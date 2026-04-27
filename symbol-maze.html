@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>符号迷宫 - 读写障碍注意力训练</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+    html, body { touch-action: manipulation; overscroll-behavior: none; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #3d7ab5 100%); min-height: 100vh; min-height: 100dvh; padding: 10px; color: white; display: flex; flex-direction: column; }
+    
+    .container { max-width: 600px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+    
+    .nav { text-align: center; margin-bottom: 8px; flex-shrink: 0; }
+    .back-btn { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+    
+    .rules-section { background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 12px; margin-bottom: 8px; flex-shrink: 0; }
+    .rules-section h2 { font-size: 0.9rem; margin-bottom: 6px; color: #ffd700; }
+    .rule-item { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; font-size: 0.8rem; }
+    .rule-item:last-child { margin-bottom: 0; }
+    
+    .symbol-type-btn {
+      padding: 4px 12px;
+      border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 15px;
+      background: transparent;
+      color: white;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .symbol-type-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .symbol-type-btn.active {
+      background: rgba(255,255,255,0.3);
+      border-color: white;
+      font-weight: bold;
+    } 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 2px; 
+      background: #f5f5f5; 
+      padding: 2px 5px; 
+      border-radius: 5px; 
+      border: 2px solid #333;
+    }
+    .symbol-icon {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+    }
+    
+    .game-container { background: white; border-radius: 15px; padding: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 2px solid #eee; flex-shrink: 0; }
+    .level-title { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; }
+    .hint-text { font-size: 0.75rem; color: #666; }
+    
+    .maze-area { position: relative; background: #f8f9fa; border-radius: 12px; padding: 5px; display: flex; justify-content: center; align-items: center; flex: 1; min-height: 0; overflow: hidden; }
+    #mazeCanvas { display: block; cursor: pointer; max-width: 100%; max-height: 100%; }
+    
+    .controls { display: flex; justify-content: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; flex-shrink: 0; }
+    .btn { padding: 8px 20px; border: none; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 5px; }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .btn:active { transform: scale(0.98); }
+    
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .modal.show { display: flex; }
+    .modal-content { background: white; padding: 25px; border-radius: 15px; text-align: center; max-width: 280px; width: 100%; }
+    .modal-icon { font-size: 50px; margin-bottom: 10px; }
+    .modal-content h2 { color: #1a1a2e; margin-bottom: 8px; font-size: 1.1rem; }
+    .modal-content p { color: #666; margin-bottom: 15px; font-size: 0.9rem; }
+    
+    /* 手机竖屏 - 小屏幕 */
+    @media (max-width: 380px) {
+      body { padding: 6px; }
+      .rules-section { padding: 8px 10px; }
+      .rules-section h2 { font-size: 0.8rem; margin-bottom: 4px; }
+      .rule-item { font-size: 0.7rem; gap: 3px; margin-bottom: 4px; }
+      .symbol-icon { width: 14px; height: 14px; }
+      .game-container { padding: 8px; border-radius: 12px; }
+      .game-header { margin-bottom: 5px; padding-bottom: 5px; }
+      .level-title { font-size: 0.85rem; }
+      .hint-text { font-size: 0.7rem; }
+      .maze-area { padding: 4px; border-radius: 10px; }
+      .btn { padding: 7px 16px; font-size: 0.8rem; }
+      .back-btn { padding: 6px 12px; font-size: 0.75rem; }
+    }
+    
+    /* 手机竖屏 - 中等屏幕 */
+    @media (min-width: 381px) and (max-width: 480px) {
+      body { padding: 8px; }
+      .rules-section { padding: 8px 12px; }
+      .rule-item { font-size: 0.75rem; }
+      .symbol-icon { width: 16px; height: 16px; }
+      .game-container { padding: 8px; }
+    }
+    
+    /* 平板和大屏手机 */
+    @media (min-width: 481px) and (max-width: 768px) {
+      body { padding: 12px; }
+      .container { max-width: 500px; }
+      .rules-section { padding: 12px 16px; }
+      .rules-section h2 { font-size: 1rem; }
+      .rule-item { font-size: 0.85rem; }
+      .symbol-icon { width: 20px; height: 20px; }
+      .game-container { padding: 12px; }
+      .level-title { font-size: 1.05rem; }
+      .hint-text { font-size: 0.8rem; }
+      .btn { padding: 10px 24px; font-size: 0.9rem; }
+    }
+    
+    /* 平板横屏和桌面 */
+    @media (min-width: 769px) {
+      body { padding: 15px; justify-content: center; }
+      .container { max-width: 550px; }
+      .rules-section { padding: 15px 20px; margin-bottom: 12px; }
+      .rules-section h2 { font-size: 1.1rem; margin-bottom: 8px; }
+      .rule-item { font-size: 0.9rem; gap: 6px; margin-bottom: 6px; }
+      .symbol-icon { width: 22px; height: 22px; }
+      .game-container { padding: 15px; }
+      .game-header { margin-bottom: 10px; padding-bottom: 10px; }
+      .level-title { font-size: 1.1rem; }
+      .hint-text { font-size: 0.85rem; }
+      .maze-area { padding: 8px; }
+      .controls { margin-top: 12px; }
+      .btn { padding: 10px 28px; font-size: 0.95rem; }
+    }
+    
+    /* 横屏手机优化 */
+    @media (max-height: 500px) and (orientation: landscape) {
+      body { padding: 5px 10px; }
+      .container { flex-direction: row; flex-wrap: wrap; max-width: 100%; }
+      .nav { width: auto; margin-bottom: 0; margin-right: 10px; }
+      .rules-section { width: auto; flex: 1; min-width: 200px; margin-bottom: 0; padding: 6px 10px; }
+      .rules-section h2 { font-size: 0.75rem; margin-bottom: 3px; }
+      .rule-item { font-size: 0.65rem; margin-bottom: 2px; }
+      .game-container { width: 100%; margin-top: 5px; flex-direction: row; gap: 10px; }
+      .game-header { border-bottom: none; margin-bottom: 0; padding-bottom: 0; flex-direction: column; gap: 3px; }
+      .maze-area { flex: 1; min-height: 200px; }
+      .controls { width: auto; margin-top: 0; flex-direction: column; }
+    }
+    
+    /* iPhone X/11/12/13 等刘海屏底部安全区 */
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      .controls { padding-bottom: env(safe-area-inset-bottom); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <a href="index.html" class="back-btn">← 返回游戏主页</a>
+    </div>
+    
+    <div class="rules-section">
+      <h2>🎮 游戏规则</h2>
+      <div class="rule-item">
+        从<span style="color:#4CAF50;font-weight:bold;">左上角入口</span>开始，按顺序连线到达<span style="color:#4CAF50;font-weight:bold;">右侧出口</span>
+      </div>
+      <div class="rule-item" id="symbolDisplay">
+        当前符号：
+      </div>
+      <div class="rule-item">
+        符号类型：
+        <button class="symbol-type-btn active" data-type="math" onclick="setSymbolType('math')">加减乘除</button>
+        <button class="symbol-type-btn" data-type="abcd" onclick="setSymbolType('abcd')">ABCD</button>
+        <button class="symbol-type-btn" data-type="1234" onclick="setSymbolType('1234')">1234</button>
+      </div>
+      <div class="rule-item" style="color: rgba(255,255,255,0.8); font-size: 0.75rem;">
+        💡 提示：10×10迷宫，只有唯一正确路线！
+      </div>
+    </div>
+    
+    <div class="game-container">
+      <div class="game-header">
+        <span class="level-title">符号迷宫 10×10</span>
+        <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+        <span class="hint-text" id="hintText">点击格子开始走迷宫</span>
+      </div>
+      
+      <div class="maze-area" id="mazeArea">
+        <canvas id="mazeCanvas"></canvas>
+      </div>
+      
+      <div class="controls">
+        <button class="btn btn-primary" id="newGameBtn">🎲 新迷宫</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <div class="modal-icon">🎉</div>
+      <h2>恭喜过关！</h2>
+      <p id="modalText">你成功找到了出口！</p>
+      <button class="btn btn-primary" id="modalBtn">再玩一次</button>
+    </div>
+  </div>
+
+  <script>
+    var canvas = document.getElementById('mazeCanvas');
+    var ctx = canvas.getContext('2d');
+    
+    // 音频上下文
+    var audioCtx = null;
+    
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+    
+    function playConnectSound() {
+      if (!audioCtx) return;
+      try {
+        var oscillator = audioCtx.createOscillator();
+        var gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+        oscillator.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.05);
+        oscillator.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.2);
+      } catch(e) {}
+    }
+    
+    function playWinSound() {
+      if (!audioCtx) return;
+      try {
+        var notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach(function(freq, i) {
+          var oscillator = audioCtx.createOscillator();
+          var gainNode = audioCtx.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.15);
+          gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime + i * 0.15);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.15 + 0.3);
+          oscillator.start(audioCtx.currentTime + i * 0.15);
+          oscillator.stop(audioCtx.currentTime + i * 0.15 + 0.3);
+        });
+      } catch(e) {}
+    }
+    
+    // 符号类型配置
+    var SYMBOL_TYPES = {
+      'math': { symbols: ['+', '−', '×', '÷'], names: ['+', '−', '×', '÷'], colors: ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'] },
+      'abcd': { symbols: ['A', 'B', 'C', 'D'], names: ['A', 'B', 'C', 'D'], colors: ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'] },
+      '1234': { symbols: ['1', '2', '3', '4'], names: ['1', '2', '3', '4'], colors: ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'] }
+    };
+    var currentSymbolType = 'math';
+    var SYMBOLS = SYMBOL_TYPES[currentSymbolType].symbols;
+    var SYMBOL_NAMES = SYMBOL_TYPES[currentSymbolType].names;
+    
+    // 游戏状态 - 10x10格子
+    var game = {
+      grid: [],
+      rows: 10,
+      cols: 10,
+      cellSize: 40,
+      entrance: { row: 0, col: 0 },
+      path: [],
+      nextSymbolIndex: 1,
+      steps: 0,
+      bestSteps: null,
+      completed: false
+    };
+    
+    // 初始化画布 - 自适应屏幕
+    function initCanvas() {
+      var container = document.getElementById('mazeArea');
+      var containerRect = container.getBoundingClientRect();
+      
+      // 获取可用宽度和高度
+      var maxWidth = Math.min(containerRect.width - 10, window.innerWidth - 40);
+      var maxHeight = containerRect.height - 10;
+      
+      // 10x10格子，加上行列标签的空间
+      var labelSize = game.labelSize || 25;
+      
+      // 根据宽度和高度计算最佳格子大小
+      var cellByWidth = Math.floor((maxWidth - labelSize) / 10);
+      var cellByHeight = Math.floor((maxHeight - labelSize) / 10);
+      
+      // 取较小值，确保迷宫完全可见
+      game.cellSize = Math.min(cellByWidth, cellByHeight);
+      
+      // 设置合理的大小范围
+      var minSize = window.innerWidth < 400 ? 28 : (window.innerWidth < 600 ? 30 : 32);
+      var maxSize = window.innerWidth < 400 ? 36 : (window.innerWidth < 600 ? 40 : 45);
+      
+      game.cellSize = Math.max(minSize, Math.min(game.cellSize, maxSize));
+      
+      // 根据格子大小调整标签大小
+      labelSize = Math.max(20, Math.min(25, game.cellSize * 0.6));
+      
+      canvas.width = game.cols * game.cellSize + labelSize;
+      canvas.height = game.rows * game.cellSize + labelSize;
+      
+      // 存储labelSize供绘制使用
+      game.labelSize = labelSize;
+    }
+    
+    // 生成唯一路径的迷宫 - 10x10
+    function generateMaze() {
+      // 初始化网格
+      game.grid = [];
+      for (var r = 0; r < game.rows; r++) {
+        var row = [];
+        for (var c = 0; c < game.cols; c++) {
+          row.push({ symbol: null, visited: false, onPath: false });
+        }
+        game.grid.push(row);
+      }
+      
+      // 生成从入口到第10列的路径
+      var path = generateUniquePath();
+      
+      // 设置路径上的符号：+、−、×、÷ 循环
+      for (var i = 0; i < path.length; i++) {
+        var cell = path[i];
+        var symbolIndex = i % 4;
+        game.grid[cell.row][cell.col].symbol = SYMBOLS[symbolIndex];
+        game.grid[cell.row][cell.col].onPath = true;
+      }
+      
+      // 填充非路径格子，确保不会产生歧义路径
+      fillNonPathCells(path);
+      
+      // 初始化游戏状态
+      game.grid[game.entrance.row][game.entrance.col].visited = true;
+      game.path = [{ row: game.entrance.row, col: game.entrance.col }];
+      game.nextSymbolIndex = 1;
+      game.steps = 0;
+      game.completed = false;
+    }
+    
+    // 生成唯一路径 - 10x10版本（程序化随机生成）
+    // 核心逻辑：路径长度必须是4的倍数，最后一步是÷（索引3），终点在第10列
+    function generateUniquePath() {
+      var maxAttempts = 30;
+      
+      for (var attempt = 0; attempt < maxAttempts; attempt++) {
+        var path = generateRandomPath();
+        if (path && validatePath(path)) {
+          return path;
+        }
+      }
+      
+      // Fallback: 使用多样化的预设模式
+      return getVariedFallbackPath();
+    }
+    
+    // 随机生成路径
+    function generateRandomPath() {
+      var path = [{ row: 0, col: 0 }];
+      var visited = { '0,0': true };
+      
+      var directions = [
+        { dr: 0, dc: 1 },  // 右
+        { dr: 1, dc: 0 },  // 下
+        { dr: 0, dc: -1 }, // 左
+        { dr: -1, dc: 0 }  // 上
+      ];
+      
+      var maxSteps = 50;
+      var minSteps = 8;
+      
+      for (var steps = 0; steps < maxSteps; steps++) {
+        var current = path[path.length - 1];
+        
+        // 到达第10列且长度满足条件，检查是否可以结束
+        if (current.col === 9 && path.length >= minSteps && path.length % 4 === 0) {
+          break;
+        }
+        
+        // 获取可行的下一步
+        var validMoves = [];
+        for (var i = 0; i < directions.length; i++) {
+          var d = directions[i];
+          var nr = current.row + d.dr;
+          var nc = current.col + d.dc;
+          var key = nr + ',' + nc;
+          
+          if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10 && !visited[key]) {
+            validMoves.push({ row: nr, col: nc, dir: i });
+          }
+        }
+        
+        if (validMoves.length === 0) {
+          break;
+        }
+        
+        // 加权随机选择：向右优先，适度向下，避免回退
+        var weights = [];
+        for (var i = 0; i < validMoves.length; i++) {
+          var move = validMoves[i];
+          var weight = 1;
+          if (move.col > current.col) weight += 3; // 向右权重高
+          if (move.row > current.row) weight += 1; // 向下适度
+          // 避免过早到达右边界但行数不够
+          if (move.col === 9 && path.length < minSteps) weight = 0.1;
+          weights.push(weight);
+        }
+        
+        // 加权随机选择
+        var totalWeight = 0;
+        for (var i = 0; i < weights.length; i++) {
+          totalWeight += weights[i];
+        }
+        var random = Math.random() * totalWeight;
+        var cumulative = 0;
+        var selectedIndex = 0;
+        for (var i = 0; i < weights.length; i++) {
+          cumulative += weights[i];
+          if (random <= cumulative) {
+            selectedIndex = i;
+            break;
+          }
+        }
+        
+        var next = validMoves[selectedIndex];
+        path.push({ row: next.row, col: next.col });
+        visited[next.row + ',' + next.col] = true;
+      }
+      
+      return path;
+    }
+    
+    // 验证路径
+    function validatePath(path) {
+      // 检查终点是否在第10列
+      if (path[path.length - 1].col !== 9) {
+        return false;
+      }
+      
+      // 检查长度是否是4的倍数
+      if (path.length % 4 !== 0) {
+        // 尝试截断
+        while (path.length > 8 && path.length % 4 !== 0) {
+          path.pop();
+        }
+        if (path[path.length - 1].col !== 9) {
+          return false;
+        }
+      }
+      
+      return path.length >= 8 && path.length % 4 === 0;
+    }
+    
+    // 多样化的Fallback路径
+    function getVariedFallbackPath() {
+      // 使用时间戳增加随机性
+      var seed = Date.now() % 1000;
+      
+      var fallbacks = [
+        // 模式A: 水平蛇形
+        [
+          { row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }, { row: 0, col: 3 },
+          { row: 1, col: 3 }, { row: 1, col: 2 }, { row: 1, col: 1 }, { row: 1, col: 0 },
+          { row: 2, col: 0 }, { row: 2, col: 1 }, { row: 2, col: 2 }, { row: 2, col: 3 },
+          { row: 3, col: 3 }, { row: 3, col: 4 }, { row: 3, col: 5 }, { row: 3, col: 6 },
+          { row: 3, col: 7 }, { row: 3, col: 8 }, { row: 3, col: 9 }, { row: 4, col: 9 }
+        ],
+        // 模式B: 垂直之字
+        [
+          { row: 0, col: 0 }, { row: 1, col: 0 }, { row: 2, col: 0 }, { row: 3, col: 0 },
+          { row: 3, col: 1 }, { row: 2, col: 1 }, { row: 1, col: 1 }, { row: 0, col: 1 },
+          { row: 0, col: 2 }, { row: 1, col: 2 }, { row: 2, col: 2 }, { row: 3, col: 2 },
+          { row: 3, col: 3 }, { row: 3, col: 4 }, { row: 3, col: 5 }, { row: 3, col: 6 },
+          { row: 3, col: 7 }, { row: 3, col: 8 }, { row: 3, col: 9 }, { row: 4, col: 9 }
+        ],
+        // 模式C: 阶梯上升
+        [
+          { row: 0, col: 0 }, { row: 1, col: 0 }, { row: 1, col: 1 }, { row: 2, col: 1 },
+          { row: 2, col: 2 }, { row: 3, col: 2 }, { row: 3, col: 3 }, { row: 4, col: 3 },
+          { row: 4, col: 4 }, { row: 5, col: 4 }, { row: 5, col: 5 }, { row: 6, col: 5 },
+          { row: 6, col: 6 }, { row: 7, col: 6 }, { row: 7, col: 7 }, { row: 8, col: 7 },
+          { row: 8, col: 8 }, { row: 8, col: 9 }, { row: 9, col: 9 }, { row: 8, col: 9 }
+        ],
+        // 模式D: 大回环
+        [
+          { row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }, { row: 0, col: 3 },
+          { row: 1, col: 3 }, { row: 2, col: 3 }, { row: 3, col: 3 }, { row: 4, col: 3 },
+          { row: 4, col: 4 }, { row: 4, col: 5 }, { row: 4, col: 6 }, { row: 4, col: 7 },
+          { row: 3, col: 7 }, { row: 2, col: 7 }, { row: 1, col: 7 }, { row: 1, col: 8 },
+          { row: 1, col: 9 }, { row: 2, col: 9 }, { row: 3, col: 9 }, { row: 4, col: 9 }
+        ],
+        // 模式E: 螺旋内卷
+        [
+          { row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }, { row: 0, col: 3 },
+          { row: 0, col: 4 }, { row: 1, col: 4 }, { row: 2, col: 4 }, { row: 3, col: 4 },
+          { row: 3, col: 3 }, { row: 3, col: 2 }, { row: 3, col: 1 }, { row: 2, col: 1 },
+          { row: 1, col: 1 }, { row: 1, col: 2 }, { row: 1, col: 3 }, { row: 2, col: 3 },
+          { row: 2, col: 2 }, { row: 2, col: 3 }, { row: 2, col: 4 }, { row: 2, col: 5 },
+          { row: 2, col: 6 }, { row: 2, col: 7 }, { row: 2, col: 8 }, { row: 2, col: 9 }
+        ],
+        // 模式F: 斜向下行
+        [
+          { row: 0, col: 0 }, { row: 1, col: 0 }, { row: 1, col: 1 }, { row: 2, col: 1 },
+          { row: 2, col: 2 }, { row: 3, col: 2 }, { row: 3, col: 3 }, { row: 4, col: 3 },
+          { row: 4, col: 4 }, { row: 5, col: 4 }, { row: 5, col: 5 }, { row: 6, col: 5 },
+          { row: 6, col: 6 }, { row: 7, col: 6 }, { row: 7, col: 7 }, { row: 8, col: 7 },
+          { row: 8, col: 8 }, { row: 8, col: 9 }, { row: 9, col: 9 }, { row: 8, col: 9 }
+        ],
+        // 模式G: 直线横穿
+        [
+          { row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }, { row: 0, col: 3 },
+          { row: 0, col: 4 }, { row: 0, col: 5 }, { row: 0, col: 6 }, { row: 0, col: 7 },
+          { row: 0, col: 8 }, { row: 0, col: 9 }, { row: 1, col: 9 }, { row: 2, col: 9 }
+        ],
+        // 模式H: 直线竖穿
+        [
+          { row: 0, col: 0 }, { row: 1, col: 0 }, { row: 2, col: 0 }, { row: 3, col: 0 },
+          { row: 4, col: 0 }, { row: 5, col: 0 }, { row: 6, col: 0 }, { row: 7, col: 0 },
+          { row: 7, col: 1 }, { row: 7, col: 2 }, { row: 7, col: 3 }, { row: 7, col: 4 },
+          { row: 7, col: 5 }, { row: 7, col: 6 }, { row: 7, col: 7 }, { row: 7, col: 8 },
+          { row: 7, col: 9 }, { row: 8, col: 9 }, { row: 9, col: 9 }, { row: 8, col: 9 }
+        ]
+      ];
+      
+      var index = Math.floor((Math.random() * 1000 + seed) % fallbacks.length);
+      return fallbacks[index];
+    }
+    
+    // 填充非路径格子 - 确保唯一路径
+    // 核心逻辑：每个路径格子的非路径相邻格子，都不能出现"正确的下一个符号"
+    // 这样玩家在任何路径格子上，相邻的非路径格子都不会引导走错
+    function fillNonPathCells(path) {
+      // 创建路径集合和路径索引映射
+      var pathSet = {};
+      var pathIndexMap = {}; // 记录每个路径格子在路径中的位置
+      
+      for (var i = 0; i < path.length; i++) {
+        var key = path[i].row + ',' + path[i].col;
+        pathSet[key] = true;
+        pathIndexMap[key] = i;
+      }
+      
+      // 计算每个非路径格子禁止使用的符号
+      var forbiddenMap = {};
+      
+      for (var r = 0; r < game.rows; r++) {
+        for (var c = 0; c < game.cols; c++) {
+          var key = r + ',' + c;
+          if (pathSet[key]) continue;
+          forbiddenMap[key] = [];
+        }
+      }
+      
+      var directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+      
+      // 对于每个路径格子，计算其相邻非路径格子禁止的符号
+      for (var i = 0; i < path.length; i++) {
+        var pathCell = path[i];
+        var currentSymbol = i % 4; // 当前格子的符号索引
+        var nextSymbol = (i + 1) % 4; // 下一步需要的符号索引
+        
+        var pathKey = pathCell.row + ',' + pathCell.col;
+        
+        // 检查这个路径格子的所有相邻格子
+        for (var d = 0; d < directions.length; d++) {
+          var nr = pathCell.row + directions[d][0];
+          var nc = pathCell.col + directions[d][1];
+          var neighborKey = nr + ',' + nc;
+          
+          // 如果是边界或路径格子，跳过
+          if (nr < 0 || nr >= game.rows || nc < 0 || nc >= game.cols) continue;
+          if (pathSet[neighborKey]) continue;
+          
+          // 这个非路径格子不能出现"下一步需要的符号"
+          // 因为如果它有这个符号，玩家就会走错方向
+          if (forbiddenMap[neighborKey].indexOf(nextSymbol) === -1) {
+            forbiddenMap[neighborKey].push(nextSymbol);
+          }
+        }
+      }
+      
+      // 填充非路径格子
+      for (var r = 0; r < game.rows; r++) {
+        for (var c = 0; c < game.cols; c++) {
+          var key = r + ',' + c;
+          if (pathSet[key]) continue;
+          
+          var forbidden = forbiddenMap[key];
+          
+          // 选择一个不在禁止列表中的符号
+          // 优先选择最"安全"的符号（和当前需要差距最大的）
+          var availableSymbols = [];
+          for (var i = 0; i < 4; i++) {
+            if (forbidden.indexOf(i) === -1) {
+              availableSymbols.push(i);
+            }
+          }
+          
+          var symbolIndex;
+          if (availableSymbols.length > 0) {
+            symbolIndex = availableSymbols[Math.floor(Math.random() * availableSymbols.length)];
+          } else {
+            // 极端情况：所有符号都被禁止
+            // 这种情况下，我们选择一个"最不危险"的符号
+            // 即选择和任何路径格子下一步需要的符号不同的
+            symbolIndex = 2; // 默认用×
+          }
+          
+          game.grid[r][c].symbol = SYMBOLS[symbolIndex];
+        }
+      }
+    }
+    
+    // 绘制迷宫
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      var labelSize = game.labelSize || 25;
+      var cellSize = game.cellSize;
+      
+      // 根据格子大小动态调整字体
+      var fontSize = Math.max(9, Math.min(12, Math.floor(cellSize * 0.3)));
+      ctx.font = 'bold ' + fontSize + 'px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#666';
+      
+      for (var c = 0; c < game.cols; c++) {
+        var letter = String.fromCharCode(97 + c); // a, b, c, d, e, f, g, h, i, j
+        ctx.fillText(letter, labelSize + c * cellSize + cellSize / 2, labelSize / 2);
+      }
+      
+      // 绘制行标签 (1-10)
+      for (var r = 0; r < game.rows; r++) {
+        ctx.fillText((r + 1).toString(), labelSize / 2, labelSize + r * cellSize + cellSize / 2);
+      }
+      
+      // 绘制格子
+      for (var r = 0; r < game.rows; r++) {
+        for (var c = 0; c < game.cols; c++) {
+          var x = labelSize + c * cellSize;
+          var y = labelSize + r * cellSize;
+          var cell = game.grid[r][c];
+          
+          // 背景
+          if (cell.visited) {
+            ctx.fillStyle = '#4CAF50'; // 绿色表示已走过
+          } else {
+            ctx.fillStyle = '#ffffff'; // 白色
+          }
+          
+          // 绘制圆角矩形
+          var padding = 1;
+          var radius = 4;
+          roundRect(ctx, x + padding, y + padding, cellSize - padding * 2, cellSize - padding * 2, radius);
+          ctx.fill();
+          
+          // 边框
+          ctx.strokeStyle = '#e0e0e0';
+          ctx.lineWidth = 0.5;
+          roundRect(ctx, x + padding, y + padding, cellSize - padding * 2, cellSize - padding * 2, radius);
+          ctx.stroke();
+          
+          // 绘制符号文字
+          var symbol = cell.symbol;
+          var config = SYMBOL_TYPES[currentSymbolType];
+          var symbolIndex = SYMBOLS.indexOf(symbol);
+          var color = config.colors[symbolIndex];
+          var fontSize = cellSize * 0.45;
+          
+          ctx.font = 'bold ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          if (cell.visited) {
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          } else {
+            ctx.fillStyle = color;
+          }
+          ctx.fillText(symbol, x + cellSize / 2, y + cellSize / 2 + 2);
+        }
+      }
+      
+      // 绘制路径连线
+      if (game.path.length > 1) {
+        ctx.strokeStyle = '#2E7D32';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(
+          labelSize + game.path[0].col * cellSize + cellSize / 2,
+          labelSize + game.path[0].row * cellSize + cellSize / 2
+        );
+        for (var i = 1; i < game.path.length; i++) {
+          ctx.lineTo(
+            labelSize + game.path[i].col * cellSize + cellSize / 2,
+            labelSize + game.path[i].row * cellSize + cellSize / 2
+          );
+        }
+        ctx.stroke();
+      }
+    }
+    
+    // 圆角矩形辅助函数
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+    
+    // 检查是否可以移动
+    function canMoveTo(row, col) {
+      if (row < 0 || row >= game.rows || col < 0 || col >= game.cols) return false;
+      if (game.grid[row][col].visited) return false;
+      
+      var last = game.path[game.path.length - 1];
+      var isAdjacent = Math.abs(row - last.row) + Math.abs(col - last.col) === 1;
+      if (!isAdjacent) return false;
+      
+      var targetSymbol = game.grid[row][col].symbol;
+      var targetIndex = SYMBOLS.indexOf(targetSymbol);
+      
+      return targetIndex === game.nextSymbolIndex;
+    }
+    
+    // 移动
+    function moveTo(row, col) {
+      if (!canMoveTo(row, col)) return false;
+      
+      initAudio();
+      playConnectSound();
+      
+      game.grid[row][col].visited = true;
+      game.path.push({ row: row, col: col });
+      game.nextSymbolIndex = (game.nextSymbolIndex + 1) % 4;
+      game.steps++;
+      
+      // 检查是否通关：必须到达第10列且当前格子是÷符号
+      var currentSymbol = game.grid[row][col].symbol;
+      var pathPosition = game.path.length - 1; // 当前位置在路径中的索引
+      var isDivide = (pathPosition % 4 === 3); // ÷符号的索引是3
+      
+      if (col === 9 && isDivide) {
+        game.completed = true;
+        playWinSound();
+        showModal('恭喜你成功找到了出口！');
+      }
+      
+      updateUI();
+      draw();
+      return true;
+    }
+    
+    // 更新UI
+    function updateUI() {
+      var hint = game.completed ? '已到达出口！' : '点击相邻的正确符号';
+      document.getElementById('hintText').textContent = hint;
+    }
+    
+    function showModal(text) {
+      document.getElementById('modalText').textContent = text;
+      document.getElementById('modal').classList.add('show');
+    }
+    
+    function closeModal() {
+      document.getElementById('modal').classList.remove('show');
+    }
+    
+    function newGame() {
+      generateMaze();
+      draw();
+      updateUI();
+    }
+    
+    function handleCanvasClick(e) {
+      if (game.completed) return;
+      
+      initAudio();
+      
+      var rect = canvas.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      
+      var labelSize = game.labelSize || 25;
+      var col = Math.floor((x - labelSize) / game.cellSize);
+      var row = Math.floor((y - labelSize) / game.cellSize);
+      
+      if (row >= 0 && row < game.rows && col >= 0 && col < game.cols) {
+        moveTo(row, col);
+      }
+    }
+    
+    function init() {
+      document.getElementById('newGameBtn').addEventListener('click', newGame);
+      document.getElementById('modalBtn').addEventListener('click', function() {
+        closeModal();
+        newGame();
+      });
+      document.getElementById('modal').addEventListener('click', function(e) {
+        if (e.target === document.getElementById('modal')) closeModal();
+      });
+      
+      canvas.addEventListener('click', handleCanvasClick);
+      
+      // 触摸事件
+      var touchStartTime = 0;
+      var touchStartX = 0;
+      var touchStartY = 0;
+      
+      canvas.addEventListener('touchstart', function(e) {
+        touchStartTime = Date.now();
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      
+      canvas.addEventListener('touchend', function(e) {
+        var touchEndTime = Date.now();
+        var touchEndX = e.changedTouches[0].clientX;
+        var touchEndY = e.changedTouches[0].clientY;
+        
+        var timeDiff = touchEndTime - touchStartTime;
+        var distance = Math.sqrt(
+          Math.pow(touchEndX - touchStartX, 2) + 
+          Math.pow(touchEndY - touchStartY, 2)
+        );
+        
+        if (timeDiff < 300 && distance < 10) {
+          handleCanvasClick({ clientX: touchEndX, clientY: touchEndY });
+        }
+      }, { passive: true });
+      
+      initCanvas();
+      updateSymbolDisplay();
+      generateMaze();
+      draw();
+      updateUI();
+    }
+    
+    function setSymbolType(type) {
+      currentSymbolType = type;
+      var config = SYMBOL_TYPES[type];
+      SYMBOLS = config.symbols;
+      SYMBOL_NAMES = config.names;
+      
+      // 更新按钮状态
+      document.querySelectorAll('.symbol-type-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+        if (btn.dataset.type === type) {
+          btn.classList.add('active');
+        }
+      });
+      
+      updateSymbolDisplay();
+      generateMaze();
+      draw();
+      updateUI();
+    }
+    
+    function updateSymbolDisplay() {
+      var config = SYMBOL_TYPES[currentSymbolType];
+      var html = '当前符号：';
+      config.colors.forEach(function(color, i) {
+        if (i > 0) html += ' → ';
+        html += '<span style="color:' + color + ';font-weight:bold;font-size:1rem;">' + config.names[i] + '</span>';
+      });
+      document.getElementById('symbolDisplay').innerHTML = html;
+    }
+    
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+<style>
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    </style>
+    <img src="/public/qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  </body>
+</html>

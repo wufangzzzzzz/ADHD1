@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>蛇形连线益智游戏</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px;
+      color: white;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* 顶部导航 */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .back-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    /* 游戏信息栏 */
+    .game-info {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .info-item {
+      text-align: center;
+    }
+
+    .info-label {
+      font-size: 0.8rem;
+      color: #ff0000;
+      margin-bottom: 5px;
+    }
+
+    .info-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffd700;
+    }
+
+    /* 规则说明 */
+    .rules {
+      background: rgba(255,255,255,0.1);
+      padding: 15px 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .rules strong {
+      color: #ffd700;
+    }
+
+    .triangle-icon {
+      color: #ff8c00;
+      font-size: 1.1rem;
+    }
+
+    /* 游戏画布容器 */
+    .game-container {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #eee;
+    }
+
+    .level-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+
+    .progress-text {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    /* 游戏区域 */
+    .game-area {
+      position: relative;
+      background: #fafafa;
+      border-radius: 15px;
+      padding: 20px;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      cursor: pointer;
+    }
+
+    /* 控制按钮 */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+
+    .btn-hint {
+      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+      color: white;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* 难度选择 */
+    .difficulty-selector {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .diff-btn {
+      padding: 8px 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: transparent;
+      color: white;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .diff-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: transparent;
+    }
+
+    .diff-btn:hover:not(.active) {
+      border-color: rgba(255,255,255,0.6);
+    }
+
+    /* 烟花画布 - 在弹窗层内 */
+    #fireworksCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .completion-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+
+    .completion-modal.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .completion-modal.show .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-content {
+      position: relative;
+      z-index: 2;
+      background: white;
+      padding: 40px;
+      border-radius: 25px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      transform: scale(0.8);
+      transition: transform 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .modal-icon {
+
+    .modal-title {
+      font-size: 1.8rem;
+      color: #1a1a2e;
+      margin-bottom: 15px;
+    }
+
+    .modal-text {
+      color: #666;
+      margin-bottom: 25px;
+      font-size: 1.1rem;
+    }
+
+    .modal-content .btn {
+      width: 100%;
+      max-width: 200px;
+    }
+
+    /* 提示信息 */
+    .hint {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .hint.show {
+      opacity: 1;
+    }
+
+    /* 烟花画布 */
+    #fireworksCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* 手机竖版适配 */
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+
+      .nav {
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .game-info {
+        gap: 20px;
+      }
+
+      .info-value {
+        font-size: 1.2rem;
+      }
+
+      .game-area {
+        padding: 15px;
+        min-height: 250px;
+        height: 35vh;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
+
+      .game-container {
+        padding: 15px;
+      }
+
+      .rules {
+        padding: 12px 15px;
+        font-size: 0.85rem;
+      }
+
+      .level-title {
+        font-size: 1rem;
+      }
+
+      .progress-text {
+        font-size: 0.8rem;
+      }
+
+      .modal-content {
+        padding: 30px 20px;
+      }
+
+      .modal-title {
+        font-size: 1.4rem;
+      }
+
+      .modal-text {
+        font-size: 1rem;
+      }
+    }
+
+    /* 平板适配 */
+    @media (min-width: 601px) and (max-width: 1024px) {
+      .container {
+        max-width: 90%;
+      }
+
+      .game-area {
+        min-height: 350px;
+      }
+    }
+
+    /* PC大屏适配 */
+    @media (min-width: 1025px) {
+      .container {
+        max-width: 800px;
+      }
+
+      .game-area {
+        min-height: 450px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 顶部导航 -->
+    <div class="nav">
+      <a href="index.html" class="back-btn">← 返回游戏主页</a>
+      <div class="difficulty-selector">
+        <button class="diff-btn active" data-difficulty="easy">简单</button>
+        <button class="diff-btn" data-difficulty="hard">困难</button>
+      </div>
+    </div>
+
+    <!-- 游戏信息 -->
+    <div class="game-info">
+      <div class="info-item">
+        <div class="info-label">当前关卡</div>
+        <div class="info-value" id="levelDisplay">1</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">已连点数</div>
+        <div class="info-value" id="dotsConnected">0</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">剩余点数</div>
+        <div class="info-value" id="dotsRemaining">0</div>
+      </div>
+    </div>
+
+    <!-- 规则说明 -->
+    <div class="rules">
+      <strong>玩法：</strong>按照数字顺序从蓝色1开始依次点击黑点进行连线，<span class="triangle-icon">▲</span> 三角形是障碍物，<span style="color:#ff6b6b;">不需要点击</span>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="game-container">
+      <div class="game-header">
+        <span class="level-title" id="levelTitle">第 1 关</span>
+        <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+        <span class="progress-text" id="progressText">点击第一个黑点开始</span>
+      </div>
+      <div class="game-area">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hint" id="hint">请按顺序点击下一个黑点</div>
+      </div>
+      <div class="controls">
+        <button class="btn btn-secondary" id="resetBtn">🔄 重置关卡</button>
+        <button class="btn btn-hint" id="hintBtn">💡 提示</button>
+        <button class="btn btn-primary" id="nextBtn">下一关 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 完成提示 -->
+  <div class="completion-modal" id="completionModal">
+    <!-- 烟花画布 - 在弹窗层内 -->
+    <canvas id="fireworksCanvas"></canvas>
+    <div class="modal-content">
+      <div class="modal-icon">🎉</div>
+      <h2 class="modal-title">恭喜过关！</h2>
+      <p class="modal-text" id="completionText">你成功完成了第 1 关！</p>
+      <button class="btn btn-primary" id="modalNextBtn">继续下一关 →</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== 音效系统 =====
+    class SoundManager {
+      constructor() {
+        this.audioContext = null;
+        this.initialized = false;
+      }
+
+      init() {
+        if (this.initialized) return;
+        try {
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          this.initialized = true;
+        } catch (e) {
+          console.log('音频不可用');
+        }
+      }
+
+      // 点击音效
+      playClick() {
+        if (!this.audioContext) return;
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+        
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        
+        osc.frequency.setValueAtTime(800, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, this.audioContext.currentTime + 0.1);
+        
+        gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+        
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.15);
+      }
+
+      // 完成音效
+      playComplete() {
+        if (!this.audioContext) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        
+        notes.forEach((freq, i) => {
+          setTimeout(() => {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+            
+            osc.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+            osc.type = 'sine';
+            
+            gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
+            
+            osc.start(this.audioContext.currentTime);
+            osc.stop(this.audioContext.currentTime + 0.4);
+          }, i * 150);
+        });
+      }
+    }
+
+    const soundManager = new SoundManager();
+
+    // ===== 烟花系统 =====
+    class FireworksManager {
+      constructor() {
+        this.canvas = document.getElementById('fireworksCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.particles = [];
+        this.isRunning = false;
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      }
+
+      // 创建烟花
+      createFirework(x, y) {
+        const colors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ffffff'];
+        const particleCount = 80;
+        
+        for (let i = 0; i < particleCount; i++) {
+          const angle = (Math.PI * 2 / particleCount) * i;
+          const velocity = 2 + Math.random() * 4;
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          
+          this.particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * velocity,
+            vy: Math.sin(angle) * velocity,
+            life: 100 + Math.random() * 50,
+            color: color,
+            size: 2 + Math.random() * 2
+          });
+        }
+      }
+
+      // 开始烟花表演
+      startShow() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.particles = [];
+        
+        // 多个烟花位置
+        const positions = [
+          { x: this.canvas.width * 0.2, y: this.canvas.height * 0.3 },
+          { x: this.canvas.width * 0.5, y: this.canvas.height * 0.2 },
+          { x: this.canvas.width * 0.8, y: this.canvas.height * 0.3 },
+          { x: this.canvas.width * 0.3, y: this.canvas.height * 0.5 },
+          { x: this.canvas.width * 0.7, y: this.canvas.height * 0.5 },
+        ];
+
+        let index = 0;
+        const launchNext = () => {
+          if (index < positions.length) {
+            this.createFirework(positions[index].x, positions[index].y);
+            index++;
+            setTimeout(launchNext, 300);
+          }
+        };
+
+        launchNext();
+        this.animate();
+      }
+
+      // 停止烟花
+      stopShow() {
+        this.isRunning = false;
+        this.particles = [];
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      }
+
+      // 动画循环
+      animate() {
+        if (!this.isRunning && this.particles.length === 0) return;
+
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.05; // 重力
+          p.life--;
+          
+          if (p.life <= 0) {
+            this.particles.splice(i, 1);
+            continue;
+          }
+
+          const alpha = p.life / 150;
+          this.ctx.beginPath();
+          this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          this.ctx.fillStyle = p.color;
+          this.ctx.globalAlpha = alpha;
+          this.ctx.fill();
+          this.ctx.globalAlpha = 1;
+        }
+
+        if (this.isRunning || this.particles.length > 0) {
+          requestAnimationFrame(() => this.animate());
+        } else {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+      }
+    }
+
+    const fireworksManager = new FireworksManager();
+
+    // ===== 游戏系统 =====
+    const game = {
+      currentLevel: 0,
+      difficulty: 'easy',
+      dots: [],
+      triangles: [],
+      connections: [],
+      currentDotIndex: 0,
+      isCompleted: false,
+      showingHint: false
+    };
+
+    // 关卡配置
+    const levels = {
+      easy: [
+        // 第1-3关：3行
+        { rows: 3, dotsPerRow: [5, 5, 5], triangles: [[0, 2], [2, 1]] },
+        { rows: 3, dotsPerRow: [6, 6, 6], triangles: [[0, 2], [1, 4], [2, 1]] },
+        { rows: 3, dotsPerRow: [7, 7, 7], triangles: [[0, 3], [1, 1], [1, 5], [2, 4]] },
+        // 第4-6关：4行
+        { rows: 4, dotsPerRow: [5, 5, 5, 5], triangles: [[0, 2], [1, 0], [2, 3], [3, 1]] },
+        { rows: 4, dotsPerRow: [6, 6, 6, 6], triangles: [[0, 3], [1, 1], [2, 4], [3, 2]] },
+        { rows: 4, dotsPerRow: [7, 7, 7, 7], triangles: [[0, 2], [1, 5], [2, 1], [3, 4]] },
+        // 第7-10关：5行
+        { rows: 5, dotsPerRow: [6, 6, 6, 6, 6], triangles: [[0, 2], [1, 4], [2, 1], [3, 3], [4, 0]] },
+        { rows: 5, dotsPerRow: [7, 7, 7, 7, 7], triangles: [[0, 3], [1, 1], [2, 5], [3, 2], [4, 4]] },
+        { rows: 5, dotsPerRow: [8, 8, 8, 8, 8], triangles: [[0, 2], [1, 5], [2, 1], [3, 6], [4, 3]] },
+        { rows: 5, dotsPerRow: [8, 8, 8, 8, 8], triangles: [[0, 4], [1, 2], [2, 6], [3, 0], [3, 5], [4, 3]] }
+      ],
+      hard: [
+        // 第1-3关：5行，更多障碍
+        { rows: 5, dotsPerRow: [8, 8, 8, 8, 8], triangles: [[0, 3], [0, 6], [1, 1], [1, 5], [2, 2], [2, 7], [3, 0], [3, 4], [4, 2], [4, 6]] },
+        { rows: 5, dotsPerRow: [9, 9, 9, 9, 9], triangles: [[0, 2], [0, 5], [0, 8], [1, 1], [1, 4], [2, 3], [2, 7], [3, 0], [3, 5], [4, 2], [4, 7]] },
+        { rows: 5, dotsPerRow: [10, 10, 10, 10, 10], triangles: [[0, 2], [0, 5], [0, 8], [1, 1], [1, 4], [1, 7], [2, 3], [2, 6], [2, 9], [3, 0], [3, 3], [3, 8], [4, 2], [4, 5], [4, 9]] },
+        // 第4-6关：6行
+        { rows: 6, dotsPerRow: [9, 9, 9, 9, 9, 9], triangles: [[0, 4], [0, 7], [1, 2], [1, 6], [2, 1], [2, 5], [3, 0], [3, 4], [4, 2], [4, 7], [5, 1], [5, 5]] },
+        { rows: 6, dotsPerRow: [10, 10, 10, 10, 10, 10], triangles: [[0, 4], [0, 7], [1, 2], [1, 6], [1, 9], [2, 1], [2, 5], [2, 8], [3, 0], [3, 3], [3, 7], [4, 2], [4, 6], [4, 9], [5, 1], [5, 4], [5, 8]] },
+        { rows: 6, dotsPerRow: [11, 11, 11, 11, 11, 11], triangles: [[0, 3], [0, 6], [0, 9], [1, 1], [1, 5], [1, 8], [2, 2], [2, 7], [2, 10], [3, 0], [3, 4], [3, 8], [4, 2], [4, 6], [4, 9], [5, 1], [5, 5], [5, 10]] },
+        // 第7-10关：7-8行
+        { rows: 7, dotsPerRow: [10, 10, 10, 10, 10, 10, 10], triangles: [[0, 4], [0, 8], [1, 2], [1, 6], [1, 9], [2, 0], [2, 5], [3, 3], [3, 7], [4, 1], [4, 6], [5, 3], [5, 8], [6, 2], [6, 7]] },
+        { rows: 7, dotsPerRow: [11, 11, 11, 11, 11, 11, 11], triangles: [[0, 4], [0, 8], [1, 2], [1, 6], [1, 10], [2, 0], [2, 5], [2, 9], [3, 3], [3, 7], [4, 1], [4, 6], [4, 10], [5, 3], [5, 8], [6, 2], [6, 7], [6, 11]] },
+        { rows: 8, dotsPerRow: [10, 10, 10, 10, 10, 10, 10, 10], triangles: [[0, 4], [0, 8], [1, 2], [1, 6], [2, 1], [2, 5], [2, 9], [3, 0], [3, 4], [3, 8], [4, 2], [4, 6], [5, 1], [5, 5], [5, 9], [6, 3], [6, 7], [7, 2], [7, 6]] },
+        { rows: 8, dotsPerRow: [11, 11, 11, 11, 11, 11, 11, 11], triangles: [[0, 3], [0, 7], [0, 10], [1, 1], [1, 5], [1, 9], [2, 2], [2, 6], [2, 10], [3, 0], [3, 4], [3, 8], [4, 2], [4, 6], [4, 10], [5, 1], [5, 5], [5, 9], [6, 3], [6, 7], [7, 2], [7, 6], [7, 10]] }
+      ]
+    };
+
+    // Canvas 设置
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let dotRadius = 18;
+    let triangleSize = 20;
+    let spacing = 50;
+
+    // 计算画布尺寸（自适应）
+    function resizeCanvas() {
+      const container = document.querySelector('.game-area');
+      
+      // 获取容器尺寸，处理Safari兼容性
+      let containerWidth = container.clientWidth || 300;
+      let containerHeight = container.clientHeight || 300;
+      
+      // 如果容器高度为0，使用窗口高度计算
+      if (containerHeight < 100) {
+        const isMobile = window.innerWidth <= 600;
+        containerHeight = isMobile ? window.innerHeight * 0.4 : 400;
+      }
+      
+      const level = levels[game.difficulty][game.currentLevel];
+      // 兼容性写法，避免Safari问题
+      const maxDots = level.dotsPerRow.reduce(function(a, b) { return Math.max(a, b); }, 0);
+      const rows = level.rows;
+      
+      // 检测设备类型
+      const isMobile = window.innerWidth <= 600;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      
+      // 计算合适的间距，同时考虑宽度和高度
+      // 减去padding (20*2=40)
+      const availableWidth = containerWidth - 40;
+      const availableHeight = containerHeight - 40;
+      const spacingX = Math.floor(availableWidth / (maxDots + 1));
+      const spacingY = Math.floor(availableHeight / (rows + 1));
+      
+      if (isMobile && isPortrait) {
+        // 手机竖屏：让游戏充满整个区域
+        spacing = Math.min(spacingX, spacingY, 50);
+        spacing = Math.max(spacing, 35); // 最小间距
+        dotRadius = Math.max(12, Math.min(16, spacing * 0.35));
+      } else {
+        spacing = Math.min(spacingX, spacingY, 60);
+        spacing = Math.max(spacing, 40);
+        dotRadius = Math.max(10, Math.min(16, spacing * 0.3));
+      }
+      triangleSize = dotRadius * 1.4;
+      
+      // 画布尺寸使用容器可用尺寸，确保占满区域
+      canvas.width = availableWidth;
+      canvas.height = availableHeight;
+    }
+
+    // 初始化关卡
+    function initLevel() {
+      const level = levels[game.difficulty][game.currentLevel];
+      game.dots = [];
+      game.triangles = [];
+      game.connections = [];
+      game.currentDotIndex = 0;
+      game.isCompleted = false;
+      game.showingHint = false;
+
+      resizeCanvas();
+
+      const maxDots = level.dotsPerRow.reduce(function(a, b) { return Math.max(a, b); }, 0);
+      const rows = level.rows;
+      
+      // 计算整体居中的偏移量
+      // 点的总宽度 = (maxDots - 1) * spacing
+      // 居中起始位置
+      const totalWidth = (maxDots - 1) * spacing;
+      const offsetX = (canvas.width - totalWidth) / 2;
+      const totalHeight = (rows - 1) * spacing;
+      const offsetY = (canvas.height - totalHeight) / 2;
+      
+      for (let row = 0; row < level.rows; row++) {
+        const dotsInRow = level.dotsPerRow[row];
+        
+        for (let col = 0; col < dotsInRow; col++) {
+          const x = offsetX + col * spacing;
+          const y = offsetY + row * spacing;
+          
+          const isTriangle = level.triangles.some(t => t[0] === row && t[1] === col);
+          
+          if (isTriangle) {
+            game.triangles.push({ x, y, row, col });
+          } else {
+            game.dots.push({ x, y, row, col, connected: false });
+          }
+        }
+      }
+
+      generateSnakeOrder();
+      updateUI();
+      draw();
+    }
+
+    // 生成随机连接顺序
+    function generateSnakeOrder() {
+      // 简单模式的基本路径
+      const easyPatterns = [
+        // 蛇形
+        (dots) => {
+          dots.sort((a, b) => {
+            if (a.row !== b.row) return a.row - b.row;
+            return a.row % 2 === 0 ? a.col - b.col : b.col - a.col;
+          });
+        },
+        // 蛇形反向
+        (dots) => {
+          dots.sort((a, b) => {
+            if (a.row !== b.row) return a.row - b.row;
+            return a.row % 2 === 0 ? b.col - a.col : a.col - b.col;
+          });
+        },
+        // Z字形变体
+        (dots) => {
+          dots.sort((a, b) => {
+            if (a.row !== b.row) return a.row - b.row;
+            const group = Math.floor(a.row / 2);
+            return group % 2 === 0 ? a.col - b.col : b.col - a.col;
+          });
+        }
+      ];
+
+      // 困难模式增加跨行随机性
+      const hardPatterns = [
+        ...easyPatterns,
+        // 列优先（跨行）
+        (dots) => {
+          dots.sort((a, b) => {
+            if (a.col !== b.col) return a.col - b.col;
+            return a.row - b.row;
+          });
+        },
+        // 跨行跳跃：按列分组，奇偶列反向
+        (dots) => {
+          dots.sort((a, b) => {
+            if (a.col !== b.col) return a.col - b.col;
+            return a.col % 2 === 0 ? a.row - b.row : b.row - a.row;
+          });
+        },
+        // 斜线模式：从左上到右下
+        (dots) => {
+          dots.sort((a, b) => {
+            const sumA = a.row + a.col;
+            const sumB = b.row + b.col;
+            if (sumA !== sumB) return sumA - sumB;
+            return a.row - b.row;
+          });
+        },
+        // 跨行交替：每2列换行
+        (dots) => {
+          dots.sort((a, b) => {
+            const groupA = Math.floor(a.col / 2) * 100 + a.row;
+            const groupB = Math.floor(b.col / 2) * 100 + b.row;
+            if (groupA !== groupB) return groupA - groupB;
+            return a.col % 2 === 0 ? a.row - b.row : b.row - a.row;
+          });
+        },
+        // 随机跨行：行内蛇形但行顺序随机
+        (dots) => {
+          const rowOrder = [];
+          const level = levels[game.difficulty][game.currentLevel];
+          for (let i = 0; i < level.rows; i++) rowOrder.push(i);
+          // 随机打乱行顺序
+          for (let i = rowOrder.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [rowOrder[i], rowOrder[j]] = [rowOrder[j], rowOrder[i]];
+          }
+          const rowPriority = {};
+          rowOrder.forEach((r, i) => rowPriority[r] = i);
+          
+          dots.sort((a, b) => {
+            if (rowPriority[a.row] !== rowPriority[b.row]) {
+              return rowPriority[a.row] - rowPriority[b.row];
+            }
+            return a.row % 2 === 0 ? a.col - b.col : b.col - a.col;
+          });
+        },
+        // 反斜线模式：从右上到左下
+        (dots) => {
+          const level = levels[game.difficulty][game.currentLevel];
+          const maxCol = level.dotsPerRow.reduce(function(a, b) { return Math.max(a, b); }, 0) - 1;
+          dots.sort((a, b) => {
+            const diffA = a.col - a.row + maxCol;
+            const diffB = b.col - b.row + maxCol;
+            if (diffA !== diffB) return diffA - diffB;
+            return a.col - b.col;
+          });
+        }
+      ];
+
+      const patterns = game.difficulty === 'hard' ? hardPatterns : easyPatterns;
+      const patternIndex = Math.floor(Math.random() * patterns.length);
+      patterns[patternIndex](game.dots);
+
+      game.dots.forEach((dot, index) => {
+        dot.order = index + 1;
+      });
+    }
+
+    // 更新UI
+    function updateUI() {
+      document.getElementById('levelDisplay').textContent = game.currentLevel + 1;
+      document.getElementById('dotsConnected').textContent = game.currentDotIndex;
+      document.getElementById('dotsRemaining').textContent = game.dots.length - game.currentDotIndex;
+      document.getElementById('levelTitle').textContent = `第 ${game.currentLevel + 1} 关`;
+      document.getElementById('progressText').textContent = game.currentDotIndex === 0 
+        ? '点击第一个黑点开始' 
+        : `已连接 ${game.currentDotIndex} / ${game.dots.length} 个点`;
+      
+      document.getElementById('nextBtn').disabled = false;
+    }
+
+    // 绘制游戏
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 绘制已连接的线
+      if (game.connections.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(game.connections[0].x, game.connections[0].y);
+        for (let i = 1; i < game.connections.length; i++) {
+          ctx.lineTo(game.connections[i].x, game.connections[i].y);
+        }
+        ctx.strokeStyle = '#4CAF50';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+
+      // 绘制三角形障碍
+      game.triangles.forEach(t => {
+        drawTriangle(t.x, t.y, triangleSize, '#FF8C00');
+      });
+
+      // 绘制黑点
+      game.dots.forEach((dot, index) => {
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, dotRadius, 0, Math.PI * 2);
+        
+        if (dot.connected) {
+          ctx.fillStyle = '#4CAF50';
+        } else if (dot.order === 1) {
+          // 起始点(数字1)始终为蓝色
+          ctx.fillStyle = '#2196F3';
+          ctx.shadowColor = '#2196F3';
+          ctx.shadowBlur = 10;
+        } else if (game.showingHint && index === game.currentDotIndex) {
+          // 提示模式下高亮下一个点
+          ctx.fillStyle = '#FFD700';
+          ctx.shadowColor = '#FFD700';
+          ctx.shadowBlur = 15;
+        } else {
+          ctx.fillStyle = '#333';
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (!dot.connected && !game.isCompleted) {
+          ctx.fillStyle = 'white';
+          ctx.font = `bold ${Math.round(dotRadius * 1.1)}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(dot.order, dot.x, dot.y);
+        }
+      });
+    }
+
+    // 绘制三角形
+    function drawTriangle(x, y, size, color) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x - size * 0.866, y + size * 0.5);
+      ctx.lineTo(x + size * 0.866, y + size * 0.5);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    // 处理点击
+    canvas.addEventListener('click', (e) => {
+      if (game.isCompleted) return;
+
+      // 初始化音频（需要用户交互）
+      soundManager.init();
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      const nextDot = game.dots[game.currentDotIndex];
+      if (!nextDot) return;
+
+      const distance = Math.sqrt(Math.pow(x - nextDot.x, 2) + Math.pow(y - nextDot.y, 2));
+      
+      if (distance <= dotRadius + 15) {
+        // 正确点击 - 播放音效
+        soundManager.playClick();
+        
+        nextDot.connected = true;
+        game.connections.push(nextDot);
+        game.currentDotIndex++;
+        game.showingHint = false; // 重置提示状态
+
+        if (game.currentDotIndex >= game.dots.length) {
+          game.isCompleted = true;
+          showCompletion();
+        }
+
+        updateUI();
+        draw();
+      } else {
+        showHint('请按顺序点击正确的黑点！');
+      }
+    });
+
+    // 触摸支持 - 只在点击时触发，允许页面滚动
+    var touchStartTime = 0;
+    var touchStartX = 0;
+    var touchStartY = 0;
+
+    canvas.addEventListener('touchstart', function(e) {
+      touchStartTime = Date.now();
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', function(e) {
+      var touchEndTime = Date.now();
+      var touchEndX = e.changedTouches[0].clientX;
+      var touchEndY = e.changedTouches[0].clientY;
+
+      var timeDiff = touchEndTime - touchStartTime;
+      var distance = Math.sqrt(
+        Math.pow(touchEndX - touchStartX, 2) +
+        Math.pow(touchEndY - touchStartY, 2)
+      );
+
+      // 点击条件：时间<300ms，移动距离<10px
+      if (timeDiff < 300 && distance < 10) {
+        var mouseEvent = new MouseEvent('click', {
+          clientX: touchEndX,
+          clientY: touchEndY
+        });
+        canvas.dispatchEvent(mouseEvent);
+      }
+    }, { passive: true });
+
+    // 显示提示
+    function showHint(text) {
+      const hint = document.getElementById('hint');
+      hint.textContent = text;
+      hint.classList.add('show');
+      setTimeout(() => hint.classList.remove('show'), 2000);
+    }
+
+    // 显示完成弹窗
+    function showCompletion() {
+      // 播放完成音效
+      soundManager.playComplete();
+      
+      // 启动烟花
+      fireworksManager.startShow();
+
+      const modal = document.getElementById('completionModal');
+      document.getElementById('completionText').textContent = 
+        `你成功完成了第 ${game.currentLevel + 1} 关！`;
+      modal.classList.add('show');
+    }
+
+    // 隐藏完成弹窗
+    function hideCompletion() {
+      document.getElementById('completionModal').classList.remove('show');
+      fireworksManager.stopShow();
+    }
+
+    // 重置关卡
+    document.getElementById('resetBtn').addEventListener('click', initLevel);
+
+    // 提示按钮
+    document.getElementById('hintBtn').addEventListener('click', () => {
+      if (game.isCompleted) return;
+      
+      // 初始化音频
+      soundManager.init();
+      
+      // 显示提示
+      game.showingHint = true;
+      draw();
+      
+      // 播放提示音
+      soundManager.playClick();
+      
+      // 3秒后自动隐藏提示
+      setTimeout(() => {
+        game.showingHint = false;
+        draw();
+      }, 2000);
+    });
+
+    // 下一关
+    document.getElementById('nextBtn').addEventListener('click', nextLevel);
+    document.getElementById('modalNextBtn').addEventListener('click', () => {
+      hideCompletion();
+      nextLevel();
+    });
+
+    function nextLevel() {
+      const levelCount = levels[game.difficulty].length;
+      if (game.currentLevel < levelCount - 1) {
+        game.currentLevel++;
+        initLevel();
+      } else {
+        showHint('恭喜！你已完成所有关卡！');
+      }
+    }
+
+    // 难度选择
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        game.difficulty = btn.dataset.difficulty;
+        game.currentLevel = 0;
+        initLevel();
+      });
+    });
+
+    // 移除resize事件，避免移动端地址栏显示/隐藏时触发
+
+    // 初始化游戏 - 确保DOM加载完成
+    function init() {
+      // 延迟一帧确保布局完成
+      requestAnimationFrame(function() {
+        initLevel();
+      });
+    }
+
+    // 兼容各种加载时机
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+<style>
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    </style>
+    <img src="/public/qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  </body>
+</html>

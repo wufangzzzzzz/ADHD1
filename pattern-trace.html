@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>图形复刻</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:70px 15px 30px}
+.header{background:#fff;border-radius:12px;padding:15px;margin-bottom:15px;text-align:center}
+.header h1{font-size:18px;margin-bottom:8px}
+.header p{font-size:13px;color:#666}
+.btn-row{display:flex;gap:10px;justify-content:center;margin-bottom:15px;flex-wrap:wrap}
+button{padding:12px 24px;border:none;border-radius:25px;font-size:14px;font-weight:600;cursor:pointer}
+.reset-btn{background:linear-gradient(#4CAF50,#66BB6A);color:#fff}
+.clear-btn{background:linear-gradient(#f44336,#e57373);color:#fff}
+.undo-btn{background:linear-gradient(#FF9800,#FFB74D);color:#fff}
+.gallery{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.image-card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 2px 15px rgba(0,0,0,0.15);text-align:center;min-width:300px}
+.image-card h3{font-size:14px;color:#555;margin-bottom:10px}
+.image-wrapper{background:#fafafa;border-radius:10px;border:2px solid #eee;padding:15px;position:relative}
+.image-wrapper svg{display:block;width:100%;height:auto;cursor:default}
+.can-draw{cursor:crosshair !important}
+.can-draw svg{cursor:crosshair !important}
+.task-desc{font-size:11px;color:#888;margin-top:8px}
+.back-btn{position:fixed;top:15px;left:15px;width:44px;height:44px;background:rgba(255,255,255,0.95);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#667eea;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:100;text-decoration:none}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:1000}
+.modal.show{display:flex}
+.modal-content{background:#fff;padding:30px;border-radius:15px;text-align:center}
+.modal-title{font-size:24px;color:#4CAF50;margin-bottom:10px}
+.modal-text{font-size:14px;color:#666;margin-bottom:20px}
+.modal-btn{padding:10px 30px;background:linear-gradient(#4CAF50,#66BB6A);color:#fff;border:none;border-radius:20px;font-size:14px;cursor:pointer}
+</style>
+</head>
+<body>
+<a href="index.html" class="back-btn">&#8592;</a>
+<div class="header">
+<h1>图形复刻</h1>
+<p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+<p>复刻左侧的连线图案到右侧<br/>点击相邻的点进行连线</p>
+</div>
+<div class="btn-row">
+<button class="reset-btn" onclick="initGame()">重新开始</button>
+<button class="undo-btn" onclick="undoLine()">撤销一步</button>
+<button class="clear-btn" onclick="clearUserLines()">清空连线</button>
+</div>
+<div class="gallery">
+<div class="image-card">
+<h3>示例图案</h3>
+<div class="image-wrapper" id="svg1"></div>
+<p class="task-desc" id="desc1"></p>
+</div>
+<div class="image-card">
+<h3>你的作品</h3>
+<div class="image-wrapper can-draw" id="drawArea">
+<svg id="svg2" width="480" height="360" viewBox="0 0 480 360"></svg>
+</div>
+<p class="task-desc" id="desc2">已连接：0条</p>
+</div>
+</div>
+<div class="modal" id="successModal">
+<div class="modal-content">
+<div class="modal-title">恭喜过关！</div>
+<div class="modal-text" id="modalText">你成功复刻了图案！</div>
+<button class="modal-btn" onclick="closeModal()">确定</button>
+</div>
+</div>
+<script>
+var audioCtx=null;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();}
+function playClick(){initAudio();var o=audioCtx.createOscillator();var g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=600;o.type='sine';g.gain.setValueAtTime(0.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.1);o.start();o.stop(audioCtx.currentTime+0.1);}
+function playSuccess(){initAudio();var notes=[523,659,784,1047];notes.forEach(function(freq,idx){setTimeout(function(){var o=audioCtx.createOscillator();var g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(0.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.3);o.start();o.stop(audioCtx.currentTime+0.3);},idx*150);});}
+function playError(){initAudio();var o=audioCtx.createOscillator();var g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=200;o.type='square';g.gain.setValueAtTime(0.2,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.15);o.start();o.stop(audioCtx.currentTime+0.15);}
+function playUndo(){initAudio();var o=audioCtx.createOscillator();var g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=400;o.type='sine';g.gain.setValueAtTime(0.2,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.08);o.start();o.stop(audioCtx.currentTime+0.08);}
+var points=[{x:120,y:90,id:1},{x:240,y:90,id:2},{x:360,y:90,id:3},{x:60,y:180,id:4},{x:180,y:180,id:5},{x:300,y:180,id:6},{x:420,y:180,id:7},{x:120,y:270,id:8},{x:240,y:270,id:9},{x:360,y:270,id:10}];
+var targetLines=[],userLines=[],currentPoint=null;
+function isAdjacent(p1,p2){var dx=Math.abs(p1.x-p2.x),dy=Math.abs(p1.y-p2.y);return(dx===120&&dy===0)||(dx===60&&dy===90)||(dx===120&&dy===90);}
+function lineExists(lines,from,to){for(var i=0;i<lines.length;i++){if((lines[i].from===from&&lines[i].to===to)||(lines[i].from===to&&lines[i].to===from))return true;}return false;}
+function getPointIndex(e){var svg=document.getElementById('svg2');var rect=svg.getBoundingClientRect();var x=(e.clientX-rect.left)*480/rect.width;var y=(e.clientY-rect.top)*360/rect.height;for(var i=0;i<points.length;i++){var dx=points[i].x-x,dy=points[i].y-y;if(Math.sqrt(dx*dx+dy*dy)<40)return i;}return-1;}
+function generateTargetLines(){var skip=[];while(skip.length<2){var idx=Math.floor(Math.random()*10);var ok=true;for(var i=0;i<skip.length;i++){if(isAdjacent(points[idx],points[skip[i]])){ok=false;break;}}if(ok&&skip.indexOf(idx)===-1)skip.push(idx);}var active=[];for(var i=0;i<10;i++){if(skip.indexOf(i)===-1)active.push(i);}var pairs=[];for(var i=0;i<active.length;i++){for(var j=i+1;j<active.length;j++){if(isAdjacent(points[active[i]],points[active[j]])){pairs.push({from:active[i],to:active[j]});}}}for(var i=pairs.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=pairs[i];pairs[i]=pairs[j];pairs[j]=t;}targetLines=[];var parent={};for(var i=0;i<active.length;i++)parent[active[i]]=active[i];function find(x){if(parent[x]!==x)parent[x]=find(parent[x]);return parent[x];}function union(x,y){var px=find(x),py=find(y);if(px!==py){parent[px]=py;return true;}return false;}for(var i=0;i<pairs.length&&targetLines.length<active.length-1;i++){if(union(pairs[i].from,pairs[i].to))targetLines.push(pairs[i]);}for(var i=0;i<pairs.length;i++){if(!lineExists(targetLines,pairs[i].from,pairs[i].to)&&Math.random()<0.4){targetLines.push(pairs[i]);}}}
+function renderTarget(){var svg=document.getElementById('svg1');var s='<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360"><rect width="480" height="360" fill="#fafafa" rx="8"/>';for(var i=0;i<targetLines.length;i++){var p1=points[targetLines[i].from],p2=points[targetLines[i].to];s+='<line x1="'+p1.x+'" y1="'+p1.y+'" x2="'+p2.x+'" y2="'+p2.y+'" stroke="#4CAF50" stroke-width="4" stroke-linecap="round"/>';}for(var i=0;i<10;i++)s+='<circle cx="'+points[i].x+'" cy="'+points[i].y+'" r="10" fill="#333"/>';s+='</svg>';svg.innerHTML=s;document.getElementById('desc1').textContent='共'+targetLines.length+'条连线';}
+function renderUser(){var svg=document.getElementById('svg2');var s='<rect width="480" height="360" fill="#fafafa" rx="8"/>';for(var i=0;i<userLines.length;i++){var p1=points[userLines[i].from],p2=points[userLines[i].to];s+='<line x1="'+p1.x+'" y1="'+p1.y+'" x2="'+p2.x+'" y2="'+p2.y+'" stroke="#FF9800" stroke-width="4" stroke-linecap="round"/>';}for(var i=0;i<10;i++){var color=currentPoint===i?"#FF9800":"#333";s+='<circle cx="'+points[i].x+'" cy="'+points[i].y+'" r="10" fill="'+color+'"/>';}svg.innerHTML=s;document.getElementById('desc2').textContent='已连接：'+userLines.length+'条 / '+targetLines.length+'条';}
+function checkWin(){if(userLines.length!==targetLines.length)return false;for(var i=0;i<targetLines.length;i++){if(!lineExists(userLines,targetLines[i].from,targetLines[i].to))return false;}return true;}
+function undoLine(){if(userLines.length>0){userLines.pop();playUndo();renderUser();}}
+function handleClick(e){var idx=getPointIndex(e);if(idx===-1)return;if(currentPoint===null){currentPoint=idx;playClick();renderUser();return;}if(idx===currentPoint){currentPoint=null;playClick();renderUser();return;}if(isAdjacent(points[currentPoint],points[idx])){if(!lineExists(userLines,currentPoint,idx)){userLines.push({from:currentPoint,to:idx});currentPoint=idx;playClick();renderUser();if(checkWin()){playSuccess();document.getElementById('successModal').classList.add('show');}}else{currentPoint=idx;playClick();renderUser();}}else{currentPoint=idx;playClick();renderUser();}}
+function clearUserLines(){userLines=[];currentPoint=null;renderUser();}
+function initGame(){userLines=[];currentPoint=null;generateTargetLines();renderTarget();renderUser();}
+function closeModal(){document.getElementById('successModal').classList.remove('show');initGame();}
+document.getElementById('drawArea').addEventListener('click',handleClick);
+initGame();
+</script>
+<style>
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    </style>
+    <img src="/public/qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  </body>
+</html>

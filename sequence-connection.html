@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>读写障碍注意力训练 - 顺序连线</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 50%, #E0F7FF 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 10px;
+        position: relative;
+      }
+
+      /* 顶部说明区域 */
+      .header {
+        width: 100%;
+        text-align: center;
+        padding: 10px 5px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 10;
+      }
+
+      .header h1 {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      .header p {
+        font-size: 12px;
+        color: #666;
+      }
+
+      /* 信息栏 - 计时器和积分 */
+      .info-bar {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        padding: 8px 15px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 10;
+      }
+
+      .info-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+        color: #333;
+        font-weight: 600;
+      }
+
+      .info-icon {
+        font-size: 18px;
+      }
+
+      .timer-value {
+        color: #FF6B6B;
+        font-size: 18px;
+        min-width: 60px;
+        text-align: center;
+      }
+
+      .score-value {
+        color: #4CAF50;
+        font-size: 18px;
+        min-width: 40px;
+        text-align: center;
+      }
+
+      /* 按钮组 */
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .game-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+
+      .game-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+
+      .game-btn:active {
+        transform: translateY(0);
+      }
+
+      /* 音效开关按钮 */
+      .sound-toggle {
+        padding: 8px 16px;
+        font-size: 14px;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+
+      .sound-toggle:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+      }
+
+      .sound-toggle.muted {
+        background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
+        box-shadow: 0 4px 15px rgba(158, 158, 158, 0.4);
+      }
+
+      .sound-toggle.muted:hover {
+        box-shadow: 0 6px 20px rgba(158, 158, 158, 0.6);
+      }
+
+      /* 难度按钮 */
+      .difficulty-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        opacity: 0.5;
+      }
+
+      .difficulty-btn:hover {
+        transform: translateY(-2px);
+        opacity: 0.7;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+
+      .difficulty-btn:active {
+        transform: translateY(0);
+      }
+
+      .difficulty-btn.active {
+        opacity: 1;
+      }
+
+      .difficulty-btn.difficulty-hard {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+      }
+
+      .difficulty-btn.difficulty-hard:hover {
+        opacity: 0.7;
+        box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+      }
+
+      /* 顺序提示区域 */
+      .sequence-area {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        z-index: 10;
+      }
+
+      .sequence-item {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        background: #FFFFFF;
+        border-radius: 5px;
+        padding: 2px;
+      }
+
+      .sequence-item.connected {
+        opacity: 1;
+      }
+
+      .sequence-item.connected::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 40px;
+        color: #4CAF50;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        z-index: 10;
+      }
+
+      .arrow {
+        font-size: 18px;
+        color: #333;
+        margin: 0 2px;
+      }
+
+      /* Canvas容器 */
+      .canvas-container {
+        flex: 1;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+        touch-action: none;
+      }
+
+      /* 重新开始按钮 */
+      .restart-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 10px 20px;
+        font-size: 13px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .restart-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+
+      .restart-btn:active {
+        transform: translateY(0);
+      }
+
+      /* 成功弹窗 */
+      .success-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .success-modal.show {
+        display: flex;
+      }
+
+      .success-content {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        animation: popIn 0.5s ease;
+        max-width: 80%;
+      }
+
+      @keyframes popIn {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      .success-content h2 {
+        color: #4CAF50;
+        margin-bottom: 10px;
+        font-size: 24px;
+      }
+
+      .success-content p {
+        color: #666;
+        margin-bottom: 20px;
+        font-size: 16px;
+      }
+
+      .success-btn {
+        padding: 12px 30px;
+        font-size: 16px;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+      }
+
+      /* 响应式设计 */
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 14px;
+        }
+
+        .header p {
+          font-size: 11px;
+        }
+
+        .sequence-item {
+          width: 30px;
+          height: 30px;
+        }
+
+        .arrow {
+          font-size: 14px;
+        }
+
+        .restart-btn {
+          bottom: 10px;
+          right: 10px;
+          padding: 10px 20px;
+          font-size: 13px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .sequence-area {
+          gap: 3px;
+          padding: 8px;
+        }
+
+        .sequence-item {
+          width: 25px;
+          height: 25px;
+        }
+
+        .arrow {
+          font-size: 12px;
+          margin: 0 1px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>顺序连线</h1>
+      <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+      <p>按住鼠标/手指，按照上方顺序依次连接图形</p>
+    </div>
+
+    <!-- 信息栏 - 计时器和积分 -->
+    <div class="info-bar">
+      <div class="info-item">
+        <span class="info-icon">⏱️</span>
+        <span class="timer-value" id="timer">00:00</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon">🏆</span>
+        <span class="score-value" id="score">0</span>
+      </div>
+    </div>
+
+    <!-- 按钮组 -->
+    <div class="button-group">
+      <button class="game-btn" onclick="game.restart()">🔄 重新开始</button>
+      <button class="game-btn difficulty-btn difficulty-normal active" id="difficultyNormal" onclick="game.setDifficulty('normal')">🌟 简单</button>
+      <button class="game-btn difficulty-btn difficulty-hard" id="difficultyHard" onclick="game.setDifficulty('hard')">⭐ 困难</button>
+      <button class="sound-toggle" id="soundToggle" onclick="game.toggleSound()">🔊 音效开</button>
+    </div>
+
+    <div class="sequence-area" id="sequenceArea">
+      <!-- 动态生成顺序提示 -->
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="success-modal" id="successModal">
+      <div class="success-content">
+        <h2>🎉 恭喜完成！</h2>
+        <p>用时：<span id="finalTime">00:00</span> | 得分：<span id="finalScore">0</span></p>
+        <button class="success-btn" onclick="game.restart()">再玩一次</button>
+      </div>
+    </div>
+
+    <script>
+      (function() {
+        // 图形定义
+        var SHAPES = [
+          { id: 1, type: 'circle', color: '#FF0000', name: '红色圆形' },
+          { id: 2, type: 'triangle-up', color: '#000000', name: '黑色正三角形' },
+          { id: 3, type: 'cross', color: '#87CEEB', name: '浅蓝色十字形' },
+          { id: 4, type: 'pentagon', color: '#FFD700', name: '黄色正五边形' },
+          { id: 5, type: 'triangle-down', color: '#4CAF50', name: '绿色倒三角形' },
+          { id: 6, type: 'diamond', color: '#9C27B0', name: '紫色菱形' },
+          { id: 7, type: 'trapezoid', color: '#1976D2', name: '深蓝色直角梯形' },
+          { id: 8, type: 'hexagon', color: '#FFB6C1', name: '浅粉色正六边形' },
+          { id: 9, type: 'triangle-right', color: '#FF4500', name: '红色直角三角形' },
+          { id: 10, type: 'star', color: '#FF8C00', name: '橙色五角星' },
+          { id: 11, type: 'moon', color: '#20B2AA', name: '青色月牙形' },
+          { id: 12, type: 'heart', color: '#DC143C', name: '深红色心形' }
+        ];
+
+        var SequenceConnection = function() {
+          this.canvas = document.getElementById('gameCanvas');
+          this.ctx = this.canvas.getContext('2d');
+          this.sequenceArea = document.getElementById('sequenceArea');
+          this.successModal = document.getElementById('successModal');
+          this.timerDisplay = document.getElementById('timer');
+          this.scoreDisplay = document.getElementById('score');
+          this.finalTimeDisplay = document.getElementById('finalTime');
+          this.finalScoreDisplay = document.getElementById('finalScore');
+          this.soundToggle = document.getElementById('soundToggle');
+
+          this.shapes = [];
+          this.sequence = []; // 当前连接顺序（随机）
+          this.currentSequenceIndex = 0;
+          this.connectedShapes = [];
+          this.isDragging = false;
+          this.currentPos = { x: 0, y: 0 };
+          this.startPos = null;
+
+          this.canvasOffset = { x: 0, y: 0 };
+          this.scale = 1;
+
+          // 计时器和积分
+          this.timer = 0;
+          this.timerInterval = null;
+          this.score = 0;
+          this.isPlaying = false;
+
+          // 音频上下文
+          this.audioContext = null;
+          this.soundEnabled = true;
+
+          // 难度设置
+          this.difficulty = 'normal'; // 'normal' = 9种图形, 'hard' = 12种图形
+
+          this.init();
+        };
+
+        // 初始化音频上下文
+        SequenceConnection.prototype.initAudio = function() {
+          if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          // 恢复音频上下文（某些浏览器需要用户交互后才能播放）
+          if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+          }
+        };
+
+        // 播放连线音效
+        SequenceConnection.prototype.playConnectSound = function() {
+          if (!this.soundEnabled || !this.audioContext) return;
+
+          try {
+            var ctx = this.audioContext;
+            var now = ctx.currentTime;
+
+            // 使用三角波，声音更柔和
+            var oscillator = ctx.createOscillator();
+            var gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.type = 'triangle';
+
+            // 使用较低的频率，不那么尖锐
+            oscillator.frequency.setValueAtTime(600, now);
+            oscillator.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+
+            // 柔和的音量包络
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+            oscillator.start(now);
+            oscillator.stop(now + 0.15);
+          } catch (e) {
+            console.error('Error playing connect sound:', e);
+          }
+        };
+
+        // 播放开始音效（点击第一个图形时）
+        SequenceConnection.prototype.playStartSound = function() {
+          // 初始化音频上下文
+          this.initAudio();
+
+          if (!this.soundEnabled || !this.audioContext) return;
+
+          try {
+            var ctx = this.audioContext;
+            var now = ctx.currentTime;
+
+            // 使用三角波，声音更柔和
+            var oscillator = ctx.createOscillator();
+            var gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.type = 'triangle';
+
+            // 较高的频率，表示开始
+            oscillator.frequency.setValueAtTime(523.25, now); // C5
+            oscillator.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+
+            // 柔和的音量包络
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.03);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+          } catch (e) {
+            console.error('Error playing start sound:', e);
+          }
+        };
+
+        // 播放通关音效
+        SequenceConnection.prototype.playWinSound = function() {
+          if (!this.soundEnabled || !this.audioContext) return;
+
+          try {
+            var ctx = this.audioContext;
+            var now = ctx.currentTime;
+
+            // 使用较低的音高，不那么尖锐
+            var notes = [392.00, 493.88, 587.33, 783.99, 987.77]; // G4, B4, D5, G5, B5
+            var duration = 0.15;
+
+            notes.forEach(function(freq, index) {
+              var oscillator = ctx.createOscillator();
+              var gainNode = ctx.createGain();
+
+              oscillator.connect(gainNode);
+              gainNode.connect(ctx.destination);
+
+              // 使用三角波，更柔和
+              oscillator.type = 'triangle';
+              oscillator.frequency.setValueAtTime(freq, now + index * duration);
+
+              gainNode.gain.setValueAtTime(0, now + index * duration);
+              gainNode.gain.linearRampToValueAtTime(0.2, now + index * duration + 0.02);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, now + index * duration + duration);
+
+              oscillator.start(now + index * duration);
+              oscillator.stop(now + index * duration + duration);
+            });
+          } catch (e) {
+            console.error('Error playing win sound:', e);
+          }
+        };
+
+        // 切换音效
+        SequenceConnection.prototype.toggleSound = function() {
+          this.soundEnabled = !this.soundEnabled;
+          if (this.soundEnabled) {
+            this.soundToggle.textContent = '🔊 音效开';
+            this.soundToggle.classList.remove('muted');
+          } else {
+            this.soundToggle.textContent = '🔇 音效关';
+            this.soundToggle.classList.add('muted');
+          }
+        };
+
+        // 设置难度
+        SequenceConnection.prototype.setDifficulty = function(difficulty) {
+          this.difficulty = difficulty;
+
+          var normalBtn = document.getElementById('difficultyNormal');
+          var hardBtn = document.getElementById('difficultyHard');
+
+          if (difficulty === 'hard') {
+            normalBtn.classList.remove('active');
+            hardBtn.classList.add('active');
+          } else {
+            normalBtn.classList.add('active');
+            hardBtn.classList.remove('active');
+          }
+
+          // 切换难度后重新开始游戏
+          this.restart();
+        };
+
+        SequenceConnection.prototype.init = function() {
+          // 根据难度选择使用的图形数量
+          var shapeCount = this.difficulty === 'hard' ? 12 : 9;
+          this.sequence = SHAPES.slice(0, shapeCount);
+          this.shuffleArray(this.sequence);
+
+          this.resizeCanvas();
+          this.setupEventListeners();
+          this.restart();
+
+          window.addEventListener('resize', this.resizeCanvas.bind(this));
+        };
+
+        SequenceConnection.prototype.resizeCanvas = function() {
+          var container = this.canvas.parentElement;
+          var maxWidth = container.clientWidth - 20;
+          var maxHeight = container.clientHeight - 20;
+
+          var canvasWidth = Math.min(maxWidth, 800);
+          var canvasHeight = Math.min(maxHeight, 600);
+
+          this.canvas.width = canvasWidth;
+          this.canvas.height = canvasHeight;
+
+          this.canvas.style.width = canvasWidth + 'px';
+          this.canvas.style.height = canvasHeight + 'px';
+
+          this.canvasOffset = this.getCanvasOffset();
+          this.scale = 1;
+
+          this.generateShapes();
+          this.draw();
+        };
+
+        SequenceConnection.prototype.getCanvasOffset = function() {
+          var rect = this.canvas.getBoundingClientRect();
+          return {
+            x: rect.left,
+            y: rect.top
+          };
+        };
+
+        SequenceConnection.prototype.setupEventListeners = function() {
+          var self = this;
+
+          // 鼠标事件
+          this.canvas.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            self.handleStart(e.clientX, e.clientY);
+          });
+
+          this.canvas.addEventListener('mousemove', function(e) {
+            e.preventDefault();
+            self.handleMove(e.clientX, e.clientY);
+          });
+
+          this.canvas.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            self.handleEnd(e.clientX, e.clientY);
+          });
+
+          this.canvas.addEventListener('mouseleave', function(e) {
+            if (self.isDragging) {
+              self.handleEnd(e.clientX, e.clientY);
+            }
+          });
+
+          // 触摸事件
+          this.canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            var touch = e.touches[0];
+            self.handleStart(touch.clientX, touch.clientY);
+          });
+
+          this.canvas.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            var touch = e.touches[0];
+            self.handleMove(touch.clientX, touch.clientY);
+          });
+
+          this.canvas.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            var touch = e.changedTouches[0];
+            self.handleEnd(touch.clientX, touch.clientY);
+          });
+
+          this.canvas.addEventListener('touchcancel', function(e) {
+            if (self.isDragging) {
+              var touch = e.changedTouches[0];
+              self.handleEnd(touch.clientX, touch.clientY);
+            }
+          });
+        };
+
+        SequenceConnection.prototype.handleStart = function(clientX, clientY) {
+          // 初始化音频（需要在用户交互后才能创建）
+          this.initAudio();
+
+          var pos = this.getCanvasPosition(clientX, clientY);
+          var shape = this.findShapeAt(pos.x, pos.y);
+
+          if (shape) {
+            // 第一次连接：必须点击第一个图形
+            if (this.currentSequenceIndex === 0) {
+              var firstShape = this.sequence[0];
+              if (shape.id === firstShape.id) {
+                // 开始计时
+                if (!this.isPlaying) {
+                  this.startTimer();
+                }
+                this.isDragging = true;
+                this.startPos = { x: shape.x, y: shape.y };
+                this.currentPos = pos;
+
+                // 播放开始音效
+                this.playStartSound();
+
+                // 标记已开始，立即更新UI显示第一个图形的对勾
+                this.isPlaying = true;
+                this.updateSequenceUI();
+
+                this.draw();
+              }
+            } else {
+              // 后续连接：必须从上一个已连接的图形开始拖动
+              var lastConnected = this.connectedShapes[this.connectedShapes.length - 1];
+              if (lastConnected && shape.id === lastConnected.to.id) {
+                this.isDragging = true;
+                this.startPos = { x: shape.x, y: shape.y };
+                this.currentPos = pos;
+                this.draw();
+              }
+            }
+          }
+        };
+
+        SequenceConnection.prototype.handleMove = function(clientX, clientY) {
+          if (!this.isDragging) return;
+
+          this.currentPos = this.getCanvasPosition(clientX, clientY);
+          this.draw();
+        };
+
+        SequenceConnection.prototype.handleEnd = function(clientX, clientY) {
+          if (!this.isDragging) return;
+
+          var pos = this.getCanvasPosition(clientX, clientY);
+          var shape = this.findShapeAt(pos.x, pos.y);
+
+          // 目标图形是序列中的下一个
+          var nextIndex = this.currentSequenceIndex + 1;
+          var nextShape = nextIndex < this.sequence.length ? this.sequence[nextIndex] : null;
+
+          if (shape && nextShape && shape.id === nextShape.id) {
+            // 找到起点图形（在shapes数组中查找）
+            var fromId = this.sequence[this.currentSequenceIndex].id;
+            var fromShape = null;
+            for (var i = 0; i < this.shapes.length; i++) {
+              if (this.shapes[i].id === fromId) {
+                fromShape = this.shapes[i];
+                break;
+              }
+            }
+
+            this.connectedShapes.push({
+              from: fromShape,
+              to: shape,
+              lineIndex: this.currentSequenceIndex
+            });
+
+            // 播放连线音效
+            this.playConnectSound();
+
+            // 增加积分
+            this.score += 10;
+            this.updateScore();
+
+            this.currentSequenceIndex++;
+
+            // 更新UI
+            this.updateSequenceUI();
+
+            // 检查是否完成（所有图形都连接了，即已连接的线条数等于图形数-1）
+            if (this.currentSequenceIndex >= this.sequence.length - 1) {
+              this.gameComplete();
+            }
+          }
+
+          this.isDragging = false;
+          this.startPos = null;
+          this.currentPos = { x: 0, y: 0 };
+          this.draw();
+        };
+
+        SequenceConnection.prototype.getCanvasPosition = function(clientX, clientY) {
+          this.canvasOffset = this.getCanvasOffset();
+          return {
+            x: (clientX - this.canvasOffset.x) * this.scale,
+            y: (clientY - this.canvasOffset.y) * this.scale
+          };
+        };
+
+        SequenceConnection.prototype.findShapeAt = function(x, y) {
+          for (var i = 0; i < this.shapes.length; i++) {
+            var shape = this.shapes[i];
+            var dx = x - shape.x;
+            var dy = y - shape.y;
+            var distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= shape.size) {
+              return shape;
+            }
+          }
+          return null;
+        };
+
+        SequenceConnection.prototype.generateShapes = function() {
+          this.shapes = [];
+          var padding = 50;
+          var whiteAreaX = padding - 10;
+          var whiteAreaY = 70;
+          var whiteAreaWidth = this.canvas.width - padding * 2 + 20;
+          var whiteAreaHeight = this.canvas.height - padding * 2 - 100 + 20;
+
+          // 根据难度确定图形数量和布局
+          var shapeCount = this.difficulty === 'hard' ? 12 : 9;
+          var cols = 3;
+          var rows = this.difficulty === 'hard' ? 4 : 3;
+
+          // 缩小图形，确保不超出白色区域
+          var shapeSize = Math.min(whiteAreaWidth / cols, whiteAreaHeight / rows, 25);
+          shapeSize = Math.max(shapeSize, 18);
+
+          // 创建所有图形的副本（只使用当前难度需要的数量）
+          var allShapes = SHAPES.slice(0, shapeCount).map(function(shape) {
+            return {
+              id: shape.id,
+              type: shape.type,
+              color: shape.color,
+              x: 0,
+              y: 0,
+              size: shapeSize
+            };
+          });
+
+          // 随机打乱位置
+          this.shuffleArray(allShapes);
+
+          // 计算位置网格 - 根据难度动态调整
+          var cellWidth = whiteAreaWidth / cols;
+          var cellHeight = whiteAreaHeight / rows;
+
+          for (var i = 0; i < allShapes.length; i++) {
+            var col = i % cols;
+            var row = Math.floor(i / cols);
+
+            // 计算格子的中心点
+            var centerX = whiteAreaX + col * cellWidth + cellWidth / 2;
+            var centerY = whiteAreaY + row * cellHeight + cellHeight / 2;
+
+            // 计算安全的随机偏移范围（考虑图形大小，确保不超出格子）
+            var maxOffsetX = Math.min(cellWidth / 2 - shapeSize, cellWidth * 0.15);
+            var maxOffsetY = Math.min(cellHeight / 2 - shapeSize, cellHeight * 0.15);
+
+            var offsetX = (Math.random() - 0.5) * maxOffsetX * 2;
+            var offsetY = (Math.random() - 0.5) * maxOffsetY * 2;
+
+            allShapes[i].x = centerX + offsetX;
+            allShapes[i].y = centerY + offsetY;
+          }
+
+          this.shapes = allShapes;
+        };
+
+        SequenceConnection.prototype.shuffleArray = function(array) {
+          for (var i = array.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+          }
+        };
+
+        SequenceConnection.prototype.draw = function() {
+          var ctx = this.ctx;
+          ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // 绘制绿色虚线框（操作区域）
+          this.drawOperationArea();
+
+          // 绘制已连接的线条
+          this.drawConnectedLines();
+
+          // 绘制正在拖动的线条
+          if (this.isDragging && this.startPos) {
+            this.drawDraggingLine();
+          }
+
+          // 绘制图形
+          for (var i = 0; i < this.shapes.length; i++) {
+            this.drawShape(this.shapes[i]);
+          }
+        };
+
+        SequenceConnection.prototype.drawOperationArea = function() {
+          var ctx = this.ctx;
+          var padding = 50;
+          var width = this.canvas.width - padding * 2;
+          var height = this.canvas.height - padding * 2 - 100;
+
+          ctx.save();
+
+          // 绘制白色背景
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(padding - 10, 70, width + 20, height + 20);
+
+          // 绘制绿色虚线框
+          ctx.strokeStyle = '#4CAF50';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 5]);
+          ctx.strokeRect(padding - 10, 70, width + 20, height + 20);
+
+          ctx.restore();
+        };
+
+        SequenceConnection.prototype.drawConnectedLines = function() {
+          var ctx = this.ctx;
+
+          for (var i = 0; i < this.connectedShapes.length; i++) {
+            var connection = this.connectedShapes[i];
+            var from = connection.from;
+            var to = connection.to;
+
+            ctx.save();
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+
+            // 绘制连接点
+            ctx.fillStyle = '#666';
+            ctx.beginPath();
+            ctx.arc(from.x, from.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(to.x, to.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        };
+
+        SequenceConnection.prototype.drawDraggingLine = function() {
+          var ctx = this.ctx;
+          var from = this.connectedShapes.length > 0 ?
+            this.connectedShapes[this.connectedShapes.length - 1].to :
+            this.startPos;
+
+          ctx.save();
+          ctx.strokeStyle = '#999';
+          ctx.lineWidth = 4;
+          ctx.lineCap = 'round';
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(this.currentPos.x, this.currentPos.y);
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        SequenceConnection.prototype.drawShape = function(shape) {
+          var ctx = this.ctx;
+          var x = shape.x;
+          var y = shape.y;
+          var size = shape.size;
+
+          ctx.save();
+          ctx.fillStyle = shape.color;
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 2;
+
+          // 检查是否已连接
+          var isConnected = this.isConnected(shape.id);
+          if (isConnected) {
+            ctx.globalAlpha = 0.7;
+          }
+
+          switch (shape.type) {
+            case 'circle':
+              this.drawCircle(ctx, x, y, size);
+              break;
+            case 'triangle-up':
+              this.drawTriangleUp(ctx, x, y, size);
+              break;
+            case 'triangle-down':
+              this.drawTriangleDown(ctx, x, y, size);
+              break;
+            case 'triangle-right':
+              this.drawTriangleRight(ctx, x, y, size);
+              break;
+            case 'cross':
+              this.drawCross(ctx, x, y, size);
+              break;
+            case 'pentagon':
+              this.drawPolygon(ctx, x, y, size, 5);
+              break;
+            case 'hexagon':
+              this.drawPolygon(ctx, x, y, size, 6);
+              break;
+            case 'diamond':
+              this.drawDiamond(ctx, x, y, size);
+              break;
+            case 'trapezoid':
+              this.drawTrapezoid(ctx, x, y, size);
+              break;
+            case 'star':
+              this.drawStar(ctx, x, y, size);
+              break;
+            case 'moon':
+              this.drawMoon(ctx, x, y, size);
+              break;
+            case 'heart':
+              this.drawHeart(ctx, x, y, size);
+              break;
+          }
+
+          ctx.restore();
+        };
+
+        SequenceConnection.prototype.drawCircle = function(ctx, x, y, size) {
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.drawTriangleUp = function(ctx, x, y, size) {
+          ctx.beginPath();
+          ctx.moveTo(x, y - size);
+          ctx.lineTo(x + size * 0.866, y + size * 0.5);
+          ctx.lineTo(x - size * 0.866, y + size * 0.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.drawTriangleDown = function(ctx, x, y, size) {
+          ctx.beginPath();
+          ctx.moveTo(x, y + size);
+          ctx.lineTo(x + size * 0.866, y - size * 0.5);
+          ctx.lineTo(x - size * 0.866, y - size * 0.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.drawTriangleRight = function(ctx, x, y, size) {
+          ctx.beginPath();
+          ctx.moveTo(x - size * 0.5, y - size * 0.7);
+          ctx.lineTo(x + size * 0.7, y);
+          ctx.lineTo(x - size * 0.5, y + size * 0.7);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.drawCross = function(ctx, x, y, size) {
+          var thickness = size * 0.3;
+
+          ctx.beginPath();
+          ctx.moveTo(x - thickness, y - size);
+          ctx.lineTo(x + thickness, y - size);
+          ctx.lineTo(x + thickness, y - thickness);
+          ctx.lineTo(x + size, y - thickness);
+          ctx.lineTo(x + size, y + thickness);
+          ctx.lineTo(x + thickness, y + thickness);
+          ctx.lineTo(x + thickness, y + size);
+          ctx.lineTo(x - thickness, y + size);
+          ctx.lineTo(x - thickness, y + thickness);
+          ctx.lineTo(x - size, y + thickness);
+          ctx.lineTo(x - size, y - thickness);
+          ctx.lineTo(x - thickness, y - thickness);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.drawPolygon = function(ctx, x, y, size, sides) {
+          ctx.beginPath();
+          var angleStep = (Math.PI * 2) / sides;
+          var startAngle = -Math.PI / 2;
+
+          for (var i = 0; i < sides; i++) {
+            var angle = startAngle + i * angleStep;
+            var px = x + size * Math.cos(angle);
+            var py = y + size * Math.sin(angle);
+
+            if (i === 0) {
+              ctx.moveTo(px, py);
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.drawDiamond = function(ctx, x, y, size) {
+          ctx.beginPath();
+          ctx.moveTo(x, y - size);
+          ctx.lineTo(x + size * 0.7, y);
+          ctx.lineTo(x, y + size);
+          ctx.lineTo(x - size * 0.7, y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.drawTrapezoid = function(ctx, x, y, size) {
+          var topWidth = size * 0.8;
+          var bottomWidth = size * 1.4;
+          var height = size * 0.9;
+
+          ctx.beginPath();
+          ctx.moveTo(x - topWidth / 2, y - height / 2);
+          ctx.lineTo(x + topWidth / 2, y - height / 2);
+          ctx.lineTo(x + bottomWidth / 2, y + height / 2);
+          ctx.lineTo(x - bottomWidth / 2, y + height / 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        // 绘制五角星
+        SequenceConnection.prototype.drawStar = function(ctx, x, y, size) {
+          var spikes = 5;
+          var outerRadius = size;
+          var innerRadius = size * 0.4;
+          var rot = Math.PI / 2 * 3;
+          var step = Math.PI / spikes;
+
+          ctx.beginPath();
+          ctx.moveTo(x, y - outerRadius);
+
+          for (var i = 0; i < spikes; i++) {
+            ctx.lineTo(x + Math.cos(rot) * outerRadius, y + Math.sin(rot) * outerRadius);
+            rot += step;
+            ctx.lineTo(x + Math.cos(rot) * innerRadius, y + Math.sin(rot) * innerRadius);
+            rot += step;
+          }
+
+          ctx.lineTo(x, y - outerRadius);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        // 绘制月牙形
+        SequenceConnection.prototype.drawMoon = function(ctx, x, y, size) {
+          ctx.beginPath();
+          // 外圆（向右）
+          ctx.arc(x, y, size, 0.7 * Math.PI, 1.3 * Math.PI, false);
+          // 内圆（向左，形成月牙）
+          ctx.arc(x - size * 0.6, y, size * 0.8, 1.3 * Math.PI, 0.7 * Math.PI, true);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        // 绘制心形
+        SequenceConnection.prototype.drawHeart = function(ctx, x, y, size) {
+          var heartSize = size * 1.2;
+          ctx.beginPath();
+          ctx.moveTo(x, y + heartSize * 0.3);
+          // 左半心
+          ctx.bezierCurveTo(
+            x - heartSize, y - heartSize * 0.5,
+            x - heartSize, y + heartSize * 0.5,
+            x, y + heartSize
+          );
+          // 右半心
+          ctx.bezierCurveTo(
+            x + heartSize, y + heartSize * 0.5,
+            x + heartSize, y - heartSize * 0.5,
+            x, y + heartSize * 0.3
+          );
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        SequenceConnection.prototype.isConnected = function(shapeId) {
+          for (var i = 0; i < this.connectedShapes.length; i++) {
+            if (this.connectedShapes[i].to.id === shapeId) {
+              return true;
+            }
+          }
+          return false;
+        };
+
+        SequenceConnection.prototype.updateSequenceUI = function() {
+          var shapeItems = this.sequenceArea.querySelectorAll('.shape-item');
+          for (var i = 0; i < shapeItems.length; i++) {
+            var index = parseInt(shapeItems[i].dataset.index);
+
+            // 检查该图形是否已连接（在 connectedShapes 中）
+            var isConnected = false;
+
+            // 特殊处理：如果游戏已开始（isPlaying = true），第一个图形应该显示对勾
+            if (this.isPlaying && index === 0) {
+              isConnected = true;
+            }
+
+            // 检查该图形是否是任何连接线的"from"端（起点）
+            for (var j = 0; j < this.connectedShapes.length; j++) {
+              if (this.connectedShapes[j].from.id === this.sequence[index].id) {
+                isConnected = true;
+                break;
+              }
+            }
+
+            // 检查该图形是否是最后一个连接线的"to"端（终点，也就是最新连接的图形）
+            if (this.connectedShapes.length > 0) {
+              var lastConnection = this.connectedShapes[this.connectedShapes.length - 1];
+              if (lastConnection.to.id === this.sequence[index].id) {
+                isConnected = true;
+              }
+            }
+
+            if (isConnected) {
+              shapeItems[i].classList.add('connected');
+            } else {
+              shapeItems[i].classList.remove('connected');
+            }
+          }
+        };
+
+        SequenceConnection.prototype.renderSequenceUI = function() {
+          this.sequenceArea.innerHTML = '';
+
+          for (var i = 0; i < this.sequence.length; i++) {
+            var shape = this.sequence[i];
+
+            // 创建图形容器
+            var item = document.createElement('div');
+            item.className = 'sequence-item shape-item';
+            item.dataset.index = i;
+
+            // 创建图形
+            var shapeEl = document.createElement('div');
+            shapeEl.style.width = '100%';
+            shapeEl.style.height = '100%';
+            shapeEl.style.position = 'relative';
+
+            // 使用 Canvas 绘制小图形
+            var canvas = document.createElement('canvas');
+            canvas.width = 80;
+            canvas.height = 80;
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            var ctx = canvas.getContext('2d');
+
+            var centerX = 40;
+            var centerY = 40;
+            var size = 24; // 缩小顺序提示区域的图形
+
+            // 重置透明度，确保颜色正确显示
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = shape.color;
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+
+            switch (shape.type) {
+              case 'circle':
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'triangle-up':
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY - size);
+                ctx.lineTo(centerX + size * 0.866, centerY + size * 0.5);
+                ctx.lineTo(centerX - size * 0.866, centerY + size * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'triangle-down':
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY + size);
+                ctx.lineTo(centerX + size * 0.866, centerY - size * 0.5);
+                ctx.lineTo(centerX - size * 0.866, centerY - size * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'triangle-right':
+                ctx.beginPath();
+                ctx.moveTo(centerX - size * 0.5, centerY - size * 0.7);
+                ctx.lineTo(centerX + size * 0.7, centerY);
+                ctx.lineTo(centerX - size * 0.5, centerY + size * 0.7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'cross':
+                var thickness = size * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(centerX - thickness, centerY - size);
+                ctx.lineTo(centerX + thickness, centerY - size);
+                ctx.lineTo(centerX + thickness, centerY - thickness);
+                ctx.lineTo(centerX + size, centerY - thickness);
+                ctx.lineTo(centerX + size, centerY + thickness);
+                ctx.lineTo(centerX + thickness, centerY + thickness);
+                ctx.lineTo(centerX + thickness, centerY + size);
+                ctx.lineTo(centerX - thickness, centerY + size);
+                ctx.lineTo(centerX - thickness, centerY + thickness);
+                ctx.lineTo(centerX - size, centerY + thickness);
+                ctx.lineTo(centerX - size, centerY - thickness);
+                ctx.lineTo(centerX - thickness, centerY - thickness);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'pentagon':
+                ctx.beginPath();
+                var angleStep = (Math.PI * 2) / 5;
+                var startAngle = -Math.PI / 2;
+                for (var j = 0; j < 5; j++) {
+                  var angle = startAngle + j * angleStep;
+                  var px = centerX + size * Math.cos(angle);
+                  var py = centerY + size * Math.sin(angle);
+                  if (j === 0) ctx.moveTo(px, py);
+                  else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'hexagon':
+                ctx.beginPath();
+                var angleStep = (Math.PI * 2) / 6;
+                var startAngle = -Math.PI / 2;
+                for (var j = 0; j < 6; j++) {
+                  var angle = startAngle + j * angleStep;
+                  var px = centerX + size * Math.cos(angle);
+                  var py = centerY + size * Math.sin(angle);
+                  if (j === 0) ctx.moveTo(px, py);
+                  else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'diamond':
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY - size);
+                ctx.lineTo(centerX + size * 0.7, centerY);
+                ctx.lineTo(centerX, centerY + size);
+                ctx.lineTo(centerX - size * 0.7, centerY);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'trapezoid':
+                var topWidth = size * 0.8;
+                var bottomWidth = size * 1.4;
+                var height = size * 0.9;
+                ctx.beginPath();
+                ctx.moveTo(centerX - topWidth / 2, centerY - height / 2);
+                ctx.lineTo(centerX + topWidth / 2, centerY - height / 2);
+                ctx.lineTo(centerX + bottomWidth / 2, centerY + height / 2);
+                ctx.lineTo(centerX - bottomWidth / 2, centerY + height / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'star':
+                var spikes = 5;
+                var outerRadius = size;
+                var innerRadius = size * 0.4;
+                var rot = Math.PI / 2 * 3;
+                var step = Math.PI / spikes;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY - outerRadius);
+                for (var j = 0; j < spikes; j++) {
+                  ctx.lineTo(centerX + Math.cos(rot) * outerRadius, centerY + Math.sin(rot) * outerRadius);
+                  rot += step;
+                  ctx.lineTo(centerX + Math.cos(rot) * innerRadius, centerY + Math.sin(rot) * innerRadius);
+                  rot += step;
+                }
+                ctx.lineTo(centerX, centerY - outerRadius);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'moon':
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, size, 0.7 * Math.PI, 1.3 * Math.PI, false);
+                ctx.arc(centerX - size * 0.6, centerY, size * 0.8, 1.3 * Math.PI, 0.7 * Math.PI, true);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+              case 'heart':
+                var heartSize = size * 1.2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY + heartSize * 0.3);
+                ctx.bezierCurveTo(
+                  centerX - heartSize, centerY - heartSize * 0.5,
+                  centerX - heartSize, centerY + heartSize * 0.5,
+                  centerX, centerY + heartSize
+                );
+                ctx.bezierCurveTo(
+                  centerX + heartSize, centerY + heartSize * 0.5,
+                  centerX + heartSize, centerY - heartSize * 0.5,
+                  centerX, centerY + heartSize * 0.3
+                );
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+            }
+
+            shapeEl.appendChild(canvas);
+            item.appendChild(shapeEl);
+
+            // 添加箭头（除了最后一个）
+            if (i < this.sequence.length - 1) {
+              var arrow = document.createElement('span');
+              arrow.className = 'arrow';
+              arrow.textContent = '→';
+              this.sequenceArea.appendChild(item);
+              this.sequenceArea.appendChild(arrow);
+            } else {
+              this.sequenceArea.appendChild(item);
+            }
+          }
+        };
+
+        SequenceConnection.prototype.showSuccess = function() {
+          this.finalTimeDisplay.textContent = this.formatTime(this.timer);
+          this.finalScoreDisplay.textContent = this.score;
+          this.successModal.classList.add('show');
+        };
+
+        SequenceConnection.prototype.hideSuccess = function() {
+          this.successModal.classList.remove('show');
+        };
+
+        // 计时器相关方法
+        SequenceConnection.prototype.startTimer = function() {
+          this.isPlaying = true;
+          this.timerInterval = setInterval(this.updateTimer.bind(this), 1000);
+        };
+
+        SequenceConnection.prototype.updateTimer = function() {
+          this.timer++;
+          this.timerDisplay.textContent = this.formatTime(this.timer);
+        };
+
+        SequenceConnection.prototype.stopTimer = function() {
+          this.isPlaying = false;
+          if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+          }
+        };
+
+        SequenceConnection.prototype.resetTimer = function() {
+          this.stopTimer();
+          this.timer = 0;
+          this.timerDisplay.textContent = '00:00';
+        };
+
+        SequenceConnection.prototype.formatTime = function(seconds) {
+          var mins = Math.floor(seconds / 60);
+          var secs = seconds % 60;
+          return (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+        };
+
+        // 积分相关方法
+        SequenceConnection.prototype.updateScore = function() {
+          this.scoreDisplay.textContent = this.score;
+        };
+
+        SequenceConnection.prototype.resetScore = function() {
+          this.score = 0;
+          this.updateScore();
+        };
+
+        // 游戏完成
+        SequenceConnection.prototype.gameComplete = function() {
+          this.stopTimer();
+
+          // 播放通关音效
+          this.playWinSound();
+
+          // 计算最终得分：基础分 + 时间奖励
+          var timeBonus = Math.max(0, 100 - this.timer);
+          this.score += timeBonus;
+          this.updateScore();
+
+          this.showSuccess();
+        };
+
+        SequenceConnection.prototype.restart = function() {
+          this.hideSuccess();
+          this.resetTimer();
+          this.resetScore();
+
+          this.currentSequenceIndex = 0;
+          this.connectedShapes = [];
+          this.isDragging = false;
+          this.startPos = null;
+          this.currentPos = { x: 0, y: 0 };
+          this.isPlaying = false;
+
+          // 根据难度生成新的随机连接顺序
+          var shapeCount = this.difficulty === 'hard' ? 12 : 9;
+          this.sequence = SHAPES.slice(0, shapeCount);
+          this.shuffleArray(this.sequence);
+
+          this.generateShapes();
+          this.renderSequenceUI();
+          this.updateSequenceUI();
+          this.draw();
+        };
+
+        // 创建游戏实例
+        var game = new SequenceConnection();
+        window.game = game;
+      })();
+    </script>
+  <style>
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    </style>
+    <img src="/public/qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  </body>
+</html>

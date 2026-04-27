@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>读写障碍注意力训练一彩色连线</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        touch-action: manipulation;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 50%, #E0F7FF 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* 云朵装饰 - 只在主页显示 */
+      .cloud-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .cloud-bg::before,
+      .cloud-bg::after {
+        content: '';
+        position: absolute;
+        background: white;
+        border-radius: 50%;
+        opacity: 0.9;
+      }
+
+      .cloud-bg::before {
+        width: 200px;
+        height: 80px;
+        top: 5%;
+        left: -200px;
+        box-shadow: 
+          60px -20px 0 20px white,
+          100px 0 0 10px white,
+          140px -10px 0 15px white;
+        animation: cloudFloat 30s linear infinite;
+      }
+
+      .cloud-bg::after {
+        width: 150px;
+        height: 60px;
+        top: 25%;
+        left: -150px;
+        box-shadow: 
+          50px -15px 0 15px white,
+          80px 5px 0 10px white,
+          110px -5px 0 12px white;
+        animation: cloudFloat 35s linear infinite;
+      }
+
+      @keyframes cloudFloat {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(calc(100vw + 400px)); }
+      }
+
+      /* 额外云朵 */
+      .cloud {
+        position: absolute;
+        background: white;
+        border-radius: 50%;
+        opacity: 0.85;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .cloud1 {
+        width: 120px;
+        height: 50px;
+        top: 45%;
+        left: -150px;
+        box-shadow: 
+          40px -15px 0 12px white,
+          70px 0 0 8px white,
+          95px -8px 0 10px white;
+        animation: cloudFloat 40s linear infinite;
+      }
+
+      .cloud2 {
+        width: 100px;
+        height: 40px;
+        top: 65%;
+        left: -120px;
+        box-shadow: 
+          35px -12px 0 10px white,
+          60px 0 0 6px white,
+          80px -5px 0 8px white;
+        animation: cloudFloat 25s linear infinite;
+      }
+
+      /* ========== 主页面 ========== */
+      #homePage {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 450px;
+        height: 100%;
+        position: relative;
+      }
+
+      #homePage > *:not(.cloud) {
+        position: relative;
+        z-index: 10;
+      }
+
+      .home-title {
+        color: #1e3a5f;
+        text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
+        font-size: clamp(1.8rem, 7vw, 2.8rem);
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      .home-subtitle {
+        color: #2d5a87;
+        font-size: clamp(0.85rem, 3vw, 1rem);
+        margin-bottom: 12px;
+        text-align: center;
+      }
+
+      .game-rules {
+        background: rgba(255,255,255,0.7);
+        border: 1px solid rgba(135,206,235,0.5);
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-top: 15px;
+        max-width: 400px;
+        width: 100%;
+      }
+
+      .game-rules h3 {
+        color: #1e3a5f;
+        font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      .game-rules ul {
+        color: #2d5a87;
+        font-size: clamp(0.7rem, 2.5vw, 0.85rem);
+        line-height: 1.6;
+        padding-left: 20px;
+        margin: 0;
+      }
+
+      .game-rules li {
+        margin-bottom: 4px;
+      }
+
+      .level-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        width: 100%;
+        padding: 0 5px;
+      }
+
+      .level-card {
+        aspect-ratio: 1;
+        background: rgba(255,255,255,0.8);
+        border-radius: 14px;
+        border: 2px solid rgba(135,206,235,0.6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        position: relative;
+      }
+
+      .level-card:active {
+        transform: scale(0.95);
+        background: rgba(255,255,255,0.95);
+      }
+
+      .level-card.completed {
+        background: rgba(16, 185, 129, 0.3);
+        border-color: rgba(16, 185, 129, 0.5);
+      }
+
+      .level-card.completed::after {
+        content: '✓';
+        position: absolute;
+        top: 3px;
+        right: 5px;
+        color: #10b981;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .level-number {
+        color: #1e3a5f;
+        font-size: clamp(1.8rem, 7vw, 2.4rem);
+        font-weight: bold;
+      }
+
+      /* ========== 游戏页面 ========== */
+      #gamePage {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        max-width: 1000px;
+        background: #f5f5f5;
+      }
+
+      .game-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        margin-bottom: 8px;
+        flex-shrink: 0;
+        padding: 8px 10px;
+        background: white;
+        border-radius: 12px;
+      }
+
+      .back-btn, .reset-btn {
+        background: #f0f0f0;
+        border: 2px solid #ddd;
+        color: #333;
+        padding: 6px 14px;
+        border-radius: 18px;
+        font-size: clamp(0.7rem, 2.5vw, 0.85rem);
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .reset-btn {
+        background: #f97316;
+        border-color: #f97316;
+        color: white;
+      }
+
+      .level-info {
+        color: #333;
+        font-size: clamp(0.9rem, 3.5vw, 1.15rem);
+        font-weight: bold;
+      }
+
+      .color-selector {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .color-btn {
+        width: clamp(30px, 8vw, 42px);
+        height: clamp(30px, 8vw, 42px);
+        border-radius: 50%;
+        border: 3px solid white;
+        cursor: pointer;
+        transition: all 0.15s;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        flex-shrink: 0;
+      }
+
+      .color-btn:active {
+        transform: scale(0.95);
+      }
+
+      .color-btn.active {
+        transform: scale(1.12);
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.8), 0 3px 10px rgba(0,0,0,0.3);
+      }
+
+      .color-btn.cleared {
+        opacity: 0.4;
+        pointer-events: none;
+        position: relative;
+      }
+
+      .color-btn.cleared::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 14px;
+        font-weight: bold;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      }
+
+      .game-container {
+        background: white;
+        border-radius: 14px;
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        flex: 1;
+        min-height: 0;
+      }
+
+      #gameCanvas {
+        display: block;
+        background: #fafafa;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+
+      .status-bar {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        align-items: center;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: white;
+        border-radius: 10px;
+        color: #333;
+        font-size: clamp(0.65rem, 2.5vw, 0.8rem);
+        flex-wrap: wrap;
+        flex-shrink: 0;
+      }
+
+      .progress-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+
+      .progress-dot {
+        width: clamp(9px, 2.5vw, 12px);
+        height: clamp(9px, 2.5vw, 12px);
+        border-radius: 50%;
+      }
+
+      /* 星星效果 */
+      .star {
+        position: absolute;
+        font-size: clamp(18px, 5vw, 32px);
+        pointer-events: none;
+        animation: starPop 0.7s ease-out forwards;
+        z-index: 100;
+      }
+
+      @keyframes starPop {
+        0% {
+          transform: scale(0) rotate(0deg);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.4) rotate(180deg);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.4) rotate(360deg) translateY(-25px);
+          opacity: 0;
+        }
+      }
+
+      /* 消息弹窗 */
+      .message {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: clamp(18px, 5vw, 30px) clamp(22px, 6vw, 45px);
+        border-radius: 18px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.4);
+        z-index: 1000;
+        text-align: center;
+        display: none;
+        max-width: 90%;
+      }
+
+      .message.show {
+        display: block;
+        animation: popIn 0.25s ease;
+      }
+
+      @keyframes popIn {
+        from { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      }
+
+      .message h2 {
+        margin-bottom: 8px;
+        font-size: clamp(1.1rem, 4vw, 1.5rem);
+      }
+
+      .message p {
+        color: #666;
+        margin-bottom: 12px;
+        font-size: clamp(0.85rem, 3vw, 0.95rem);
+      }
+
+      .message .btn-group {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .msg-btn {
+        padding: 9px 22px;
+        border: none;
+        border-radius: 22px;
+        cursor: pointer;
+        font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .msg-btn.primary {
+        background: #10b981;
+        color: white;
+      }
+
+      .msg-btn.secondary {
+        background: #f0f0f0;
+        color: #333;
+      }
+
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+        display: none;
+      }
+
+      .overlay.show {
+        display: block;
+      }
+
+      /* 铅笔光标 */
+      .pencil-cursor {
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        display: none;
+      }
+
+      .pencil-cursor.visible {
+        display: block;
+      }
+
+      .pencil-cursor svg {
+        width: 42px;
+        height: 42px;
+        filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.2));
+      }
+
+      .game-container {
+        cursor: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 云朵背景层 -->
+    <div class="cloud-bg" id="cloudBg">
+      <div class="cloud cloud1"></div>
+      <div class="cloud cloud2"></div>
+    </div>
+    
+    <!-- 主页面 -->
+    <div id="homePage">
+      <h1 class="home-title">读写障碍注意力训练一彩色连线</h1>
+      <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+      <p class="home-subtitle">选择关卡开始训练</p>
+      <div class="level-grid" id="levelGrid"></div>
+      <div class="game-rules">
+        <h3>🎮 游戏玩法</h3>
+        <ul>
+          <li>点击选择下方的颜色，然后用鼠标/手指连接两个相同颜色的点</li>
+          <li>连线必须从一个点开始，到另一个相同颜色的点结束</li>
+          <li>成功连接后，两个点会消除，继续连接直到所有点消除完毕</li>
+          <li>共10个关卡，难度逐渐递增，锻炼注意力和颜色识别能力</li>
+        </ul>
+      </div>
+      <div style="margin-top: 15px; text-align: center;">
+        <a href="index.html" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">← 返回游戏主页</a>
+      </div>
+    </div>
+
+    <!-- 游戏页面 -->
+    <div id="gamePage">
+      <div class="game-header">
+        <button class="back-btn" id="backBtn">← 返回</button>
+        <span class="level-info" id="levelInfo">第 1 关</span>
+        <button class="reset-btn" id="resetBtn">重置</button>
+      </div>
+
+      <div class="color-selector" id="colorSelector"></div>
+
+      <div class="game-container" id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+      </div>
+
+      <div class="status-bar" id="statusBar"></div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    
+    <!-- 铅笔光标 -->
+    <div class="pencil-cursor" id="pencilCursor">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- 笔身 - 白色填充，边框描边，朝右下倾斜 -->
+        <path d="M8 8 L32 32 L28 36 L4 12 L8 8 Z" id="pencilBody" fill="white" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- 笔尖 - 在左上角 -->
+        <path d="M8 8 L2 2 L2 8 Z" fill="#f5deb3" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- 笔芯 -->
+        <path d="M6 5 L2 2 L2 6 Z" id="pencilTip" stroke="#333" stroke-width="0.5"/>
+      </svg>
+    </div>
+    
+    <div class="message" id="message">
+      <h2 id="messageTitle">🎉 恭喜！</h2>
+      <p id="messageText">你完成了！</p>
+      <div class="btn-group">
+        <button class="msg-btn secondary" id="msgBtn1">再玩一次</button>
+        <button class="msg-btn primary" id="msgBtn2">下一关</button>
+      </div>
+    </div>
+
+    <script>
+      var homePage = document.getElementById('homePage');
+      var gamePage = document.getElementById('gamePage');
+      var canvas = document.getElementById('gameCanvas');
+      var ctx = canvas.getContext('2d');
+      var pencilCursor = document.getElementById('pencilCursor');
+      var pencilBody = document.getElementById('pencilBody');
+      var gameContainer = document.getElementById('gameContainer');
+      
+      var allColors = {
+        red: '#ef4444', green: '#22c55e', blue: '#3b82f6', yellow: '#eab308',
+        purple: '#a855f7', pink: '#ec4899', orange: '#f97316', cyan: '#06b6d4',
+        lime: '#84cc16', indigo: '#6366f1'
+      };
+
+      var colorNames = {
+        red: '红', green: '绿', blue: '蓝', yellow: '黄',
+        purple: '紫', pink: '粉', orange: '橙', cyan: '青',
+        lime: '青绿', indigo: '靛'
+      };
+
+      var levels = [
+        { colors: ['red', 'green', 'blue'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple', 'pink'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple', 'pink', 'orange'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple', 'pink', 'orange', 'cyan'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple', 'pink', 'orange', 'cyan', 'lime'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple', 'pink', 'orange', 'cyan', 'lime', 'indigo'], dotsPerColor: 4 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple', 'pink', 'orange', 'cyan', 'lime', 'indigo'], dotsPerColor: 6 },
+        { colors: ['red', 'green', 'blue', 'yellow', 'purple', 'pink', 'orange', 'cyan', 'lime', 'indigo'], dotsPerColor: 8 },
+      ];
+
+      var currentLevel = 1;
+      var dotsData = {};
+      var dotsCleared = {};
+      var currentColor = '';
+      var isDrawing = false;
+      var currentLine = [];
+      var particles = [];
+      var completedLevels = new Set();
+      var audioCtx = null;
+      var canvasW = 0, canvasH = 0;
+
+      function initHomePage() {
+        var levelColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e'];
+        var grid = document.getElementById('levelGrid');
+        grid.innerHTML = '';
+        for (var i = 1; i <= 10; i++) {
+          (function(levelNum) {
+            var card = document.createElement('div');
+            card.className = 'level-card' + (completedLevels.has(levelNum) ? ' completed' : '');
+            card.innerHTML = '<span class="level-number" style="color: ' + levelColors[levelNum-1] + '">' + levelNum + '</span>';
+            // 直接使用onclick，现代浏览器会自动处理触摸事件
+            card.onclick = function() { startLevel(levelNum); };
+            grid.appendChild(card);
+          })(i);
+        }
+      }
+
+      function startLevel(levelNum) {
+        currentLevel = levelNum;
+        homePage.style.display = 'none';
+        gamePage.style.display = 'flex';
+        document.getElementById('cloudBg').style.display = 'none';
+        initLevel(levelNum);
+      }
+
+      function goHome() {
+        gamePage.style.display = 'none';
+        homePage.style.display = 'flex';
+        document.getElementById('cloudBg').style.display = 'block';
+        initHomePage();
+      }
+
+      function resizeCanvas() {
+        var container = document.getElementById('gameContainer');
+        var rect = container.getBoundingClientRect();
+        var dpr = window.devicePixelRatio || 1;
+        
+        canvasW = rect.width;
+        canvasH = rect.height;
+        
+        canvas.width = canvasW * dpr;
+        canvas.height = canvasH * dpr;
+        canvas.style.width = canvasW + 'px';
+        canvas.style.height = canvasH + 'px';
+        
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function generateLevelDots(levelIndex) {
+        var level = levels[levelIndex];
+        var dots = {};
+        var dotRadius = Math.min(canvasW, canvasH) * 0.02; // 减小点半径
+        // 安全边距 = 光晕半径 + 点半径 + 额外安全距离
+        var padding = dotRadius * 8;
+        var gap = Math.min(canvasW, canvasH) * 0.08;
+        
+        level.colors.forEach(function(color) {
+          dots[color] = [];
+          for (var i = 0; i < level.dotsPerColor; i++) {
+            var x, y, valid, attempts = 0;
+            // 确保生成的坐标在安全范围内
+            var minX = padding;
+            var maxX = Math.max(minX + 10, canvasW - padding);
+            var minY = padding;
+            var maxY = Math.max(minY + 10, canvasH - padding);
+            
+            do {
+              x = minX + Math.random() * (maxX - minX);
+              y = minY + Math.random() * (maxY - minY);
+              valid = true;
+              Object.values(dots).forEach(function(colorDots) {
+                colorDots.forEach(function(dot) {
+                  if (Math.sqrt(Math.pow(dot.x - x, 2) + Math.pow(dot.y - y, 2)) < gap) valid = false;
+                });
+              });
+              attempts++;
+            } while (!valid && attempts < 100);
+            dots[color].push({ x: x, y: y });
+          }
+        });
+        return dots;
+      }
+
+      function initLevel(levelNum) {
+        currentLevel = levelNum;
+        var level = levels[levelNum - 1];
+        
+        resizeCanvas();
+        dotsData = generateLevelDots(levelNum - 1);
+        
+        dotsCleared = {};
+        level.colors.forEach(function(color) {
+          dotsCleared[color] = new Array(dotsData[color].length).fill(false);
+        });
+        
+        currentColor = level.colors[0];
+        updatePencilColor(currentColor);
+        particles = [];
+        
+        updateUI();
+        draw();
+      }
+
+      function updateUI() {
+        var level = levels[currentLevel - 1];
+        document.getElementById('levelInfo').textContent = '第 ' + currentLevel + ' 关';
+        
+        var selector = document.getElementById('colorSelector');
+        selector.innerHTML = '';
+        level.colors.forEach(function(color) {
+          var allCleared = dotsCleared[color].every(function(v) { return v; });
+          var btn = document.createElement('button');
+          btn.className = 'color-btn' + (color === currentColor ? ' active' : '') + (allCleared ? ' cleared' : '');
+          btn.style.background = allColors[color];
+          
+          // 使用闭包保存当前颜色，直接用onclick
+          (function(c, cleared, btnEl) {
+            btnEl.onclick = function(e) {
+              if (!cleared) {
+                currentColor = c;
+                updatePencilColor(c);
+                var btns = document.querySelectorAll('.color-btn');
+                for (var i = 0; i < btns.length; i++) {
+                  btns[i].classList.remove('active');
+                }
+                btnEl.classList.add('active');
+              }
+            };
+          })(color, allCleared, btn);
+          
+          selector.appendChild(btn);
+        });
+        
+        var statusBar = document.getElementById('statusBar');
+        statusBar.innerHTML = '';
+        level.colors.forEach(function(color) {
+          var remaining = dotsCleared[color].filter(function(v) { return !v; }).length;
+          var item = document.createElement('div');
+          item.className = 'progress-item';
+          item.style.opacity = remaining === 0 ? '0.5' : '1';
+          item.innerHTML = '<div class="progress-dot" style="background:' + allColors[color] + '"></div><span>' + colorNames[color] + ':' + remaining + '</span>';
+          statusBar.appendChild(item);
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvasW, canvasH);
+        
+        // 网格
+        ctx.strokeStyle = '#e8e8e8';
+        ctx.lineWidth = 1;
+        var gridSize = Math.min(canvasW, canvasH) / 12;
+        for (var x = 0; x <= canvasW; x += gridSize) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvasH); ctx.stroke();
+        }
+        for (var y = 0; y <= canvasH; y += gridSize) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasW, y); ctx.stroke();
+        }
+
+        // 当前线条
+        if (currentLine.length > 1) {
+          ctx.beginPath();
+          ctx.strokeStyle = allColors[currentColor];
+          ctx.lineWidth = Math.min(canvasW, canvasH) * 0.018;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.globalAlpha = 0.8;
+          ctx.moveTo(currentLine[0].x, currentLine[0].y);
+          for (var i = 1; i < currentLine.length; i++) ctx.lineTo(currentLine[i].x, currentLine[i].y);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        // 点
+        var dotR = Math.min(canvasW, canvasH) * 0.02; // 与生成时保持一致
+        // 安全边距 = 光晕半径 + 点半径 + 额外安全距离
+        var safeMargin = dotR * 8;
+        Object.keys(dotsData).forEach(function(color) {
+          dotsData[color].forEach(function(dot, idx) {
+            if (dotsCleared[color][idx]) return;
+            // 强制确保点在画布安全区域内
+            var cx = Math.max(safeMargin, Math.min(canvasW - safeMargin, dot.x));
+            var cy = Math.max(safeMargin, Math.min(canvasH - safeMargin, dot.y));
+            
+            // 光晕
+            ctx.beginPath(); ctx.arc(cx, cy, dotR * 1.3, 0, Math.PI * 2);
+            ctx.fillStyle = allColors[color] + '35'; ctx.fill();
+            // 主圆点
+            ctx.beginPath(); ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
+            ctx.fillStyle = allColors[color]; ctx.fill();
+            // 高光
+            ctx.beginPath(); ctx.arc(cx - dotR * 0.25, cy - dotR * 0.25, dotR * 0.35, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fill();
+          });
+        });
+
+        // 粒子
+        particles.forEach(function(p) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+          ctx.fillStyle = allColors[p.color] + Math.floor(p.life * 255).toString(16).padStart(2, '0');
+          ctx.fill();
+        });
+      }
+
+      function getPos(e) {
+        var rect = canvas.getBoundingClientRect();
+        var x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        var y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        return { x: x, y: y };
+      }
+
+      function startDrawing(e) {
+        e.preventDefault();
+        initAudio();
+        isDrawing = true;
+        currentLine = [getPos(e)];
+      }
+
+      function drawLine(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        currentLine.push(getPos(e));
+        draw();
+      }
+
+      function stopDrawing(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        isDrawing = false;
+        
+        if (currentLine.length > 1) {
+          var connected = findConnectedDots(currentLine, currentColor);
+          if (connected.length === 2) {
+            var dotR = Math.min(canvasW, canvasH) * 0.02;
+            var safeMargin = dotR * 8;
+            var dot1 = dotsData[currentColor][connected[0]];
+            var dot2 = dotsData[currentColor][connected[1]];
+            // 使用修正后的坐标
+            var cx1 = Math.max(safeMargin, Math.min(canvasW - safeMargin, dot1.x));
+            var cy1 = Math.max(safeMargin, Math.min(canvasH - safeMargin, dot1.y));
+            var cx2 = Math.max(safeMargin, Math.min(canvasW - safeMargin, dot2.x));
+            var cy2 = Math.max(safeMargin, Math.min(canvasH - safeMargin, dot2.y));
+            
+            connected.forEach(function(idx) { dotsCleared[currentColor][idx] = true; });
+            playPopSound();
+            createStars(cx1, cy1);
+            createStars(cx2, cy2);
+            createParticles(currentColor, connected);
+            updateUI();
+            setTimeout(checkComplete, 350);
+          }
+        }
+        currentLine = [];
+        draw();
+      }
+
+      function findConnectedDots(linePoints, color) {
+        var connected = [];
+        var threshold = Math.min(canvasW, canvasH) * 0.05;
+        var dotR = Math.min(canvasW, canvasH) * 0.02;
+        var safeMargin = dotR * 8;
+        (dotsData[color] || []).forEach(function(dot, idx) {
+          if (dotsCleared[color][idx]) return;
+          // 使用修正后的坐标
+          var cx = Math.max(safeMargin, Math.min(canvasW - safeMargin, dot.x));
+          var cy = Math.max(safeMargin, Math.min(canvasH - safeMargin, dot.y));
+          for (var i = 0; i < linePoints.length; i++) {
+            var p = linePoints[i];
+            if (Math.sqrt(Math.pow(p.x - cx, 2) + Math.pow(p.y - cy, 2)) < threshold) {
+              connected.push(idx);
+              break;
+            }
+          }
+        });
+        return connected;
+      }
+
+      function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      function playPopSound() {
+        if (!audioCtx) initAudio();
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+      }
+
+      function playWinSound() {
+        if (!audioCtx) initAudio();
+        var freqs = [523, 659, 784, 1047];
+        freqs.forEach(function(freq, i) {
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.1);
+          gain.gain.setValueAtTime(0.18, audioCtx.currentTime + i * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.1 + 0.25);
+          osc.start(audioCtx.currentTime + i * 0.1);
+          osc.stop(audioCtx.currentTime + i * 0.1 + 0.25);
+        });
+      }
+
+      function createStars(x, y) {
+        var container = document.getElementById('gameContainer');
+        var rect = container.getBoundingClientRect();
+        var canvasRect = canvas.getBoundingClientRect();
+        var actualX = x + (canvasRect.left - rect.left);
+        var actualY = y + (canvasRect.top - rect.top);
+        for (var i = 0; i < 4; i++) {
+          var star = document.createElement('div');
+          star.className = 'star';
+          star.textContent = '⭐';
+          star.style.left = (actualX + (Math.random() - 0.5) * 40) + 'px';
+          star.style.top = (actualY + (Math.random() - 0.5) * 40) + 'px';
+          star.style.animationDelay = (i * 0.04) + 's';
+          container.appendChild(star);
+          setTimeout(function() { star.remove(); }, 700);
+        }
+      }
+
+      function createParticles(color, indices) {
+        var dotR = Math.min(canvasW, canvasH) * 0.02;
+        var safeMargin = dotR * 8;
+        indices.forEach(function(idx) {
+          var dot = dotsData[color][idx];
+          // 使用修正后的坐标
+          var cx = Math.max(safeMargin, Math.min(canvasW - safeMargin, dot.x));
+          var cy = Math.max(safeMargin, Math.min(canvasH - safeMargin, dot.y));
+          for (var i = 0; i < 6; i++) {
+            var angle = (Math.PI * 2 / 6) * i;
+            particles.push({
+              x: cx, y: cy,
+              vx: Math.cos(angle) * (2 + Math.random() * 2.5),
+              vy: Math.sin(angle) * (2 + Math.random() * 2.5),
+              size: 3 + Math.random() * 3,
+              life: 1,
+              color: color
+            });
+          }
+        });
+        animateParticles();
+      }
+
+      function animateParticles() {
+        particles = particles.filter(function(p) {
+          if (p.life > 0) {
+            p.x += p.vx; p.y += p.vy; p.vy += 0.08;
+            p.life -= 0.035;
+            return true;
+          }
+          return false;
+        });
+        draw();
+        if (particles.length > 0) requestAnimationFrame(animateParticles);
+      }
+
+      function checkComplete() {
+        var allComplete = Object.values(dotsCleared).every(function(arr) {
+          return arr.every(function(v) { return v; });
+        });
+        if (allComplete) {
+          completedLevels.add(currentLevel);
+          playWinSound();
+          showMessage('🎉 恭喜过关！', '你完成了第 ' + currentLevel + ' 关！', currentLevel < 10);
+        }
+      }
+
+      function showMessage(title, text, hasNext) {
+        document.getElementById('messageTitle').textContent = title;
+        document.getElementById('messageText').textContent = text;
+        document.getElementById('msgBtn1').textContent = hasNext ? '选择关卡' : '返回主页';
+        document.getElementById('msgBtn2').style.display = hasNext ? 'inline-block' : 'none';
+        document.getElementById('overlay').classList.add('show');
+        document.getElementById('message').classList.add('show');
+      }
+
+      function closeMessage() {
+        document.getElementById('overlay').classList.remove('show');
+        document.getElementById('message').classList.remove('show');
+        goHome();
+      }
+
+      function nextLevel() {
+        document.getElementById('overlay').classList.remove('show');
+        document.getElementById('message').classList.remove('show');
+        if (currentLevel < 10) initLevel(currentLevel + 1);
+      }
+
+      function resetLevel() { initLevel(currentLevel); }
+
+      // 铅笔光标功能
+      function updatePencilColor(color) {
+        if (allColors[color]) {
+          var pencilBody = document.getElementById('pencilBody');
+          var pencilTip = document.getElementById('pencilTip');
+          if (pencilBody) pencilBody.setAttribute('fill', allColors[color]);
+          if (pencilTip) pencilTip.setAttribute('fill', allColors[color]);
+        }
+      }
+
+      gameContainer.addEventListener('mouseenter', function() {
+        pencilCursor.classList.add('visible');
+      });
+
+      gameContainer.addEventListener('mouseleave', function() {
+        pencilCursor.classList.remove('visible');
+      });
+
+      gameContainer.addEventListener('mousemove', function(e) {
+        // 铅笔固定角度，笔尖对准鼠标位置
+        pencilCursor.style.left = (e.clientX - 2) + 'px';
+        pencilCursor.style.top = (e.clientY - 2) + 'px';
+      });
+
+      // 直接使用onclick绑定按钮事件
+      document.getElementById('backBtn').onclick = goHome;
+      document.getElementById('resetBtn').onclick = resetLevel;
+      document.getElementById('msgBtn1').onclick = closeMessage;
+      document.getElementById('msgBtn2').onclick = nextLevel;
+
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', drawLine);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseleave', stopDrawing);
+      canvas.addEventListener('touchstart', startDrawing, { passive: false });
+      canvas.addEventListener('touchmove', drawLine, { passive: false });
+      canvas.addEventListener('touchend', stopDrawing, { passive: false });
+
+      // 移除resize事件，避免移动端地址栏显示/隐藏时重置游戏
+
+      // 确保DOM加载完成后初始化
+      function init() {
+        requestAnimationFrame(function() {
+          initHomePage();
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    </script>
+  <style>
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    </style>
+    <img src="/public/qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  </body>
+</html>

@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>读写障碍注意力训练 - 舒尔特方格</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 8px 3px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* 背景粒子容器 */
+      .particles-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        animation: float 20s infinite;
+      }
+
+      /* 粒子浮动动画 */
+      @keyframes float {
+        0%, 100% {
+          transform: translateY(100vh) scale(0);
+          opacity: 0;
+        }
+        10% {
+          opacity: 1;
+        }
+        90% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-100px) scale(1);
+          opacity: 0;
+        }
+      }
+
+      /* 顶部整合区域 */
+      .top-bar {
+        width: 100%;
+        max-width: 600px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        z-index: 10;
+        padding: 4px 8px;
+      }
+
+      /* 顶部标题 */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 3px;
+        padding-bottom: 3px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .header h1 {
+        font-size: 14px;
+        color: #333;
+        font-weight: bold;
+        margin: 0;
+      }
+
+      .header p {
+        font-size: 10px;
+        color: #999;
+        margin: 0;
+      }
+
+      /* 整合的信息栏 */
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* 左侧：时间 + 进度 */
+      .stats-group {
+        display: flex;
+        gap: 8px;
+        flex: 1;
+        align-items: center;
+      }
+
+      /* 颜色选择器 */
+      .color-picker {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .color-picker:hover {
+        background: rgba(0,0,0,0.05);
+      }
+
+      .color-icon {
+        font-size: 14px;
+      }
+
+      .color-label {
+        font-size: 11px;
+        color: #555;
+        font-weight: 600;
+      }
+
+      .color-input {
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        background: none;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .color-input::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+
+      .color-input::-webkit-color-swatch {
+        border: 2px solid rgba(0,0,0,0.2);
+        border-radius: 50%;
+      }
+
+      .color-input::-moz-color-swatch {
+        border: 2px solid rgba(0,0,0,0.2);
+        border-radius: 50%;
+      }
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 12px;
+        color: #555;
+        font-weight: 600;
+      }
+
+      .stat-icon {
+        font-size: 13px;
+      }
+
+      .stat-value {
+        min-width: 45px;
+        text-align: center;
+      }
+
+      .timer-value {
+        color: #FF6B6B;
+        font-size: 14px;
+      }
+
+      .progress-value {
+        color: #4CAF50;
+        font-size: 14px;
+      }
+
+      /* 中间：当前目标数字 */
+      .target-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 18px;
+      }
+
+      .target-label {
+        font-size: 10px;
+        color: rgba(255,255,255,0.9);
+      }
+
+      .target-number {
+        font-size: 20px;
+        font-weight: bold;
+        color: #fff;
+        min-width: 25px;
+        text-align: center;
+      }
+
+      /* 右侧：难度选择（紧凑版） */
+      .difficulty-group {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .difficulty-btn {
+        padding: 4px 8px;
+        border: 1px solid #667eea;
+        background: #fff;
+        color: #667eea;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .difficulty-btn:hover,
+      .difficulty-btn:active {
+        background: #667eea;
+        color: #fff;
+      }
+
+      .difficulty-btn.active {
+        background: #667eea;
+        color: #fff;
+      }
+
+      /* 游戏区域 */
+      .game-container {
+        flex: 1;
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        min-height: 0;
+        z-index: 10;
+      }
+
+      .grid-container {
+        display: grid;
+        gap: 3px;
+        background: rgba(255, 255, 255, 0.3);
+        padding: 4px;
+        border-radius: 8px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      }
+
+      .grid-cell {
+        background: #fff;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 70px !important;
+        font-weight: bold;
+        color: var(--number-color, #333);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        -webkit-transition: all 0.15s ease;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      }
+
+      .grid-cell:active {
+        transform: scale(0.95);
+      }
+
+      .grid-cell.correct {
+        background: #4CAF50 !important;
+        color: #fff;
+        animation: correct-pulse 0.3s ease;
+      }
+
+      .grid-cell.wrong {
+        background: #FF6B6B !important;
+        color: #fff;
+        animation: shake 0.4s ease;
+      }
+
+      .grid-cell.current {
+        border: 3px solid #667eea;
+        background: #E8EAF6;
+      }
+
+      @keyframes correct-pulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+      }
+
+      @keyframes shake {
+        0%, 100% {
+          transform: translateX(0);
+        }
+        20%, 60% {
+          transform: translateX(-5px);
+        }
+        40%, 80% {
+          transform: translateX(5px);
+        }
+      }
+
+      /* 控制按钮 */
+      .controls {
+        position: absolute;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        z-index: 10;
+        width: 100%;
+        pointer-events: none;
+      }
+
+      .control-btn {
+        pointer-events: auto;
+        padding: 12px 32px;
+        background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
+        color: #fff;
+        border: none;
+        border-radius: 25px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 200, 83, 0.5);
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      }
+
+      .control-btn:hover,
+      .control-btn:active {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(0, 200, 83, 0.7);
+        background: linear-gradient(135deg, #00C853 0%, #69F0AE 100%);
+      }
+
+      .control-btn:disabled {
+        background: linear-gradient(135deg, #9E9E9E 0%, #BDBDBD 100%);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        text-shadow: none;
+      }
+
+      /* 返回按钮 */
+      .back-btn {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        border-radius: 50%;
+        font-size: 16px;
+        color: #667eea;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 100;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .back-btn:hover,
+      .back-btn:active {
+        transform: scale(1.1);
+        background: #667eea;
+        color: #fff;
+      }
+
+      /* 结果弹窗 */
+      .result-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .result-overlay.show {
+        display: flex;
+      }
+
+      .result-content {
+        background: #fff;
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        max-width: 90%;
+        animation: slide-up 0.3s ease;
+      }
+
+      @keyframes slide-up {
+        from {
+          transform: translateY(50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .result-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+        margin-bottom: 15px;
+      }
+
+      .result-time {
+        font-size: 36px;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 10px;
+      }
+
+      .result-info {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+
+      .result-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .result-btn {
+        padding: 12px 25px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border: none;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .result-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+
+      /* 响应式设计 */
+      @media screen and (max-width: 360px) {
+        .header h1 {
+          font-size: 13px;
+        }
+
+        .stat-item {
+          font-size: 11px;
+        }
+
+        .stat-value {
+          min-width: 40px;
+          font-size: 13px;
+        }
+
+        .difficulty-btn {
+          padding: 3px 6px;
+          font-size: 9px;
+        }
+
+        .target-number {
+          font-size: 18px;
+        }
+
+        .grid-cell {
+          font-size: 17px;
+        }
+
+        .control-btn {
+          padding: 10px 24px;
+          font-size: 14px;
+        }
+
+        .controls {
+          bottom: 18px;
+        }
+      }
+
+      @media screen and (min-width: 768px) {
+        .grid-cell {
+          font-size: 24px;
+        }
+
+        .header h1 {
+          font-size: 16px;
+        }
+
+        .difficulty-btn {
+          font-size: 11px;
+          padding: 5px 10px;
+        }
+
+        .stat-value {
+          font-size: 15px;
+        }
+
+        .control-btn {
+          padding: 14px 40px;
+          font-size: 16px;
+        }
+
+        .controls {
+          bottom: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 背景粒子效果 -->
+    <div class="particles-container" id="particles-container"></div>
+
+    <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+
+    <!-- 顶部整合栏 -->
+    <div class="top-bar">
+      <div class="header">
+        <h1>舒尔特方格</h1>
+        <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+        <p>按顺序点击数字</p>
+      </div>
+      <div class="info-row">
+        <div class="stats-group">
+          <div class="color-picker" title="选择数字颜色">
+            <span class="color-icon">🎨</span>
+            <span class="color-label">数字颜色</span>
+            <input type="color" class="color-input" id="color-picker" value="#333333" onchange="game.setNumberColor(this.value)">
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">⏱️</span>
+            <span class="stat-value timer-value" id="timer">00:00</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📊</span>
+            <span class="stat-value progress-value" id="progress">0/0</span>
+          </div>
+        </div>
+        <div class="target-group">
+          <span class="target-label">找</span>
+          <span class="target-number" id="target-number">1</span>
+        </div>
+        <div class="difficulty-group">
+          <button class="difficulty-btn" data-size="3" onclick="game.setDifficulty(3)">入门</button>
+          <button class="difficulty-btn active" data-size="4" onclick="game.setDifficulty(4)">初级</button>
+          <button class="difficulty-btn" data-size="5" onclick="game.setDifficulty(5)">中级</button>
+          <button class="difficulty-btn" data-size="6" onclick="game.setDifficulty(6)">高级</button>
+          <button class="difficulty-btn" data-size="7" onclick="game.setDifficulty(7)">专家</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-container">
+      <div class="grid-container" id="grid-container"></div>
+    </div>
+
+    <div class="controls">
+      <button class="control-btn" id="start-btn" onclick="game.start()">开始游戏</button>
+      <button class="control-btn" id="restart-btn" onclick="game.restart()" style="display: none;">重新开始</button>
+    </div>
+
+    <div class="result-overlay" id="result-overlay">
+      <div class="result-content">
+        <div class="result-title">🎉 挑战成功!</div>
+        <div class="result-time" id="result-time">00:00</div>
+        <div class="result-info" id="result-info"></div>
+        <div class="result-buttons">
+          <button class="result-btn" onclick="game.restart()">再玩一次</button>
+          <button class="result-btn" onclick="game.closeResult()">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 创建背景粒子效果
+      (function() {
+        var container = document.getElementById('particles-container');
+        if (!container) return;
+
+        var particleCount = 30;
+
+        for (var i = 0; i < particleCount; i++) {
+          var particle = document.createElement('div');
+          particle.className = 'particle';
+
+          var size = Math.random() * 4 + 2;
+          particle.style.width = size + 'px';
+          particle.style.height = size + 'px';
+          particle.style.left = Math.random() * 100 + '%';
+          particle.style.animationDuration = (Math.random() * 20 + 15) + 's';
+          particle.style.animationDelay = (Math.random() * 10) + 's';
+          particle.style.opacity = Math.random() * 0.5 + 0.2;
+
+          container.appendChild(particle);
+        }
+      })();
+
+      var SchulteGridGame = function() {
+        this.gridSize = 4;
+        this.numbers = [];
+        this.currentNumber = 1;
+        this.isPlaying = false;
+        this.startTime = 0;
+        this.timerInterval = null;
+        this.audioContext = null;
+        this.numberColor = '#333333';
+
+        this.init();
+      };
+
+      SchulteGridGame.prototype.init = function() {
+        this.loadSavedColor();
+        this.generateNumbers();
+        this.renderGrid();
+        this.updateUI();
+      };
+
+      SchulteGridGame.prototype.setNumberColor = function(color) {
+        this.numberColor = color;
+        document.documentElement.style.setProperty('--number-color', color);
+
+        try {
+          localStorage.setItem('schulteGridNumberColor', color);
+        } catch (e) {
+          console.log('无法保存颜色设置');
+        }
+      };
+
+      SchulteGridGame.prototype.loadSavedColor = function() {
+        try {
+          var savedColor = localStorage.getItem('schulteGridNumberColor');
+          if (savedColor) {
+            this.numberColor = savedColor;
+            document.documentElement.style.setProperty('--number-color', savedColor);
+
+            var colorPicker = document.getElementById('color-picker');
+            if (colorPicker) {
+              colorPicker.value = savedColor;
+            }
+          }
+        } catch (e) {
+          console.log('无法加载保存的颜色设置');
+        }
+      };
+
+      SchulteGridGame.prototype.setDifficulty = function(size) {
+        if (this.isPlaying) {
+          return;
+        }
+
+        this.gridSize = size;
+
+        var buttons = document.querySelectorAll('.difficulty-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].classList.remove('active');
+          if (parseInt(buttons[i].dataset.size) === size) {
+            buttons[i].classList.add('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.reset = function() {
+        this.currentNumber = 1;
+        this.isPlaying = false;
+        this.stopTimer();
+        this.generateNumbers();
+        this.renderGrid();
+        this.updateUI();
+
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('restart-btn').style.display = 'none';
+      };
+
+      SchulteGridGame.prototype.start = function() {
+        this.isPlaying = true;
+        this.currentNumber = 1;
+        this.startTime = Date.now();
+        this.startTimer();
+
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('restart-btn').style.display = 'block';
+
+        this.initAudio();
+        this.playSound('start');
+        this.updateUI();
+      };
+
+      SchulteGridGame.prototype.restart = function() {
+        this.closeResult();
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.generateNumbers = function() {
+        var total = this.gridSize * this.gridSize;
+        this.numbers = [];
+
+        for (var i = 1; i <= total; i++) {
+          this.numbers.push(i);
+        }
+
+        this.shuffleNumbers();
+      };
+
+      SchulteGridGame.prototype.shuffleNumbers = function() {
+        for (var i = this.numbers.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var temp = this.numbers[i];
+          this.numbers[i] = this.numbers[j];
+          this.numbers[j] = temp;
+        }
+      };
+
+      SchulteGridGame.prototype.renderGrid = function() {
+        var container = document.getElementById('grid-container');
+        var cellSize = this.calculateCellSize();
+
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.innerHTML = '';
+
+        var colorPalette = ['#f44336', '#2196F3', '#FF9800', '#9C27B0'];
+        
+        for (var i = 0; i < this.numbers.length; i++) {
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          cell.textContent = this.numbers[i];
+          cell.dataset.number = this.numbers[i];
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          cell.style.color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+
+          cell.onclick = (function(number) {
+            return function() {
+              game.handleClick(number, this);
+            };
+          })(this.numbers[i]);
+
+          container.appendChild(cell);
+        }
+      };
+
+      SchulteGridGame.prototype.calculateCellSize = function() {
+        var containerWidth = Math.min(window.innerWidth - 20, 600);
+        var maxGridSize = 7;
+        var padding = 4;
+        var gap = 3;
+        
+        var availableWidth = containerWidth - padding * 2 - (this.gridSize - 1) * gap;
+        var cellSize = Math.floor(availableWidth / this.gridSize);
+        
+        return Math.min(cellSize, 120);
+      };
+
+      SchulteGridGame.prototype.handleClick = function(number, element) {
+        if (!this.isPlaying) {
+          return;
+        }
+
+        if (number === this.currentNumber) {
+          this.handleCorrectClick(element);
+        } else {
+          this.handleWrongClick(element);
+        }
+      };
+
+      SchulteGridGame.prototype.handleCorrectClick = function(element) {
+        element.classList.add('correct');
+
+        this.playSound('correct');
+
+        var total = this.gridSize * this.gridSize;
+
+        if (this.currentNumber === total) {
+          this.completeGame();
+        } else {
+          this.currentNumber++;
+          this.updateUI();
+        }
+      };
+
+      SchulteGridGame.prototype.handleWrongClick = function(element) {
+        element.classList.add('wrong');
+
+        this.playSound('wrong');
+
+        setTimeout(function() {
+          element.classList.remove('wrong');
+        }, 400);
+      };
+
+      SchulteGridGame.prototype.completeGame = function() {
+        this.isPlaying = false;
+        this.stopTimer();
+        this.playSound('complete');
+
+        var elapsedTime = Math.floor((Date.now() - this.startTime) / 1000);
+        var timeStr = this.formatTime(elapsedTime);
+
+        document.getElementById('result-time').textContent = timeStr;
+
+        var total = this.gridSize * this.gridSize;
+        var avgTime = (elapsedTime / total).toFixed(2);
+        var evaluation = this.evaluatePerformance(elapsedTime, total);
+
+        document.getElementById('result-info').innerHTML =
+          '难度: ' + this.gridSize + '×' + this.gridSize + ' (' + total + '个数字)<br>' +
+          '平均每个数字: ' + avgTime + '秒<br>' +
+          '评价: ' + evaluation;
+
+        document.getElementById('result-overlay').classList.add('show');
+      };
+
+      SchulteGridGame.prototype.evaluatePerformance = function(totalTime, totalNumbers) {
+        var avgTime = totalTime / totalNumbers;
+        var evaluation = '';
+
+        if (this.gridSize === 3) {
+          if (avgTime < 0.5) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 0.8) evaluation = '👍 优秀!';
+          else if (avgTime < 1.2) evaluation = '😊 良好';
+          else if (avgTime < 1.8) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else if (this.gridSize === 4) {
+          if (avgTime < 0.6) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 0.9) evaluation = '👍 优秀!';
+          else if (avgTime < 1.4) evaluation = '😊 良好';
+          else if (avgTime < 2.0) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else if (this.gridSize === 5) {
+          if (avgTime < 0.7) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 1.1) evaluation = '👍 优秀!';
+          else if (avgTime < 1.6) evaluation = '😊 良好';
+          else if (avgTime < 2.3) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else if (this.gridSize === 6) {
+          if (avgTime < 0.8) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 1.3) evaluation = '👍 优秀!';
+          else if (avgTime < 1.9) evaluation = '😊 良好';
+          else if (avgTime < 2.6) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else {
+          if (avgTime < 0.9) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 1.5) evaluation = '👍 优秀!';
+          else if (avgTime < 2.1) evaluation = '😊 良好';
+          else if (avgTime < 2.9) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        }
+
+        return evaluation;
+      };
+
+      SchulteGridGame.prototype.updateUI = function() {
+        var total = this.gridSize * this.gridSize;
+        document.getElementById('target-number').textContent = this.currentNumber;
+        document.getElementById('progress').textContent = this.currentNumber - 1 + '/' + total;
+      };
+
+      SchulteGridGame.prototype.startTimer = function() {
+        var self = this;
+        this.timerInterval = setInterval(function() {
+          var elapsed = Math.floor((Date.now() - self.startTime) / 1000);
+          document.getElementById('timer').textContent = self.formatTime(elapsed);
+        }, 100);
+      };
+
+      SchulteGridGame.prototype.stopTimer = function() {
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+          this.timerInterval = null;
+        }
+      };
+
+      SchulteGridGame.prototype.formatTime = function(seconds) {
+        var mins = Math.floor(seconds / 60);
+        var secs = seconds % 60;
+        return (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+      };
+
+      SchulteGridGame.prototype.closeResult = function() {
+        document.getElementById('result-overlay').classList.remove('show');
+      };
+
+      SchulteGridGame.prototype.initAudio = function() {
+        try {
+          window.AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.audioContext = new AudioContext();
+        } catch (e) {
+          console.log('Web Audio API 不支持');
+        }
+      };
+
+      SchulteGridGame.prototype.playSound = function(type) {
+        if (!this.audioContext) {
+          return;
+        }
+
+        try {
+          var oscillator = this.audioContext.createOscillator();
+          var gainNode = this.audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(this.audioContext.destination);
+
+          if (type === 'start') {
+            oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(659.25, this.audioContext.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.2);
+          } else if (type === 'correct') {
+            oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.1);
+          } else if (type === 'wrong') {
+            oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.15);
+          } else if (type === 'complete') {
+            oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(659.25, this.audioContext.currentTime + 0.15);
+            oscillator.frequency.exponentialRampToValueAtTime(783.99, this.audioContext.currentTime + 0.3);
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.5);
+          }
+        } catch (e) {
+          console.log('播放音效失败', e);
+        }
+      };
+
+      var game = new SchulteGridGame();
+    </script>
+  <style>
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    </style>
+    <img src="/public/qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  </body>
+</html>

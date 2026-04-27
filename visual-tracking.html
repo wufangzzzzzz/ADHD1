@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>视觉追踪专注力训练</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+
+    /* 规则说明区 */
+    .rules-section {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+      color: white;
+      padding: 18px 25px;
+      text-align: center;
+    }
+
+    .rules-section h1 {
+      font-size: clamp(1.3rem, 5vw, 1.6rem);
+      margin-bottom: 10px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .rules-section p {
+      font-size: clamp(0.8rem, 3vw, 0.9rem);
+      line-height: 1.6;
+      opacity: 0.95;
+    }
+
+    .rules-section .highlight {
+      background: rgba(255,255,255,0.25);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    /* 状态信息 */
+    .status-section {
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #eee;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .status-section span {
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    /* 难度选择 */
+    .difficulty-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .difficulty-section label {
+      font-weight: 500;
+      color: #555;
+    }
+
+    .difficulty-btn {
+      padding: 4px 12px;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .difficulty-btn:hover {
+      border-color: #667eea;
+    }
+
+    .difficulty-btn.active {
+      background: #667eea;
+      border-color: #667eea;
+      color: white;
+    }
+
+    /* 主内容区 - 左右分栏 */
+    .main-content {
+      display: flex;
+      flex-direction: row;
+      min-height: 450px;
+    }
+
+    /* 左侧游戏区 */
+    .game-section {
+      flex: 1;
+      min-width: 50%;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: white;
+      border-right: 1px solid #eee;
+    }
+
+    .game-canvas-container {
+      width: 100%;
+      position: relative;
+      background: #fafafa;
+      border-radius: 12px;
+      border: 1px solid #eee;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 右侧答案区 */
+    .answer-section {
+      flex: 0 0 260px;
+      min-width: 220px;
+      padding: 15px;
+      background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .answer-title {
+      font-size: clamp(0.9rem, 3vw, 1rem);
+      color: #333;
+      margin-bottom: 12px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .answer-table {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      align-content: center;
+    }
+
+    .answer-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .answer-cell .number {
+      width: 28px;
+      height: 28px;
+      background: #333;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    /* 颜色选择容器 */
+    .color-select-container {
+      flex: 1;
+      position: relative;
+    }
+
+    /* 颜色块按钮 */
+    .color-block-btn {
+      width: 100%;
+      height: 32px;
+      border-radius: 6px;
+      border: 2px dashed #ccc;
+      background: #f5f5f5;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .color-block-btn:hover {
+      border-color: #999;
+    }
+
+    .color-block-btn .placeholder {
+      color: #999;
+      font-size: 0.7rem;
+    }
+
+    .color-block-btn.selected {
+      border-style: solid;
+      border-color: #ddd;
+      background: var(--selected-color);
+    }
+
+    .color-block-btn.selected .placeholder {
+      display: none;
+    }
+
+    .color-block-btn.correct {
+      border-color: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+    }
+
+    .color-block-btn.wrong {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+    }
+
+    /* 对勾图标 */
+    .checkmark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5rem;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      animation: checkPop 0.3s ease;
+      z-index: 10;
+    }
+
+    @keyframes checkPop {
+      0% { transform: translate(-50%, -50%) scale(0); }
+      50% { transform: translate(-50%, -50%) scale(1.3); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* 内联颜色选择器 */
+    .inline-color-picker {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 4px;
+      padding: 8px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 100;
+    }
+
+    .inline-color-picker.show {
+      display: block;
+      animation: slideDown 0.2s ease;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .inline-color-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .inline-color-item {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    .inline-color-item:hover {
+      transform: scale(1.1);
+      border-color: #333;
+    }
+
+    .inline-color-item.marked {
+      /* 已使用的颜色不做任何标记，保持正常显示 */
+    }
+
+    /* 星星特效容器 */
+    .stars-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      overflow: hidden;
+    }
+
+    /* 烟花特效 */
+    .firework-particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    @keyframes fireworkExplode {
+      0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--tx), var(--ty)) scale(0);
+        opacity: 0;
+      }
+    }
+
+    /* 烟花拖尾效果 */
+    .firework-trail {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: trailFade 0.3s ease-out forwards;
+    }
+
+    @keyframes trailFade {
+      0% {
+        opacity: 0.6;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+    }
+
+    /* 按钮区 */
+    .button-section {
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 25px;
+      font-size: clamp(0.85rem, 3vw, 0.95rem);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #333;
+      border: 2px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: #667eea;
+      border: 2px solid #667eea;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-outline:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    /* 返回首页链接 */
+    .back-link {
+      text-align: center;
+      padding: 10px;
+      background: #f0f0f0;
+    }
+
+    .back-link a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* 结果弹窗 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      max-width: 320px;
+      width: 100%;
+      animation: popIn 0.3s ease;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-icon {
+      font-size: 60px;
+      margin-bottom: 15px;
+    }
+
+    .modal h2 {
+      font-size: 1.4rem;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .modal p {
+      color: #666;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+
+    /* 响应式设计 - 全平台自适应 */
+    
+    /* 平板设备 (768px - 1024px) */
+    /* ==================== 响应式设计 ==================== */
+    
+    /* 大屏幕 PC (>1200px) */
+    @media (min-width: 1200px) {
+      .container {
+        max-width: 1000px;
+      }
+      
+      .main-content {
+        min-height: 500px;
+      }
+      
+      .answer-section {
+        flex: 0 0 280px;
+      }
+      
+      .answer-cell {
+        padding: 8px 12px;
+        gap: 10px;
+      }
+      
+      .answer-cell .number {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+      }
+      
+      .color-block-btn {
+        height: 36px;
+      }
+    }
+    
+    /* 平板横屏/小屏PC (768px - 1200px) */
+    @media (max-width: 1200px) and (min-width: 768px) {
+      .main-content {
+        min-height: 420px;
+      }
+      
+      .answer-section {
+        flex: 0 0 240px;
+        min-width: 200px;
+      }
+    }
+    
+    /* 平板竖屏/大屏手机 - 上下布局 (小于768px) */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .rules-section {
+        padding: 15px 20px;
+      }
+      
+      /* 改为上下布局 */
+      .main-content {
+        flex-direction: column;
+        min-height: auto;
+      }
+      
+      .game-section {
+        border-right: none;
+        border-bottom: 1px solid #eee;
+        min-height: 320px;
+        padding: 10px;
+      }
+      
+      /* 答案区移到下方 */
+      .answer-section {
+        flex: none;
+        min-width: 100%;
+        padding: 12px;
+      }
+      
+      .answer-title {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+      }
+      
+      /* 答案表格横向排列 */
+      .answer-table {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-height: none;
+        gap: 6px;
+      }
+      
+      .answer-cell {
+        flex: 0 0 auto;
+        min-width: 105px;
+        padding: 5px 8px;
+      }
+      
+      .status-section {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 15px;
+      }
+      
+      /* 颜色选择器居中弹出 */
+      .inline-color-picker {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 200;
+      }
+    }
+    
+    /* 手机设备 - 竖构图优化 (小于600px) */
+    @media (max-width: 600px) {
+      body {
+        padding: 8px;
+      }
+      
+      .container {
+        border-radius: 12px;
+      }
+      
+      .rules-section {
+        padding: 12px 15px;
+      }
+      
+      .rules-section h1 {
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+      }
+      
+      .rules-section p {
+        font-size: 0.75rem;
+      }
+      
+      .status-section {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
+      
+      .difficulty-section {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .difficulty-btn {
+        padding: 3px 10px;
+        font-size: 0.75rem;
+      }
+      
+      /* 游戏区高度调整 */
+      .game-section {
+        min-height: 280px;
+        padding: 8px;
+      }
+      
+      .game-canvas-container {
+        border-radius: 8px;
+      }
+      
+      /* 答案区 */
+      .answer-section {
+        padding: 10px;
+      }
+      
+      .answer-title {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+      }
+      
+      .answer-table {
+        gap: 5px;
+      }
+      
+      .answer-cell {
+        min-width: 95px;
+        padding: 4px 7px;
+        gap: 6px;
+      }
+      
+      .answer-cell .number {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+      }
+      
+      .color-block-btn {
+        height: 28px;
+      }
+      
+      .color-block-btn .placeholder {
+        font-size: 0.6rem;
+      }
+      
+      .button-section {
+        padding: 10px;
+        gap: 8px;
+      }
+      
+      .btn {
+        padding: 8px 20px;
+        font-size: 0.8rem;
+      }
+      
+      .back-link {
+        padding: 8px;
+        font-size: 0.8rem;
+      }
+      
+      .modal {
+        padding: 20px;
+        max-width: 280px;
+      }
+      
+      .modal-icon {
+        font-size: 50px;
+      }
+      
+      .inline-color-grid {
+        gap: 4px;
+      }
+      
+      .inline-color-item {
+        border-radius: 4px;
+      }
+    }
+    
+    /* 超小屏幕 - 更紧凑布局 (小于380px) */
+    @media (max-width: 380px) {
+      .rules-section h1 {
+        font-size: 1rem;
+      }
+      
+      .answer-cell {
+        min-width: 85px;
+        padding: 3px 6px;
+      }
+      
+      .answer-cell .number {
+        width: 22px;
+        height: 22px;
+        font-size: 0.7rem;
+      }
+      
+      .color-block-btn {
+        height: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 规则说明区 -->
+    <div class="rules-section">
+      <h1>视觉追踪专注力训练</h1>
+      <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+      <p>
+        <span class="highlight">玩法</span>：从左侧数字 1-8 出发，追踪每一条交叉的黑色连线，找到每个数字对应的右侧彩色圆点，在右侧表格标注对应关系。
+      </p>
+      <p style="margin-top: 6px;">
+        <span class="highlight">要求</span>：仅用眼睛追踪连线，不能用手指、笔等辅助，考验视觉专注力！
+      </p>
+    </div>
+
+    <!-- 状态信息 -->
+    <div class="status-section">
+      <div>共 <span>8</span> 组配对</div>
+      <div class="difficulty-section">
+        <label>难度：</label>
+        <button class="difficulty-btn active" id="easyBtn" onclick="setDifficulty('easy')">简单</button>
+        <button class="difficulty-btn" id="hardBtn" onclick="setDifficulty('hard')">困难</button>
+      </div>
+      <div>完成次数：<span id="completedCount">0</span></div>
+    </div>
+
+    <!-- 主内容区 - 左右分栏 -->
+    <div class="main-content">
+      <!-- 左侧游戏区 -->
+      <div class="game-section">
+        <div class="game-canvas-container">
+          <canvas id="gameCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 右侧答案区 -->
+      <div class="answer-section">
+        <div class="answer-title">填写你的答案</div>
+        <div class="answer-table" id="answerTable"></div>
+      </div>
+    </div>
+
+    <!-- 按钮区 -->
+    <div class="button-section">
+      <button class="btn btn-secondary" onclick="generateNewGame()">
+        重新分布
+      </button>
+      <button class="btn btn-outline" onclick="toggleLayout()">
+        🔄 更改排版
+      </button>
+      <button class="btn btn-primary" onclick="checkAnswer()">
+        提交答案
+      </button>
+    </div>
+
+    <!-- 返回首页 -->
+    <div class="back-link">
+      <a href="index.html">← 返回游戏主页</a>
+    </div>
+  </div>
+
+  <!-- 结果弹窗 -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-icon" id="modalIcon">🎉</div>
+      <h2 id="modalTitle">太棒了！</h2>
+      <p id="modalText">你全部答对了！</p>
+      <button class="btn btn-primary" onclick="closeModal(); generateNewGame();">继续挑战</button>
+    </div>
+  </div>
+
+  <!-- 星星特效容器 -->
+  <div class="stars-container" id="starsContainer"></div>
+
+  <script>
+    // 音频上下文
+    var audioContext = null;
+
+    // 初始化音频
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    // 播放正确音效
+    function playCorrectSound() {
+      initAudio();
+      var oscillator = audioContext.createOscillator();
+      var gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.4);
+    }
+
+    // 播放错误音效
+    function playWrongSound() {
+      initAudio();
+      var oscillator = audioContext.createOscillator();
+      var gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    }
+
+    // 创建烟花特效
+    function createStars(x, y) {
+      var container = document.getElementById('starsContainer');
+      
+      // 烟花颜色数组
+      var colors = [
+        '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', 
+        '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43',
+        '#ee5a24', '#009432', '#0652DD', '#9980FA'
+      ];
+      
+      // 创建多个烟花爆炸点
+      var burstCount = 2 + Math.floor(Math.random() * 2);
+      
+      for (var b = 0; b < burstCount; b++) {
+        var offsetX = (Math.random() - 0.5) * 40;
+        var offsetY = (Math.random() - 0.5) * 20;
+        var burstX = x + offsetX;
+        var burstY = y + offsetY;
+        var particleCount = 15 + Math.floor(Math.random() * 10);
+        var burstColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        setTimeout(function() {
+          for (var i = 0; i < particleCount; i++) {
+            createParticle(container, burstX, burstY, burstColor);
+          }
+        }, b * 100);
+      }
+    }
+    
+    // 创建单个烟花粒子
+    function createParticle(container, x, y, color) {
+      var particle = document.createElement('div');
+      particle.className = 'firework-particle';
+      particle.style.backgroundColor = color;
+      particle.style.boxShadow = '0 0 6px ' + color + ', 0 0 12px ' + color;
+      particle.style.left = x + 'px';
+      particle.style.top = y + 'px';
+      
+      // 随机角度和距离
+      var angle = Math.random() * Math.PI * 2;
+      var distance = 40 + Math.random() * 80;
+      var tx = Math.cos(angle) * distance;
+      var ty = Math.sin(angle) * distance + 30; // 加入重力效果
+      
+      particle.style.setProperty('--tx', tx + 'px');
+      particle.style.setProperty('--ty', ty + 'px');
+      particle.style.animation = 'fireworkExplode ' + (0.6 + Math.random() * 0.4) + 's ease-out forwards';
+      
+      container.appendChild(particle);
+      
+      // 创建拖尾效果
+      var trailCount = 3;
+      for (var j = 0; j < trailCount; j++) {
+        (function(idx) {
+          setTimeout(function() {
+            var trail = document.createElement('div');
+            trail.className = 'firework-trail';
+            trail.style.backgroundColor = color;
+            trail.style.left = (x + tx * (idx / trailCount) * 0.3) + 'px';
+            trail.style.top = (y + ty * (idx / trailCount) * 0.3) + 'px';
+            container.appendChild(trail);
+            setTimeout(function() { trail.remove(); }, 300);
+          }, idx * 50);
+        })(j);
+      }
+      
+      setTimeout(function() { particle.remove(); }, 1000);
+    }
+    // 颜色配置 - 8种颜色
+    var colorConfig = {
+      red: { name: '红色', hex: '#ef4444' },
+      purple: { name: '紫色', hex: '#a855f7' },
+      orange: { name: '橙色', hex: '#f97316' },
+      blue: { name: '蓝色', hex: '#3b82f6' },
+      green: { name: '绿色', hex: '#22c55e' },
+      yellow: { name: '黄色', hex: '#eab308' },
+      pink: { name: '粉色', hex: '#ec4899' },
+      cyan: { name: '青色', hex: '#06b6d4' }
+    };
+
+    var colorKeys = Object.keys(colorConfig);
+    var pairCount = 8; // 固定8组
+
+    // 游戏状态
+    var correctAnswers = {};
+    var userAnswers = {};
+    var completedCount = 0;
+    var currentDifficulty = 'easy'; // 默认简单难度
+    var isHorizontalLayout = false; // 默认左右布局（竖向数字排列）
+
+    // 切换布局
+    function toggleLayout() {
+      isHorizontalLayout = !isHorizontalLayout;
+      generateNewGame();
+    }
+
+    // 设置难度
+    function setDifficulty(level) {
+      currentDifficulty = level;
+      document.getElementById('easyBtn').classList.toggle('active', level === 'easy');
+      document.getElementById('hardBtn').classList.toggle('active', level === 'hard');
+      generateNewGame();
+    }
+
+    // Canvas 相关
+    var canvas = document.getElementById('gameCanvas');
+    var ctx = canvas.getContext('2d');
+
+    // 初始化画布尺寸
+    function initCanvas() {
+      var container = canvas.parentElement;
+      var width = container.clientWidth || 400;
+      var height = container.clientHeight || 400;
+      
+      var dpr = window.devicePixelRatio || 1;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      return { width, height };
+    }
+
+    // 生成新游戏
+    function generateNewGame() {
+      var canvasSize = initCanvas();
+      var width = canvasSize.width;
+      var height = canvasSize.height;
+      
+      // 使用所有8种颜色，打乱顺序
+      var shuffledColors = colorKeys.slice().sort(function() { return Math.random() - 0.5; });
+      
+      // 生成正确答案：数字 -> 颜色
+      correctAnswers = {};
+      for (var i = 1; i <= pairCount; i++) {
+        correctAnswers[i] = shuffledColors[i - 1];
+      }
+      
+      // 清空用户答案
+      userAnswers = {};
+      
+      // 绘制游戏
+      drawGame(width, height, shuffledColors);
+      
+      // 生成答案表格
+      generateAnswerTable();
+    }
+
+    // 绘制游戏
+    function drawGame(width, height, colors) {
+      ctx.clearRect(0, 0, width, height);
+      
+      // 布局参数
+      var padding = Math.min(width, height) * 0.06;
+      
+      var leftPoints, rightPoints;
+      
+      if (isHorizontalLayout) {
+        // 上下布局：数字在上方横排，颜色在下方
+        var leftY = padding;
+        var rightY = height - padding;
+        var leftX = width * 0.08;
+        var rightX = width * 0.92;
+        var stepX = (rightX - leftX) / (pairCount - 1);
+        
+        // 上方数字点（从左到右依次为1-8）
+        leftPoints = [];
+        for (var i = 0; i < pairCount; i++) {
+          leftPoints.push({ x: leftX + stepX * i, y: leftY, num: i + 1 });
+        }
+        
+        // 下方彩色点位置 - 打乱顺序
+        var rightPositions = [];
+        for (var i = 0; i < pairCount; i++) { rightPositions.push(i); }
+        rightPositions.sort(function() { return Math.random() - 0.5; });
+        rightPoints = [];
+        for (var i = 0; i < pairCount; i++) {
+          rightPoints.push({ 
+            x: leftX + stepX * i, 
+            y: rightY, 
+            color: colors[rightPositions[i]] 
+          });
+        }
+      } else {
+        // 左右布局：数字在左侧竖排，颜色在右侧
+        var leftX = padding;
+        var rightX = width - padding;
+        var topY = height * 0.08;
+        var bottomY = height * 0.92;
+        var stepY = (bottomY - topY) / (pairCount - 1);
+        
+        // 左侧数字点（从上到下依次为1-8）
+        leftPoints = [];
+        for (var i = 0; i < pairCount; i++) {
+          leftPoints.push({ x: leftX, y: topY + stepY * i, num: i + 1 });
+        }
+        
+        // 右侧彩色点位置 - 打乱顺序
+        var rightPositions = [];
+        for (var i = 0; i < pairCount; i++) { rightPositions.push(i); }
+        rightPositions.sort(function() { return Math.random() - 0.5; });
+        rightPoints = [];
+        for (var i = 0; i < pairCount; i++) {
+          rightPoints.push({ 
+            x: rightX, 
+            y: topY + stepY * i, 
+            color: colors[rightPositions[i]] 
+          });
+        }
+      }
+      
+      // 收集所有连线数据
+      var lines = [];
+      for (var i = 0; i < pairCount; i++) {
+        var leftPoint = leftPoints[i];
+        var targetColor = correctAnswers[i + 1];
+        var rightPoint = null;
+        for (var j = 0; j < rightPoints.length; j++) {
+          if (rightPoints[j].color === targetColor) {
+            rightPoint = rightPoints[j];
+            break;
+          }
+        }
+        if (!rightPoint) continue;
+        
+        lines.push({
+          start: leftPoint,
+          end: rightPoint,
+          index: i
+        });
+      }
+      
+      // 绘制所有连线
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      lines.forEach(function(line, idx) {
+        var start = line.start;
+        var end = line.end;
+        var index = line.index;
+        
+        var x1 = start.x, y1 = start.y;
+        var x2 = end.x, y2 = end.y;
+        
+        // 为每条线添加基础偏移，避免线在交叉处完全重叠
+        var lineOffset = (index - pairCount / 2) * 4;
+        
+        // 根据难度和布局设置曲线参数
+        var baseAmplitude, maxAmplitude, numPoints;
+        
+        if (currentDifficulty === 'easy') {
+          baseAmplitude = isHorizontalLayout ? width * 0.08 : height * 0.12;
+          maxAmplitude = isHorizontalLayout ? width * 0.15 : height * 0.22;
+          numPoints = 4;
+        } else {
+          baseAmplitude = isHorizontalLayout ? width * 0.18 : height * 0.25;
+          maxAmplitude = isHorizontalLayout ? width * 0.30 : height * 0.45;
+          numPoints = 7 + Math.floor(Math.random() * 3);
+        }
+        
+        var pts = [{ x: x1, y: y1 }];
+        var seed = Math.random() * 100;
+        
+        for (var i = 1; i < numPoints; i++) {
+          var ratio = i / numPoints;
+          
+          // 简单难度使用交替方向，困难难度随机方向
+          var dir;
+          if (currentDifficulty === 'easy') {
+            dir = (index + i) % 2 === 0 ? 1 : -1;
+          } else {
+            dir = ((index + i + Math.floor(seed)) % 3 === 0) ? 1 : -1;
+          }
+          
+          var amplitudeFactor, randomOffset;
+          if (currentDifficulty === 'easy') {
+            amplitudeFactor = Math.sin(ratio * Math.PI);
+            randomOffset = 0;
+          } else {
+            amplitudeFactor = Math.sin(ratio * Math.PI * 2 + seed) * 0.8 + 0.2;
+            randomOffset = isHorizontalLayout ? (Math.random() - 0.5) * width * 0.06 : (Math.random() - 0.5) * height * 0.08;
+          }
+          
+          var amplitude = baseAmplitude + Math.random() * (maxAmplitude - baseAmplitude);
+          
+          var x, y;
+          if (isHorizontalLayout) {
+            // 上下布局：曲线在水平方向弯曲，使用平滑过渡
+            var baseX = x1 + (x2 - x1) * ratio;
+            var smoothFactor = Math.sin(ratio * Math.PI); // 中间最大，两端为0
+            x = baseX + dir * amplitude * amplitudeFactor * smoothFactor;
+            y = y1 + (y2 - y1) * ratio + lineOffset * 0.5;
+          } else {
+            // 左右布局：曲线在垂直方向弯曲
+            x = x1 + (x2 - x1) * ratio;
+            y = (y1 + y2) / 2 + dir * amplitude * amplitudeFactor + (y2 - y1) * ratio + randomOffset + lineOffset;
+          }
+          
+          pts.push({ x, y });
+        }
+        pts.push({ x: x2, y: y2 });
+        
+        // 限制坐标在画布范围内
+        var clampX = function(x) { return Math.max(padding * 0.5, Math.min(width - padding * 0.5, x)); };
+        var clampY = function(y) { return Math.max(padding * 0.5, Math.min(height - padding * 0.5, y)); };
+        var p = pts.map(function(pt, i) {
+          return {
+            x: i === 0 || i === pts.length - 1 ? pt.x : clampX(pt.x),
+            y: i === 0 || i === pts.length - 1 ? pt.y : clampY(pt.y)
+          };
+        });
+        
+        var getControlPoints = function(p0, p1, p2, tension) {
+          if (tension === undefined) tension = 0.3;
+          var d01 = Math.sqrt(Math.pow(p1.x - p0.x, 2) + Math.pow(p1.y - p0.y, 2));
+          var d12 = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+          var fa = tension * d01 / (d01 + d12);
+
+          var fb = tension - fa;
+          return {
+            cp1: { x: p1.x - fa * (p2.x - p0.x), y: p1.y - fa * (p2.y - p0.y) },
+            cp2: { x: p1.x + fb * (p2.x - p0.x), y: p1.y + fb * (p2.y - p0.y) }
+          };
+        };
+        
+        ctx.beginPath();
+        ctx.moveTo(p[0].x, p[0].y);
+        
+        // 使用所有控制点绘制平滑曲线，上下布局使用更大张力
+        var curveTension = isHorizontalLayout ? 0.5 : 0.3;
+        for (var i = 1; i < p.length; i++) {
+          var p0 = i === 1 ? p[0] : p[i - 2];
+          var p1 = p[i - 1];
+          var p2 = p[i];
+          var p3 = i === p.length - 1 ? p[i] : p[i + 1];
+          
+          var cp = getControlPoints(p0, p1, p2, curveTension);
+          var cp2 = getControlPoints(p1, p2, p3, curveTension);
+          
+          ctx.bezierCurveTo(cp.cp2.x, cp.cp2.y, cp2.cp1.x, cp2.cp1.y, p2.x, p2.y);
+        }
+        
+        ctx.stroke();
+      });
+      
+      // 绘制左侧数字点
+      var dotRadius = Math.min(width, height) * 0.03;
+      
+      leftPoints.forEach(function(point) {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
+        ctx.fillStyle = '#333';
+        ctx.fill();
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold ' + (dotRadius * 1.1) + 'px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(point.num, point.x, point.y);
+      });
+      
+      // 绘制右侧彩色点
+      rightPoints.forEach(function(point) {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
+        ctx.fillStyle = colorConfig[point.color].hex;
+        ctx.fill();
+        
+        // 光泽
+        ctx.beginPath();
+        ctx.arc(point.x - dotRadius * 0.25, point.y - dotRadius * 0.25, dotRadius * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fill();
+      });
+    }
+
+    // 生成答案表格
+    function generateAnswerTable() {
+      var table = document.getElementById('answerTable');
+      table.innerHTML = '';
+      
+      for (var i = 1; i <= pairCount; i++) {
+        var cell = document.createElement('div');
+        cell.className = 'answer-cell';
+        cell.innerHTML = '<div class="number">' + i + '</div>' +
+          '<div class="color-select-container">' +
+            '<div class="color-block-btn" id="colorBtn' + i + '" onclick="toggleInlinePicker(' + i + ')">' +
+              '<span class="placeholder">点击选择</span>' +
+            '</div>' +
+            '<div class="inline-color-picker" id="picker' + i + '">' +
+              '<div class="inline-color-grid" id="grid' + i + '"></div>' +
+            '</div>' +
+          '</div>';
+        table.appendChild(cell);
+      }
+      
+      // 为每个选择器生成颜色网格
+      for (var i = 1; i <= pairCount; i++) {
+        generateInlineColorGrid(i);
+      }
+    }
+
+    // 生成内联颜色网格
+    function generateInlineColorGrid(num) {
+      var grid = document.getElementById('grid' + num);
+      if (!grid) return;
+      grid.innerHTML = '';
+      
+      // 获取已使用的颜色（只做视觉标记，不禁止选择）
+      var usedColors = new Set(
+        Object.entries(userAnswers)
+          .filter(function(entry) { return entry[1] && entry[0] != num; })
+          .map(function(entry) { return entry[1]; })
+      );
+      
+      colorKeys.forEach(function(key) {
+        var item = document.createElement('div');
+        // 不再使用 'used' 类禁用颜色，改为 'marked' 类仅做视觉提示
+        item.className = 'inline-color-item' + (usedColors.has(key) ? ' marked' : '');
+        item.style.backgroundColor = colorConfig[key].hex;
+        item.dataset.color = key;
+        item.onclick = function(e) {
+          e.stopPropagation();
+          selectColorInline(num, key);
+        };
+        grid.appendChild(item);
+      });
+    }
+
+    // 当前打开的选择器
+    var currentOpenPicker = null;
+
+    // 切换内联颜色选择器
+    function toggleInlinePicker(num) {
+      var picker = document.getElementById('picker' + num);
+      
+      // 关闭其他选择器
+      if (currentOpenPicker && currentOpenPicker !== num) {
+        var prevPicker = document.getElementById('picker' + currentOpenPicker);
+        if (prevPicker) prevPicker.classList.remove('show');
+      }
+      
+      // 切换当前选择器
+      picker.classList.toggle('show');
+      currentOpenPicker = picker.classList.contains('show') ? num : null;
+      
+      // 更新颜色网格状态
+      generateInlineColorGrid(num);
+    }
+
+    // 从内联选择器选择颜色
+    function selectColorInline(num, colorKey) {
+      // 检查是否有其他数字已选择该颜色，如有则清除
+      for (var i = 1; i <= pairCount; i++) {
+        if (i !== num && userAnswers[i] === colorKey) {
+          // 清除之前的选择
+          userAnswers[i] = null;
+          var prevBtn = document.getElementById('colorBtn' + i);
+          if (prevBtn) {
+            prevBtn.classList.remove('selected', 'correct', 'wrong');
+            prevBtn.style.removeProperty('--selected-color');
+            var existingCheck = prevBtn.querySelector('.checkmark');
+            if (existingCheck) existingCheck.remove();
+            // 恢复占位文字
+            if (!prevBtn.querySelector('.placeholder')) {
+              var placeholder = document.createElement('span');
+              placeholder.className = 'placeholder';
+              placeholder.textContent = '点击选择';
+              prevBtn.appendChild(placeholder);
+            }
+          }
+        }
+      }
+      
+      userAnswers[num] = colorKey;
+      
+      var btn = document.getElementById('colorBtn' + num);
+      var picker = document.getElementById('picker' + num);
+      
+      // 移除占位文字
+      var placeholder = btn.querySelector('.placeholder');
+      if (placeholder) placeholder.remove();
+      
+      // 更新按钮显示
+      btn.classList.add('selected');
+      btn.classList.remove('correct', 'wrong');
+      btn.style.setProperty('--selected-color', colorConfig[colorKey].hex);
+      
+      // 检查是否正确
+      if (colorKey === correctAnswers[num]) {
+        // 正确！显示对勾
+        btn.classList.add('correct');
+        var checkmark = document.createElement('span');
+        checkmark.className = 'checkmark';
+        checkmark.textContent = '✓';
+        btn.appendChild(checkmark);
+        
+        // 播放正确音效
+        playCorrectSound();
+        
+        // 获取按钮位置，创建星星特效
+        var rect = btn.getBoundingClientRect();
+        var x = rect.left + rect.width / 2;
+        var y = rect.top + rect.height / 2;
+        createStars(x, y);
+      } else {
+        // 错误
+        btn.classList.add('wrong');
+        playWrongSound();
+      }
+      
+      // 关闭选择器
+      picker.classList.remove('show');
+      currentOpenPicker = null;
+      
+      // 更新所有选择器的颜色网格
+      for (var i = 1; i <= pairCount; i++) {
+        generateInlineColorGrid(i);
+      }
+    }
+
+    // 点击页面其他地方关闭选择器
+    document.addEventListener('click', function(e) {
+      if (currentOpenPicker && !e.target.closest('.color-select-container')) {
+        var picker = document.getElementById('picker' + currentOpenPicker);
+        if (picker) picker.classList.remove('show');
+        currentOpenPicker = null;
+      }
+    });
+
+    // 检查答案
+    function checkAnswer() {
+      var correct = 0;
+      
+      for (var i = 1; i <= pairCount; i++) {
+        var btn = document.getElementById('colorBtn' + i);
+        
+        // 移除之前的状态，但保留selected状态
+        btn.classList.remove('correct', 'wrong');
+        
+        // 移除之前添加的对勾
+        var existingCheck = btn.querySelector('.checkmark');
+        if (existingCheck) existingCheck.remove();
+        
+        if (userAnswers[i] === correctAnswers[i]) {
+          correct++;
+          btn.classList.add('correct');
+          // 添加对勾
+          var checkmark = document.createElement('span');
+          checkmark.className = 'checkmark';
+          checkmark.textContent = '✓';
+          btn.appendChild(checkmark);
+        } else if (userAnswers[i]) {
+          btn.classList.add('wrong');
+        }
+      }
+      
+      var modal = document.getElementById('modalOverlay');
+      var icon = document.getElementById('modalIcon');
+      var title = document.getElementById('modalTitle');
+      var text = document.getElementById('modalText');
+      
+      if (correct === pairCount) {
+        icon.textContent = '🎉';
+        title.textContent = '太棒了！';
+        text.textContent = '你全部答对了！视觉追踪能力很棒！';
+        completedCount++;
+        document.getElementById('completedCount').textContent = completedCount;
+      } else if (correct >= pairCount / 2) {
+        icon.textContent = '👍';
+        title.textContent = '不错！';
+        text.textContent = '答对了 ' + correct + '/' + pairCount + '，继续加油！';
+      } else {
+        icon.textContent = '💪';
+        title.textContent = '再试试！';
+        text.textContent = '答对了 ' + correct + '/' + pairCount + '，仔细追踪每条线哦~';
+      }
+      
+      modal.classList.add('show');
+    }
+
+    // 关闭弹窗
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    // 点击弹窗外部关闭
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+
+    // 初始化游戏 - 确保DOM加载完成
+    function init() {
+      requestAnimationFrame(function() {
+        generateNewGame();
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+<style>
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    </style>
+    <img src="/public/qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  </body>
+</html>
