@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>数字专注力</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      color: white;
+    }
+    
+    .title-area {
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 0%, #4FC3F7 50%, #fff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 3px;
+    }
+    
+    .subtitle {
+      color: #4FC3F7;
+      font-size: 11px;
+      padding: 4px 12px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 15px;
+      display: inline-block;
+    }
+    
+    .mode-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .mode-btn {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .mode-btn.active {
+      border-color: #4FC3F7;
+      background: rgba(79,195,247,0.3);
+      color: white;
+    }
+    
+    .mode-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .score-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 380px;
+      margin-bottom: 12px;
+      padding: 8px 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+    }
+    
+    .score-section {
+      text-align: center;
+    }
+    
+    .score-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .score-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #FFD700;
+    }
+    
+    .round-text {
+      font-size: 14px;
+      font-weight: bold;
+      color: #4FC3F7;
+      min-width: 60px;
+      text-align: center;
+    }
+    
+    .round-indicator {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    
+    .round-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .round-dot.active {
+      background: #4CAF50;
+      border-color: #4CAF50;
+      box-shadow: 0 0 6px rgba(76,175,80,0.5);
+    }
+    
+    .round-dot.wrong {
+      background: #f44336;
+      border-color: #f44336;
+    }
+    
+    .game-area {
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      margin-bottom: 15px;
+      width: 100%;
+      max-width: 340px;
+    }
+    
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .cell {
+      aspect-ratio: 1;
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: bold;
+      color: black;
+      border: 2px solid rgba(0,0,0,0.1);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .cell.show {
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .cell.hidden {
+      color: transparent;
+      background: white;
+      cursor: default;
+    }
+    
+    .cell.input-mode {
+      background: white;
+      cursor: pointer;
+    }
+    
+    .cell.input-mode:active {
+      background: rgba(200,200,200,1);
+    }
+    
+    .cell.filled {
+      background: rgba(79,195,247,0.2);
+    }
+    
+    .cell.correct {
+      border-color: #4CAF50;
+      background: rgba(76,175,80,0.3);
+      animation: correctPulse 0.6s ease-out;
+    }
+    
+    .cell.wrong {
+      border-color: #f44336;
+      background: rgba(244,67,54,0.3);
+      animation: wrongShake 0.5s ease-out;
+    }
+    
+    .cell .cross {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+    }
+    
+    .cell .cross::before,
+    .cell .cross::after {
+      content: '';
+      position: absolute;
+      background: #f44336;
+      top: 50%;
+      left: 50%;
+    }
+    
+    .cell .cross::before {
+      width: 70%;
+      height: 4px;
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+    
+    .cell .cross::after {
+      width: 70%;
+      height: 4px;
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+    
+    /* 图形样式 */
+    .cell .shape {
+      width: 60%;
+      height: 60%;
+    }
+    
+    .cell .shape-square {
+      background: currentColor;
+    }
+    
+    .cell .shape-triangle {
+      width: 0;
+      height: 0;
+      border-left: calc(var(--cell-size) * 0.3) solid transparent;
+      border-right: calc(var(--cell-size) * 0.3) solid transparent;
+      border-bottom: calc(var(--cell-size) * 0.5) solid currentColor;
+      background: transparent;
+    }
+    
+    .cell .shape-circle {
+      border-radius: 50%;
+      background: currentColor;
+    }
+    
+    .cell .shape-pentagon {
+      position: relative;
+      background: transparent;
+    }
+    
+    .cell .shape-hexagon {
+      position: relative;
+      background: transparent;
+    }
+    
+    .cell .shape-diamond {
+      position: relative;
+      background: transparent;
+    }
+    
+    @keyframes correctPulse {
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes wrongShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-8px); }
+      80% { transform: translateX(8px); }
+    }
+    
+    .timer {
+      font-size: 42px;
+      font-weight: bold;
+      color: #4FC3F7;
+      text-align: center;
+      margin-bottom: 12px;
+      display: none;
+    }
+    
+    .timer.show {
+      display: block;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: bold;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      flex: 1;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    
+    .btn-start {
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      color: white;
+    }
+    
+    .btn-reset {
+      background: linear-gradient(135deg, #9C27B0, #BA68C8);
+      color: white;
+    }
+    
+    .status {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 14px;
+      color: #4FC3F7;
+    }
+    
+    .number-picker {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(30,30,50,0.98);
+      border-radius: 20px;
+      padding: 18px;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    
+    .number-picker.show {
+      display: block;
+      animation: fadeIn 0.2s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    
+    .number-picker-title {
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #4FC3F7;
+    }
+    
+    .number-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    
+    .picker-btn {
+      width: 58px;
+      height: 58px;
+      border: none;
+      border-radius: 10px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: linear-gradient(135deg, #4FC3F7, #29B6F6);
+      color: white;
+    }
+    
+    .picker-btn:active {
+      transform: scale(0.9);
+    }
+    
+    .picker-btn:hover {
+      background: linear-gradient(135deg, #29B6F6, #03A9F4);
+    }
+    
+    .picker-cancel {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .picker-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      z-index: 999;
+    }
+    
+    .picker-overlay.show {
+      display: block;
+    }
+    
+    .win-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .win-overlay.show {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+    
+    .win-content {
+      text-align: center;
+      animation: winBounce 0.8s ease-out;
+    }
+    
+    @keyframes winBounce {
+      0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+      50% { transform: scale(1.2) rotate(5deg); }
+      70% { transform: scale(0.9) rotate(-3deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    
+    .win-emoji {
+      font-size: 70px;
+      margin-bottom: 15px;
+    }
+    
+    .win-score {
+      font-size: 42px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 30px rgba(255,215,0,0.8);
+      margin-bottom: 8px;
+    }
+    
+    .win-text {
+      font-size: 20px;
+      color: #4CAF50;
+    }
+    
+    .game-over-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .game-over-overlay.show {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+    
+    .game-over-content {
+      text-align: center;
+      animation: fadeIn 0.5s;
+    }
+    
+    .game-over-emoji {
+      font-size: 50px;
+      margin-bottom: 12px;
+    }
+    
+    .game-over-text {
+      font-size: 18px;
+      color: #f44336;
+      margin-bottom: 15px;
+    }
+    
+    .game-over-next {
+      font-size: 14px;
+      color: #4FC3F7;
+    }
+    
+    /* 底部二维码 */
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="title-area">
+    <h1>数字专注力</h1>
+    <p class="subtitle">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+  </div>
+  
+  <!-- 难度选择 -->
+  <div class="mode-row">
+    <button class="mode-btn" id="modeEasy" onclick="setDifficulty('easy')">简单 10秒</button>
+    <button class="mode-btn active" id="modeHard" onclick="setDifficulty('hard')">困难 5秒</button>
+  </div>
+  
+  <!-- 内容选择 -->
+  <div class="mode-row">
+    <button class="mode-btn active" id="modeNumber" onclick="setContentType('number')">数字模式</button>
+    <button class="mode-btn" id="modeColor" onclick="setContentType('color')">颜色模式</button>
+    <button class="mode-btn" id="modeShape" onclick="setContentType('shape')">图形模式</button>
+  </div>
+  
+  <div class="score-bar">
+    <div class="score-section">
+      <div class="score-label">当前得分</div>
+      <div class="score-value" id="currentScore">0</div>
+    </div>
+    <div class="round-text" id="roundText">第 1 关</div>
+    <div class="score-section">
+      <div class="score-label">最高得分</div>
+      <div class="score-value" id="bestScore">0</div>
+    </div>
+  </div>
+  
+  <div class="round-indicator" id="roundIndicator">
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+    <div class="round-dot"></div>
+  </div>
+  
+  <div class="game-area">
+    <div class="timer" id="timer">5</div>
+    
+    <div class="grid-container" id="gridContainer">
+      <div class="cell hidden" id="cell0" onclick="cellClick(0)"></div>
+      <div class="cell hidden" id="cell1" onclick="cellClick(1)"></div>
+      <div class="cell hidden" id="cell2" onclick="cellClick(2)"></div>
+      <div class="cell hidden" id="cell3" onclick="cellClick(3)"></div>
+      <div class="cell hidden" id="cell4" onclick="cellClick(4)"></div>
+      <div class="cell hidden" id="cell5" onclick="cellClick(5)"></div>
+      <div class="cell hidden" id="cell6" onclick="cellClick(6)"></div>
+      <div class="cell hidden" id="cell7" onclick="cellClick(7)"></div>
+      <div class="cell hidden" id="cell8" onclick="cellClick(8)"></div>
+    </div>
+    
+    <div class="controls">
+      <button class="btn btn-start" onclick="startGame()">开始</button>
+      <button class="btn btn-reset" onclick="resetGame()">重置</button>
+    </div>
+  </div>
+  
+  <div class="status" id="status">点击开始按钮显示内容</div>
+  
+  <div class="picker-overlay" id="pickerOverlay" onclick="closePicker()"></div>
+  <div class="number-picker" id="numberPicker">
+    <div class="number-picker-title" id="pickerTitle">选择数字</div>
+    <div class="number-picker-grid" id="pickerGrid"></div>
+    <button class="picker-cancel" onclick="closePicker()">取消</button>
+  </div>
+  
+  <div class="win-overlay" id="winOverlay">
+    <div class="win-content">
+      <div class="win-emoji">🎉</div>
+      <div class="win-score" id="winScore">100分</div>
+      <div class="win-text">满分通关！</div>
+    </div>
+  </div>
+  
+  <div class="game-over-overlay" id="gameOverOverlay">
+    <div class="game-over-content">
+      <div class="game-over-emoji">😅</div>
+      <div class="game-over-text" id="gameOverText">答错了！</div>
+      <div class="game-over-next" id="gameOverNext">2秒后进入下一关</div>
+    </div>
+  </div>
+  
+  <script>
+    // 禁止右键菜单
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+    });
+    
+    // 禁止拖拽
+    document.addEventListener('dragstart', function(e) {
+      e.preventDefault();
+    });
+    
+    // 禁止选择
+    document.addEventListener('selectstart', function(e) {
+      e.preventDefault();
+    });
+    
+    // 禁止复制
+    document.addEventListener('copy', function(e) {
+      e.preventDefault();
+    });
+    
+    // 禁止键盘快捷键
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) {
+        e.preventDefault();
+      }
+    });
+    
+    var items = [];
+    var userInputs = [];
+    var gameStarted = false;
+    var canInput = false;
+    var currentCellIndex = -1;
+    var currentRound = 0;
+    var bestScore = 0;
+    var difficulty = 'hard';
+    var contentType = 'number';
+    
+    // 颜色列表
+    var colors = [
+      { name: '红', value: '#FF0000' },
+      { name: '橙', value: '#FF8C00' },
+      { name: '黄', value: '#FFD700' },
+      { name: '绿', value: '#00FF00' },
+      { name: '青', value: '#00FFFF' },
+      { name: '蓝', value: '#0000FF' },
+      { name: '紫', value: '#8B00FF' }
+    ];
+    
+    // 图形列表
+    var shapes = [
+      { name: '方块', type: 'square' },
+      { name: '三角', type: 'triangle' },
+      { name: '圆形', type: 'circle' },
+      { name: '五角', type: 'pentagon' },
+      { name: '六边', type: 'hexagon' },
+      { name: '菱形', type: 'diamond' }
+    ];
+    
+    var audioCtx = null;
+    
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+    
+    function playSound(type) {
+      try {
+        initAudio();
+        var oscillator = audioCtx.createOscillator();
+        var gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        if (type === 'click') {
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.1);
+        } else if (type === 'perfect') {
+          var notes = [523.25, 659.25, 783.99, 1046.50];
+          for (var i = 0; i < notes.length; i++) {
+            (function(index) {
+              setTimeout(function() {
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = notes[index];
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.3);
+              }, index * 100);
+            })(i);
+          }
+        } else if (type === 'error') {
+          oscillator.frequency.value = 200;
+          oscillator.type = 'square';
+          gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'fill') {
+          oscillator.frequency.value = 600;
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.08);
+        } else if (type === 'wrong') {
+          oscillator.frequency.value = 150;
+          oscillator.type = 'sawtooth';
+          gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.5);
+        }
+      } catch (e) {}
+    }
+    
+    // 设置难度
+    function setDifficulty(mode) {
+      difficulty = mode;
+      document.getElementById('modeEasy').classList.toggle('active', mode === 'easy');
+      document.getElementById('modeHard').classList.toggle('active', mode === 'hard');
+    }
+    
+    // 设置内容类型
+    function setContentType(type) {
+      contentType = type;
+      document.getElementById('modeNumber').classList.toggle('active', type === 'number');
+      document.getElementById('modeColor').classList.toggle('active', type === 'color');
+      document.getElementById('modeShape').classList.toggle('active', type === 'shape');
+      resetGame();
+    }
+    
+    // 生成内容
+    function generateItems() {
+      items = [];
+      userInputs = [];
+      
+      if (contentType === 'number') {
+        for (var i = 0; i < 9; i++) {
+          items.push({ type: 'number', value: Math.floor(Math.random() * 9) + 1 });
+          userInputs.push(0);
+        }
+      } else if (contentType === 'color') {
+        for (var i = 0; i < 9; i++) {
+          var colorIndex = Math.floor(Math.random() * colors.length);
+          items.push({ type: 'color', value: colorIndex });
+          userInputs.push(-1);
+        }
+      } else if (contentType === 'shape') {
+        for (var i = 0; i < 9; i++) {
+          var shapeIndex = Math.floor(Math.random() * shapes.length);
+          items.push({ type: 'shape', value: shapeIndex });
+          userInputs.push(-1);
+        }
+      }
+    }
+    
+    // 更新回合指示器
+    function updateRoundIndicator() {
+      var dots = document.querySelectorAll('.round-dot');
+      dots.forEach(function(dot, index) {
+        dot.classList.remove('active', 'wrong');
+        if (index < currentRound) {
+          dot.classList.add('active');
+        }
+      });
+    }
+    
+    // 更新进度显示
+    function updateProgress() {
+      document.getElementById('roundText').textContent = '第 ' + (currentRound + 1) + ' 关';
+    }
+    
+    // 创建形状SVG
+    function createShapeSVG(shapeType, color) {
+      var svg = '';
+      var size = 45;
+      
+      if (shapeType === 'square') {
+        svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><rect x="5" y="5" width="' + (size-10) + '" height="' + (size-10) + '" fill="' + color + '"/></svg>';
+      } else if (shapeType === 'triangle') {
+        svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><polygon points="' + size/2 + ',5 5,' + (size-5) + ' ' + (size-5) + ',' + (size-5) + '" fill="' + color + '"/></svg>';
+      } else if (shapeType === 'circle') {
+        svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><circle cx="' + size/2 + '" cy="' + size/2 + '" r="' + (size/2-5) + '" fill="' + color + '"/></svg>';
+      } else if (shapeType === 'pentagon') {
+        var cx = size/2, cy = size/2, r = size/2-5;
+        var points = [];
+        for (var i = 0; i < 5; i++) {
+          var angle = (i * 72 - 90) * Math.PI / 180;
+          points.push((cx + r * Math.cos(angle)) + ',' + (cy + r * Math.sin(angle)));
+        }
+        svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><polygon points="' + points.join(' ') + '" fill="' + color + '"/></svg>';
+      } else if (shapeType === 'hexagon') {
+        var cx = size/2, cy = size/2, r = size/2-5;
+        var points = [];
+        for (var i = 0; i < 6; i++) {
+          var angle = (i * 60 - 90) * Math.PI / 180;
+          points.push((cx + r * Math.cos(angle)) + ',' + (cy + r * Math.sin(angle)));
+        }
+        svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><polygon points="' + points.join(' ') + '" fill="' + color + '"/></svg>';
+      } else if (shapeType === 'diamond') {
+        svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><polygon points="' + size/2 + ',5 ' + (size-5) + ',' + size/2 + ' ' + size/2 + ',' + (size-5) + ' 5,' + size/2 + '" fill="' + color + '"/></svg>';
+      }
+      
+      return svg;
+    }
+    
+    // 显示内容
+    function displayItems() {
+      for (var i = 0; i < 9; i++) {
+        var cell = document.getElementById('cell' + i);
+        cell.innerHTML = '';
+        cell.classList.add('show');
+        cell.classList.remove('hidden', 'input-mode', 'correct', 'wrong', 'filled');
+        
+        var item = items[i];
+        if (item.type === 'number') {
+          cell.textContent = item.value;
+          cell.style.color = 'black';
+        } else if (item.type === 'color') {
+          cell.style.background = colors[item.value].value;
+          cell.style.color = colors[item.value].value;
+          cell.innerHTML = '<svg width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="' + colors[item.value].value + '"/></svg>';
+        } else if (item.type === 'shape') {
+          var shapeColor = '#333';
+          cell.innerHTML = createShapeSVG(shapes[item.value].type, shapeColor);
+        }
+      }
+    }
+    
+    // 隐藏内容
+    function hideItems() {
+      for (var i = 0; i < 9; i++) {
+        var cell = document.getElementById('cell' + i);
+        cell.innerHTML = '';
+        cell.style.background = 'white';
+        cell.textContent = '';
+        cell.classList.remove('show');
+        cell.classList.add('input-mode');
+        cell.classList.remove('hidden');
+      }
+    }
+    
+    // 点击格子
+    function cellClick(index) {
+      if (!canInput) return;
+      if (contentType === 'number' && userInputs[index] > 0) return;
+      if ((contentType === 'color' || contentType === 'shape') && userInputs[index] >= 0) return;
+      
+      playSound('click');
+      
+      for (var i = 0; i < 9; i++) {
+        document.getElementById('cell' + i).classList.remove('selected');
+      }
+      
+      currentCellIndex = index;
+      document.getElementById('cell' + index).classList.add('selected');
+      openPicker();
+    }
+    
+    // 开始游戏
+    function startGame() {
+      if (gameStarted) return;
+      
+      generateItems();
+      displayItems();
+      gameStarted = true;
+      canInput = false;
+      
+      updateProgress();
+      document.getElementById('status').textContent = '请记住这些内容...';
+      document.getElementById('gameOverOverlay').classList.remove('show');
+      
+      var timerEl = document.getElementById('timer');
+      timerEl.classList.add('show');
+      var count = difficulty === 'easy' ? 10 : 5;
+      timerEl.textContent = count;
+      
+      var countdown = setInterval(function() {
+        count--;
+        if (count > 0) {
+          timerEl.textContent = count;
+        } else {
+          clearInterval(countdown);
+          timerEl.classList.remove('show');
+          hideItems();
+          canInput = true;
+          document.getElementById('status').textContent = '点击格子选择内容';
+        }
+      }, 1000);
+    }
+    
+    // 打开选择器
+    function openPicker() {
+      var grid = document.getElementById('pickerGrid');
+      var title = document.getElementById('pickerTitle');
+      grid.innerHTML = '';
+      
+      if (contentType === 'number') {
+        title.textContent = '选择数字';
+        for (var i = 1; i <= 9; i++) {
+          var btn = document.createElement('button');
+          btn.className = 'picker-btn';
+          btn.textContent = i;
+          btn.onclick = (function(n) { return function() { selectItem(n); }; })(i);
+          grid.appendChild(btn);
+        }
+      } else if (contentType === 'color') {
+        title.textContent = '选择颜色';
+        for (var i = 0; i < colors.length; i++) {
+          var btn = document.createElement('button');
+          btn.className = 'picker-btn';
+          btn.style.background = colors[i].value;
+          btn.textContent = colors[i].name;
+          btn.onclick = (function(n) { return function() { selectItem(n); }; })(i);
+          grid.appendChild(btn);
+        }
+      } else if (contentType === 'shape') {
+        title.textContent = '选择图形';
+        for (var i = 0; i < shapes.length; i++) {
+          var btn = document.createElement('button');
+          btn.className = 'picker-btn';
+          btn.style.background = '#333';
+          btn.style.color = 'white';
+          btn.style.fontSize = '11px';
+          btn.innerHTML = createShapeSVG(shapes[i].type, 'white');
+          btn.onclick = (function(n) { return function() { selectItem(n); }; })(i);
+          grid.appendChild(btn);
+        }
+      }
+      
+      document.getElementById('pickerOverlay').classList.add('show');
+      document.getElementById('numberPicker').classList.add('show');
+    }
+    
+    function closePicker() {
+      document.getElementById('pickerOverlay').classList.remove('show');
+      document.getElementById('numberPicker').classList.remove('show');
+      currentCellIndex = -1;
+    }
+    
+    // 选择内容
+    function selectItem(value) {
+      if (currentCellIndex < 0) return;
+      
+      var cell = document.getElementById('cell' + currentCellIndex);
+      userInputs[currentCellIndex] = value;
+      
+      if (contentType === 'number') {
+        cell.textContent = value;
+      } else if (contentType === 'color') {
+        cell.style.background = colors[value].value;
+        cell.innerHTML = '<svg width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="' + colors[value].value + '"/></svg>';
+      } else if (contentType === 'shape') {
+        cell.innerHTML = createShapeSVG(shapes[value].type, '#333');
+      }
+      
+      cell.classList.add('filled');
+      cell.classList.remove('selected');
+      
+      playSound('fill');
+      closePicker();
+      
+      // 检查是否全部填写
+      var allFilled = true;
+      for (var i = 0; i < 9; i++) {
+        if (contentType === 'number' && userInputs[i] === 0) {
+          allFilled = false;
+          break;
+        } else if ((contentType === 'color' || contentType === 'shape') && userInputs[i] < 0) {
+          allFilled = false;
+          break;
+        }
+      }
+      
+      if (allFilled) {
+        setTimeout(function() {
+          checkAnswer();
+        }, 300);
+      }
+    }
+    
+    // 验证答案
+    function checkAnswer() {
+      var correct = 0;
+      
+      for (var i = 0; i < 9; i++) {
+        var cell = document.getElementById('cell' + i);
+        cell.classList.remove('input-mode');
+        
+        if (userInputs[i] === items[i].value) {
+          correct++;
+          cell.classList.add('correct');
+          cell.classList.remove('wrong');
+        } else {
+          cell.classList.add('wrong');
+          cell.classList.remove('correct');
+        }
+      }
+      
+      canInput = false;
+      gameStarted = false;
+      
+      if (correct === 9) {
+        currentRound++;
+        updateRoundIndicator();
+        document.getElementById('currentScore').textContent = currentRound * 10;
+        
+        if (currentRound === 10) {
+          playSound('perfect');
+          showPerfectWin();
+        } else {
+          playSound('perfect');
+          setTimeout(function() {
+            startGame();
+          }, 1000);
+        }
+      } else {
+        playSound('wrong');
+        showWrongAndNext();
+      }
+    }
+    
+    // 显示满分通关
+    function showPerfectWin() {
+      if (currentRound * 10 > bestScore) {
+        bestScore = currentRound * 10;
+        document.getElementById('bestScore').textContent = bestScore;
+      }
+      
+      document.getElementById('winScore').textContent = '100分';
+      document.getElementById('winOverlay').classList.add('show');
+      
+      setTimeout(function() {
+        document.getElementById('winOverlay').classList.remove('show');
+        resetGame();
+      }, 3000);
+    }
+    
+    // 显示答错并进入下一关
+    function showWrongAndNext() {
+      var dots = document.querySelectorAll('.round-dot');
+      dots[currentRound].classList.add('wrong');
+      
+      document.getElementById('gameOverOverlay').classList.add('show');
+      
+      var countdown = 2;
+      document.getElementById('gameOverNext').textContent = countdown + '秒后进入下一关';
+      
+      var timer = setInterval(function() {
+        countdown--;
+        if (countdown > 0) {
+          document.getElementById('gameOverNext').textContent = countdown + '秒后进入下一关';
+        } else {
+          clearInterval(timer);
+          document.getElementById('gameOverOverlay').classList.remove('show');
+          currentRound = 0;
+          updateRoundIndicator();
+          document.getElementById('currentScore').textContent = '0';
+          startGame();
+        }
+      }, 1000);
+    }
+    
+    // 重置游戏
+    function resetGame() {
+      gameStarted = false;
+      canInput = false;
+      items = [];
+      userInputs = [];
+      currentRound = 0;
+      
+      document.getElementById('winOverlay').classList.remove('show');
+      document.getElementById('gameOverOverlay').classList.remove('show');
+      
+      for (var i = 0; i < 9; i++) {
+        var cell = document.getElementById('cell' + i);
+        cell.innerHTML = '';
+        cell.textContent = '';
+        cell.style.background = 'white';
+        cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+        cell.classList.add('hidden');
+      }
+      
+      updateRoundIndicator();
+      document.getElementById('currentScore').textContent = '0';
+      document.getElementById('roundText').textContent = '第 1 关';
+      document.getElementById('timer').classList.remove('show');
+      document.getElementById('status').textContent = '点击开始按钮显示内容';
+    }
+  </script>
+  <img src="qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+</body>
+</html>

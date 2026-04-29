@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>色彩归纳 - 读写障碍注意力训练</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    html, body { touch-action: manipulation; overscroll-behavior: none; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 15px;
+      color: white;
+    }
+    
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    
+    /* 顶部区域 */
+    .top-section {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .back-btn {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      padding: 8px 18px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 14px;
+      margin-bottom: 15px;
+      transition: all 0.2s;
+    }
+    
+    .back-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .title-area {
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 36px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #fff 0%, #FFD700 50%, #fff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 2px 10px rgba(255,215,0,0.3);
+      letter-spacing: 4px;
+    }
+    .subtitle {
+      color: #FFD700;
+      font-size: 12px;
+      padding: 6px 16px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 20px;
+      display: inline-block;
+    }
+    
+    /* 按钮行 */
+    .btn-row {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+    
+    .btn {
+      padding: 12px 35px;
+      border: none;
+      border-radius: 25px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn-reset {
+      background: linear-gradient(135deg, #FF9800, #FFB74D);
+      color: white;
+    }
+    
+    .btn-symmetry {
+      background: linear-gradient(135deg, #9C27B0, #BA68C8);
+      color: white;
+    }
+    
+    .btn-symmetry.active {
+      background: linear-gradient(135deg, #E91E63, #F48FB1);
+      box-shadow: 0 0 15px rgba(233,30,99,0.5);
+    }
+    
+    .btn-next {
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      color: white;
+    }
+    
+    /* 形状选择器 */
+    .shape-selector {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(255,255,255,0.9);
+      padding: 8px 12px;
+      border-radius: 25px;
+    }
+    
+    .shape-option {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    
+    .shape-option:hover {
+      background: rgba(0,0,0,0.05);
+    }
+    
+    .shape-option.selected {
+      border-color: #FF9800;
+      background: rgba(255,152,0,0.15);
+    }
+    
+    .shape-option svg {
+      pointer-events: none;
+    }
+    
+    .game-area {
+      background: white;
+      border-radius: 15px;
+      padding: 35px 40px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    
+    /* 颜色选项 - 顶部小三角形 */
+    .color-palette {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .color-option {
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .color-option:hover {
+      transform: scale(1.15);
+    }
+    
+    .color-option.selected svg polygon {
+      stroke-width: 3;
+      stroke: #333;
+    }
+    
+    /* 游戏区域 - 左右三角形 */
+    .triangles-container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 50px;
+    }
+    
+    .triangle-box {
+      text-align: center;
+    }
+    
+    .triangle-box h3 {
+      color: #333;
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+    
+    .triangle-svg {
+      display: block;
+      margin: 0 auto;
+    }
+    
+    .triangle-svg .tri {
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .triangle-svg .tri:hover {
+      opacity: 0.7;
+    }
+    
+    .fill-title {
+      color: #E91E63;
+    }
+    
+    /* 提示信息 */
+    .hint {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-top: 20px;
+    }
+    
+    /* 结果 */
+    .result {
+      text-align: center;
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    .result.success {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .result.error {
+      background: #f44336;
+      color: white;
+    }
+    
+    /* 进度 */
+    .progress {
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    
+    /* 计时器 */
+    .timer {
+      text-align: center;
+      color: #FF9800;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    
+    /* 底部二维码 */
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+    
+    /* 通关动画 */
+    .win-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      flex-direction: column;
+    }
+    
+    .win-text {
+      font-size: 48px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 0 20px #FFD700, 0 0 40px #FFD700;
+      animation: bounceIn 0.5s ease;
+    }
+    
+    @keyframes bounceIn {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes confetti {
+      0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+    
+    @media (max-width: 500px) {
+      .triangles-container {
+        gap: 30px;
+      }
+      .color-palette {
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 顶部区域 -->
+    <div class="top-section">
+      <a href="index.html" class="back-btn">← 返回主页</a>
+      
+      <div class="title-area">
+        <h1>色彩管理</h1>
+        <p class="subtitle">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+      </div>
+      
+      <div class="btn-row">
+        <button class="btn btn-reset" onclick="resetUserPattern()">重置</button>
+        <button class="btn btn-symmetry" id="symmetryBtn" onclick="toggleSymmetry()">对称玩法</button>
+        <div class="shape-selector">
+          <div class="shape-option selected" data-shape="triangle" onclick="selectShape('triangle')">
+            <svg width="24" height="24"><polygon points="12,2 22,20 2,20" fill="#fff" stroke="#333" stroke-width="1"/></svg>
+          </div>
+          <div class="shape-option" data-shape="circle" onclick="selectShape('circle')">
+            <svg width="24" height="24"><circle cx="12" cy="12" r="9" fill="#fff" stroke="#333" stroke-width="1"/></svg>
+          </div>
+          <div class="shape-option" data-shape="square" onclick="selectShape('square')">
+            <svg width="24" height="24"><rect x="3" y="3" width="18" height="18" fill="#fff" stroke="#333" stroke-width="1"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="game-area">
+      <!-- 顶部颜色选项 -->
+      <div class="color-palette" id="colorPalette"></div>
+      
+      <!-- 左右三角形 -->
+      <div class="triangles-container">
+        <div class="triangle-box">
+          <h3>示例</h3>
+          <svg id="sampleTriangle" class="triangle-svg"></svg>
+        </div>
+        <div class="triangle-box">
+          <h3 id="fillTitle" class="fill-title">请填充</h3>
+          <svg id="userTriangle" class="triangle-svg"></svg>
+        </div>
+      </div>
+      
+      <div class="hint" id="hint">选择顶部颜色后点击空白三角形填充</div>
+      
+      <div class="result" id="result" style="display:none;"></div>
+      
+      <div class="progress" id="progress">已填充: 0 / 10</div>
+      
+      <div class="timer" id="timer">用时: 00:00</div>
+    </div>
+  </div>
+  
+  <img src="qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  
+  <!-- 通关动画容器 -->
+  <div id="winAnimation" class="win-animation" style="display:none;">
+    <div class="confetti"></div>
+    <div class="win-text">太棒了！</div>
+  </div>
+  
+  <script>
+    // 防下载
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) e.preventDefault();
+    });
+    
+    // 音效
+    var audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    function playFillSound() {
+      initAudio();
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.frequency.value = 800;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      o.start();
+      o.stop(audioCtx.currentTime + 0.1);
+    }
+    
+    function playError() {
+      initAudio();
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.frequency.value = 200;
+      o.type = 'square';
+      g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      o.start();
+      o.stop(audioCtx.currentTime + 0.2);
+    }
+    
+    function playSuccess() {
+      initAudio();
+      var notes = [523, 659, 784, 1047];
+      notes.forEach(function(freq, idx) {
+        setTimeout(function() {
+          var o = audioCtx.createOscillator();
+          var g = audioCtx.createGain();
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.frequency.value = freq;
+          o.type = 'sine';
+          g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          o.start();
+          o.stop(audioCtx.currentTime + 0.3);
+        }, idx * 150);
+      });
+    }
+    
+    function showWinAnimation() {
+      var anim = document.getElementById('winAnimation');
+      anim.style.display = 'flex';
+      anim.querySelector('.win-text').style.animation = 'bounceIn 0.5s ease';
+      setTimeout(function() {
+        anim.style.display = 'none';
+      }, 2000);
+    }
+    // 颜色配置 - 5种颜色
+    var COLORS = [
+      '#00BCD4', // 青色
+      '#FFEB3B', // 黄色
+      '#8BC34A', // 绿色
+      '#F44336', // 红色
+      '#9C27B0'  // 紫色
+    ];
+    
+    var currentLevel = 1;
+    var selectedColor = null;
+    var selectedShape = 'triangle';
+    var symmetryMode = false; // 对称玩法开关
+    var samplePattern = [];
+    var userPattern = [];
+    var totalCells = 10;
+    var timerInterval = null;
+    var startTime = null;
+    var elapsedSeconds = 0;
+    var timerStarted = false;
+    
+    // 三角形布局 - 每行数量
+    var LAYOUT = [1, 2, 3, 4];
+    // 圆形布局 - 上下对称菱形
+    var CIRCLE_LAYOUT = [1, 2, 3, 2, 1];
+    // 方块布局 - 5x5网格
+    var SQUARE_LAYOUT = [5, 5, 5, 5, 5];
+    
+    // 获取当前布局
+    function getCurrentLayout() {
+      if (selectedShape === 'circle') return CIRCLE_LAYOUT;
+      if (selectedShape === 'square') return SQUARE_LAYOUT;
+      return LAYOUT;
+    }
+    
+    // 生成关卡图案
+    function generatePattern(level) {
+      samplePattern = [];
+      userPattern = [];
+      
+      var layout = getCurrentLayout();
+      var layoutTotal = layout.reduce(function(a, b) { return a + b; }, 0);
+      totalCells = layoutTotal;
+      
+      var colors = [];
+      
+      if (selectedShape === 'circle') {
+        // 圆形模式：5种颜色，4种各出现2次，1种出现1次，共9个
+        var randomSingle = Math.floor(Math.random() * 5);
+        for (var i = 0; i < 5; i++) {
+          if (i === randomSingle) {
+            colors.push(i); // 只出现1次
+          } else {
+            colors.push(i);
+            colors.push(i); // 各出现2次
+          }
+        }
+      } else if (selectedShape === 'square') {
+        // 方块模式：5种颜色，每种各出现5次，共25个
+        for (var i = 0; i < 5; i++) {
+          for (var j = 0; j < 5; j++) {
+            colors.push(i);
+          }
+        }
+      } else {
+        // 三角形模式：5种颜色，每种各出现2次，共10个
+        for (var i = 0; i < 5; i++) {
+          colors.push(i);
+          colors.push(i);
+        }
+      }
+      
+      // 打乱颜色顺序
+      for (var i = colors.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = colors[i];
+        colors[i] = colors[j];
+        colors[j] = temp;
+      }
+      
+      // 按布局分配颜色
+      var colorIndex = 0;
+      for (var row = 0; row < layout.length; row++) {
+        var rowData = [];
+        var rowUser = [];
+        for (var col = 0; col < layout[row]; col++) {
+          rowData.push(colors[colorIndex]);
+          rowUser.push(-1);
+          colorIndex++;
+        }
+        samplePattern.push(rowData);
+        userPattern.push(rowUser);
+      }
+    }
+    
+    // 渲染颜色选择器
+    function renderPalette() {
+      var palette = document.getElementById('colorPalette');
+      palette.innerHTML = '';
+      
+      var size = 40;
+      
+      for (var i = 0; i < COLORS.length; i++) {
+        var div = document.createElement('div');
+        div.className = 'color-option';
+        div.dataset.index = i;
+        div.style.width = size + 'px';
+        div.style.height = size + 'px';
+        
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', size);
+        svg.setAttribute('height', size);
+        svg.style.display = 'block';
+        
+        var shape;
+        if (selectedShape === 'circle') {
+          shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          shape.setAttribute('cx', size / 2);
+          shape.setAttribute('cy', size / 2);
+          shape.setAttribute('r', size / 2 - 3);
+        } else if (selectedShape === 'square') {
+          shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          shape.setAttribute('x', 3);
+          shape.setAttribute('y', 3);
+          shape.setAttribute('width', size - 6);
+          shape.setAttribute('height', size - 6);
+        } else {
+          shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          var triHeight = size * 0.866;
+          shape.setAttribute('points', (size/2) + ',' + 2 + ' 2,' + (triHeight + 2) + ' ' + (size - 2) + ',' + (triHeight + 2));
+        }
+        
+        shape.setAttribute('fill', COLORS[i]);
+        shape.setAttribute('stroke', 'rgba(0,0,0,0.2)');
+        shape.setAttribute('stroke-width', '1');
+        
+        svg.appendChild(shape);
+        div.appendChild(svg);
+        
+        div.onclick = function() {
+          selectColor(parseInt(this.dataset.index));
+        };
+        
+        palette.appendChild(div);
+      }
+    }
+    
+    // 选择颜色
+    function selectColor(index) {
+      selectedColor = index;
+      document.querySelectorAll('.color-option').forEach(function(el, i) {
+        el.classList.toggle('selected', i === index);
+      });
+    }
+    
+    // 选择形状
+    function selectShape(shape) {
+      if (selectedShape === shape) return;
+      selectedShape = shape;
+      document.querySelectorAll('.shape-option').forEach(function(el) {
+        el.classList.toggle('selected', el.dataset.shape === shape);
+      });
+      // 重新渲染颜色选择器
+      renderPalette();
+      // 切换形状时重新开始
+      stopTimer();
+      timerStarted = false;
+      elapsedSeconds = 0;
+      updateTimerDisplay();
+      startLevel();
+    }
+    
+    // 切换对称玩法
+    function toggleSymmetry() {
+      symmetryMode = !symmetryMode;
+      var btn = document.getElementById('symmetryBtn');
+      btn.classList.toggle('active', symmetryMode);
+      btn.textContent = symmetryMode ? '对称玩法 ✓' : '对称玩法';
+      
+      // 修改填充标题
+      document.getElementById('fillTitle').textContent = symmetryMode ? '请左右对称填充' : '请填充';
+      
+      // 更新提示
+      if (symmetryMode) {
+        document.getElementById('hint').textContent = '对称玩法：请左右对称填充';
+      } else {
+        document.getElementById('hint').textContent = '选择顶部颜色后点击空白图形填充';
+      }
+    }
+    
+    // 获取对称位置的颜色（左右镜像）
+    function getMirrorColor(row, col) {
+      var layout = getCurrentLayout();
+      var rowCols = layout[row];
+      var mirrorCol = rowCols - 1 - col; // 同一行左右镜像
+      return samplePattern[row][mirrorCol];
+    }
+    
+    // 启动计时器
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      startTime = Date.now();
+      elapsedSeconds = 0;
+      updateTimerDisplay();
+      timerInterval = setInterval(function() {
+        elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        updateTimerDisplay();
+      }, 1000);
+    }
+    
+    // 停止计时器
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+    
+    // 更新计时器显示
+    function updateTimerDisplay() {
+      var minutes = Math.floor(elapsedSeconds / 60);
+      var seconds = elapsedSeconds % 60;
+      var timeStr = '用时: ' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+      document.getElementById('timer').textContent = timeStr;
+    }
+    
+    // 绘制图形SVG
+    function drawTriangle(svgId, pattern, isUser) {
+      var svg = document.getElementById(svgId);
+      svg.innerHTML = '';
+      
+      var shapeSize = 55;
+      var gap = 3;
+      
+      var layout = getCurrentLayout();
+      var rows = pattern.length;
+      var maxCols = Math.max.apply(null, layout);
+      
+      var svgWidth, svgHeight, drawX, drawY;
+      
+      if (selectedShape === 'square') {
+        // 方块模式：5x5网格
+        svgWidth = maxCols * shapeSize + (maxCols - 1) * gap + 10;
+        svgHeight = rows * shapeSize + (rows - 1) * gap + 10;
+        
+        svg.setAttribute('width', svgWidth);
+        svg.setAttribute('height', svgHeight);
+        svg.setAttribute('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight);
+        
+        for (var row = 0; row < pattern.length; row++) {
+          var rowData = pattern[row];
+          var cols = rowData.length;
+          
+          var y = 5 + row * (shapeSize + gap);
+          
+          for (var col = 0; col < cols; col++) {
+            var colorIndex = rowData[col];
+            var x = 5 + col * (shapeSize + gap);
+            
+            var shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            shape.setAttribute('x', x + 2);
+            shape.setAttribute('y', y + 2);
+            shape.setAttribute('width', shapeSize - 4);
+            shape.setAttribute('height', shapeSize - 4);
+            shape.setAttribute('fill', colorIndex >= 0 ? COLORS[colorIndex] : '#f5f5f5');
+            shape.setAttribute('stroke', colorIndex >= 0 ? '#333' : '#999');
+            shape.setAttribute('stroke-width', '1.5');
+            
+            if (isUser && colorIndex < 0) {
+              shape.classList.add('tri');
+              shape.dataset.row = row;
+              shape.dataset.col = col;
+              shape.onclick = function() {
+                fillCell(parseInt(this.dataset.row), parseInt(this.dataset.col));
+              };
+            }
+            
+            svg.appendChild(shape);
+          }
+        }
+      } else if (selectedShape === 'circle') {
+        // 圆形模式：菱形布局
+        svgWidth = 3 * shapeSize + 2 * gap + 10;
+        svgHeight = 5 * shapeSize + 4 * gap + 10;
+        
+        svg.setAttribute('width', svgWidth);
+        svg.setAttribute('height', svgHeight);
+        svg.setAttribute('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight);
+        
+        for (var row = 0; row < pattern.length; row++) {
+          var rowData = pattern[row];
+          var cols = rowData.length;
+          
+          // 菱形居中：第一行1个居中，后续向两边扩展
+          var rowWidth = cols * shapeSize + (cols - 1) * gap;
+          var centerX = svgWidth / 2;
+          var startX = centerX - rowWidth / 2;
+          var y = 5 + row * (shapeSize + gap);
+          
+          for (var col = 0; col < cols; col++) {
+            var colorIndex = rowData[col];
+            var x = startX + col * (shapeSize + gap);
+            
+            var shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            shape.setAttribute('cx', x + shapeSize / 2);
+            shape.setAttribute('cy', y + shapeSize / 2);
+            shape.setAttribute('r', shapeSize / 2 - 2);
+            shape.setAttribute('fill', colorIndex >= 0 ? COLORS[colorIndex] : '#f5f5f5');
+            shape.setAttribute('stroke', colorIndex >= 0 ? '#333' : '#999');
+            shape.setAttribute('stroke-width', '1.5');
+            
+            if (isUser && colorIndex < 0) {
+              shape.classList.add('tri');
+              shape.dataset.row = row;
+              shape.dataset.col = col;
+              shape.onclick = function() {
+                fillCell(parseInt(this.dataset.row), parseInt(this.dataset.col));
+              };
+            }
+            
+            svg.appendChild(shape);
+          }
+        }
+      } else {
+        // 三角形模式
+        var triWidth = 65;
+        var triHeight = triWidth * 0.866;
+        
+        svgWidth = maxCols * triWidth + (maxCols - 1) * gap + 10;
+        svgHeight = rows * triHeight + 10;
+        
+        svg.setAttribute('width', svgWidth);
+        svg.setAttribute('height', svgHeight);
+        svg.setAttribute('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight);
+        
+        for (var row = 0; row < pattern.length; row++) {
+          var rowData = pattern[row];
+          var cols = rowData.length;
+          
+          var rowWidth = cols * triWidth + (cols - 1) * gap;
+          var startX = (svgWidth - rowWidth) / 2;
+          var y = 5 + row * triHeight;
+          
+          for (var col = 0; col < cols; col++) {
+            var colorIndex = rowData[col];
+            var x = startX + col * (triWidth + gap);
+            
+            var shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            shape.setAttribute('points', (x + triWidth / 2) + ',' + y + ' ' + x + ',' + (y + triHeight) + ' ' + (x + triWidth) + ',' + (y + triHeight));
+            shape.setAttribute('fill', colorIndex >= 0 ? COLORS[colorIndex] : '#f5f5f5');
+            shape.setAttribute('stroke', colorIndex >= 0 ? '#333' : '#999');
+            shape.setAttribute('stroke-width', '1.5');
+            
+            if (isUser && colorIndex < 0) {
+              shape.classList.add('tri');
+              shape.dataset.row = row;
+              shape.dataset.col = col;
+              shape.onclick = function() {
+                fillCell(parseInt(this.dataset.row), parseInt(this.dataset.col));
+              };
+            }
+            
+            svg.appendChild(shape);
+          }
+        }
+      }
+    }
+    
+    // 填充单元格
+    function fillCell(row, col) {
+      if (selectedColor === null) {
+        document.getElementById('hint').textContent = '请先选择颜色';
+        return;
+      }
+      
+      // 获取该位置应该填的正确颜色
+      var expectedColor;
+      if (symmetryMode) {
+        // 对称玩法：该位置需要填镜像位置的颜色
+        expectedColor = getMirrorColor(row, col);
+      } else {
+        // 普通模式：该位置需要填示例对应位置的颜色
+        expectedColor = samplePattern[row][col];
+      }
+      
+      // 检查颜色是否正确
+      if (selectedColor !== expectedColor) {
+        playError();
+        document.getElementById('hint').textContent = '颜色不对，请选择正确的颜色！';
+        setTimeout(function() {
+          document.getElementById('hint').textContent = symmetryMode ? '对称玩法：请左右对称填充' : '选择顶部颜色后点击空白图形填充';
+        }, 1500);
+        return;
+      }
+      
+      // 颜色正确，填充
+      userPattern[row][col] = selectedColor;
+      playFillSound();
+      
+      // 第一次填充时启动计时器
+      if (!timerStarted) {
+        startTimer();
+        timerStarted = true;
+      }
+      
+      drawTriangle('userTriangle', userPattern, true);
+      updateProgress();
+      checkWin();
+    }
+    
+    // 更新进度
+    function updateProgress() {
+      var filled = 0;
+      for (var row = 0; row < userPattern.length; row++) {
+        for (var col = 0; col < userPattern[row].length; col++) {
+          if (userPattern[row][col] >= 0) filled++;
+        }
+      }
+      document.getElementById('progress').textContent = '已填充: ' + filled + ' / ' + totalCells;
+    }
+    
+    // 检查是否完成
+    function checkWin() {
+      var filled = 0;
+      var correct = 0;
+      
+      for (var row = 0; row < samplePattern.length; row++) {
+        for (var col = 0; col < samplePattern[row].length; col++) {
+          if (userPattern[row][col] >= 0) {
+            filled++;
+            // 验证颜色是否正确
+            var expectedColor;
+            if (symmetryMode) {
+              expectedColor = getMirrorColor(row, col);
+            } else {
+              expectedColor = samplePattern[row][col];
+            }
+            if (userPattern[row][col] === expectedColor) {
+              correct++;
+            }
+          }
+        }
+      }
+      
+      if (filled === totalCells) {
+        var result = document.getElementById('result');
+        stopTimer();
+        
+        if (correct === totalCells) {
+          var minutes = Math.floor(elapsedSeconds / 60);
+          var seconds = elapsedSeconds % 60;
+          result.textContent = '太棒了！用时 ' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+          result.className = 'result success';
+          playSuccess();
+          showWinAnimation();
+          // 动画消失时重置
+          setTimeout(function() {
+            resetUserPattern();
+          }, 2000);
+        } else {
+          result.style.display = 'none';
+        }
+      }
+    }
+    
+    // 重置 - 重新生成图案
+    function resetUserPattern() {
+      currentLevel++;
+      startLevel();
+    }
+    
+    // 开始关卡
+    function startLevel() {
+      selectedColor = null;
+      document.querySelectorAll('.color-option').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('hint').textContent = '选择顶部颜色后点击空白三角形填充';
+      
+      generatePattern(currentLevel);
+      drawTriangle('sampleTriangle', samplePattern, false);
+      drawTriangle('userTriangle', userPattern, true);
+      updateProgress();
+      
+      // 重置计时器
+      stopTimer();
+      timerStarted = false;
+      elapsedSeconds = 0;
+      updateTimerDisplay();
+    }
+    
+    // 初始化
+    renderPalette();
+    startLevel();
+  </script>
+</body>
+</html>
