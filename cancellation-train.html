@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>划消训练 - 读写障碍注意力训练</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      color: white;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 5px;
+      background: linear-gradient(135deg, #fff 0%, #4FC3F7 50%, #fff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .subtitle {
+      color: #4FC3F7;
+      font-size: 10px;
+      padding: 4px 12px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px;
+      display: inline-block;
+    }
+    
+    .mode-bar {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .mode-btn {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .mode-btn.active {
+      border-color: #4FC3F7;
+      background: rgba(79,195,247,0.3);
+      color: white;
+    }
+    
+    .mode-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    
+    .template-select {
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(0,0,0,0.3);
+      color: rgba(255,255,255,0.9);
+      outline: none;
+    }
+    
+    .template-select:hover {
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    .template-select:focus {
+      border-color: #4FC3F7;
+    }
+    
+    .template-select option {
+      background: #1a1a2e;
+      color: white;
+      padding: 5px;
+    }
+    
+    .info-bar {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 10px;
+      padding: 8px 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+    }
+    
+    .info-item {
+      text-align: center;
+    }
+    
+    .info-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .info-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #FFD700;
+    }
+    
+    .target-display {
+      background: rgba(255,255,255,0.15);
+      padding: 10px 20px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .target-label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 5px;
+    }
+    
+    .target-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+    
+    .target-number {
+      font-size: 36px;
+      font-weight: bold;
+      color: #4FC3F7;
+    }
+    
+    .target-arrow {
+      font-size: 24px;
+      color: rgba(255,255,255,0.6);
+    }
+    
+    .target-mirror {
+      font-size: 36px;
+      font-weight: bold;
+      color: #FF9800;
+      transform: scaleX(-1);
+      display: inline-block;
+    }
+    
+    .game-area {
+      background: white;
+      border-radius: 15px;
+      padding-top: 15px;
+      padding-bottom: 15px;
+      padding-left: 10px;
+      padding-right: 50px;
+      max-width: 740px;
+      width: 100%;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      gap: 6px;
+      margin-left: 5px;
+    }
+    
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: bold;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: transparent;
+      padding: 0 4px; /* 左右对称padding */
+      box-sizing: border-box;
+    }
+    
+    .cell:active {
+      transform: scale(0.9);
+    }
+    
+    .cell.found {
+      color: transparent;
+      text-shadow: 0 0 0 transparent;
+      background: transparent;
+      position: relative;
+    }
+    
+    .cell.found::after {
+      content: '';
+      position: absolute;
+      width: 80%;
+      height: 3px;
+      background: #333;
+      transform: rotate(-45deg);
+    }
+    
+    .cell.found::before {
+      content: '';
+      position: absolute;
+      width: 80%;
+      height: 3px;
+      background: #333;
+      transform: rotate(45deg);
+    }
+    
+    .cell.wrong {
+      animation: wrongShake 0.3s ease-out;
+    }
+    
+    .cell .letter {
+      font-size: 22px;
+      color: #333;
+    }
+    
+    .cell.found .letter {
+      color: transparent;
+    }
+    
+    @keyframes foundPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    
+    @keyframes wrongShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 15px;
+    }
+    
+    .btn {
+      padding: 10px 25px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-start {
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      color: white;
+    }
+    
+    .btn-reset {
+      background: linear-gradient(135deg, #9C27B0, #BA68C8);
+      color: white;
+    }
+    
+    .status {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #4FC3F7;
+    }
+    
+    .win-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .win-overlay.show {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+    
+    .win-content {
+      text-align: center;
+      animation: winBounce 0.8s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes winBounce {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .win-emoji {
+      font-size: 60px;
+      margin-bottom: 15px;
+    }
+    
+    .win-time {
+      font-size: 36px;
+      font-weight: bold;
+      color: #FFD700;
+      margin-bottom: 10px;
+    }
+    
+    .win-text {
+      font-size: 18px;
+      color: #4CAF50;
+    }
+    
+    .qrcode-fixed {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      width: 80px;
+      height: 80px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>划消训练</h1>
+    <p class="subtitle">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+  </div>
+  
+  <div class="mode-bar">
+    <button class="mode-btn active" id="modeNumber" onclick="setMode('number')">数字模式</button>
+    <button class="mode-btn" id="modeLetter" onclick="setMode('letter')">字母模式</button>
+    <button class="mode-btn" id="modeWord" onclick="setMode('word')">文字模式</button>
+    <select id="wordTemplateSelect" class="template-select" onchange="selectWordTemplate(this.value)" style="display:none;">
+      <option value="宝盖头">宝盖头</option>
+      <option value="日字系列">日字系列</option>
+      <option value="口字框">口字框</option>
+      <option value="土字底">土字底</option>
+      <option value="月字旁">月字旁</option>
+      <option value="绞丝旁">绞丝旁</option>
+      <option value="金字旁">金字旁</option>
+      <option value="木字旁">木字旁</option>
+      <option value="草字头">草字头</option>
+      <option value="三点水">三点水</option>
+    </select>
+  </div>
+  
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="info-label">用时</div>
+      <div class="info-value" id="timer">0.0s</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">找到</div>
+      <div class="info-value" id="found">0/0</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">正确率</div>
+      <div class="info-value" id="accuracy">100%</div>
+    </div>
+  </div>
+  
+  <div class="target-display">
+    <div class="target-label" id="targetLabel">请找出所有</div>
+    <div class="target-content">
+      <span class="target-number" id="targetNumber">-</span>
+      <span class="target-arrow">→</span>
+      <span class="target-mirror" id="targetMirror">-</span>
+    </div>
+  </div>
+  
+  <div class="game-area">
+    <div class="grid" id="grid"></div>
+    <div class="controls">
+      <button class="btn btn-start" onclick="startGame()">开始</button>
+      <button class="btn btn-reset" onclick="resetGame()">重置</button>
+    </div>
+  </div>
+  
+  <div class="status" id="status">点击开始按钮开始训练</div>
+  
+  <div class="win-overlay" id="winOverlay">
+    <div class="win-content">
+      <div class="win-emoji">🎉</div>
+      <div class="win-time" id="winTime">0.0秒</div>
+      <div class="win-text">全部找到！</div>
+    </div>
+  </div>
+  
+  <img src="qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  
+  <script>
+    // 防下载
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) e.preventDefault();
+    });
+    
+    var ROWS = 12;
+    var COLS = 20;
+    var mode = 'number';
+    var grid = [];
+    var targetValue = '';
+    var targetCells = [];
+    var foundCount = 0;
+    var wrongCount = 0;
+    var gameStarted = false;
+    var gameEnded = false;
+    var startTime = 0;
+    var timerInterval = null;
+    
+    // 小写字母列表 (排除易混淆的字母)
+    var letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+    
+    // 10套易混淆汉字模板（每套12字）
+    var wordTemplates = {
+      '宝盖头': ['灾', '定', '官', '完', '守', '牢', '宗', '宝', '宁', '宋', '宇', '宅'],
+      '日字系列': ['日', '目', '白', '旧', '旦', '百', '自', '且', '田', '由', '申', '甲'],
+      '口字框': ['囚', '团', '四', '回', '囱', '囧', '圆', '圈', '囵', '固', '国', '圃'],
+      '土字底': ['至', '到', '致', '屋', '握', '卧', '底', '店', '垂', '塞', '坐', '堪'],
+      '月字旁': ['肝', '胆', '肺', '肚', '肠', '胃', '腰', '腹', '腿', '脚', '膝', '臂'],
+      '绞丝旁': ['红', '绿', '结', '织', '终', '绚', '给', '绝', '绞', '絮', '紫', '线'],
+      '金字旁': ['钟', '钉', '铁', '银', '铜', '锡', '铅', '钻', '锋', '链', '锁', '镜'],
+      '木字旁': ['林', '杨', '柳', '桃', '李', '梅', '桂', '桥', '板', '柜', '桌', '椅'],
+      '草字头': ['花', '草', '苗', '芽', '苟', '苞', '苔', '荷', '茶', '菊', '葱', '落'],
+      '三点水': ['汉', '汗', '江', '泪', '洒', '洗', '洁', '洛', '浪', '涌', '涛', '浮']
+    };
+    
+    // 当前选中的文字模板名称
+    var currentWordTemplate = '宝盖头';
+    var words = wordTemplates[currentWordTemplate];
+    
+    var audioCtx = null;
+    
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+    
+    function playSound(type) {
+      try {
+        initAudio();
+        var oscillator = audioCtx.createOscillator();
+        var gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        if (type === 'found') {
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.1);
+        } else if (type === 'wrong') {
+          oscillator.frequency.value = 200;
+          oscillator.type = 'square';
+          gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.2);
+        } else if (type === 'win') {
+          var notes = [523.25, 659.25, 783.99, 1046.50];
+          for (var i = 0; i < notes.length; i++) {
+            (function(index) {
+              setTimeout(function() {
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = notes[index];
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.3);
+              }, index * 150);
+            })(i);
+          }
+        }
+      } catch (e) {}
+    }
+    
+    function setMode(m) {
+      mode = m;
+      document.getElementById('modeNumber').classList.toggle('active', m === 'number');
+      document.getElementById('modeLetter').classList.toggle('active', m === 'letter');
+      document.getElementById('modeWord').classList.toggle('active', m === 'word');
+      
+      // 显示/隐藏文字模板选择器
+      var templateSelect = document.getElementById('wordTemplateSelect');
+      templateSelect.style.display = m === 'word' ? 'inline-block' : 'none';
+      
+      // 更新目标显示标签
+      document.getElementById('targetMirror').style.display = 'none';
+      document.querySelector('.target-arrow').style.display = 'none';
+      
+      if (m === 'number') {
+        document.getElementById('targetLabel').textContent = '请找出所有';
+      } else if (m === 'letter') {
+        document.getElementById('targetLabel').textContent = '请找出字母';
+      } else if (m === 'word') {
+        document.getElementById('targetLabel').textContent = '请找出文字';
+      }
+      
+      resetGame();
+      initGrid();
+    }
+    
+    function selectWordTemplate(templateName) {
+      currentWordTemplate = templateName;
+      words = wordTemplates[templateName];
+      resetGame();
+      initGrid();
+    }
+    
+    function createGrid() {
+      grid = [];
+      targetCells = [];
+      
+      var container = document.getElementById('grid');
+      container.innerHTML = '';
+      
+      // 确定目标值（数字1-9或字母a-z或汉字）
+      var possibleValues;
+      if (mode === 'number') {
+        possibleValues = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+      } else if (mode === 'letter') {
+        possibleValues = letters.slice();
+      } else if (mode === 'word') {
+        possibleValues = words.slice();
+      }
+      targetValue = possibleValues[Math.floor(Math.random() * possibleValues.length)];
+      
+      // 随机选择每行至少一个位置放目标值
+      var rowTargetPositions = [];
+      for (var row = 0; row < ROWS; row++) {
+        // 每行随机选择1-3个位置放目标值
+        var count = Math.floor(Math.random() * 3) + 1;
+        for (var c = 0; c < count; c++) {
+          var pos = row * COLS + Math.floor(Math.random() * COLS);
+          rowTargetPositions.push(pos);
+        }
+      }
+      
+      for (var i = 0; i < ROWS * COLS; i++) {
+        var value;
+        
+        // 如果这个位置是目标位置，放目标值
+        if (rowTargetPositions.indexOf(i) !== -1) {
+          value = targetValue;
+          targetCells.push(i);
+        } else {
+          // 否则放随机值（不能是目标值）
+          var otherValues = possibleValues.filter(function(v) { return v !== targetValue; });
+          value = otherValues[Math.floor(Math.random() * otherValues.length)];
+        }
+        
+        grid.push(value);
+        
+        var cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        cell.dataset.value = value;
+        
+        if (mode === 'number') {
+          cell.textContent = value;
+        } else if (mode === 'letter') {
+          cell.innerHTML = '<span class="letter">' + value + '</span>';
+        } else if (mode === 'word') {
+          cell.textContent = value;
+        }
+        
+        cell.onclick = function() { cellClick(this); };
+        container.appendChild(cell);
+      }
+    }
+    
+    function selectTarget() {
+      // 显示目标
+      if (mode === 'number') {
+        document.getElementById('targetNumber').textContent = targetValue;
+      } else if (mode === 'letter') {
+        document.getElementById('targetNumber').textContent = targetValue;
+      } else if (mode === 'word') {
+        document.getElementById('targetNumber').textContent = targetValue;
+      }
+      
+      document.getElementById('found').textContent = '0/' + targetCells.length;
+    }
+    
+    function cellClick(cell) {
+      if (!gameStarted || gameEnded) return;
+      
+      var index = parseInt(cell.dataset.index);
+      var value = cell.dataset.value;
+      // 数字模式下需要类型转换
+      var targetVal = (mode === 'number') ? parseInt(value) : value;
+      
+      if (cell.classList.contains('found')) return;
+      
+      if (targetVal === targetValue) {
+        cell.classList.add('found');
+        foundCount++;
+        playSound('found');
+      } else {
+        cell.classList.add('wrong');
+        wrongCount++;
+        playSound('wrong');
+        setTimeout(function() {
+          cell.classList.remove('wrong');
+        }, 300);
+      }
+      
+      updateStats();
+      
+      if (foundCount === targetCells.length) {
+        endGame();
+      }
+    }
+    
+    function updateStats() {
+      var total = foundCount + wrongCount;
+      var accuracy = total === 0 ? 100 : Math.round((foundCount / total) * 100);
+      document.getElementById('accuracy').textContent = accuracy + '%';
+      document.getElementById('found').textContent = foundCount + '/' + targetCells.length;
+    }
+    
+    function startGame() {
+      gameStarted = true;
+      gameEnded = false;
+      foundCount = 0;
+      wrongCount = 0;
+      
+      createGrid();
+      selectTarget();
+      
+      startTime = Date.now();
+      timerInterval = setInterval(updateTimer, 100);
+      
+      if (mode === 'number') {
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
+      } else if (mode === 'letter') {
+        document.getElementById('status').textContent = '快速找出所有镜像字母 ' + targetValue + '！';
+      } else if (mode === 'word') {
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
+      }
+    }
+    
+    function updateTimer() {
+      var elapsed = (Date.now() - startTime) / 1000;
+      document.getElementById('timer').textContent = elapsed.toFixed(1) + 's';
+    }
+    
+    function endGame() {
+      gameEnded = true;
+      clearInterval(timerInterval);
+      
+      var elapsed = (Date.now() - startTime) / 1000;
+      document.getElementById('winTime').textContent = elapsed.toFixed(1) + '秒';
+      document.getElementById('winOverlay').classList.add('show');
+      
+      playSound('win');
+      
+      setTimeout(function() {
+        document.getElementById('winOverlay').classList.remove('show');
+      }, 3000);
+    }
+    
+    function resetGame() {
+      gameStarted = false;
+      gameEnded = false;
+      foundCount = 0;
+      wrongCount = 0;
+      grid = [];
+      targetCells = [];
+      targetValue = '';
+      
+      clearInterval(timerInterval);
+      
+      document.getElementById('timer').textContent = '0.0s';
+      document.getElementById('found').textContent = '0/0';
+      document.getElementById('accuracy').textContent = '100%';
+      document.getElementById('targetNumber').textContent = '-';
+      document.getElementById('targetMirror').textContent = '-';
+      document.getElementById('status').textContent = '点击开始按钮开始训练';
+      document.getElementById('winOverlay').classList.remove('show');
+      
+      // 重置所有格子的样式
+      var cells = document.querySelectorAll('.cell');
+      cells.forEach(function(cell) {
+        cell.classList.remove('found', 'wrong');
+      });
+    }
+    
+    // 初始化网格（用于预览）
+    function initGrid() {
+      var container = document.getElementById('grid');
+      container.innerHTML = '';
+      grid = [];
+      
+      // 确定目标值
+      var possibleValues;
+      if (mode === 'number') {
+        possibleValues = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+      } else if (mode === 'letter') {
+        possibleValues = letters.slice();
+      } else if (mode === 'word') {
+        possibleValues = words.slice();
+      }
+      var previewTarget = possibleValues[Math.floor(Math.random() * possibleValues.length)];
+      
+      // 每行至少一个目标
+      for (var row = 0; row < ROWS; row++) {
+        for (var col = 0; col < COLS; col++) {
+          var i = row * COLS + col;
+          var value;
+          
+          if (col === Math.floor(Math.random() * COLS)) {
+            value = previewTarget;
+          } else {
+            var otherValues = possibleValues.filter(function(v) { return v !== previewTarget; });
+            value = otherValues[Math.floor(Math.random() * otherValues.length)];
+          }
+          
+          grid.push(value);
+          
+          var cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.index = i;
+          cell.dataset.value = value;
+          
+          if (mode === 'number') {
+            cell.textContent = value;
+          } else if (mode === 'letter') {
+            cell.innerHTML = '<span class="letter">' + value + '</span>';
+          } else if (mode === 'word') {
+            cell.textContent = value;
+          }
+          
+          cell.onclick = function() { cellClick(this); };
+          container.appendChild(cell);
+        }
+      }
+    }
+    
+    // 页面加载完成后初始化
+    window.addEventListener('load', function() {
+      initGrid();
+      // 默认隐藏字母镜像
+      document.getElementById('targetMirror').style.display = 'none';
+      document.querySelector('.target-arrow').style.display = 'none';
+    });
+  </script>
+</body>
+</html>

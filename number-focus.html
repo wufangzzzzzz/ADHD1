@@ -294,22 +294,15 @@
     }
     
     .timer {
-      font-size: 42px;
+      font-size: 28px;
       font-weight: bold;
-      color: #4FC3F7;
-      text-align: center;
-      margin-bottom: 12px;
-      display: none;
+      color: #e74c3c;
+      margin-left: 15px;
+      display: inline;
     }
     
     .timer.show {
       display: block;
-      animation: pulse 1s infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
     }
     
     .controls {
@@ -368,10 +361,10 @@
     
     .number-picker.show {
       display: block;
-      animation: fadeIn 0.2s;
+      animation: fadeInPicker 0.2s;
     }
     
-    @keyframes fadeIn {
+    @keyframes fadeInPicker {
       from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
       to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
@@ -457,14 +450,15 @@
     
     .win-content {
       text-align: center;
+      transform-origin: center center;
       animation: winBounce 0.8s ease-out;
     }
     
     @keyframes winBounce {
-      0% { transform: scale(0) rotate(-10deg); opacity: 0; }
-      50% { transform: scale(1.2) rotate(5deg); }
-      70% { transform: scale(0.9) rotate(-3deg); }
-      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); opacity: 1; }
     }
     
     .win-emoji {
@@ -505,6 +499,7 @@
     
     .game-over-content {
       text-align: center;
+      transform-origin: center center;
       animation: fadeIn 0.5s;
     }
     
@@ -522,6 +517,41 @@
     .game-over-next {
       font-size: 14px;
       color: #4FC3F7;
+    }
+    
+    /* 答对成功动画 */
+    .success-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(76, 175, 80, 0.3);
+      display: none;
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .success-overlay.show {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+    
+    .success-content {
+      text-align: center;
+      transform-origin: center center;
+    }
+    
+    .success-emoji {
+      font-size: 80px;
+      margin-bottom: 12px;
+    }
+    
+    .success-text {
+      font-size: 28px;
+      color: #4CAF50;
+      font-weight: bold;
     }
     
     /* 底部二维码 */
@@ -564,6 +594,7 @@
       <div class="score-value" id="currentScore">0</div>
     </div>
     <div class="round-text" id="roundText">第 1 关</div>
+    <div class="timer-inline" id="timer">5</div>
     <div class="score-section">
       <div class="score-label">最高得分</div>
       <div class="score-value" id="bestScore">0</div>
@@ -584,8 +615,6 @@
   </div>
   
   <div class="game-area">
-    <div class="timer" id="timer">5</div>
-    
     <div class="grid-container" id="gridContainer">
       <div class="cell hidden" id="cell0" onclick="cellClick(0)"></div>
       <div class="cell hidden" id="cell1" onclick="cellClick(1)"></div>
@@ -663,6 +692,7 @@
     var canInput = false;
     var currentCellIndex = -1;
     var currentRound = 0;
+    var currentScore = 0;
     var bestScore = 0;
     var difficulty = 'hard';
     var contentType = 'number';
@@ -744,6 +774,16 @@
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
           oscillator.start(audioCtx.currentTime);
           oscillator.stop(audioCtx.currentTime + 0.08);
+        } else if (type === 'correct') {
+          // 答对音效 - 上升音调
+          oscillator.frequency.value = 523.25;
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(783.99, audioCtx.currentTime + 0.15);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.3);
         } else if (type === 'wrong') {
           oscillator.frequency.value = 150;
           oscillator.type = 'sawtooth';
@@ -1043,43 +1083,118 @@
       gameStarted = false;
       
       if (correct === 9) {
-        currentRound++;
-        updateRoundIndicator();
-        document.getElementById('currentScore').textContent = currentRound * 10;
+        // 全部正确，加10分
+        currentScore += 10;
+        document.getElementById('currentScore').textContent = currentScore;
+        playSound('correct');
         
-        if (currentRound === 10) {
-          playSound('perfect');
+        if (currentScore >= 100) {
+          // 满分通关
           showPerfectWin();
         } else {
-          playSound('perfect');
-          setTimeout(function() {
-            startGame();
-          }, 1000);
+          // 未满分，显示成功动画后进入下一关
+          showCorrectAndNext();
         }
       } else {
-        playSound('wrong');
+        // 有错误，显示错误动画
         showWrongAndNext();
       }
     }
     
-    // 显示满分通关
-    function showPerfectWin() {
-      if (currentRound * 10 > bestScore) {
-        bestScore = currentRound * 10;
-        document.getElementById('bestScore').textContent = bestScore;
-      }
-      
-      document.getElementById('winScore').textContent = '100分';
-      document.getElementById('winOverlay').classList.add('show');
+    // 显示答对动画并进入下一关
+    function showCorrectAndNext() {
+      var successOverlay = document.createElement('div');
+      successOverlay.className = 'success-overlay';
+      successOverlay.innerHTML = '<div class="success-content"><div class="success-emoji">✓</div><div class="success-text">正确！</div></div>';
+      document.body.appendChild(successOverlay);
       
       setTimeout(function() {
-        document.getElementById('winOverlay').classList.remove('show');
-        resetGame();
-      }, 3000);
+        successOverlay.classList.add('show');
+        setTimeout(function() {
+          successOverlay.classList.remove('show');
+          setTimeout(function() {
+            document.body.removeChild(successOverlay);
+            // 进入下一关
+            currentRound = (currentRound % 10) + 1;
+            gameStarted = false;
+            canInput = false;
+            userInputs = [];
+            document.getElementById('timer').classList.remove('show');
+            
+            // 重置格子
+            for (var i = 0; i < 9; i++) {
+              var cell = document.getElementById('cell' + i);
+              cell.innerHTML = '';
+              cell.textContent = '';
+              cell.style.background = 'white';
+              cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+              cell.classList.add('hidden');
+            }
+            
+            updateRoundIndicator();
+            updateProgress();
+            document.getElementById('status').textContent = '点击开始按钮开始第 ' + currentRound + ' 关';
+          }, 300);
+        }, 1000);
+      }, 50);
+    }
+    
+    // 显示满分通关
+    function showPerfectWin() {
+      var successOverlay = document.createElement('div');
+      successOverlay.className = 'success-overlay';
+      successOverlay.innerHTML = '<div class="success-content"><div class="success-emoji">✓</div><div class="success-text">正确！</div></div>';
+      document.body.appendChild(successOverlay);
+      
+      setTimeout(function() {
+        successOverlay.classList.add('show');
+        setTimeout(function() {
+          successOverlay.classList.remove('show');
+          setTimeout(function() {
+            document.body.removeChild(successOverlay);
+            
+            // 显示满分弹窗
+            if (currentScore > bestScore) {
+              bestScore = currentScore;
+              document.getElementById('bestScore').textContent = bestScore;
+            }
+            
+            document.getElementById('winScore').textContent = currentScore + '分';
+            document.getElementById('winOverlay').classList.add('show');
+            
+            setTimeout(function() {
+              document.getElementById('winOverlay').classList.remove('show');
+              // 满分后进入下一关，分数重置为0
+              currentRound = (currentRound % 10) + 1;
+              gameStarted = false;
+              canInput = false;
+              userInputs = [];
+              currentScore = 0;
+              document.getElementById('currentScore').textContent = '0';
+              document.getElementById('timer').classList.remove('show');
+              
+              // 重置格子
+              for (var i = 0; i < 9; i++) {
+                var cell = document.getElementById('cell' + i);
+                cell.innerHTML = '';
+                cell.textContent = '';
+                cell.style.background = 'white';
+                cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+                cell.classList.add('hidden');
+              }
+              
+              updateRoundIndicator();
+              updateProgress();
+              document.getElementById('status').textContent = '点击开始按钮开始第 ' + currentRound + ' 关';
+            }, 3000);
+          }, 300);
+        }, 1000);
+      }, 50);
     }
     
     // 显示答错并进入下一关
     function showWrongAndNext() {
+      playSound('wrong');
       var dots = document.querySelectorAll('.round-dot');
       dots[currentRound].classList.add('wrong');
       
@@ -1095,10 +1210,26 @@
         } else {
           clearInterval(timer);
           document.getElementById('gameOverOverlay').classList.remove('show');
-          currentRound = 0;
+          // 答错后进入下一关，10关后循环回第1关
+          currentRound = (currentRound % 10) + 1;
+          gameStarted = false;
+          canInput = false;
+          userInputs = [];
+          document.getElementById('timer').classList.remove('show');
+          
+          // 重置格子
+          for (var i = 0; i < 9; i++) {
+            var cell = document.getElementById('cell' + i);
+            cell.innerHTML = '';
+            cell.textContent = '';
+            cell.style.background = 'white';
+            cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+            cell.classList.add('hidden');
+          }
+          
           updateRoundIndicator();
-          document.getElementById('currentScore').textContent = '0';
-          startGame();
+          updateProgress();
+          document.getElementById('status').textContent = '点击开始按钮开始第 ' + currentRound + ' 关';
         }
       }, 1000);
     }
@@ -1129,6 +1260,37 @@
       document.getElementById('timer').classList.remove('show');
       document.getElementById('status').textContent = '点击开始按钮显示内容';
     }
+    
+    // 重置格子准备下一关
+    function resetGridForNextRound() {
+      gameStarted = false;
+      canInput = false;
+      userInputs = [];
+      
+      for (var i = 0; i < 9; i++) {
+        var cell = document.getElementById('cell' + i);
+        cell.innerHTML = '';
+        cell.textContent = '';
+        cell.style.background = 'white';
+        cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+        cell.classList.add('hidden');
+      }
+      
+      updateRoundIndicator();
+      document.getElementById('currentScore').textContent = '0';
+      document.getElementById('timer').classList.remove('show');
+      document.getElementById('status').textContent = '点击开始按钮显示内容';
+      document.getElementById('roundText').textContent = '第 ' + (currentRound + 1) + ' 关';
+    }
+    
+    // 防下载
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) e.preventDefault();
+    });
   </script>
   <img src="qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
 </body>
