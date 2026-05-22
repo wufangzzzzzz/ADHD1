@@ -179,9 +179,9 @@
       border-radius: 15px;
       padding-top: 15px;
       padding-bottom: 15px;
-      padding-left: 10px;
-      padding-right: 10px;
-      max-width: 740px;
+      padding-left: 8px;
+      padding-right: 8px;
+      max-width: 720px;
       width: 100%;
       overflow: hidden;
       box-sizing: border-box;
@@ -190,9 +190,10 @@
     .grid {
       display: grid;
       grid-template-columns: repeat(20, 1fr);
-      gap: 6px;
+      gap: 4px;
       margin: 0 auto;
       max-width: 100%;
+      width: fit-content;
     }
     
     .cell {
@@ -200,14 +201,16 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
       color: #333;
       cursor: pointer;
       transition: all 0.15s;
       background: transparent;
-      padding: 0 4px; /* 左右对称padding */
+      padding: 0 2px;
       box-sizing: border-box;
+      min-width: 28px;
+      max-width: 32px;
     }
     
     .cell:active {
