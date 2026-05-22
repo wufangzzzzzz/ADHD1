@@ -445,7 +445,7 @@
           { id: 8, type: 'hexagon', color: '#FFB6C1', name: '浅粉色正六边形' },
           { id: 9, type: 'triangle-right', color: '#FF4500', name: '红色直角三角形' },
           { id: 10, type: 'star', color: '#FF8C00', name: '橙色五角星' },
-          { id: 11, type: 'moon', color: '#20B2AA', name: '青色月牙形' },
+          { id: 11, type: 'diamond', color: '#20B2AA', name: '青色菱形' },
           { id: 12, type: 'heart', color: '#DC143C', name: '深红色心形' }
         ];
 
@@ -1054,9 +1054,6 @@
             case 'star':
               this.drawStar(ctx, x, y, size);
               break;
-            case 'moon':
-              this.drawMoon(ctx, x, y, size);
-              break;
             case 'heart':
               this.drawHeart(ctx, x, y, size);
               break;
@@ -1190,18 +1187,6 @@
           }
 
           ctx.lineTo(x, y - outerRadius);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        };
-
-        // 绘制月牙形
-        SequenceConnection.prototype.drawMoon = function(ctx, x, y, size) {
-          ctx.beginPath();
-          // 外圆（向右）
-          ctx.arc(x, y, size, 0.7 * Math.PI, 1.3 * Math.PI, false);
-          // 内圆（向左，形成月牙）
-          ctx.arc(x - size * 0.6, y, size * 0.8, 1.3 * Math.PI, 0.7 * Math.PI, true);
           ctx.closePath();
           ctx.fill();
           ctx.stroke();
@@ -1431,14 +1416,6 @@
                   rot += step;
                 }
                 ctx.lineTo(centerX, centerY - outerRadius);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                break;
-              case 'moon':
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, size, 0.7 * Math.PI, 1.3 * Math.PI, false);
-                ctx.arc(centerX - size * 0.6, centerY, size * 0.8, 1.3 * Math.PI, 0.7 * Math.PI, true);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();

@@ -180,16 +180,19 @@
       padding-top: 15px;
       padding-bottom: 15px;
       padding-left: 10px;
-      padding-right: 50px;
+      padding-right: 10px;
       max-width: 740px;
       width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
     }
     
     .grid {
       display: grid;
       grid-template-columns: repeat(20, 1fr);
       gap: 6px;
-      margin-left: 5px;
+      margin: 0 auto;
+      max-width: 100%;
     }
     
     .cell {
