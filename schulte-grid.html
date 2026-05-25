@@ -126,57 +126,6 @@
         align-items: center;
       }
 
-      /* 颜色选择器 */
-      .color-picker {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 6px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        -webkit-transition: all 0.2s ease;
-      }
-
-      .color-picker:hover {
-        background: rgba(0,0,0,0.05);
-      }
-
-      .color-icon {
-        font-size: 14px;
-      }
-
-      .color-label {
-        font-size: 11px;
-        color: #555;
-        font-weight: 600;
-      }
-
-      .color-input {
-        width: 24px;
-        height: 24px;
-        border: none;
-        border-radius: 50%;
-        cursor: pointer;
-        padding: 0;
-        background: none;
-        -webkit-appearance: none;
-        appearance: none;
-      }
-
-      .color-input::-webkit-color-swatch-wrapper {
-        padding: 0;
-      }
-
-      .color-input::-webkit-color-swatch {
-        border: 2px solid rgba(0,0,0,0.2);
-        border-radius: 50%;
-      }
-
-      .color-input::-moz-color-swatch {
-        border: 2px solid rgba(0,0,0,0.2);
-        border-radius: 50%;
-      }
 
       .stat-item {
         display: flex;
@@ -204,6 +153,39 @@
       .progress-value {
         color: #4CAF50;
         font-size: 14px;
+      }
+
+      /* 计时器显示区域 */
+      .timer-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        padding: 12px 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        margin-top: 30px;
+        margin-bottom: -10px;
+        max-width: 300px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+
+      .timer-icon {
+        font-size: 24px;
+      }
+
+      .timer-text {
+        font-size: 28px;
+        font-weight: bold;
+        color: #FF6B6B;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .progress-text {
+        font-size: 18px;
+        color: #4CAF50;
+        font-weight: 500;
       }
 
       /* 中间：当前目标数字 */
@@ -260,6 +242,54 @@
         color: #fff;
       }
 
+      .mode-group {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+
+      .mode-btn {
+        padding: 4px 8px;
+        border: 1px solid #e91e63;
+        background: #fff;
+        color: #e91e63;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .mode-btn:hover,
+      .mode-btn:active {
+        background: #e91e63;
+        color: #fff;
+      }
+
+      .mode-btn.active {
+        background: #e91e63;
+        color: #fff;
+      }
+
+      /* 混乱模式摆动动画 */
+      @keyframes swing {
+        0% { transform: rotate(var(--start-angle)); }
+        50% { transform: rotate(var(--end-angle)); }
+        100% { transform: rotate(var(--start-angle)); }
+      }
+
+      /* 数字旋转样式 */
+      .grid-cell .number-text {
+        display: inline-block;
+        transition: transform 0.3s;
+      }
+
+      .grid-cell .number-text.chaos-mode {
+        animation: swing 2s ease-in-out infinite;
+      }
+
       /* 游戏区域 */
       .game-container {
         flex: 1;
@@ -280,6 +310,117 @@
         padding: 4px;
         border-radius: 8px;
         box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        margin-top: -15px;
+      }
+
+      /* 虚无模式 - 边框放射颜色动画 */
+      @keyframes voidGlow1 {
+        0% { box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000, 0 0 15px #ff0000; }
+        25% { box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
+        50% { box-shadow: 0 0 5px #0000ff, 0 0 10px #0000ff, 0 0 15px #0000ff; }
+        75% { box-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00, 0 0 15px #ffff00; }
+        100% { box-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff; }
+      }
+      @keyframes voidGlow2 {
+        0% { box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff; }
+        25% { box-shadow: 0 0 5px #ff8800, 0 0 10px #ff8800, 0 0 15px #ff8800; }
+        50% { box-shadow: 0 0 5px #88ff00, 0 0 10px #88ff00, 0 0 15px #88ff00; }
+        75% { box-shadow: 0 0 5px #0088ff, 0 0 10px #0088ff, 0 0 15px #0088ff; }
+        100% { box-shadow: 0 0 5px #ff0088, 0 0 10px #ff0088, 0 0 15px #ff0088; }
+      }
+      @keyframes voidGlow3 {
+        0% { box-shadow: 0 0 5px #8800ff, 0 0 10px #8800ff, 0 0 15px #8800ff; }
+        25% { box-shadow: 0 0 5px #ff8888, 0 0 10px #ff8888, 0 0 15px #ff8888; }
+        50% { box-shadow: 0 0 5px #88ff88, 0 0 10px #88ff88, 0 0 15px #88ff88; }
+        75% { box-shadow: 0 0 5px #8888ff, 0 0 10px #8888ff, 0 0 15px #8888ff; }
+        100% { box-shadow: 0 0 5px #ffff88, 0 0 10px #ffff88, 0 0 15px #ffff88; }
+      }
+      @keyframes voidGlow4 {
+        0% { box-shadow: 0 0 5px #ff4444, 0 0 12px #ff4444, 0 0 20px #ff4444; }
+        33% { box-shadow: 0 0 5px #44ff44, 0 0 12px #44ff44, 0 0 20px #44ff44; }
+        66% { box-shadow: 0 0 5px #4444ff, 0 0 12px #4444ff, 0 0 20px #4444ff; }
+        100% { box-shadow: 0 0 5px #ff44ff, 0 0 12px #ff44ff, 0 0 20px #ff44ff; }
+      }
+
+      .grid-cell.void-mode {
+        animation: voidGlow1 2s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(2n) {
+        animation: voidGlow2 2.5s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(3n) {
+        animation: voidGlow3 1.8s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(4n) {
+        animation: voidGlow4 2.2s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(5n) {
+        animation: voidGlow1 1.5s ease-in-out infinite reverse;
+      }
+      .grid-cell.void-mode:nth-child(7n) {
+        animation: voidGlow3 2.8s ease-in-out infinite reverse;
+      }
+
+      /* 毁灭模式 - 整个格子背景颜色变换动画 */
+      .grid-cell.destroy-mode {
+        background: linear-gradient(45deg, #ff0000, #ff00ff, #ff0000, #ff7700, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+        background-size: 500% 500%;
+        animation: destroyBg 3s ease infinite;
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+      }
+      .grid-cell.destroy-mode:nth-child(2n) {
+        animation: destroyBg 2.5s ease infinite 0.3s;
+      }
+      .grid-cell.destroy-mode:nth-child(3n) {
+        animation: destroyBg2 2.8s ease infinite 0.6s;
+      }
+      .grid-cell.destroy-mode:nth-child(4n) {
+        animation: destroyBg3 3.2s ease infinite 0.9s;
+      }
+      .grid-cell.destroy-mode:nth-child(5n) {
+        animation: destroyBg2 2.6s ease infinite 1.2s;
+      }
+      .grid-cell.destroy-mode:nth-child(7n) {
+        animation: destroyBg3 3.5s ease infinite 1.5s;
+      }
+      .grid-cell.destroy-mode .number-text {
+        color: #fff !important;
+        text-shadow: 0 0 10px rgba(0,0,0,0.5);
+      }
+
+      @keyframes destroyBg {
+        0% { background-position: 0% 50%; box-shadow: 0 0 25px rgba(255, 0, 0, 0.9); }
+        10% { background-position: 10% 50%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+        20% { background-position: 20% 50%; box-shadow: 0 0 25px rgba(255, 0, 0, 0.9); }
+        35% { background-position: 35% 50%; box-shadow: 0 0 30px rgba(255, 119, 0, 0.8); }
+        50% { background-position: 50% 50%; box-shadow: 0 0 25px rgba(255, 255, 0, 0.8); }
+        65% { background-position: 65% 50%; box-shadow: 0 0 30px rgba(0, 255, 0, 0.8); }
+        80% { background-position: 80% 50%; box-shadow: 0 0 25px rgba(0, 255, 255, 0.8); }
+        90% { background-position: 90% 50%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+        100% { background-position: 100% 50%; box-shadow: 0 0 25px rgba(255, 0, 0, 0.9); }
+      }
+
+      @keyframes destroyBg2 {
+        0% { background-position: 50% 0%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+        10% { background-position: 50% 10%; box-shadow: 0 0 25px rgba(255, 0, 0, 0.9); }
+        20% { background-position: 50% 20%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+        35% { background-position: 50% 35%; box-shadow: 0 0 25px rgba(0, 0, 255, 0.8); }
+        50% { background-position: 50% 50%; box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); }
+        65% { background-position: 50% 65%; box-shadow: 0 0 25px rgba(0, 255, 0, 0.8); }
+        80% { background-position: 50% 80%; box-shadow: 0 0 30px rgba(255, 255, 0, 0.8); }
+        90% { background-position: 50% 90%; box-shadow: 0 0 25px rgba(255, 0, 0, 0.9); }
+        100% { background-position: 50% 100%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+      }
+
+      @keyframes destroyBg3 {
+        0% { background-position: 0% 0%; box-shadow: 0 0 30px rgba(255, 0, 0, 0.9); }
+        15% { background-position: 25% 25%; box-shadow: 0 0 35px rgba(255, 0, 255, 0.9); }
+        30% { background-position: 50% 50%; box-shadow: 0 0 30px rgba(255, 0, 0, 0.9); }
+        45% { background-position: 75% 75%; box-shadow: 0 0 35px rgba(255, 0, 255, 0.9); }
+        60% { background-position: 100% 100%; box-shadow: 0 0 30px rgba(255, 119, 0, 0.8); }
+        75% { background-position: 75% 25%; box-shadow: 0 0 35px rgba(255, 0, 255, 0.9); }
+        90% { background-position: 25% 75%; box-shadow: 0 0 30px rgba(255, 0, 0, 0.9); }
+        100% { background-position: 0% 0%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
       }
 
       .grid-cell {
@@ -579,25 +720,6 @@
         <p>按顺序点击数字</p>
       </div>
       <div class="info-row">
-        <div class="stats-group">
-          <div class="color-picker" title="选择数字颜色">
-            <span class="color-icon">🎨</span>
-            <span class="color-label">数字颜色</span>
-            <input type="color" class="color-input" id="color-picker" value="#333333" onchange="game.setNumberColor(this.value)">
-          </div>
-          <div class="stat-item">
-            <span class="stat-icon">⏱️</span>
-            <span class="stat-value timer-value" id="timer">00:00</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-icon">📊</span>
-            <span class="stat-value progress-value" id="progress">0/0</span>
-          </div>
-        </div>
-        <div class="target-group">
-          <span class="target-label">找</span>
-          <span class="target-number" id="target-number">1</span>
-        </div>
         <div class="difficulty-group">
           <button class="difficulty-btn" data-size="3" onclick="game.setDifficulty(3)">入门</button>
           <button class="difficulty-btn active" data-size="4" onclick="game.setDifficulty(4)">初级</button>
@@ -605,7 +727,25 @@
           <button class="difficulty-btn" data-size="6" onclick="game.setDifficulty(6)">高级</button>
           <button class="difficulty-btn" data-size="7" onclick="game.setDifficulty(7)">专家</button>
         </div>
+        <div class="mode-group">
+          <button class="mode-btn active" data-mode="normal" onclick="game.setMode('normal')">普通</button>
+          <button class="mode-btn" data-mode="offset" onclick="game.setMode('offset')">偏移</button>
+          <button class="mode-btn" data-mode="chaos" onclick="game.setMode('chaos')">混乱</button>
+        </div>
+        <div class="mode-group" style="margin-left: 10px;">
+          <button class="mode-btn font-toggle" data-font="false" onclick="game.toggleFontMode()" style="background: #2196F3; border-color: #2196F3;">换字</button>
+        </div>
+        <div class="mode-group" style="margin-left: 10px;">
+          <button class="mode-btn void-toggle" data-void="false" onclick="game.toggleVoidMode()" style="background: #9C27B0; border-color: #9C27B0;">虚无(慎点)</button>
+          <button class="mode-btn destroy-toggle" data-destroy="false" onclick="game.toggleDestroyMode()" style="background: #E91E63; border-color: #E91E63;">毁灭</button>
+        </div>
       </div>
+    </div>
+
+    <div class="timer-display" id="timer-display">
+      <span class="timer-icon">⏱️</span>
+      <span class="timer-text" id="timer">00:00</span>
+      <span class="progress-text" id="progress" style="display: none;"></span>
     </div>
 
     <div class="game-container">
@@ -671,12 +811,38 @@
         this.timerInterval = null;
         this.audioContext = null;
         this.numberColor = '#333333';
+        this.currentMode = 'normal';
+        this.fontMode = false;
+        this.voidMode = false;
+        this.destroyMode = false;
+        // 20种字体
+        this.fonts = [
+          'Georgia, serif',
+          'Times New Roman, serif',
+          'Arial, sans-serif',
+          'Verdana, sans-serif',
+          'Courier New, monospace',
+          'Impact, sans-serif',
+          'Comic Sans MS, cursive',
+          'Trebuchet MS, sans-serif',
+          'Arial Black, sans-serif',
+          'Palatino Linotype, serif',
+          'Lucida Console, monospace',
+          'Tahoma, sans-serif',
+          'Century Gothic, sans-serif',
+          'Brush Script MT, cursive',
+          'Gill Sans, sans-serif',
+          'Franklin Gothic Medium, sans-serif',
+          'Rockwell, serif',
+          'Baskerville, serif',
+          'Futura, sans-serif',
+          'Cooper Black, serif'
+        ];
 
         this.init();
       };
 
       SchulteGridGame.prototype.init = function() {
-        this.loadSavedColor();
         this.generateNumbers();
         this.renderGrid();
         this.updateUI();
@@ -693,23 +859,6 @@
         }
       };
 
-      SchulteGridGame.prototype.loadSavedColor = function() {
-        try {
-          var savedColor = localStorage.getItem('schulteGridNumberColor');
-          if (savedColor) {
-            this.numberColor = savedColor;
-            document.documentElement.style.setProperty('--number-color', savedColor);
-
-            var colorPicker = document.getElementById('color-picker');
-            if (colorPicker) {
-              colorPicker.value = savedColor;
-            }
-          }
-        } catch (e) {
-          console.log('无法加载保存的颜色设置');
-        }
-      };
-
       SchulteGridGame.prototype.setDifficulty = function(size) {
         if (this.isPlaying) {
           return;
@@ -722,6 +871,81 @@
           buttons[i].classList.remove('active');
           if (parseInt(buttons[i].dataset.size) === size) {
             buttons[i].classList.add('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.setMode = function(mode) {
+        if (this.isPlaying) {
+          return;
+        }
+
+        this.currentMode = mode;
+
+        var buttons = document.querySelectorAll('.mode-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].classList.remove('active');
+          if (buttons[i].dataset.mode === mode) {
+            buttons[i].classList.add('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.toggleFontMode = function() {
+        if (this.isPlaying) {
+          return;
+        }
+
+        this.fontMode = !this.fontMode;
+
+        var btn = document.querySelector('.font-toggle-btn');
+        if (btn) {
+          if (this.fontMode) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.toggleVoidMode = function() {
+        if (this.isPlaying) {
+          return;
+        }
+
+        this.voidMode = !this.voidMode;
+
+        var btn = document.querySelector('.void-toggle-btn');
+        if (btn) {
+          if (this.voidMode) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.toggleDestroyMode = function() {
+        if (this.isPlaying) {
+          return;
+        }
+
+        this.destroyMode = !this.destroyMode;
+
+        var btn = document.querySelector('.destroy-toggle-btn');
+        if (btn) {
+          if (this.destroyMode) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
           }
         }
 
@@ -787,15 +1011,58 @@
         container.innerHTML = '';
 
         var colorPalette = ['#f44336', '#2196F3', '#FF9800', '#9C27B0'];
+        var angles = [25, 30, 45, 75];
         
         for (var i = 0; i < this.numbers.length; i++) {
           var cell = document.createElement('div');
           cell.className = 'grid-cell';
-          cell.textContent = this.numbers[i];
           cell.dataset.number = this.numbers[i];
           cell.style.width = cellSize + 'px';
           cell.style.height = cellSize + 'px';
-          cell.style.color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+          
+          // 创建数字文字元素
+          var numberSpan = document.createElement('span');
+          numberSpan.className = 'number-text';
+          numberSpan.textContent = this.numbers[i];
+          // 随机颜色
+          numberSpan.style.color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+
+          // 根据模式应用旋转
+          if (this.currentMode === 'offset' || this.currentMode === 'chaos') {
+            var angle = angles[Math.floor(Math.random() * angles.length)];
+            var direction = Math.random() > 0.5 ? 1 : -1;
+            var finalAngle = angle * direction;
+            
+            if (this.currentMode === 'offset') {
+              // 偏移模式：静态旋转
+              numberSpan.style.transform = 'rotate(' + finalAngle + 'deg)';
+            } else {
+              // 混乱模式：动态摆动
+              numberSpan.classList.add('chaos-mode');
+              var oppositeAngle = -finalAngle;
+              numberSpan.style.setProperty('--start-angle', finalAngle + 'deg');
+              numberSpan.style.setProperty('--end-angle', oppositeAngle + 'deg');
+            }
+          }
+          
+          // 换字模式：随机字体（可与其他模式组合）
+          if (this.fontMode) {
+            var randomFont = this.fonts[Math.floor(Math.random() * this.fonts.length)];
+            numberSpan.style.fontFamily = randomFont;
+          }
+          
+          cell.appendChild(numberSpan);
+          
+          // 虚无模式：边框放射动画（可与其他模式组合）
+          if (this.voidMode) {
+            cell.classList.add('void-mode');
+          }
+
+          // 毁灭模式：整个底图颜色变换，数字白色
+          if (this.destroyMode) {
+            cell.classList.add('destroy-mode');
+            numberSpan.style.color = '#ffffff';
+          }
 
           cell.onclick = (function(number) {
             return function() {
@@ -833,6 +1100,13 @@
 
       SchulteGridGame.prototype.handleCorrectClick = function(element) {
         element.classList.add('correct');
+        
+        // 混乱模式下，停止已选中数字的动画
+        var numberSpan = element.querySelector('.number-text');
+        if (numberSpan && this.currentMode === 'chaos') {
+          numberSpan.style.animation = 'none';
+          numberSpan.classList.remove('chaos-mode');
+        }
 
         this.playSound('correct');
 
@@ -919,7 +1193,6 @@
 
       SchulteGridGame.prototype.updateUI = function() {
         var total = this.gridSize * this.gridSize;
-        document.getElementById('target-number').textContent = this.currentNumber;
         document.getElementById('progress').textContent = this.currentNumber - 1 + '/' + total;
       };
 
