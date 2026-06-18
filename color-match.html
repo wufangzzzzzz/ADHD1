@@ -617,6 +617,151 @@
       var completedLevels = new Set();
       var audioCtx = null;
       var canvasW = 0, canvasH = 0;
+      var shapeTime = 0; // 形状变换时间
+      var shapeAnimId = null; // 动画ID
+
+      // 形状常量
+      var SHAPE_CIRCLE = 0;
+      var SHAPE_SQUARE = 1;
+      var SHAPE_STAR = 2;
+      var SHAPE_TRIANGLE = 3;
+
+      // 缓动函数
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      // 获取当前形状和过渡进度
+      function getShapeProgress(time, offset) {
+        var cycleTime = 4000; // 每个形状周期4秒
+        var totalCycle = cycleTime * 4; // 总周期16秒
+        var adjustedTime = (time + offset) % totalCycle;
+        var shapeIndex = Math.floor(adjustedTime / cycleTime);
+        var progressInCycle = (adjustedTime % cycleTime) / cycleTime;
+        
+        // 过渡阶段占周期的25%，稳定阶段占75%
+        var transitionRatio = 0.25;
+        
+        if (progressInCycle < transitionRatio) {
+          // 过渡阶段
+          var transitionProgress = progressInCycle / transitionRatio;
+          var prevShape = (shapeIndex - 1 + 4) % 4;
+          return { from: prevShape, to: shapeIndex, progress: transitionProgress };
+        } else {
+          // 定阶段：保持当前形状
+          return { from: shapeIndex, to: shapeIndex, progress: 1 };
+        }
+      }
+
+      // 绘制简单圆形（无发光）
+      function drawCircle(ctx, cx, cy, r, color) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      // 绘制简单方形（无发光）
+      function drawSquare(ctx, cx, cy, r, color, cornerRadius) {
+        ctx.beginPath();
+        ctx.roundRect(cx - r, cy - r, r * 2, r * 2, cornerRadius);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      // 绘制简单星形（无发光）
+      function drawStar(ctx, cx, cy, r, color, innerRatio) {
+        ctx.beginPath();
+        for (var i = 0; i < 5; i++) {
+          var angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+          var x = cx + Math.cos(angle) * r;
+          var y = cy + Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          var innerAngle = angle + Math.PI / 5;
+          ctx.lineTo(cx + Math.cos(innerAngle) * r * innerRatio, cy + Math.sin(innerAngle) * r * innerRatio);
+        }
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      // 绘制简单三角形（无发光）
+      function drawTriangle(ctx, cx, cy, r, color) {
+        ctx.beginPath();
+        for (var i = 0; i < 3; i++) {
+          var angle = (Math.PI * 2 / 3) * i - Math.PI / 2;
+          var x = cx + Math.cos(angle) * r;
+          var y = cy + Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      // 绘制过渡形状（无发光，清晰边缘）
+      function drawMorphingShape(ctx, cx, cy, r, color, shapeInfo) {
+        var from = shapeInfo.from;
+        var to = shapeInfo.to;
+        var progress = shapeInfo.progress;
+        
+        if (from === to) {
+          // 稳定状态，直接绘制清晰形状
+          if (from === SHAPE_CIRCLE) drawCircle(ctx, cx, cy, r, color);
+          else if (from === SHAPE_SQUARE) drawSquare(ctx, cx, cy, r, color, 0);
+          else if (from === SHAPE_STAR) drawStar(ctx, cx, cy, r, color, 0.4);
+          else if (from === SHAPE_TRIANGLE) drawTriangle(ctx, cx, cy, r, color);
+        } else {
+          // 过渡状态，使用缓动函数平滑过渡
+          var easedProgress = easeInOutCubic(progress);
+          
+          if (from === SHAPE_CIRCLE && to === SHAPE_SQUARE) {
+            // 圆形→方形：圆角从r渐变到0
+            var cornerRadius = r * (1 - easedProgress);
+            drawSquare(ctx, cx, cy, r, color, cornerRadius);
+          } else if (from === SHAPE_SQUARE && to === SHAPE_STAR) {
+            // 方形→星形：先变成圆形，再变成星形
+            if (easedProgress < 0.5) {
+              // 方形→圆形
+              var cornerRadius = r * easedProgress * 2;
+              drawSquare(ctx, cx, cy, r, color, cornerRadius);
+            } else {
+              // 圆形→星形：内圆半径从1渐变到0.4
+              var innerRatio = 1 - (easedProgress - 0.5) * 1.2; // 从1到0.4
+              drawStar(ctx, cx, cy, r, color, Math.max(0.4, innerRatio));
+            }
+          } else if (from === SHAPE_STAR && to === SHAPE_TRIANGLE) {
+            // 星形→三角形：先变成圆形，再变成三角形
+            if (easedProgress < 0.5) {
+              // 星形→圆形：内圆半径从0.4渐变到1
+              var innerRatio = 0.4 + easedProgress * 1.2;
+              drawStar(ctx, cx, cy, r, color, Math.min(1, innerRatio));
+            } else {
+              // 圆形→三角形
+              drawTriangle(ctx, cx, cy, r, color);
+            }
+          } else if (from === SHAPE_TRIANGLE && to === SHAPE_CIRCLE) {
+            // 三角形→圆形：直接用圆角方形过渡
+            var cornerRadius = r * easedProgress;
+            drawSquare(ctx, cx, cy, r, color, cornerRadius);
+          } else {
+            // 其他过渡：直接绘制目标形状
+            if (to === SHAPE_CIRCLE) drawCircle(ctx, cx, cy, r, color);
+            else if (to === SHAPE_SQUARE) drawSquare(ctx, cx, cy, r, color, 0);
+            else if (to === SHAPE_STAR) drawStar(ctx, cx, cy, r, color, 0.4);
+            else if (to === SHAPE_TRIANGLE) drawTriangle(ctx, cx, cy, r, color);
+          }
+        }
+      }
+
+      // 形状变换动画
+      function animateShapes() {
+        shapeTime += 16; // 约60fps
+        draw();
+        shapeAnimId = requestAnimationFrame(animateShapes);
+      }
 
       function initHomePage() {
         var levelColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e'];
@@ -643,6 +788,11 @@
       }
 
       function goHome() {
+        // 停止形状变换动画
+        if (shapeAnimId) {
+          cancelAnimationFrame(shapeAnimId);
+          shapeAnimId = null;
+        }
         gamePage.style.display = 'none';
         homePage.style.display = 'flex';
         document.getElementById('cloudBg').style.display = 'block';
@@ -715,9 +865,13 @@
         currentColor = level.colors[0];
         updatePencilColor(currentColor);
         particles = [];
+        shapeTime = 0; // 重置形状变换时间
+        
+        // 启动形状变换动画
+        if (shapeAnimId) cancelAnimationFrame(shapeAnimId);
+        animateShapes();
         
         updateUI();
-        draw();
       }
 
       function updateUI() {
@@ -790,26 +944,21 @@
           ctx.globalAlpha = 1;
         }
 
-        // 点
-        var dotR = Math.min(canvasW, canvasH) * 0.02; // 与生成时保持一致
-        // 安全边距 = 光晕半径 + 点半径 + 额外安全距离
+        // 点 - 动态形状平滑过渡 + 发光效果
+        var dotR = Math.min(canvasW, canvasH) * 0.025;
         var safeMargin = dotR * 8;
         Object.keys(dotsData).forEach(function(color) {
           dotsData[color].forEach(function(dot, idx) {
             if (dotsCleared[color][idx]) return;
-            // 强制确保点在画布安全区域内
             var cx = Math.max(safeMargin, Math.min(canvasW - safeMargin, dot.x));
             var cy = Math.max(safeMargin, Math.min(canvasH - safeMargin, dot.y));
             
-            // 光晕
-            ctx.beginPath(); ctx.arc(cx, cy, dotR * 1.3, 0, Math.PI * 2);
-            ctx.fillStyle = allColors[color] + '35'; ctx.fill();
-            // 主圆点
-            ctx.beginPath(); ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
-            ctx.fillStyle = allColors[color]; ctx.fill();
-            // 高光
-            ctx.beginPath(); ctx.arc(cx - dotR * 0.25, cy - dotR * 0.25, dotR * 0.35, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fill();
+            // 为每个点使用随机偏移，让变换不同步更自然
+            var offset = (idx * 2500 + color.charCodeAt(0) * 800) % 12000;
+            var shapeInfo = getShapeProgress(shapeTime, offset);
+            
+            // 绘制平滑过渡的发光形状
+            drawMorphingShape(ctx, cx, cy, dotR, allColors[color], shapeInfo);
           });
         });
 
@@ -1069,20 +1218,7 @@
         init();
       }
     </script>
-  <style>
-    .qrcode-fixed {
-      position: fixed;
-      bottom: 15px;
-      right: 15px;
-      width: 80px;
-      height: 80px;
-      z-index: 9999;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      pointer-events: none;
-      -webkit-user-drag: none;
-    }
-    </style>
-    <img src="qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+  
+    
   </body>
 </html>

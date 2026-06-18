@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>双手协调 - 行为训练</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100dvh;overflow:hidden}
+body{
+  font-family:'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+  background:#FFFBFA;
+  color:#2D2B55;
+  display:flex;align-items:center;justify-content:center;
+  height:100dvh;
+}
+
+.container{
+  display:flex;gap:8px;
+  width:min(98vw,1400px);
+  height:min(96vh,900px);
+  padding:8px;
+  align-items:stretch;
+}
+
+/* 侧面板 - 绝对定位容器 */
+.side-panel{
+  flex:1;
+  position:relative;
+  background:transparent;
+  border-radius:16px;
+  min-width:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+.side-label{
+  position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  font-size:14px;font-weight:800;
+  color:#FF5E0E;
+  letter-spacing:1px;
+  z-index:10;
+  pointer-events:none;
+}
+.side-label.right-label{color:#00BFFF;}
+
+/* 形状卡片 - 绝对定位 */
+.shape-card{
+  position:absolute;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  transition:transform 0.1s;
+  background:transparent;
+  border:none;
+  touch-action:manipulation;
+}
+.shape-card .shape-inner{
+  width:100%;height:100%;
+  pointer-events:none;
+}
+.shape-card:active{transform:scale(0.94);}
+.shape-card.found{
+  opacity:0;
+  pointer-events:none;
+  transform:scale(0.6) !important;
+  transition:all 0.3s ease;
+}
+
+/* 中间面板 */
+.center-panel{
+  width:290px;min-width:290px;
+  background:#fff;
+  border-radius:16px;
+  padding:12px 10px;
+  display:flex;flex-direction:column;align-items:center;
+  gap:4px;
+  box-shadow:0 1px 8px rgba(45,43,85,0.05);
+  overflow:hidden;
+  justify-content:center;
+}
+.game-title{
+  font-size:18px;font-weight:800;
+  color:#2D2B55;
+  text-align:center;
+}
+
+/* 目标对列表 */
+.pairs-list{
+  width:100%;
+  display:flex;flex-direction:column;
+  gap:4px;
+}
+.pair-row{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:2px 8px;
+  border-radius:10px;
+  position:relative;
+  background:rgba(45,43,85,0.02);
+  border:2px solid transparent;
+  transition:all 0.2s;
+}
+.pair-row.current{
+  border-color:#FF5E0E;
+  background:rgba(255,94,14,0.06);
+}
+.pair-row.done{
+  height:0;padding:0;margin:0;
+  border-width:0;
+  overflow:hidden;
+  opacity:0;
+  transition:all 0.3s ease;
+}
+.pair-idx{
+  font-size:11px;font-weight:800;color:#2D2B55;opacity:0.3;
+  position:absolute;left:4px;top:50%;transform:translateY(-50%);
+  width:16px;text-align:center;
+}
+.pair-row.current .pair-idx{opacity:0.8;color:#FF5E0E;}
+.pair-row.done .pair-idx{opacity:0.5;color:#32CD32;}
+.pair-shape{
+  width:56px;height:56px;
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 1px 4px rgba(45,43,85,0.06);
+}
+.pair-shape .shape-inner{width:62%;height:62%;}
+.pair-plus{font-size:12px;color:#2D2B55;opacity:0.2;}
+.pair-row.done .pair-check{
+  margin-left:auto;
+  font-size:14px;color:#32CD32;
+}
+
+/* 计时器 */
+.timer-row{
+  display:flex;align-items:center;gap:6px;
+  width:100%;
+}
+.timer-icon{font-size:16px;}
+.timer-val{
+  font-size:18px;font-weight:800;
+  font-family:'JetBrains Mono',monospace;
+  color:#2D2B55;
+}
+
+/* 按钮 */
+.btn{
+  padding:10px 24px;border-radius:10px;
+  border:none;font-size:14px;font-weight:800;cursor:pointer;
+  transition:all 0.15s;letter-spacing:0.5px;
+}
+.btn:active{transform:scale(0.95);}
+.btn-start{
+  background:#FF5E0E;
+  color:#fff;box-shadow:0 3px 12px rgba(255,94,14,0.2);
+  width:100%;
+}
+.btn-start:disabled{opacity:0.35;cursor:not-allowed;box-shadow:none;}
+
+/* 结果 */
+.result-area{
+  display:none;flex-direction:column;align-items:center;gap:6px;
+  width:100%;
+}
+.result-area.show{display:flex;}
+.result-card{
+  background:rgba(45,43,85,0.02);
+  border-radius:14px;padding:14px;width:100%;text-align:center;
+}
+.result-time-big{
+  font-size:42px;font-weight:800;
+  font-family:'JetBrains Mono',monospace;
+  color:#FF5E0E;
+}
+.result-time-lbl{
+  font-size:12px;color:#2D2B55;opacity:0.4;margin-top:2px;margin-bottom:8px;
+}
+.btn-restart{
+  background:#fff;color:#FF5E0E;
+  border:2px solid rgba(255,94,14,0.15);
+}
+
+/* 响应式 - 竖屏 */
+@media (orientation:portrait){
+  .container{
+    flex-direction:column;
+    width:min(96vw,520px);
+    height:auto;min-height:96vh;
+    gap:4px;
+    padding:4px;
+  }
+  .center-panel{
+    width:100%;min-width:0;
+    flex-direction:row;flex-wrap:wrap;
+    padding:6px 8px;gap:4px;
+  }
+  .game-title{font-size:14px;width:100%;}
+  .pairs-list{flex-direction:row;flex-wrap:wrap;gap:2px;}
+  .pair-row{padding:4px 6px;}
+  .pair-shape{width:50px;height:50px;}
+  .timer-row{width:auto;}
+  .btn-start{width:100%;}
+  .side-panel{flex:1;min-height:200px;}
+}
+
+/* 平板竖屏 — 保持横排三栏，方便双手同时点击 */
+@media (min-width:768px) and (orientation:portrait){
+  .container{width:min(96vw,900px);height:min(96vh,700px);flex-direction:row;}
+  .center-panel{width:250px;min-width:250px;}
+  .side-panel{min-height:0;}
+  .pair-shape{width:52px;height:52px;}
+}
+
+/* 手机横屏紧凑 */
+@media (orientation:landscape) and (max-height:500px){
+  .container{height:98vh;padding:2px;gap:3px;}
+  .center-panel{width:220px;min-width:220px;padding:6px 4px;gap:3px;}
+  .game-title{font-size:13px;}
+  .pair-shape{width:42px;height:42px;}
+  .pair-row{padding:3px 5px;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .shape-card,.btn,.pair-row{transition:none!important;animation:none!important;}
+}
+/* 规则弹窗 */
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
+.rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
+.rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
+.rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
+.rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
+.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 左手面板 -->
+  <div class="side-panel" id="leftPanel">
+    <div class="side-label">✋ 左手</div>
+  </div>
+
+  <!-- 中间面板 -->
+  <div class="center-panel" id="centerPanel">
+    <div class="game-title">双手协调</div>
+    <div class="pairs-list" id="pairsList"></div>
+    <div class="timer-row">
+      <span class="timer-icon">⏱</span>
+      <span class="timer-val" id="timerVal">00:00</span>
+    </div>
+
+    <button class="btn btn-start" id="btnStart" onclick="startGame()">开始训练</button>
+    <div class="result-area" id="resultArea">
+      <div class="result-card">
+        <div class="result-time-big" id="resultTime">0.0s</div>
+        <div class="result-time-lbl">总用时</div>
+        <button class="btn btn-restart" onclick="startGame()">再来一次</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右手面板 -->
+  <div class="side-panel" id="rightPanel">
+    <div class="side-label right-label">🤚 右手</div>
+  </div>
+</div>
+
+<script>
+// ===== 配置 =====
+const PAIRS = 7;
+const DISTRACTORS = 2; // 每侧干扰项数量
+const TOTAL_PER_SIDE = PAIRS + DISTRACTORS; // 9
+
+const COLORS = [
+  '#FF5E0E','#00BFFF','#AB47BC','#40E0D0',
+  '#FFD700','#FF69B4','#32CD32','#FF073A',
+  '#FF9800','#1E90FF','#8A2BE2','#00E5EE',
+  '#FFDA00','#FF1493'
+];
+
+const ALL_SHAPES = ['star','circle','triangle','hexagon'];
+
+// ===== 形状SVG =====
+function getShapeSVG(shape, color) {
+  switch(shape) {
+    case 'star':
+      return '<svg viewBox="0 0 100 100" class="shape-inner"><polygon points="50,5 61,35 95,35 68,55 79,90 50,68 21,90 32,55 5,35 39,35" fill="'+color+'"/></svg>';
+    case 'circle':
+      return '<svg viewBox="0 0 100 100" class="shape-inner"><circle cx="50" cy="50" r="45" fill="'+color+'"/></svg>';
+    case 'triangle':
+      return '<svg viewBox="0 0 100 100" class="shape-inner"><polygon points="50,8 92,88 8,88" fill="'+color+'"/></svg>';
+    case 'hexagon':
+      return '<svg viewBox="0 0 100 100" class="shape-inner"><polygon points="50,5 90,28 90,72 50,95 10,72 10,28" fill="'+color+'"/></svg>';
+    default:
+      return '<svg viewBox="0 0 100 100" class="shape-inner"><circle cx="50" cy="50" r="45" fill="'+color+'"/></svg>';
+  }
+}
+
+function randomShape() {
+  return ALL_SHAPES[Math.floor(Math.random()*ALL_SHAPES.length)];
+}
+
+// ===== 游戏状态 =====
+const state = {
+  isPlaying:false,
+  currentPairIdx:0,
+  pairs:[],
+  leftShapes:[],
+  rightShapes:[],
+  timerId:null,
+  startTime:0,
+  leftFound:false,
+  rightFound:false
+};
+
+// ===== DOM =====
+const $ = id => document.getElementById(id);
+const leftPanel = $('leftPanel');
+const rightPanel = $('rightPanel');
+const pairsList = $('pairsList');
+const timerVal = $('timerVal');
+const btnStart = $('btnStart');
+const resultArea = $('resultArea');
+
+// ===== 洗牌 =====
+function shuffle(arr) {
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// ===== 初始化目标对列表 =====
+function renderPairsList() {
+  pairsList.innerHTML = '';
+  for(let i=0;i<PAIRS;i++){
+    const row = document.createElement('div');
+    row.className = 'pair-row';
+    row.id = 'pairRow'+i;
+    row.innerHTML = '<span class="pair-idx">'+(i+1)+'</span>'
+      + '<span class="pair-shape" id="pairLeft'+i+'"></span>'
+      + '<span class="pair-plus">+</span>'
+      + '<span class="pair-shape" id="pairRight'+i+'"></span>'
+      + '<span class="pair-check" style="display:none">✓</span>';
+    pairsList.appendChild(row);
+  }
+}
+renderPairsList();
+
+function updatePairDisplay(idx, leftColor, rightColor, leftShape, rightShape) {
+  const leftEl = $('pairLeft'+idx);
+  const rightEl = $('pairRight'+idx);
+  if(leftEl) leftEl.innerHTML = getShapeSVG(leftShape, leftColor);
+  if(rightEl) rightEl.innerHTML = getShapeSVG(rightShape, rightColor);
+}
+
+// ===== 碰撞检测：两个圆形是否重叠 =====
+function circlesOverlap(x1, y1, r1, x2, y2, r2) {
+  const dx = x1 - x2;
+  const dy = y1 - y2;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  return dist < (r1 + r2);
+}
+
+// ===== 网格分区随机偏移放置（永不重叠） =====
+function placeShapes(panelW, panelH, count, shapeSize) {
+  // 计算最优网格：格子数 ≥ count，尽量接近正方形
+  let cols = Math.ceil(Math.sqrt(count));
+  let rows = Math.ceil(count / cols);
+  // 确保格子够大装下形状
+  const cellW = panelW / cols;
+  const cellH = panelH / rows;
+  if(cellW < shapeSize || cellH < shapeSize){
+    // 面板太小，缩小形状
+    shapeSize = Math.floor(Math.min(cellW, cellH) * 0.85);
+  }
+
+  const positions = [];
+  // 生成网格索引并随机打乱，避免形状按行列顺序排列
+  const indices = [];
+  for(let i=0;i<rows*cols;i++) indices.push(i);
+  for(let i=indices.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+
+  for(let i=0;i<count;i++){
+    const idx = indices[i];
+    const row = Math.floor(idx / cols);
+    const col = idx % cols;
+    // 格内随机偏移（留10%边距防贴边）
+    const padX = cellW * 0.1;
+    const padY = cellH * 0.1;
+    const maxOffX = Math.max(0, cellW - shapeSize - padX*2);
+    const maxOffY = Math.max(0, cellH - shapeSize - padY*2);
+    const offX = maxOffX > 0 ? Math.random() * maxOffX : 0;
+    const offY = maxOffY > 0 ? Math.random() * maxOffY : 0;
+    const x = col * cellW + padX + offX;
+    const y = row * cellH + padY + offY;
+    positions.push({x, y, cx: x + shapeSize/2, cy: y + shapeSize/2});
+  }
+  return positions;
+}
+
+// ===== 生成所有形状（无重复） =====
+function generateAllShapes(pairs) {
+  const leftShapes = [];
+  const rightShapes = [];
+  const leftUsed = new Set();
+  const rightUsed = new Set();
+
+  function key(c, s) { return c + '|' + s; }
+
+  pairs.forEach((p, i) => {
+    const lk = key(p.leftColor, p.leftShape);
+    const rk = key(p.rightColor, p.rightShape);
+    leftShapes.push({ color:p.leftColor, shape:p.leftShape, pairIdx:i, isTarget:true });
+    rightShapes.push({ color:p.rightColor, shape:p.rightShape, pairIdx:i, isTarget:true });
+    leftUsed.add(lk);
+    rightUsed.add(rk);
+  });
+
+  const allColors = shuffle([...COLORS]);
+  const allShapes = shuffle([...ALL_SHAPES]);
+
+  let attempts = 0;
+  while(leftShapes.length < TOTAL_PER_SIDE && attempts < 300){
+    const c = allColors[Math.floor(Math.random()*allColors.length)];
+    const s = allShapes[Math.floor(Math.random()*allShapes.length)];
+    const k = key(c, s);
+    if(!leftUsed.has(k)){
+      leftShapes.push({ color:c, shape:s, pairIdx:-1, isTarget:false });
+      leftUsed.add(k);
+    }
+    attempts++;
+  }
+
+  attempts = 0;
+  while(rightShapes.length < TOTAL_PER_SIDE && attempts < 300){
+    const c = allColors[Math.floor(Math.random()*allColors.length)];
+    const s = allShapes[Math.floor(Math.random()*allShapes.length)];
+    const k = key(c, s);
+    if(!rightUsed.has(k)){
+      rightShapes.push({ color:c, shape:s, pairIdx:-1, isTarget:false });
+      rightUsed.add(k);
+    }
+    attempts++;
+  }
+
+  return {
+    left: shuffle(leftShapes),
+    right: shuffle(rightShapes)
+  };
+}
+
+// ===== 渲染形状（绝对定位散落） =====
+function renderShapes(panel, shapes, side) {
+  // 清除旧形状
+  panel.querySelectorAll('.shape-card').forEach(c=>c.remove());
+
+  const panelW = panel.clientWidth;
+  const panelH = panel.clientHeight;
+
+  // 根据面板大小和形状数量计算形状尺寸
+  const areaPerShape = (panelW * panelH) / (TOTAL_PER_SIDE * 3.0);
+  let shapeSize = Math.floor(Math.sqrt(areaPerShape));
+  // 限制范围：不能太小也不能太大
+  shapeSize = Math.max(50, Math.min(shapeSize, 85));
+
+  const positions = placeShapes(panelW, panelH, shapes.length, shapeSize);
+
+  shapes.forEach((s, i) => {
+    const pos = positions[i];
+    const card = document.createElement('div');
+    card.className = 'shape-card';
+    card.style.width = shapeSize + 'px';
+    card.style.height = shapeSize + 'px';
+    card.style.left = pos.x + 'px';
+    card.style.top = pos.y + 'px';
+    card.dataset.color = s.color;
+    card.dataset.side = side;
+    card.dataset.pairIdx = s.pairIdx;
+    card.dataset.isTarget = s.isTarget?'1':'0';
+
+    const inner = document.createElement('div');
+    inner.className = 'shape-inner';
+    inner.innerHTML = getShapeSVG(s.shape, s.color);
+    card.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      handleShapeClick(card, s, side);
+    });
+    card.appendChild(inner);
+    panel.appendChild(card);
+  });
+}
+
+// ===== 处理形状点击（不判断对错，任意点击即算找到） =====
+function handleShapeClick(card, shape, side) {
+  if(!state.isPlaying) return;
+  if(card.classList.contains('found')) return;
+
+  card.classList.add('found');
+  playSound('click');
+
+  if(side==='left'){
+    state.leftFound = true;
+  } else {
+    state.rightFound = true;
+  }
+
+  if(state.leftFound && state.rightFound){
+    playSound('pair');
+    const row = $('pairRow'+state.currentPairIdx);
+    if(row){
+      row.classList.remove('current');
+      row.classList.add('done');
+      const check = row.querySelector('.pair-check');
+      if(check) check.style.display = 'inline';
+    }
+    state.currentPairIdx++;
+    state.leftFound = false;
+    state.rightFound = false;
+
+    if(state.currentPairIdx >= PAIRS){
+      endGame();
+    } else {
+      const nextRow = $('pairRow'+state.currentPairIdx);
+      if(nextRow) nextRow.classList.add('current');
+    }
+  }
+}
+
+// ===== 开始游戏 =====
+function startGame() {
+  state.isPlaying = true;
+  state.currentPairIdx = 0;
+  state.leftFound = false;
+  state.rightFound = false;
+  state.startTime = Date.now();
+
+  timerVal.textContent = '00:00';
+
+  btnStart.style.display = 'none';
+  resultArea.classList.remove('show');
+
+  // 生成7对目标
+  const shuffled = shuffle([...COLORS]);
+  state.pairs = [];
+  for(let i=0;i<PAIRS;i++){
+    state.pairs.push({
+      leftColor: shuffled[i*2 % shuffled.length],
+      rightColor: shuffled[(i*2+1) % shuffled.length],
+      leftShape: randomShape(),
+      rightShape: randomShape()
+    });
+  }
+
+  // 生成形状
+  const shapes = generateAllShapes(state.pairs);
+  state.leftShapes = shapes.left;
+  state.rightShapes = shapes.right;
+
+  // 渲染目标对列表
+  renderPairsList();
+  for(let i=0;i<PAIRS;i++){
+    updatePairDisplay(i, state.pairs[i].leftColor, state.pairs[i].rightColor, state.pairs[i].leftShape, state.pairs[i].rightShape);
+  }
+  const firstRow = $('pairRow0');
+  if(firstRow) firstRow.classList.add('current');
+
+  // 渲染形状
+  requestAnimationFrame(() => {
+    renderShapes(leftPanel, state.leftShapes, 'left');
+    renderShapes(rightPanel, state.rightShapes, 'right');
+  });
+
+  state.timerId = setInterval(updateTimer, 200);
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+  const min = Math.floor(elapsed / 60);
+  const sec = elapsed % 60;
+  timerVal.textContent = String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+}
+
+function endGame() {
+  state.isPlaying = false;
+  clearInterval(state.timerId);
+
+  const totalSec = ((Date.now()-state.startTime)/1000).toFixed(1);
+
+  leftPanel.querySelectorAll('.shape-card').forEach(c=>c.remove());
+  rightPanel.querySelectorAll('.shape-card').forEach(c=>c.remove());
+
+  $('resultTime').textContent = totalSec+'s';
+
+  resultArea.classList.add('show');
+  btnStart.style.display = 'block';
+  btnStart.textContent = '再来一次';
+}
+
+// ===== 音效 =====
+const AudioCtx = window.AudioContext||window.webkitAudioContext;
+let audioCtx=null;
+function getCtx(){if(!audioCtx)audioCtx=new AudioCtx();return audioCtx;}
+
+function playTone(freq,dur,type,vol){
+  try{
+    const ctx=getCtx();
+    const o=ctx.createOscillator();
+    const g=ctx.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    o.connect(g);g.connect(ctx.destination);
+    o.start();o.stop(ctx.currentTime+dur);
+  }catch(e){}
+}
+
+function playSound(type){
+  if(type==='click') playTone(660,0.06,'sine',0.04);
+  if(type==='pair'){ playTone(880,0.08,'sine',0.06); setTimeout(()=>playTone(1100,0.1,'sine',0.06),80); }
+}
+
+// 窗口大小变化时重新布局
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    if(state.isPlaying){
+      renderShapes(leftPanel, state.leftShapes, 'left');
+      renderShapes(rightPanel, state.rightShapes, 'right');
+    }
+  }, 300);
+});
+
+function showRulesPopup(){
+    if(!localStorage.getItem('b6_visited')){
+        document.getElementById('rulesOverlay').style.display='flex';
+    }
+}
+function closeRules(){
+    localStorage.setItem('b6_visited','1');
+    document.getElementById('rulesOverlay').style.display='none';
+}
+document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+
+</script>
+
+<div class="rules-overlay" id="rulesOverlay">
+<div class="rules-dialog">
+<h2>🎮 双手协调</h2>
+<p>中间面板展示7组目标形状对，左右两侧面板散落对应形状。</p><p>用<b>左右手同时</b>点击两侧匹配的形状，按从上到下的顺序完成全部7对。记录总用时！</p>
+<p class="rd-note">每次进入游戏都会显示，点击下方按钮开始</p>
+<button onclick="closeRules()">我知道了，开始游戏！</button>
+</div>
+</div>
+</body>
+</html>

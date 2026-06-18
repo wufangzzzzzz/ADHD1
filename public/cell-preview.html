@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单格素材预览 - 浮雕边缘+菱形交点</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; background: #f5f5f5;
+}
+.wrapper {
+  position: relative;
+  width: 480px; height: 480px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 120px);
+  grid-template-rows: repeat(4, 120px);
+  gap: 0;
+  position: relative;
+  z-index: 0;
+}
+.cell {
+  width: 120px; height: 120px;
+  background: #d0d0d0;
+  border-radius: 6px;
+}
+.cell.raised {
+  border-top: 3px solid #f2f2f2;
+  border-left: 3px solid #f2f2f2;
+  border-bottom: 3px solid #333;
+  border-right: 3px solid #333;
+}
+.cell.recessed {
+  border-top: 3px solid #333;
+  border-left: 3px solid #333;
+  border-bottom: 3px solid #f2f2f2;
+  border-right: 3px solid #f2f2f2;
+}
+.overlay {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1; pointer-events: none;
+}
+.diamond-cluster {
+  position: absolute;
+  width: 14px; height: 14px;
+  transform: translate(-50%, -50%);
+}
+.diamond {
+  position: absolute;
+  width: 6px; height: 6px;
+  transform: rotate(45deg);
+}
+.diamond.black { background: #222; }
+.diamond.white { background: #f2f2f2; }
+.diamond.top  { top: 0; left: 50%; margin-left: -3px; }
+.diamond.right { top: 50%; right: 0; margin-top: -3px; }
+.diamond.bottom { bottom: 0; left: 50%; margin-left: -3px; }
+.diamond.left { top: 50%; left: 0; margin-top: -3px; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="grid" id="grid"></div>
+  <div class="overlay" id="overlay"></div>
+</div>
+<script>
+const grid = document.getElementById('grid');
+const overlay = document.getElementById('overlay');
+const COLS = 4;
+const ROWS = 4;
+const CELL = 120;
+
+for (let i = 0; i < COLS * ROWS; i++) {
+  const row = Math.floor(i / COLS);
+  const col = i % COLS;
+  const cell = document.createElement('div');
+  cell.className = (row % 2 === col % 2) ? 'cell raised' : 'cell recessed';
+  grid.appendChild(cell);
+}
+
+for (let r = 0; r <= ROWS; r++) {
+  for (let c = 0; c <= COLS; c++) {
+    const cluster = document.createElement('div');
+    cluster.className = 'diamond-cluster';
+    cluster.style.left = (c * CELL) + 'px';
+    cluster.style.top = (r * CELL) + 'px';
+
+    // 4种模式随机：2黑2白相邻不交叉
+    const patterns = [
+      ['black','black','white','white'],
+      ['white','black','black','white'],
+      ['white','white','black','black'],
+      ['black','white','white','black']
+    ];
+    const colors = patterns[Math.floor(Math.random() * 4)];
+
+    const positions = ['top','right','bottom','left'];
+    for (let i = 0; i < 4; i++) {
+      const d = document.createElement('div');
+      d.className = 'diamond ' + colors[i] + ' ' + positions[i];
+      cluster.appendChild(d);
+    }
+    overlay.appendChild(cluster);
+  }
+}
+</script>
+</body>
+</html>

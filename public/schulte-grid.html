@@ -1,0 +1,1995 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>读写障碍注意力训练 - 舒尔特方格</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 8px 3px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* 背景粒子容器 */
+      .particles-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        animation: float 20s infinite;
+      }
+
+      /* 粒子浮动动画 */
+      @keyframes float {
+        0%, 100% {
+          transform: translateY(100vh) scale(0);
+          opacity: 0;
+        }
+        10% {
+          opacity: 1;
+        }
+        90% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-100px) scale(1);
+          opacity: 0;
+        }
+      }
+
+      /* 顶部整合区域 */
+      .top-bar {
+        width: 100%;
+        max-width: 600px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        z-index: 10;
+        padding: 4px 8px;
+      }
+
+      /* 顶部标题 */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 3px;
+        padding-bottom: 3px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .header h1 {
+        font-size: 14px;
+        color: #333;
+        font-weight: bold;
+        margin: 0;
+      }
+
+      .header p {
+        font-size: 10px;
+        color: #999;
+        margin: 0;
+      }
+
+      /* 整合的信息栏 */
+      .info-row {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 3px;
+        flex-wrap: nowrap;
+      }
+
+      /* 左侧：时间 + 进度 */
+      .stats-group {
+        display: flex;
+        gap: 8px;
+        flex: 1;
+        align-items: center;
+      }
+
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 12px;
+        color: #555;
+        font-weight: 600;
+      }
+
+      .stat-icon {
+        font-size: 13px;
+      }
+
+      .stat-value {
+        min-width: 45px;
+        text-align: center;
+      }
+
+      .timer-value {
+        color: #FF6B6B;
+        font-size: 14px;
+      }
+
+      .progress-value {
+        color: #4CAF50;
+        font-size: 14px;
+      }
+
+      /* 计时器显示区域 */
+      .timer-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        padding: 12px 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        margin-top: 30px;
+        margin-bottom: -10px;
+        max-width: 300px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+
+      .timer-icon {
+        font-size: 24px;
+      }
+
+      .timer-text {
+        font-size: 28px;
+        font-weight: bold;
+        color: #FF6B6B;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .progress-text {
+        font-size: 18px;
+        color: #4CAF50;
+        font-weight: 500;
+      }
+
+      /* 中间：当前目标数字 */
+      .target-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 18px;
+      }
+
+      .target-label {
+        font-size: 10px;
+        color: rgba(255,255,255,0.9);
+      }
+
+      .target-number {
+        font-size: 20px;
+        font-weight: bold;
+        color: #fff;
+        min-width: 25px;
+        text-align: center;
+      }
+
+      /* 右侧：难度选择（紧凑版） */
+      .difficulty-group {
+        display: flex;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+
+      .difficulty-btn {
+        padding: 3px 6px;
+        border: 1px solid #667eea;
+        background: #fff;
+        color: #667eea;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .difficulty-btn:hover,
+      .difficulty-btn:active {
+        background: #667eea;
+        color: #fff;
+      }
+
+      .difficulty-btn.active {
+        background: #667eea;
+        color: #fff;
+      }
+
+      .mode-group {
+        display: flex;
+        gap: 2px;
+        flex-shrink: 0;
+        margin-left: 4px;
+      }
+
+      .mode-btn {
+        padding: 3px 6px;
+        border: 1px solid #e91e63;
+        background: #fff;
+        color: #e91e63;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .mode-btn:hover,
+      .mode-btn:active {
+        background: #e91e63;
+        color: #fff;
+      }
+
+      .mode-btn.active {
+        background: #e91e63;
+        color: #fff;
+      }
+
+      /* 混乱模式摆动动画 */
+      @keyframes swing {
+        0% { transform: rotate(var(--start-angle)); }
+        50% { transform: rotate(var(--end-angle)); }
+        100% { transform: rotate(var(--start-angle)); }
+      }
+
+      /* 数字旋转样式 */
+      .grid-cell .number-text {
+        display: inline-block;
+        transition: transform 0.3s;
+      }
+
+      .grid-cell .number-text.chaos-mode {
+        animation: swing 2s ease-in-out infinite;
+      }
+
+      /* 游戏区域 */
+      .game-container {
+        flex: 1;
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        min-height: 0;
+        z-index: 10;
+      }
+
+      .grid-container {
+        display: grid;
+        gap: 3px;
+        background: rgba(255, 255, 255, 0.3);
+        padding: 4px;
+        border-radius: 8px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        margin-top: -15px;
+      }
+
+      /* 虚无模式 - 边框放射颜色动画 */
+      @keyframes voidGlow1 {
+        0% { box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000, 0 0 15px #ff0000; }
+        25% { box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
+        50% { box-shadow: 0 0 5px #0000ff, 0 0 10px #0000ff, 0 0 15px #0000ff; }
+        75% { box-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00, 0 0 15px #ffff00; }
+        100% { box-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff; }
+      }
+      @keyframes voidGlow2 {
+        0% { box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff; }
+        25% { box-shadow: 0 0 5px #ff8800, 0 0 10px #ff8800, 0 0 15px #ff8800; }
+        50% { box-shadow: 0 0 5px #88ff00, 0 0 10px #88ff00, 0 0 15px #88ff00; }
+        75% { box-shadow: 0 0 5px #0088ff, 0 0 10px #0088ff, 0 0 15px #0088ff; }
+        100% { box-shadow: 0 0 5px #ff0088, 0 0 10px #ff0088, 0 0 15px #ff0088; }
+      }
+      @keyframes voidGlow3 {
+        0% { box-shadow: 0 0 5px #8800ff, 0 0 10px #8800ff, 0 0 15px #8800ff; }
+        25% { box-shadow: 0 0 5px #ff8888, 0 0 10px #ff8888, 0 0 15px #ff8888; }
+        50% { box-shadow: 0 0 5px #88ff88, 0 0 10px #88ff88, 0 0 15px #88ff88; }
+        75% { box-shadow: 0 0 5px #8888ff, 0 0 10px #8888ff, 0 0 15px #8888ff; }
+        100% { box-shadow: 0 0 5px #ffff88, 0 0 10px #ffff88, 0 0 15px #ffff88; }
+      }
+      @keyframes voidGlow4 {
+        0% { box-shadow: 0 0 5px #ff4444, 0 0 12px #ff4444, 0 0 20px #ff4444; }
+        33% { box-shadow: 0 0 5px #44ff44, 0 0 12px #44ff44, 0 0 20px #44ff44; }
+        66% { box-shadow: 0 0 5px #4444ff, 0 0 12px #4444ff, 0 0 20px #4444ff; }
+        100% { box-shadow: 0 0 5px #ff44ff, 0 0 12px #ff44ff, 0 0 20px #ff44ff; }
+      }
+
+      .grid-cell.void-mode {
+        animation: voidGlow1 2s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(2n) {
+        animation: voidGlow2 2.5s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(3n) {
+        animation: voidGlow3 1.8s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(4n) {
+        animation: voidGlow4 2.2s ease-in-out infinite;
+      }
+      .grid-cell.void-mode:nth-child(5n) {
+        animation: voidGlow1 1.5s ease-in-out infinite reverse;
+      }
+      .grid-cell.void-mode:nth-child(7n) {
+        animation: voidGlow3 2.8s ease-in-out infinite reverse;
+      }
+
+      /* 毁灭模式1 - 背景颜色变换效果 */
+      .grid-cell.destroy-mode-1 {
+        animation: destroyBg1 3s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-1:nth-child(2n) {
+        animation: destroyBg2 4s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-1:nth-child(3n) {
+        animation: destroyBg3 5s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-1:nth-child(4n) {
+        animation: destroyBg1 3.5s ease-in-out infinite reverse;
+      }
+      .grid-cell.destroy-mode-1:nth-child(5n) {
+        animation: destroyBg2 4.5s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-1:nth-child(7n) {
+        animation: destroyBg3 5.5s ease-in-out infinite reverse;
+      }
+      .grid-cell.destroy-mode-1 .number-text {
+        color: #fff !important;
+        text-shadow: 0 0 8px rgba(255,255,255,0.8), 0 0 15px rgba(255,255,255,0.5);
+      }
+
+      /* 毁灭模式1动画 - 背景颜色循环变换 */
+      @keyframes destroyBg1 {
+        0% { background: linear-gradient(135deg, #ff0000, #ff7700, #ffff00); }
+        33% { background: linear-gradient(135deg, #00ff00, #00ffff, #0000ff); }
+        66% { background: linear-gradient(135deg, #ff00ff, #ff1493, #da70d6); }
+        100% { background: linear-gradient(135deg, #ff0000, #ff7700, #ffff00); }
+      }
+      @keyframes destroyBg2 {
+        0% { background: linear-gradient(225deg, #ff1493, #da70d6, #9370db, #7b68ee); }
+        25% { background: linear-gradient(225deg, #7b68ee, #00ced1, #20b2aa, #00fa9a); }
+        50% { background: linear-gradient(225deg, #00fa9a, #7fffd4, #40e0d0, #00bfff); }
+        75% { background: linear-gradient(225deg, #00bfff, #1e90ff, #6495ed, #9370db); }
+        100% { background: linear-gradient(225deg, #9370db, #ba55d3, #ff69b4, #ff1493); }
+      }
+      @keyframes destroyBg3 {
+        0% { background: linear-gradient(45deg, #ff0000, #ff1493, #da70d6); }
+        33% { background: linear-gradient(45deg, #da70d6, #7b68ee, #00ced1); }
+        66% { background: linear-gradient(45deg, #00ced1, #00bfff, #1e90ff); }
+        100% { background: linear-gradient(45deg, #1e90ff, #ff6347, #ff0000); }
+      }
+
+      /* 毁灭模式2 - 中心爆发式炫光效果 */
+      .grid-cell.destroy-mode-2 {
+        position: relative;
+        overflow: hidden;
+      }
+      .grid-cell.destroy-mode-2::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 200%;
+        height: 200%;
+        transform: translate(-50%, -50%);
+        background: conic-gradient(
+          from 0deg at 50% 50%,
+          #ffffff 0deg,
+          #fffae6 15deg,
+          #ffd700 30deg,
+          #ff8c00 45deg,
+          #ff6b6b 60deg,
+          #ff1493 75deg,
+          #da70d6 90deg,
+          #9370db 105deg,
+          #7b68ee 120deg,
+          #00ced1 135deg,
+          #20b2aa 150deg,
+          #00fa9a 165deg,
+          #00ff7f 180deg,
+          #7fffd4 195deg,
+          #40e0d0 210deg,
+          #00bfff 225deg,
+          #1e90ff 240deg,
+          #6495ed 255deg,
+          #9370db 270deg,
+          #ba55d3 285deg,
+          #ff69b4 300deg,
+          #ff6347 315deg,
+          #ff4500 330deg,
+          #ffa500 345deg,
+          #ffffff 360deg
+        );
+        animation: destroyRotate 2s linear infinite;
+        filter: blur(2px);
+        z-index: 0;
+      }
+      .grid-cell.destroy-mode-2::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 60%;
+        height: 60%;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(
+          circle at center,
+          #ffffff 0%,
+          #fffae6 10%,
+          #ffd700 20%,
+          rgba(255, 215, 0, 0.5) 40%,
+          transparent 70%
+        );
+        animation: destroyPulse 1.5s ease-in-out infinite;
+        z-index: 1;
+      }
+      .grid-cell.destroy-mode-2:nth-child(2n)::before {
+        animation: destroyRotate 2.5s linear infinite reverse;
+        filter: blur(3px);
+      }
+      .grid-cell.destroy-mode-2:nth-child(3n)::before {
+        animation: destroyRotate 1.8s linear infinite;
+        filter: blur(1.5px);
+      }
+      .grid-cell.destroy-mode-2:nth-child(4n)::before {
+        animation: destroyRotate 3s linear infinite reverse;
+        filter: blur(2.5px);
+      }
+      .grid-cell.destroy-mode-2:nth-child(5n)::before {
+        animation: destroyRotate 2.2s linear infinite;
+        filter: blur(2px);
+      }
+      .grid-cell.destroy-mode-2:nth-child(7n)::before {
+        animation: destroyRotate 1.5s linear infinite reverse;
+        filter: blur(1px);
+      }
+      .grid-cell.destroy-mode-2:nth-child(2n)::after {
+        animation: destroyPulse 2s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-2:nth-child(3n)::after {
+        animation: destroyPulse 1.2s ease-in-out infinite reverse;
+      }
+      .grid-cell.destroy-mode-2:nth-child(4n)::after {
+        animation: destroyPulse 1.8s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-2:nth-child(5n)::after {
+        animation: destroyPulse 2.5s ease-in-out infinite reverse;
+      }
+      .grid-cell.destroy-mode-2:nth-child(7n)::after {
+        animation: destroyPulse 1s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-2 {
+        box-shadow: 
+          0 0 15px rgba(255, 215, 0, 0.6),
+          0 0 30px rgba(255, 105, 180, 0.4),
+          0 0 45px rgba(0, 191, 255, 0.3);
+        animation: destroyGlow 3s ease-in-out infinite;
+      }
+      .grid-cell.destroy-mode-2 .number-text {
+        color: #fff !important;
+        text-shadow: 
+          0 0 8px rgba(255, 255, 255, 0.8),
+          0 0 15px rgba(255, 215, 0, 0.6),
+          0 0 25px rgba(255, 105, 180, 0.4);
+        z-index: 2;
+        position: relative;
+      }
+
+      @keyframes destroyRotate {
+        0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+        50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.1); }
+        100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
+      }
+
+      @keyframes destroyPulse {
+        0% { 
+          transform: translate(-50%, -50%) scale(0.8);
+          opacity: 0.8;
+        }
+        50% { 
+          transform: translate(-50%, -50%) scale(1.2);
+          opacity: 1;
+        }
+        100% { 
+          transform: translate(-50%, -50%) scale(0.8);
+          opacity: 0.8;
+        }
+      }
+
+      @keyframes destroyGlow {
+        0% { 
+          box-shadow: 
+            0 0 15px rgba(255, 215, 0, 0.6),
+            0 0 30px rgba(255, 105, 180, 0.4),
+            0 0 45px rgba(0, 191, 255, 0.3);
+        }
+        33% { 
+          box-shadow: 
+            0 0 20px rgba(255, 69, 0, 0.7),
+            0 0 35px rgba(218, 112, 214, 0.5),
+            0 0 50px rgba(32, 178, 170, 0.4);
+        }
+        66% { 
+          box-shadow: 
+            0 0 18px rgba(255, 255, 255, 0.8),
+            0 0 32px rgba(186, 85, 211, 0.6),
+            0 0 48px rgba(0, 255, 127, 0.3);
+        }
+        100% { 
+          box-shadow: 
+            0 0 15px rgba(255, 215, 0, 0.6),
+            0 0 30px rgba(255, 105, 180, 0.4),
+            0 0 45px rgba(0, 191, 255, 0.3);
+        }
+      }
+        35% { background-position: 50% 35%; box-shadow: 0 0 25px rgba(0, 0, 255, 0.8); }
+        50% { background-position: 50% 50%; box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); }
+        65% { background-position: 50% 65%; box-shadow: 0 0 25px rgba(0, 255, 0, 0.8); }
+        80% { background-position: 50% 80%; box-shadow: 0 0 30px rgba(255, 255, 0, 0.8); }
+        90% { background-position: 50% 90%; box-shadow: 0 0 25px rgba(255, 0, 0, 0.9); }
+        100% { background-position: 50% 100%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+      }
+
+      @keyframes destroyBg3 {
+        0% { background-position: 0% 0%; box-shadow: 0 0 30px rgba(255, 0, 0, 0.9); }
+        15% { background-position: 25% 25%; box-shadow: 0 0 35px rgba(255, 0, 255, 0.9); }
+        30% { background-position: 50% 50%; box-shadow: 0 0 30px rgba(255, 0, 0, 0.9); }
+        45% { background-position: 75% 75%; box-shadow: 0 0 35px rgba(255, 0, 255, 0.9); }
+        60% { background-position: 100% 100%; box-shadow: 0 0 30px rgba(255, 119, 0, 0.8); }
+        75% { background-position: 75% 25%; box-shadow: 0 0 35px rgba(255, 0, 255, 0.9); }
+        90% { background-position: 25% 75%; box-shadow: 0 0 30px rgba(255, 0, 0, 0.9); }
+        100% { background-position: 0% 0%; box-shadow: 0 0 30px rgba(255, 0, 255, 0.9); }
+      }
+
+      .grid-cell {
+        background: #fff;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 70px !important;
+        font-weight: bold;
+        color: var(--number-color, #333);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        -webkit-transition: all 0.15s ease;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      }
+
+      .grid-cell:active {
+        transform: scale(0.95);
+      }
+
+      .grid-cell.correct {
+        background: #4CAF50 !important;
+        color: #fff;
+        animation: correct-pulse 0.3s ease;
+      }
+
+      .grid-cell.wrong {
+        background: #FF6B6B !important;
+        color: #fff;
+        animation: shake 0.4s ease;
+      }
+
+      .grid-cell.current {
+        border: 3px solid #667eea;
+        background: #E8EAF6;
+      }
+
+      @keyframes correct-pulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+      }
+
+      @keyframes shake {
+        0%, 100% {
+          transform: translateX(0);
+        }
+        20%, 60% {
+          transform: translateX(-5px);
+        }
+        40%, 80% {
+          transform: translateX(5px);
+        }
+      }
+
+      /* 控制按钮 */
+      .controls {
+        position: absolute;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        z-index: 10;
+        width: 100%;
+        pointer-events: none;
+      }
+
+      .control-btn {
+        pointer-events: auto;
+        padding: 12px 32px;
+        background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
+        color: #fff;
+        border: none;
+        border-radius: 25px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 200, 83, 0.5);
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      }
+
+      .control-btn:hover,
+      .control-btn:active {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(0, 200, 83, 0.7);
+        background: linear-gradient(135deg, #00C853 0%, #69F0AE 100%);
+      }
+
+      .control-btn:disabled {
+        background: linear-gradient(135deg, #9E9E9E 0%, #BDBDBD 100%);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        text-shadow: none;
+      }
+
+      /* 返回按钮 */
+      .back-btn {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        border-radius: 50%;
+        font-size: 16px;
+        color: #667eea;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 100;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .back-btn:hover,
+      .back-btn:active {
+        transform: scale(1.1);
+        background: #667eea;
+        color: #fff;
+      }
+
+      /* 结果弹窗 */
+      .result-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .result-overlay.show {
+        display: flex;
+      }
+
+      .result-content {
+        background: #fff;
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        max-width: 90%;
+        animation: slide-up 0.3s ease;
+      }
+
+      @keyframes slide-up {
+        from {
+          transform: translateY(50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .result-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+        margin-bottom: 15px;
+      }
+
+      .result-time {
+        font-size: 36px;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 10px;
+      }
+
+      .result-info {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+
+      .result-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .result-btn {
+        padding: 12px 25px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border: none;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+      }
+
+      .result-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+
+      /* 响应式设计 */
+      @media screen and (max-width: 360px) {
+        .header h1 {
+          font-size: 13px;
+        }
+
+        .stat-item {
+          font-size: 11px;
+        }
+
+        .stat-value {
+          min-width: 40px;
+          font-size: 13px;
+        }
+
+        .difficulty-btn {
+          padding: 3px 6px;
+          font-size: 9px;
+        }
+
+        .target-number {
+          font-size: 18px;
+        }
+
+        .grid-cell {
+          font-size: 17px;
+        }
+
+        .control-btn {
+          padding: 10px 24px;
+          font-size: 14px;
+        }
+
+        .controls {
+          bottom: 18px;
+        }
+      }
+
+      @media screen and (min-width: 768px) {
+        .grid-cell {
+          font-size: 24px;
+        }
+
+        .header h1 {
+          font-size: 16px;
+        }
+
+        .difficulty-btn {
+          font-size: 11px;
+          padding: 5px 10px;
+        }
+
+        .stat-value {
+          font-size: 15px;
+        }
+
+        .control-btn {
+          padding: 14px 40px;
+          font-size: 16px;
+        }
+
+        .controls {
+          bottom: 30px;
+        }
+      }
+
+      /* 横屏模式 - 调整布局避免遮挡 */
+      @media screen and (orientation: landscape) and (max-height: 500px) {
+        .timer-display {
+          margin-top: 10px;
+          margin-bottom: 0;
+          padding: 6px 15px;
+        }
+        
+        .timer-text {
+          font-size: 16px;
+        }
+        
+        .timer-icon {
+          font-size: 14px;
+        }
+        
+        .game-container {
+          margin-bottom: 50px;
+        }
+        
+        .grid-container {
+          margin-top: 0;
+        }
+        
+        .controls {
+          bottom: 10px;
+        }
+        
+        .control-btn {
+          padding: 6px 20px;
+          font-size: 12px;
+        }
+        
+        .top-bar {
+          margin-bottom: 5px;
+          padding: 2px 6px;
+        }
+        
+        .header h1 {
+          font-size: 12px;
+        }
+        
+        .header p {
+          font-size: 8px;
+        }
+        
+        .difficulty-btn {
+          padding: 2px 5px;
+          font-size: 8px;
+        }
+        
+        .mode-btn {
+          padding: 2px 5px;
+          font-size: 8px;
+        }
+      }
+
+      /* 圆形模式容器 */
+      .circular-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: min(90vw, 1092px);
+        height: min(90vw, 1092px);
+        margin: 0 auto;
+      }
+
+      #circular-svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* 扇形格子 */
+      .sector-group {
+        cursor: pointer;
+      }
+
+      .sector {
+        fill: #FFFFFF;
+        stroke: #B0C4B8;
+        stroke-width: 1;
+        transition: fill 0.15s ease;
+      }
+
+      .sector-group:hover .sector {
+        fill: #F0F8F8;
+      }
+
+      .sector-group.correct .sector {
+        fill: #4CAF50;
+      }
+
+      .sector-group.correct .sector-text {
+        fill: #ffffff;
+      }
+
+      .sector-group.wrong .sector {
+        fill: #FF5252;
+      }
+
+      .sector-group.wrong .sector-text {
+        fill: #ffffff;
+      }
+
+      /* 扇形文字 */
+      .sector-text {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      /* 旋转动画 */
+      @keyframes rotateCW {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes rotateCCW {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(-360deg); }
+      }
+
+      .ring {
+        transform-origin: 250px 250px;
+      }
+
+      .ring.rotate-cw {
+        animation: rotateCW 20s linear infinite;
+      }
+
+      .ring.rotate-ccw {
+        animation: rotateCCW 20s linear infinite;
+      }
+
+      /* 文字反旋转保持正向 */
+      @keyframes counterCW {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(-360deg); }
+      }
+      @keyframes counterCCW {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .sector-text.counter-cw {
+        animation: counterCW 20s linear infinite;
+      }
+      .sector-text.counter-ccw {
+        animation: counterCCW 20s linear infinite;
+      }
+      
+
+      /* 横屏模式圆形容器 */
+      @media (orientation: landscape) {
+        .circular-container {
+          width: min(75vh, 1008px);
+          height: min(75vh, 1008px);
+        }
+      }
+
+      /* 平板竖屏圆形容器放大 */
+      @media (min-width: 768px) and (orientation: portrait) {
+        .circular-container {
+          width: min(90vw, 1330px);
+          height: min(90vw, 1330px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 背景粒子效果 -->
+    <div class="particles-container" id="particles-container"></div>
+
+    <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+
+    <!-- 顶部整合栏 -->
+    <div class="top-bar">
+      <div class="header">
+        <h1>舒尔特方格</h1>
+        <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+        <p>按顺序点击数字</p>
+      </div>
+      <div class="info-row">
+        <div class="difficulty-group">
+          <button class="difficulty-btn" data-size="3" onclick="game.setDifficulty(3)">入门</button>
+          <button class="difficulty-btn active" data-size="4" onclick="game.setDifficulty(4)">初级</button>
+          <button class="difficulty-btn" data-size="5" onclick="game.setDifficulty(5)">中级</button>
+          <button class="difficulty-btn" data-size="6" onclick="game.setDifficulty(6)">高级</button>
+          <button class="difficulty-btn" data-size="7" onclick="game.setDifficulty(7)">专家</button>
+        </div>
+        <div class="mode-group">
+          <button class="mode-btn active" data-mode="normal" onclick="game.setMode('normal')">普通</button>
+          <button class="mode-btn" data-mode="offset" onclick="game.setMode('offset')">偏移</button>
+          <button class="mode-btn" data-mode="chaos" onclick="game.setMode('chaos')">混乱</button>
+          <button class="mode-btn" data-mode="circular" id="circular-mode-btn" onclick="game.setMode('circular')">圆形（静）</button>
+        </div>
+        <div class="mode-group">
+          <button class="mode-btn font-toggle" data-font="false" onclick="game.toggleFontMode()" style="background: #2196F3; border-color: #2196F3;">换字</button>
+        </div>
+        <div class="mode-group">
+          <button class="mode-btn void-toggle" data-void="false" onclick="game.toggleVoidMode()" style="background: #9C27B0; border-color: #9C27B0;">虚无</button>
+          <button class="mode-btn destroy-toggle" data-destroy="false" onclick="game.toggleDestroyMode()" style="background: #E91E63; border-color: #E91E63;">毁灭</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="timer-display" id="timer-display">
+      <span class="timer-icon">⏱️</span>
+      <span class="timer-text" id="timer">00:00</span>
+      <span class="progress-text" id="progress" style="display: none;"></span>
+    </div>
+
+    <div class="game-container">
+      <div class="grid-container" id="grid-container"></div>
+      <div class="circular-container" id="circular-container" style="display:none;">
+        <svg id="circular-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="control-btn" id="start-btn" onclick="game.start()">开始游戏</button>
+      <button class="control-btn" id="restart-btn" onclick="game.restart()" style="display: none;">重新开始</button>
+    </div>
+
+    <div class="result-overlay" id="result-overlay">
+      <div class="result-content">
+        <div class="result-title">🎉 挑战成功!</div>
+        <div class="result-time" id="result-time">00:00</div>
+        <div class="result-info" id="result-info"></div>
+        <div class="result-buttons">
+          <button class="result-btn" onclick="game.restart()">再玩一次</button>
+          <button class="result-btn" onclick="game.closeResult()">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 防下载
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('dragstart', e => e.preventDefault());
+      document.addEventListener('selectstart', e => e.preventDefault());
+      document.addEventListener('copy', e => e.preventDefault());
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) e.preventDefault();
+      });
+      
+      // 创建背景粒子效果
+      (function() {
+        var container = document.getElementById('particles-container');
+        if (!container) return;
+
+        var particleCount = 30;
+
+        for (var i = 0; i < particleCount; i++) {
+          var particle = document.createElement('div');
+          particle.className = 'particle';
+
+          var size = Math.random() * 4 + 2;
+          particle.style.width = size + 'px';
+          particle.style.height = size + 'px';
+          particle.style.left = Math.random() * 100 + '%';
+          particle.style.animationDuration = (Math.random() * 20 + 15) + 's';
+          particle.style.animationDelay = (Math.random() * 10) + 's';
+          particle.style.opacity = Math.random() * 0.5 + 0.2;
+
+          container.appendChild(particle);
+        }
+      })();
+
+      var SchulteGridGame = function() {
+        this.gridSize = 4;
+        this.numbers = [];
+        this.currentNumber = 1;
+        this.isPlaying = false;
+        this.startTime = 0;
+        this.timerInterval = null;
+        this.audioContext = null;
+        this.numberColor = '#333333';
+        this.currentMode = 'normal';
+        this.fontMode = false;
+        this.voidMode = false;
+        this.destroyMode = 0; // 0=关闭, 1=背景变换, 2=炫光效果
+        this.previousMode = 'normal'; // 保存退出圆形后回到的方格模式
+        this.isCircularMode = false; // 是否在圆形模式
+        this.circularRotating = false; // 圆形模式旋转状态
+        this.previousMode = 'normal'; // 退出圆形时回到的方格模式
+        // 20种字体
+        this.fonts = [
+          'Georgia, serif',
+          'Times New Roman, serif',
+          'Arial, sans-serif',
+          'Verdana, sans-serif',
+          'Courier New, monospace',
+          'Impact, sans-serif',
+          'Comic Sans MS, cursive',
+          'Trebuchet MS, sans-serif',
+          'Arial Black, sans-serif',
+          'Palatino Linotype, serif',
+          'Lucida Console, monospace',
+          'Tahoma, sans-serif',
+          'Century Gothic, sans-serif',
+          'Brush Script MT, cursive',
+          'Gill Sans, sans-serif',
+          'Franklin Gothic Medium, sans-serif',
+          'Rockwell, serif',
+          'Baskerville, serif',
+          'Futura, sans-serif',
+          'Cooper Black, serif'
+        ];
+
+        this.init();
+      };
+
+      SchulteGridGame.prototype.init = function() {
+        this.generateNumbers();
+        this.renderGrid();
+        this.updateUI();
+      };
+
+      SchulteGridGame.prototype.setNumberColor = function(color) {
+        this.numberColor = color;
+        document.documentElement.style.setProperty('--number-color', color);
+
+        try {
+          localStorage.setItem('schulteGridNumberColor', color);
+        } catch (e) {
+          console.log('无法保存颜色设置');
+        }
+      };
+
+      SchulteGridGame.prototype.setDifficulty = function(size) {
+        // 游戏中允许切换难度
+        if (this.isPlaying) {
+          this.stopTimer();
+          this.isPlaying = false;
+        }
+
+        this.gridSize = size;
+
+        var buttons = document.querySelectorAll('.difficulty-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].classList.remove('active');
+          if (parseInt(buttons[i].dataset.size) === size) {
+            buttons[i].classList.add('active');
+          }
+        }
+
+        if (this.isCircularMode) {
+          this.renderCircularGrid();
+          if (this.circularRotating) {
+            var ri = 0;
+            while (true) {
+              var r = document.getElementById('ring-' + ri);
+              if (!r) break;
+              r.classList.add(ri % 2 === 0 ? 'rotate-cw' : 'rotate-ccw');
+              var ts = r.querySelectorAll('.sector-text');
+              for (var ti = 0; ti < ts.length; ti++) {
+                ts[ti].classList.add(ri % 2 === 0 ? 'counter-cw' : 'counter-ccw');
+              }
+              ri++;
+            }
+          }
+          this.start();
+        } else {
+          this.reset();
+        }
+      };
+
+      SchulteGridGame.prototype.setMode = function(mode) {
+        // 圆形模式特殊处理：允许游戏中切换
+        if (mode === 'circular') {
+          if (this.isCircularMode) {
+            // 已在圆形模式，切换旋转状态（静↔动）
+            if (this.isPlaying) {
+              this.stopTimer();
+              this.isPlaying = false;
+            }
+            this.renderCircularGrid();
+            this.toggleCircularRotation();
+            this.start();
+            return;
+          } else {
+            // 进入圆形模式（无论是否在游戏中）
+            if (this.isPlaying) {
+              this.stopTimer();
+              this.isPlaying = false;
+            }
+            this.enterCircularMode();
+            return;
+          }
+        }
+
+        // 游戏中允许切换：先停止当前游戏
+        if (this.isPlaying) {
+          this.stopTimer();
+          this.isPlaying = false;
+        }
+
+        // 从圆形模式切换到其他方格模式
+        if (this.isCircularMode) {
+          this.exitCircularMode();
+        }
+
+        this.currentMode = mode;
+
+        var buttons = document.querySelectorAll('.mode-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].classList.remove('active');
+          if (buttons[i].dataset.mode === mode) {
+            buttons[i].classList.add('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.toggleFontMode = function() {
+        if (this.isPlaying) {
+          return;
+        }
+
+        this.fontMode = !this.fontMode;
+
+        var btn = document.querySelector('.font-toggle-btn');
+        if (btn) {
+          if (this.fontMode) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.toggleVoidMode = function() {
+        if (this.isPlaying) {
+          return;
+        }
+
+        this.voidMode = !this.voidMode;
+
+        var btn = document.querySelector('.void-toggle-btn');
+        if (btn) {
+          if (this.voidMode) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.toggleDestroyMode = function() {
+        if (this.isPlaying) {
+          return;
+        }
+
+        // 三态切换：0(关闭) -> 1(背景变换) -> 2(炫光效果) -> 0(关闭)
+        this.destroyMode = (this.destroyMode + 1) % 3;
+
+        var btn = document.querySelector('.destroy-toggle');
+        if (btn) {
+          // 更新按钮状态
+          btn.dataset.destroy = this.destroyMode.toString();
+          
+          // 根据状态更新按钮文字和颜色
+          if (this.destroyMode === 0) {
+            btn.textContent = '毁灭';
+            btn.style.background = '#E91E63';
+            btn.style.borderColor = '#E91E63';
+          } else if (this.destroyMode === 1) {
+            btn.textContent = '毁灭1';
+            btn.style.background = '#FF5722';
+            btn.style.borderColor = '#FF5722';
+          } else if (this.destroyMode === 2) {
+            btn.textContent = '毁灭2';
+            btn.style.background = '#9C27B0';
+            btn.style.borderColor = '#9C27B0';
+          }
+        }
+
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.reset = function() {
+        this.currentNumber = 1;
+        this.isPlaying = false;
+        this.stopTimer();
+
+        if (this.isCircularMode) {
+          this.renderCircularGrid();
+          if (this.circularRotating) {
+            var ri = 0;
+            while (true) {
+              var r = document.getElementById('ring-' + ri);
+              if (!r) break;
+              r.classList.add(ri % 2 === 0 ? 'rotate-cw' : 'rotate-ccw');
+              var ts = r.querySelectorAll('.sector-text');
+              for (var ti = 0; ti < ts.length; ti++) {
+                ts[ti].classList.add(ri % 2 === 0 ? 'counter-cw' : 'counter-ccw');
+              }
+              ri++;
+            }
+          }
+        } else {
+          this.generateNumbers();
+          this.renderGrid();
+        }
+        this.updateUI();
+
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('restart-btn').style.display = 'none';
+      };
+
+      SchulteGridGame.prototype.start = function() {
+        this.isPlaying = true;
+        this.currentNumber = 1;
+        this.startTime = Date.now();
+        this.startTimer();
+
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('restart-btn').style.display = 'block';
+
+        this.initAudio();
+        this.playSound('start');
+        this.updateUI();
+      };
+
+      SchulteGridGame.prototype.restart = function() {
+        this.closeResult();
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.generateNumbers = function() {
+        var total = this.gridSize * this.gridSize;
+        this.numbers = [];
+
+        for (var i = 1; i <= total; i++) {
+          this.numbers.push(i);
+        }
+
+        this.shuffleNumbers();
+      };
+
+      SchulteGridGame.prototype.shuffleNumbers = function() {
+        for (var i = this.numbers.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var temp = this.numbers[i];
+          this.numbers[i] = this.numbers[j];
+          this.numbers[j] = temp;
+        }
+      };
+
+      SchulteGridGame.prototype.renderGrid = function() {
+        var container = document.getElementById('grid-container');
+        var cellSize = this.calculateCellSize();
+
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.innerHTML = '';
+
+        var colorPalette = ['#f44336', '#2196F3', '#FF9800', '#9C27B0'];
+        var angles = [25, 30, 45, 75];
+        
+        for (var i = 0; i < this.numbers.length; i++) {
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          cell.dataset.number = this.numbers[i];
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          
+          // 创建数字文字元素
+          var numberSpan = document.createElement('span');
+          numberSpan.className = 'number-text';
+          numberSpan.textContent = this.numbers[i];
+          // 随机颜色
+          numberSpan.style.color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+
+          // 根据模式应用旋转
+          if (this.currentMode === 'offset' || this.currentMode === 'chaos') {
+            var angle = angles[Math.floor(Math.random() * angles.length)];
+            var direction = Math.random() > 0.5 ? 1 : -1;
+            var finalAngle = angle * direction;
+            
+            if (this.currentMode === 'offset') {
+              // 偏移模式：静态旋转
+              numberSpan.style.transform = 'rotate(' + finalAngle + 'deg)';
+            } else {
+              // 混乱模式：动态摆动
+              numberSpan.classList.add('chaos-mode');
+              var oppositeAngle = -finalAngle;
+              numberSpan.style.setProperty('--start-angle', finalAngle + 'deg');
+              numberSpan.style.setProperty('--end-angle', oppositeAngle + 'deg');
+            }
+          }
+          
+          // 换字模式：随机字体（可与其他模式组合）
+          if (this.fontMode) {
+            var randomFont = this.fonts[Math.floor(Math.random() * this.fonts.length)];
+            numberSpan.style.fontFamily = randomFont;
+          }
+          
+          cell.appendChild(numberSpan);
+          
+          // 虚无模式：边框放射动画（可与其他模式组合）
+          if (this.voidMode) {
+            cell.classList.add('void-mode');
+          }
+
+          // 毁灭模式：根据状态应用不同的效果
+          if (this.destroyMode === 1) {
+            // 模式1：背景颜色变换
+            cell.classList.add('destroy-mode-1');
+            numberSpan.style.color = '#ffffff';
+          } else if (this.destroyMode === 2) {
+            // 模式2：中心爆发式炫光效果
+            cell.classList.add('destroy-mode-2');
+            numberSpan.style.color = '#ffffff';
+          }
+
+          cell.onclick = (function(number) {
+            return function() {
+              game.handleClick(number, this);
+            };
+          })(this.numbers[i]);
+
+          container.appendChild(cell);
+        }
+      };
+
+      SchulteGridGame.prototype.calculateCellSize = function() {
+        var containerWidth = Math.min(window.innerWidth - 20, 600);
+        var maxGridSize = 7;
+        var padding = 4;
+        var gap = 3;
+        
+        var availableWidth = containerWidth - padding * 2 - (this.gridSize - 1) * gap;
+        var cellSize = Math.floor(availableWidth / this.gridSize);
+        
+        return Math.min(cellSize, 120);
+      };
+
+      SchulteGridGame.prototype.handleClick = function(number, element) {
+        if (!this.isPlaying) {
+          return;
+        }
+
+        if (number === this.currentNumber) {
+          this.handleCorrectClick(element);
+        } else {
+          this.handleWrongClick(element);
+        }
+      };
+
+      SchulteGridGame.prototype.handleCorrectClick = function(element) {
+        element.classList.add('correct');
+        
+        // 混乱模式下，停止已选中数字的动画
+        var numberSpan = element.querySelector('.number-text');
+        if (numberSpan && this.currentMode === 'chaos') {
+          numberSpan.style.animation = 'none';
+          numberSpan.classList.remove('chaos-mode');
+        }
+
+        this.playSound('correct');
+
+        var total = this.getTotalNumbers();
+
+        if (this.currentNumber === total) {
+          this.completeGame();
+        } else {
+          this.currentNumber++;
+          this.updateUI();
+        }
+      };
+
+      SchulteGridGame.prototype.handleWrongClick = function(element) {
+        element.classList.add('wrong');
+
+        this.playSound('wrong');
+
+        setTimeout(function() {
+          element.classList.remove('wrong');
+        }, 400);
+      };
+
+      SchulteGridGame.prototype.completeGame = function() {
+        this.isPlaying = false;
+        this.stopTimer();
+        this.playSound('complete');
+
+        var elapsedTime = Math.floor((Date.now() - this.startTime) / 1000);
+        var timeStr = this.formatTime(elapsedTime);
+
+        document.getElementById('result-time').textContent = timeStr;
+
+        var total = this.getTotalNumbers();
+        var avgTime = (elapsedTime / total).toFixed(2);
+        var evaluation = this.evaluatePerformance(elapsedTime, total);
+
+        var difficultyStr;
+        if (this.isCircularMode) {
+          difficultyStr = '圆形模式 (30个数字)';
+        } else {
+          difficultyStr = '难度: ' + this.gridSize + '×' + this.gridSize + ' (' + total + '个数字)';
+        }
+
+        document.getElementById('result-info').innerHTML =
+          difficultyStr + '<br>' +
+          '平均每个数字: ' + avgTime + '秒<br>' +
+          '评价: ' + evaluation;
+
+        document.getElementById('result-overlay').classList.add('show');
+      };
+
+      SchulteGridGame.prototype.evaluatePerformance = function(totalTime, totalNumbers) {
+        var avgTime = totalTime / totalNumbers;
+        var evaluation = '';
+
+        if (this.gridSize === 3) {
+          if (avgTime < 0.5) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 0.8) evaluation = '👍 优秀!';
+          else if (avgTime < 1.2) evaluation = '😊 良好';
+          else if (avgTime < 1.8) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else if (this.gridSize === 4) {
+          if (avgTime < 0.6) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 0.9) evaluation = '👍 优秀!';
+          else if (avgTime < 1.4) evaluation = '😊 良好';
+          else if (avgTime < 2.0) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else if (this.gridSize === 5) {
+          if (avgTime < 0.7) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 1.1) evaluation = '👍 优秀!';
+          else if (avgTime < 1.6) evaluation = '😊 良好';
+          else if (avgTime < 2.3) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else if (this.gridSize === 6) {
+          if (avgTime < 0.8) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 1.3) evaluation = '👍 优秀!';
+          else if (avgTime < 1.9) evaluation = '😊 良好';
+          else if (avgTime < 2.6) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        } else {
+          if (avgTime < 0.9) evaluation = '🌟 非常优秀!';
+          else if (avgTime < 1.5) evaluation = '👍 优秀!';
+          else if (avgTime < 2.1) evaluation = '😊 良好';
+          else if (avgTime < 2.9) evaluation = '💪 继续加油';
+          else evaluation = '🔄 多加练习';
+        }
+
+        return evaluation;
+      };
+
+      SchulteGridGame.prototype.updateUI = function() {
+        var total = this.getTotalNumbers();
+        document.getElementById('progress').textContent = this.currentNumber - 1 + '/' + total;
+      };
+
+      SchulteGridGame.prototype.startTimer = function() {
+        var self = this;
+        this.timerInterval = setInterval(function() {
+          var elapsed = Math.floor((Date.now() - self.startTime) / 1000);
+          document.getElementById('timer').textContent = self.formatTime(elapsed);
+        }, 100);
+      };
+
+      SchulteGridGame.prototype.stopTimer = function() {
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+          this.timerInterval = null;
+        }
+      };
+
+      SchulteGridGame.prototype.formatTime = function(seconds) {
+        var mins = Math.floor(seconds / 60);
+        var secs = seconds % 60;
+        return (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+      };
+
+      SchulteGridGame.prototype.closeResult = function() {
+        document.getElementById('result-overlay').classList.remove('show');
+      };
+
+      SchulteGridGame.prototype.initAudio = function() {
+        try {
+          window.AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.audioContext = new AudioContext();
+        } catch (e) {
+          console.log('Web Audio API 不支持');
+        }
+      };
+
+      SchulteGridGame.prototype.playSound = function(type) {
+        if (!this.audioContext) {
+          return;
+        }
+
+        try {
+          var oscillator = this.audioContext.createOscillator();
+          var gainNode = this.audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(this.audioContext.destination);
+
+          if (type === 'start') {
+            oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(659.25, this.audioContext.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.2);
+          } else if (type === 'correct') {
+            oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.1);
+          } else if (type === 'wrong') {
+            oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.15);
+          } else if (type === 'complete') {
+            oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(659.25, this.audioContext.currentTime + 0.15);
+            oscillator.frequency.exponentialRampToValueAtTime(783.99, this.audioContext.currentTime + 0.3);
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.5);
+          }
+        } catch (e) {
+          console.log('播放音效失败', e);
+        }
+      };
+
+      // ========== 圆形模式方法 ==========
+
+      SchulteGridGame.prototype.getCircularRingConfig = function() {
+        var size = this.gridSize;
+        var configs = {
+          3: { // 入门: 2层, 10格
+            rings: [{ count: 4, fontSize: 28 }, { count: 6, fontSize: 28 }]
+          },
+          4: { // 初级: 2层, 20格
+            rings: [{ count: 8, fontSize: 26 }, { count: 12, fontSize: 28 }]
+          },
+          5: { // 中级: 3层, 30格 (默认)
+            rings: [{ count: 6, fontSize: 28 }, { count: 10, fontSize: 28 }, { count: 14, fontSize: 28 }]
+          },
+          6: { // 高级: 3层, 40格
+            rings: [{ count: 6, fontSize: 26 }, { count: 12, fontSize: 26 }, { count: 22, fontSize: 26 }]
+          },
+          7: { // 专家: 4层, 60格
+            rings: [{ count: 6, fontSize: 18 }, { count: 12, fontSize: 22 }, { count: 18, fontSize: 24 }, { count: 24, fontSize: 22 }]
+          }
+        };
+        return configs[size] || configs[5];
+      };
+
+      SchulteGridGame.prototype.getTotalNumbers = function() {
+        if (this.isCircularMode) {
+          var config = this.getCircularRingConfig();
+          var total = 0;
+          for (var i = 0; i < config.rings.length; i++) {
+            total += config.rings[i].count;
+          }
+          return total;
+        }
+        return this.gridSize * this.gridSize;
+      };
+
+      SchulteGridGame.prototype.sectorPath = function(cx, cy, r1, r2, startDeg, endDeg) {
+        var toRad = function(d) { return (d - 90) * Math.PI / 180; };
+        var s = toRad(startDeg), e = toRad(endDeg);
+        var large = (endDeg - startDeg) > 180 ? 1 : 0;
+        var ox1 = cx + r2 * Math.cos(s), oy1 = cy + r2 * Math.sin(s);
+        var ox2 = cx + r2 * Math.cos(e), oy2 = cy + r2 * Math.sin(e);
+        if (r1 === 0) {
+          return 'M ' + cx + ' ' + cy +
+                 ' L ' + ox1.toFixed(2) + ' ' + oy1.toFixed(2) +
+                 ' A ' + r2 + ' ' + r2 + ' 0 ' + large + ' 1 ' + ox2.toFixed(2) + ' ' + oy2.toFixed(2) +
+                 ' Z';
+        }
+        var ix1 = cx + r1 * Math.cos(s), iy1 = cy + r1 * Math.sin(s);
+        var ix2 = cx + r1 * Math.cos(e), iy2 = cy + r1 * Math.sin(e);
+        return 'M ' + ix1.toFixed(2) + ' ' + iy1.toFixed(2) +
+               ' A ' + r1 + ' ' + r1 + ' 0 ' + large + ' 1 ' + ix2.toFixed(2) + ' ' + iy2.toFixed(2) +
+               ' L ' + ox2.toFixed(2) + ' ' + oy2.toFixed(2) +
+               ' A ' + r2 + ' ' + r2 + ' 0 ' + large + ' 0 ' + ox1.toFixed(2) + ' ' + oy1.toFixed(2) +
+               ' Z';
+      };
+
+      SchulteGridGame.prototype.renderCircularGrid = function() {
+        var svg = document.getElementById('circular-svg');
+        svg.innerHTML = '';
+
+        // 添加文字阴影滤镜（模拟方形格子的 box-shadow）
+        var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        var filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+        filter.setAttribute('id', 'text-shadow');
+        filter.setAttribute('x', '-10%');
+        filter.setAttribute('y', '-10%');
+        filter.setAttribute('width', '120%');
+        filter.setAttribute('height', '120%');
+        var feDropShadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
+        feDropShadow.setAttribute('dx', '0');
+        feDropShadow.setAttribute('dy', '1px');
+        feDropShadow.setAttribute('stdDeviation', '1px');
+        feDropShadow.setAttribute('flood-color', 'rgba(0,0,0,0.2)');
+        filter.appendChild(feDropShadow);
+        defs.appendChild(filter);
+        svg.appendChild(defs);
+
+        var cx = 250, cy = 250;
+
+        // 添加白色背景圆盘
+        var bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bgCircle.setAttribute('cx', cx);
+        bgCircle.setAttribute('cy', cy);
+        bgCircle.setAttribute('r', 245);
+        bgCircle.setAttribute('fill', '#FFFFFF');
+        bgCircle.setAttribute('stroke', '#B0C4B8');
+        bgCircle.setAttribute('stroke-width', '1');
+        svg.appendChild(bgCircle);
+        // 根据难度获取环形配置
+        var config = this.getCircularRingConfig();
+        var rings = config.rings;
+        var numLayers = rings.length;
+        var layerWidth = 245 / numLayers;
+
+        // 计算格数总数
+        var totalNumbers = 0;
+        for (var ci = 0; ci < rings.length; ci++) {
+          totalNumbers += rings[ci].count;
+        }
+
+        // 生成随机数字
+        var numbers = [];
+        for (var i = 1; i <= totalNumbers; i++) numbers.push(i);
+        for (var i = numbers.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var temp = numbers[i]; numbers[i] = numbers[j]; numbers[j] = temp;
+        }
+
+        var numIndex = 0;
+        var self = this;
+
+        // 方形格子的彩色色板：红、蓝、橙、紫
+        var colorPalette = ['#f44336', '#2196F3', '#FF9800', '#9C27B0'];
+
+        for (var layerIdx = 0; layerIdx < numLayers; layerIdx++) {
+          var ring = rings[layerIdx];
+          var r1 = layerIdx * layerWidth;
+          var r2 = (layerIdx + 1) * layerWidth;
+          var ringId = 'ring-' + layerIdx;
+          var fontSize = ring.fontSize;
+          var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('id', ringId);
+          g.setAttribute('class', 'ring');
+
+          var angleStep = 360 / ring.count;
+
+          for (var si = 0; si < ring.count; si++) {
+            var startAngle = si * angleStep;
+            var endAngle = (si + 1) * angleStep;
+            var number = numbers[numIndex++];
+
+            var sectorGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            sectorGroup.setAttribute('class', 'sector-group');
+            sectorGroup.setAttribute('data-number', number);
+
+            var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', self.sectorPath(cx, cy, r1, r2, startAngle, endAngle));
+            path.setAttribute('class', 'sector');
+            path.setAttribute('fill', '#FFFFFF');
+            path.setAttribute('stroke', '#B0C4B8');
+            path.setAttribute('stroke-width', '1');
+            path.style.cursor = 'pointer';
+            sectorGroup.appendChild(path);
+
+            var midAngle = (startAngle + endAngle) / 2;
+            var midR = (r1 + r2) / 2;
+            var midRad = (midAngle - 90) * Math.PI / 180;
+            var tx = cx + midR * Math.cos(midRad);
+            var ty = cy + midR * Math.sin(midRad);
+
+            var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', tx.toFixed(2));
+            text.setAttribute('y', ty.toFixed(2));
+            text.setAttribute('class', 'sector-text');
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'central');
+            text.setAttribute('font-size', fontSize);
+            // 每个数字随机取彩色
+            var textColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+            text.style.fill = textColor;
+            text.style.stroke = textColor;
+            text.style.strokeWidth = '0.3';
+            text.style.paintOrder = 'stroke';
+            text.style.filter = 'url(#text-shadow)';
+            text.setAttribute('font-weight', '600');
+            // 文字反旋转以自身坐标为中心
+            text.style.transformOrigin = tx.toFixed(2) + 'px ' + ty.toFixed(2) + 'px';
+            text.setAttribute('pointer-events', 'none');
+            text.textContent = number;
+            sectorGroup.appendChild(text);
+
+            // 点击事件
+            sectorGroup.onclick = (function(num, el) {
+              return function() { self.handleClick(num, el); };
+            })(number, sectorGroup);
+
+            g.appendChild(sectorGroup);
+          }
+
+          svg.appendChild(g);
+        }
+      };
+
+      SchulteGridGame.prototype.toggleCircularRotation = function() {
+        var svg = document.getElementById('circular-svg');
+        var rings = svg.querySelectorAll('.ring');
+        var btn = document.getElementById('circular-mode-btn');
+
+        this.circularRotating = !this.circularRotating;
+
+        if (this.circularRotating) {
+          rings.forEach(function(ring, idx) {
+            // 偶数圈顺时针，奇数圈逆时针
+            ring.classList.add(idx % 2 === 0 ? 'rotate-cw' : 'rotate-ccw');
+            // 文字反旋转保持正向
+            var texts = ring.querySelectorAll('.sector-text');
+            for (var t = 0; t < texts.length; t++) {
+              texts[t].classList.add(idx % 2 === 0 ? 'counter-cw' : 'counter-ccw');
+            }
+          });
+          btn.textContent = '圆形（动）';
+        } else {
+          rings.forEach(function(ring) {
+            ring.classList.remove('rotate-cw', 'rotate-ccw');
+            var texts = ring.querySelectorAll('.sector-text');
+            for (var t = 0; t < texts.length; t++) {
+              texts[t].classList.remove('counter-cw', 'counter-ccw');
+            }
+          });
+          btn.textContent = '圆形（静）';
+        }
+      };
+
+      SchulteGridGame.prototype.enterCircularMode = function() {
+        this.isCircularMode = true;
+        this.circularRotating = false;
+        // 保存进入前的方格模式
+        this.previousMode = this.currentMode;
+        this.currentMode = 'circular';
+
+        // 隐藏方格容器，显示圆形容器
+        document.getElementById('grid-container').style.display = 'none';
+        document.getElementById('circular-container').style.display = 'flex';
+
+        // 渲染圆形网格
+        this.renderCircularGrid();
+
+        // 更新按钮状态
+        var btns = document.querySelectorAll('.mode-btn');
+        for (var i = 0; i < btns.length; i++) {
+          btns[i].classList.remove('active');
+        }
+        document.getElementById('circular-mode-btn').classList.add('active');
+
+        // 重置状态
+        this.currentNumber = 1;
+        // 获取当前难度的总格数
+        var config = this.getCircularRingConfig();
+        var total = 0;
+        for (var ci = 0; ci < config.rings.length; ci++) {
+          total += config.rings[ci].count;
+        }
+        document.getElementById('progress').textContent = '0/' + total;
+        document.getElementById('timer').textContent = '00:00';
+      };
+
+      SchulteGridGame.prototype.exitCircularMode = function() {
+        // 停止旋转
+        if (this.circularRotating) {
+          this.circularRotating = false;
+          var rings = document.querySelectorAll('#circular-svg .ring');
+          rings.forEach(function(r) {
+            r.classList.remove('rotate-cw', 'rotate-ccw');
+            var txts = r.querySelectorAll('.sector-text');
+            for (var ti = 0; ti < txts.length; ti++) {
+              txts[ti].classList.remove('counter-cw', 'counter-ccw');
+            }
+          });
+        }
+
+        this.isCircularMode = false;
+
+        // 显示方格容器，隐藏圆形容器
+        document.getElementById('grid-container').style.display = '';
+        document.getElementById('circular-container').style.display = 'none';
+
+        // 显示难度选择
+        var diffGroup = document.querySelector('.difficulty-group');
+        if (diffGroup) diffGroup.style.display = '';
+
+        // 重置按钮文字
+        document.getElementById('circular-mode-btn').textContent = '圆形（静）';
+      };
+
+      var game = new SchulteGridGame();
+    </script>
+  
+    
+  </body>
+</html>

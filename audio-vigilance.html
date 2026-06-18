@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>长时听觉监控 - 持续听觉注意训练</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;
+  background:#FFFBFA;
+  height:100dvh;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  user-select:none;-webkit-user-select:none;
+}
+.container{
+  width:min(98vw,1100px);
+  height:min(96vh,650px);
+  display:flex;
+  gap:16px;
+  padding:12px;
+}
+/* 左面板 */
+.left-panel{
+  width:280px;min-width:280px;
+  background:#FFFFFF;
+  border-radius:16px;
+  padding:8px 10px;
+  display:flex;flex-direction:column;
+  gap:4px;
+  border:1px solid rgba(45,43,85,0.08);
+  overflow-y:auto;
+  box-shadow:0 2px 12px rgba(45,43,85,0.06);
+}
+.panel-title{
+  color:#2D2B55;
+  font-size:11px;font-weight:700;
+  text-align:center;
+  padding-bottom:3px;
+  border-bottom:1px solid rgba(45,43,85,0.1);
+}
+.diff-group{margin-bottom:2px;}
+.diff-label{
+  color:rgba(45,43,85,0.6);
+  font-size:11px;font-weight:600;
+  margin-bottom:4px;
+}
+.diff-btns{display:flex;gap:5px;}
+.diff-btn{
+  flex:1;
+  padding:4px 2px;
+  border-radius:6px;
+  border:1px solid rgba(45,43,85,0.15);
+  background:rgba(45,43,85,0.03);
+  color:rgba(45,43,85,0.7);
+  font-size:10px;font-weight:600;
+  cursor:pointer;
+  transition:all 0.2s;
+  text-align:center;
+}
+.diff-btn.active{border-color:#FF5E0E;color:#FF5E0E;background:rgba(255,94,14,0.1);}
+.diff-btn:active{transform:scale(0.95);}
+
+.target-select{
+  display:flex;flex-wrap:wrap;gap:4px;
+  margin-top:4px;
+}
+.target-chip{
+  padding:8px 16px;
+  border-radius:6px;
+  border:1px solid rgba(45,43,85,0.15);
+  background:rgba(45,43,85,0.03);
+  color:rgba(45,43,85,0.7);
+  font-size:16px;font-weight:600;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.target-chip.selected{border-color:#32CD32;color:#32CD32;background:rgba(50,205,50,0.1);}
+
+/* 右面板 */
+.right-panel{
+  flex:1;
+  background:#FFFFFF;
+  border-radius:16px;
+  padding:20px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:20px;
+  border:1px solid rgba(45,43,85,0.08);
+  position:relative;
+  box-shadow:0 2px 12px rgba(45,43,85,0.06);
+}
+
+.game-title{
+  font-size:clamp(18px,3vw,26px);
+  font-weight:800;
+  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  text-align:center;
+}
+
+/* 点击区域 */
+.click-zone{
+  width:min(60vw,300px);
+  height:min(60vw,300px);
+  border-radius:50%;
+  background:rgba(45,43,85,0.04);
+  border:3px solid rgba(45,43,85,0.12);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  transition:all 0.15s;
+  position:relative;
+}
+.click-zone:active{transform:scale(0.95);}
+.click-zone.flash-green{background:rgba(50,205,50,0.2);border-color:#32CD32;}
+.click-zone.flash-red{background:rgba(255,7,58,0.2);border-color:#FF073A;animation:shake 0.4s ease;}
+
+.click-zone .zone-text{
+  color:rgba(45,43,85,0.4);
+  font-size:clamp(14px,2vw,18px);
+  font-weight:700;
+  text-align:center;
+}
+
+/* 状态文字 */
+.status-text{
+  font-size:clamp(16px,2.5vw,22px);
+  font-weight:700;
+  color:#2D2B55;
+  text-align:center;
+  min-height:32px;
+}
+
+/* 信息栏 */
+.info-row{
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+}
+.info-badge{
+  background:rgba(45,43,85,0.04);
+  border-radius:10px;
+  padding:6px 14px;
+  font-size:clamp(11px,1.6vw,13px);
+  color:rgba(45,43,85,0.7);
+  font-weight:600;
+}
+.info-badge .val{
+  color:#FF5E0E;
+  font-weight:700;
+  font-family:'JetBrains Mono','Courier New',monospace;
+}
+
+/* 进度条 */
+.progress-bar-wrap{
+  width:100%;max-width:500px;
+  display:none;
+  flex-direction:column;align-items:center;
+  gap:4px;
+}
+.progress-bar-wrap.show{display:flex;}
+.progress-label{
+  font-size:11px;color:rgba(45,43,85,0.5);
+  font-weight:600;
+}
+.progress-track{
+  width:100%;height:3px;
+  background:rgba(45,43,85,0.1);
+  border-radius:2px;
+  position:relative;
+}
+.progress-dots{
+  position:absolute;top:50%;left:0;right:0;
+  transform:translateY(-50%);
+  display:flex;justify-content:space-between;
+}
+.progress-dot{
+  width:10px;height:10px;
+  border-radius:50%;
+  background:rgba(45,43,85,0.2);
+  transition:all 0.3s;
+}
+.progress-dot.active{background:#FF5E0E;box-shadow:0 0 6px rgba(255,94,14,0.5);}
+.progress-dot.passed{background:rgba(45,43,85,0.4);}
+
+/* 结果卡片 */
+.result-card{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:#FFFFFF;
+  border-radius:20px;
+  padding:24px;
+  border:2px solid rgba(45,43,85,0.15);
+  box-shadow:0 8px 40px rgba(45,43,85,0.15);
+  display:none;
+  flex-direction:column;
+  gap:10px;
+  min-width:280px;
+  z-index:10;
+}
+.result-card.show{display:flex;}
+.result-card h3{
+  font-size:20px;font-weight:800;
+  color:#2D2B55;
+  text-align:center;
+}
+.result-row{
+  display:flex;justify-content:space-between;
+  font-size:14px;color:rgba(45,43,85,0.7);
+  padding:5px 0;
+  border-bottom:1px solid rgba(45,43,85,0.08);
+}
+.result-row .rv{font-weight:700;color:#FF5E0E;}
+
+.btn{
+  padding:10px 24px;
+  border-radius:12px;
+  border:none;
+  font-size:14px;font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.btn:active{transform:scale(0.95);}
+.btn-primary{
+  background:linear-gradient(135deg,#FF5E0E,#FF9800);
+  color:#fff;
+}
+.btn-secondary{
+  background:rgba(45,43,85,0.06);
+  color:rgba(45,43,85,0.8);
+}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-6px);}
+  40%{transform:translateX(6px);}
+  60%{transform:translateX(-4px);}
+  80%{transform:translateX(4px);}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .click-zone.flash-red{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="left-panel">
+    <div class="panel-title">难度设置</div>
+    <div class="diff-group">
+      <div class="diff-label">难度等级</div>
+      <div class="diff-btns">
+        <button class="diff-btn active" data-level="easy">初级</button>
+        <button class="diff-btn" data-level="medium">中级</button>
+        <button class="diff-btn" data-level="hard">高级</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btnStart" onclick="startGame()" style="margin-top:8px;width:100%;">开始训练</button>
+    <div class="rules-text" style="margin-top:8px;font-size:11px;color:rgba(45,43,85,0.5);line-height:1.6;">
+      <b>玩法：</b>开始训练→系统随机设定目标词→持续听词→听到目标词点击屏幕→忽略非目标词。<br>
+      正确侦测数、遗漏数（关键）、误报数、平均反应时间。<br>
+      初级8关×10词/20%目标；中级12关×10词/15%目标；高级15关×10词/10%目标。
+    </div>
+  </div>
+
+  <div class="right-panel" id="rightPanel">
+    <div class="target-word-display" id="targetWordDisplay" style="font-size:clamp(28px,4vw,40px);font-weight:800;color:#FF5E0E;text-align:center;min-height:48px;">目标词</div>
+
+    <div class="progress-bar-wrap" id="progressBarWrap">
+      <div class="progress-label" id="progressLabel">第 1/8 关</div>
+      <div class="progress-track">
+        <div class="progress-dots" id="progressDots"></div>
+      </div>
+    </div>
+
+    <div class="click-zone" id="clickZone">
+      <span class="zone-text">听到目标词<br>点击此处</span>
+    </div>
+    <div class="status-text" id="statusText">点击开始训练</div>
+    <div class="info-row">
+      <div class="info-badge">侦测 <span class="val" id="detectCount">0</span></div>
+      <div class="info-badge">遗漏 <span class="val" id="missCount">0</span></div>
+      <div class="info-badge">误报 <span class="val" id="falseCount">0</span></div>
+    </div>
+
+    <div class="result-card" id="resultCard">
+      <h3>训练结束</h3>
+      <div class="result-row"><span>正确侦测</span><span class="rv" id="rDetect">-</span></div>
+      <div class="result-row"><span>遗漏数</span><span class="rv" id="rMiss">-</span></div>
+      <div class="result-row"><span>误报数</span><span class="rv" id="rFalse">-</span></div>
+      <div class="result-row"><span>平均反应时</span><span class="rv" id="rRT">-</span></div>
+      <button class="btn btn-primary" onclick="startGame()" style="margin-top:8px;">再玩一次</button>
+    </div>
+  </div>
+</div>
+
+<script src="/public/audio-helper.js"></script>
+<script>
+const DIFFICULTY = {
+  easy:{rounds:8,wordsPerRound:10,targetRate:0.20,interval:2000},
+  medium:{rounds:12,wordsPerRound:10,targetRate:0.15,interval:1800},
+  hard:{rounds:15,wordsPerRound:10,targetRate:0.10,interval:1500}
+};
+
+const WORD_POOL = ['花','红','水','大','小','天','山','风','云','雨','日','月','星','树','草','叶',
+  '门','窗','灯','书','笔','纸','桌','椅','床','杯','碗','米','饭','菜','肉','鱼',
+  '猫','狗','鸟','马','牛','羊','鸡','鸭','兔','熊','虎','象','蛇','虫','蛙','蝶',
+  '手','脚','头','眼','耳','鼻','口','牙','舌','心','身','脸','发','指','车','腿',
+  '春','夏','秋','冬','早','午','晚','夜','今','明','昨','前','后','左','右','上','下','中'];
+
+let state = {
+  level:'easy',
+  targetWord:'花',
+  running:false,
+  started:false,
+  currentRound:0,
+  totalRounds:0,
+  wordIndex:0,
+  words:[],
+  detectCount:0,
+  missCount:0,
+  falseCount:0,
+  totalRT:0,
+  rtCount:0,
+  currentWordStart:0,
+  timeoutId:null
+};
+
+const clickZone = document.getElementById('clickZone');
+const statusText = document.getElementById('statusText');
+const resultCard = document.getElementById('resultCard');
+const progressBarWrap = document.getElementById('progressBarWrap');
+const progressDots = document.getElementById('progressDots');
+const progressLabel = document.getElementById('progressLabel');
+const btnStart = document.getElementById('btnStart');
+const targetWordDisplay = document.getElementById('targetWordDisplay');
+
+// 随机选择目标词
+function pickRandomTarget(){
+  const idx = Math.floor(Math.random() * WORD_POOL.length);
+  state.targetWord = WORD_POOL[idx];
+  targetWordDisplay.textContent = '目标词：' + state.targetWord;
+}
+
+// 难度切换
+document.querySelector('.left-panel').addEventListener('click',e=>{
+  if(!e.target.classList.contains('diff-btn')) return;
+  if(state.running) {
+    if(window.stopAllAudio) window.stopAllAudio();
+    state.running = false;
+    state.started = false;
+  }
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.level = e.target.dataset.level;
+  statusText.textContent = '点击开始训练';
+  resultCard.classList.remove('show');
+  progressBarWrap.classList.remove('show');
+  state.detectCount = 0;
+  state.missCount = 0;
+  state.falseCount = 0;
+  updateInfoUI();
+  clickZone.querySelector('.zone-text').textContent = '听到目标词\n点击此处';
+  clickZone.classList.remove('flash-green','flash-red');
+  btnStart.textContent = '开始训练';
+  btnStart.style.cssText = 'margin-top:8px;width:100%;';
+});
+
+function generateRoundWords(){
+  const cfg = DIFFICULTY[state.level];
+  const targetCount = Math.floor(cfg.wordsPerRound * cfg.targetRate);
+
+  const positions = new Set();
+  while(positions.size < targetCount){
+    positions.add(Math.floor(Math.random() * cfg.wordsPerRound));
+  }
+
+  state.words = [];
+  for(let i = 0; i < cfg.wordsPerRound; i++){
+    if(positions.has(i)){
+      state.words.push({word:state.targetWord,isTarget:true});
+    } else {
+      let w;
+      do {
+        w = WORD_POOL[Math.floor(Math.random() * WORD_POOL.length)];
+      } while(w === state.targetWord);
+      state.words.push({word:w,isTarget:false});
+    }
+  }
+}
+
+function initProgressBar(){
+  const cfg = DIFFICULTY[state.level];
+  progressDots.innerHTML = '';
+  for(let i = 0; i < cfg.wordsPerRound; i++){
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    dot.id = 'pdot' + i;
+    progressDots.appendChild(dot);
+  }
+  progressLabel.textContent = '第 ' + (state.currentRound + 1) + '/' + cfg.rounds + ' 关';
+  progressBarWrap.classList.add('show');
+}
+
+function updateProgressDot(idx){
+  const dot = document.getElementById('pdot' + idx);
+  if(dot) dot.classList.add('active');
+}
+
+async function startGame(){
+  if(state.running) {
+    if(window.stopAllAudio) window.stopAllAudio();
+    state.running = false;
+    state.started = false;
+  }
+
+  pickRandomTarget();
+
+  const cfg = DIFFICULTY[state.level];
+  state.running = true;
+  state.currentRound = 0;
+  state.totalRounds = cfg.rounds;
+  state.detectCount = 0;
+  state.missCount = 0;
+  state.falseCount = 0;
+  state.totalRT = 0;
+  state.rtCount = 0;
+  resultCard.classList.remove('show');
+  updateInfoUI();
+  btnStart.textContent = '游戏中';
+  btnStart.style.cssText = 'background:#32CD32 !important;color:#fff !important;margin-top:8px;width:100%;';
+
+  for(let r = 0; r < cfg.rounds; r++){
+    if(!state.running) break;
+    state.currentRound = r;
+    state.wordIndex = 0;
+    generateRoundWords();
+    initProgressBar();
+
+    statusText.textContent = '第 ' + (r+1) + ' 关 - 准备...';
+    clickZone.querySelector('.zone-text').textContent = '听到目标词\n点击此处';
+    state.started = false;
+
+    await sleep(1500);
+    if(!state.running) break;
+    state.started = true;
+
+    for(let i = 0; i < state.words.length; i++){
+      if(!state.running) break;
+      state.wordIndex = i;
+      const w = state.words[i];
+      state.currentWordStart = Date.now();
+      state.currentIsTarget = w.isTarget;
+
+      updateProgressDot(i);
+      // 停掉上一词音频再播新词，防止重叠
+      if(window.stopAllAudio) window.stopAllAudio();
+      speakWord(w.word);
+
+      await sleep(cfg.interval);
+    }
+  }
+
+  if(state.running) endGame();
+}
+
+function speakWord(word){
+  if(window.playAudio){
+    window.playAudio(word);
+  }
+}
+
+// 反馈音效（Web Audio API 合成）
+let _audioCtx = null;
+function _getAudioCtx(){
+  if(!_audioCtx) _audioCtx = new(window.AudioContext||window.webkitAudioContext)();
+  return _audioCtx;
+}
+function playFeedbackSound(isCorrect){
+  try{
+    const ctx = _getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if(isCorrect){
+      // 正确：高音叮 (800Hz → 1200Hz, 短促)
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.15);
+    } else {
+      // 错误：低音嗡 (200Hz, 沉闷)
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    }
+  }catch(e){}
+}
+
+clickZone.addEventListener('click',()=>{
+  if(!state.running || !state.started) return;
+  const w = state.words[state.wordIndex];
+  if(!w) return;
+
+  if(w.isTarget){
+    state.detectCount++;
+    const rt = Date.now() - state.currentWordStart;
+    state.totalRT += rt;
+    state.rtCount++;
+    playFeedbackSound(true);
+    clickZone.classList.add('flash-green');
+    setTimeout(()=>clickZone.classList.remove('flash-green'),200);
+    statusText.textContent = '侦测到目标词！';
+  } else {
+    state.falseCount++;
+    playFeedbackSound(false);
+    clickZone.classList.add('flash-red');
+    setTimeout(()=>clickZone.classList.remove('flash-red'),400);
+    statusText.textContent = '误报！这不是目标词';
+  }
+  updateInfoUI();
+});
+
+function endGame(){
+  state.running = false;
+  state.started = false;
+  statusText.textContent = '训练结束';
+  clickZone.querySelector('.zone-text').textContent = '训练结束';
+  progressBarWrap.classList.remove('show');
+  btnStart.textContent = '开始训练';
+  btnStart.style.cssText = 'margin-top:8px;width:100%;';
+
+  const cfg = DIFFICULTY[state.level];
+  const totalTargets = cfg.rounds * Math.floor(cfg.wordsPerRound * cfg.targetRate);
+  state.missCount = totalTargets - state.detectCount;
+  if(state.missCount < 0) state.missCount = 0;
+
+  const avgRT = state.rtCount > 0 ? Math.round(state.totalRT / state.rtCount) : 0;
+
+  document.getElementById('rDetect').textContent = state.detectCount;
+  document.getElementById('rMiss').textContent = state.missCount;
+  document.getElementById('rFalse').textContent = state.falseCount;
+  document.getElementById('rRT').textContent = avgRT + 'ms';
+
+  resultCard.classList.add('show');
+  updateInfoUI();
+  saveResult();
+}
+
+function saveResult(){
+  const data = JSON.parse(localStorage.getItem('audio_vigilance')||'[]');
+  data.push({
+    detect:state.detectCount,miss:state.missCount,false:state.falseCount,
+    avgRT:state.rtCount>0?Math.round(state.totalRT/state.rtCount):0,
+    level:state.level,target:state.targetWord,time:Date.now()
+  });
+  if(data.length > 20) data.shift();
+  localStorage.setItem('audio_vigilance',JSON.stringify(data));
+}
+
+function updateInfoUI(){
+  document.getElementById('detectCount').textContent = state.detectCount;
+  document.getElementById('missCount').textContent = state.missCount;
+  document.getElementById('falseCount').textContent = state.falseCount;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+</script>
+</body>
+</html>

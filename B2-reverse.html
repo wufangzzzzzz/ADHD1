@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>西蒙说 - Simon Says 冲动控制训练</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100dvh;overflow:hidden}
+body{
+  font-family:'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+  background:#0F0F1A;
+  color:#F0E6D3;
+  display:flex;align-items:center;justify-content:center;
+  height:100dvh;
+}
+.container{
+  display:flex;gap:16px;
+  width:min(96vw,1100px);
+  min-height:min(92vh,700px);
+  padding:12px;
+}
+.left-panel{
+  width:260px;min-width:260px;
+  background:#1A1826;
+  border-radius:16px;
+  padding:14px 12px;
+  display:flex;flex-direction:column;
+  gap:8px;
+  border:1px solid rgba(255,140,66,0.08);
+  overflow-y:auto;
+}
+.panel-title{
+  color:#FF8C42;
+  font-size:12px;font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:rgba(240,230,211,0.45);font-size:11px;margin-bottom:3px;}
+.diff-btns{display:flex;gap:4px;}
+.diff-btn{
+  flex:1;padding:5px 0;
+  border-radius:8px;border:1px solid rgba(240,230,211,0.1);
+  background:rgba(240,230,211,0.03);
+  color:rgba(240,230,211,0.55);
+  font-size:11px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;
+  text-align:center;
+}
+.diff-btn:hover{background:rgba(255,140,66,0.08);}
+.diff-btn.active{
+  background:rgba(255,140,66,0.15);
+  border-color:#FF8C42;
+  color:#FF8C42;
+}
+.diff-table{
+  width:100%;border-collapse:collapse;
+  font-size:10px;
+}
+.diff-table th{
+  color:rgba(240,230,211,0.35);
+  font-weight:600;padding:3px 4px;
+  text-align:left;border-bottom:1px solid rgba(240,230,211,0.06);
+}
+.diff-table td{
+  color:rgba(240,230,211,0.55);
+  padding:3px 4px;
+  border-bottom:1px solid rgba(240,230,211,0.04);
+}
+.guide-card{
+  background:rgba(255,140,66,0.04);
+  border-radius:10px;padding:10px;
+  border:1px solid rgba(255,140,66,0.08);
+}
+.guide-title{color:#FF8C42;font-size:11px;font-weight:700;margin-bottom:4px;}
+.guide-text{color:rgba(240,230,211,0.5);font-size:10px;line-height:1.5;}
+.guide-text b{color:rgba(240,230,211,0.7);}
+.stat-item{
+  display:flex;justify-content:space-between;
+  padding:4px 0;
+  border-bottom:1px solid rgba(240,230,211,0.04);
+}
+.stat-label{color:rgba(240,230,211,0.4);font-size:11px;}
+.stat-value{
+  color:#FF8C42;font-size:12px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;
+}
+.mode-switch{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;}
+.mode-btn{
+  flex:1;padding:6px 0;
+  border-radius:8px;border:1px solid rgba(240,230,211,0.1);
+  background:rgba(240,230,211,0.03);
+  color:rgba(240,230,211,0.55);
+  font-size:11px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;
+  text-align:center;
+}
+.mode-btn.active{
+  background:rgba(255,140,66,0.15);
+  border-color:#FF8C42;
+  color:#FF8C42;
+}
+.right-panel{
+  flex:1;
+  background:#1A1826;
+  border-radius:16px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  position:relative;
+  border:1px solid rgba(255,140,66,0.08);
+  min-width:0;
+  overflow-y:auto;
+  padding:12px 16px 16px;
+}
+.game-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;position:relative;}
+.game-header{
+  width:100%;
+  display:flex;justify-content:space-between;
+  align-items:center;
+  padding-bottom:8px;
+}
+.game-title{color:#F0E6D3;font-size:18px;font-weight:800;}
+.back-btn{
+  background:rgba(240,230,211,0.06);
+  border:none;color:rgba(240,230,211,0.5);
+  padding:6px 14px;border-radius:8px;
+  font-size:13px;cursor:pointer;
+  transition:all 0.2s;
+}
+.back-btn:hover{background:rgba(240,230,211,0.12);}
+.instruction-display{
+  background:rgba(255,140,66,0.08);
+  padding:12px 28px;
+  border-radius:20px;
+  color:#F0E6D3;
+  font-size:22px;font-weight:800;
+  margin-bottom:16px;
+  border:1px solid rgba(255,140,66,0.15);
+}
+.instruction-display .prefix{color:#FF8C42;}
+.character-area{
+  font-size:64px;margin-bottom:16px;
+  transition:transform 0.15s;
+}
+.character-area.speaking{transform:scale(1.1);}
+/* 训练模式：2x2 动作按钮 */
+.action-btns{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;width:100%;max-width:260px;
+}
+.action-btn{
+  aspect-ratio:1;
+  border-radius:14px;
+  border:2px solid rgba(240,230,211,0.12);
+  background:rgba(240,230,211,0.04);
+  cursor:pointer;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:6px;
+  transition:all 0.15s;
+  font-size:20px;font-weight:800;
+  color:rgba(240,230,211,0.7);
+}
+.action-btn:hover{background:rgba(255,140,66,0.08);border-color:rgba(255,140,66,0.3);}
+.action-btn:active{transform:scale(0.96);}
+.action-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.action-btn.correct-flash{box-shadow:0 0 30px rgba(76,175,80,0.5);border-color:#4CAF50;color:#4CAF50;}
+.action-btn.wrong-flash{box-shadow:0 0 30px rgba(244,67,54,0.5);border-color:#F44336;color:#F44336;}
+.num-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:100%;height:100%;border-radius:12px;
+  background:rgba(255,255,255,0.08);
+  font-size:clamp(48px,10vw,72px);font-weight:900;
+  font-family:'JetBrains Mono',monospace;
+  color:rgba(255,255,255,0.85);
+}
+/* 动作图例 */
+.legend-row{display:flex;gap:14px;justify-content:center;margin-top:6px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;color:rgba(240,230,211,0.45);font-size:12px;}
+.legend-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:rgba(240,230,211,0.08);color:rgba(240,230,211,0.55);font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;}
+/* 实际练习模式 */
+.practice-area{display:none;flex-direction:column;align-items:center;gap:20px;}
+.practice-area.show{display:flex;}
+.practice-cmd{font-size:clamp(28px,5vw,48px);font-weight:800;text-align:center;padding:30px 40px;border-radius:20px;background:rgba(240,230,211,0.04);min-width:280px;}
+.practice-cmd .prefix{font-size:0.7em;opacity:0.6;display:block;margin-bottom:8px;}
+.practice-counter{color:rgba(240,230,211,0.5);font-size:15px;margin-top:8px;}
+.practice-stop{background:rgba(255,7,58,0.15);color:#FF073A;border:2px solid rgba(255,7,58,0.3);padding:12px 36px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.practice-stop:hover{background:rgba(255,7,58,0.25);}
+.practice-stop:active{transform:scale(0.96);}
+.impulse-toast{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(244,67,54,0.9);
+  color:#fff;
+  padding:12px 24px;
+  border-radius:12px;
+  font-size:16px;font-weight:800;
+  z-index:5;
+  animation:toastPop 1.5s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes toastPop{
+  0%{transform:translate(-50%,-50%) scale(0.5);opacity:0;}
+  20%{transform:translate(-50%,-50%) scale(1.1);opacity:1;}
+  80%{opacity:1;}
+  100%{transform:translate(-50%,-50%) scale(1);opacity:0;}
+}
+.game-footer{
+  width:100%;
+  display:flex;flex-direction:column;gap:8px;
+  padding:8px 0 0;
+}
+.progress-bar{
+  width:100%;height:6px;
+  background:rgba(240,230,211,0.06);
+  border-radius:3px;overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg,#FF8C42,#E07030);
+  border-radius:3px;transition:width 0.3s;
+}
+.footer-row{
+  display:flex;justify-content:space-between;
+  align-items:center;
+}
+.score-display{color:#F0E6D3;font-size:14px;font-weight:700;}
+.trial-info{color:rgba(240,230,211,0.4);font-size:12px;}
+.start-btn{
+  padding:10px 28px;
+  border-radius:12px;border:none;
+  background:linear-gradient(135deg,#FF8C42,#E07030);
+  color:#fff;
+  font-size:15px;font-weight:700;
+  cursor:pointer;transition:all 0.2s;
+  box-shadow:0 4px 16px rgba(255,140,66,0.2);
+}
+.start-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,140,66,0.3);}
+.start-btn:active{transform:scale(0.96);}
+.start-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.countdown{
+  position:absolute;
+  font-size:72px;font-weight:800;
+  color:#F0E6D3;
+  animation:cdPop 0.5s ease-out;
+}
+@keyframes cdPop{
+  0%{transform:scale(2);opacity:0;}
+  100%{transform:scale(1);opacity:1;}
+}
+.params-row{display:flex;gap:10px;justify-content:center;margin-top:4px;}
+.param-tag{
+  background:rgba(240,230,211,0.04);
+  padding:4px 10px;border-radius:6px;
+  color:rgba(240,230,211,0.35);
+  font-size:11px;font-family:'JetBrains Mono',monospace;
+}
+/* 结果弹窗 */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal-card{background:#1A1826;border:2px solid rgba(255,140,66,0.25);border-radius:24px;padding:32px 28px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.modal-card .result-title{font-size:24px;font-weight:800;color:#FF8C42;margin-bottom:20px;}
+.modal-card .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.modal-card .result-item{background:rgba(240,230,211,0.04);border-radius:14px;padding:14px 10px;}
+.modal-card .val{font-size:28px;font-weight:800;color:#FF8C42;font-family:'JetBrains Mono',monospace;}
+.modal-card .lbl{font-size:12px;color:rgba(240,230,211,0.45);margin-top:4px;}
+.modal-card .result-grade{font-size:16px;font-weight:700;color:rgba(240,230,211,0.7);margin-bottom:18px;}
+.modal-card .result-btns{display:flex;gap:12px;justify-content:center;}
+.modal-card .btn-retry{background:linear-gradient(135deg,#FF8C42,#E07030);color:#fff;border:none;padding:10px 24px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;}
+.modal-card .btn-home{background:rgba(240,230,211,0.06);color:rgba(240,230,211,0.6);border:none;padding:10px 24px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;}
+.modal-card .btn-retry:active,.modal-card .btn-home:active{transform:scale(0.96);}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}
+}
+/* 规则弹窗 */
+.rules-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.7);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;
+}
+.rules-dialog{
+  background:#1e1e3a;
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:20px;
+  padding:28px 32px;
+  max-width:420px;
+  width:90%;
+  text-align:center;
+}
+.rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
+.rules-dialog .rd-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;text-align:left;}
+.rules-dialog .rd-icon{width:48px;height:48px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.rules-dialog .rd-icon.train{background:rgba(255,140,66,0.2);border:2px solid #FF8C42;}
+.rules-dialog .rd-icon.practice{background:rgba(76,175,80,0.2);border:2px solid #4CAF50;}
+.rules-dialog .rd-text{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.5;}
+.rules-dialog .rd-text strong{color:#fff;}
+.rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
+.rules-dialog button{
+  padding:12px 40px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,#FF8C42,#E07030);
+  color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+  transition:all 0.2s;box-shadow:0 4px 16px rgba(255,140,66,0.3);
+}
+.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,140,66,0.4);}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="left-panel">
+    <div class="panel-title">难度选择</div>
+    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
+    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
+    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="panel-title">难度差异</div>
+    <table class="diff-table">
+      <tr><th>难度</th><th>抑制比例</th><th>窗口</th><th>题数</th></tr>
+      <tr><td>简单</td><td>20%</td><td>3.0s</td><td>20</td></tr>
+      <tr><td>中等</td><td>30%</td><td>2.5s</td><td>30</td></tr>
+      <tr><td>困难</td><td>40%</td><td>2.0s</td><td>40</td></tr>
+    </table>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        <b>训练模式</b>：男声"西蒙说"才选动作，女声"反向"<b>不选</b>。<br>
+        按钮显示①②③④，对应拍手/挥手/摸摸头发/摸摸鼻子。<br>
+        键盘快捷键 1-4 也可作答。<br>
+        <b>实际练习</b>：系统只播报指令，人在现实中做动作。<br>
+        不统计不判题，点击停止结束。<br>
+        <b>儿童建议</b>：初级简单（抑制题少、时间长）。<br>
+        <b>成人建议</b>：中级中等起步。
+      </div>
+    </div>
+    <div class="panel-title">统计数据</div>
+    <div class="stat-item"><span class="stat-label">Go正确率</span><span class="stat-value" id="stat-go">--</span></div>
+    <div class="stat-item"><span class="stat-label">No-Go正确率</span><span class="stat-value" id="stat-nogo">--</span></div>
+    <div class="stat-item"><span class="stat-label">冲动率</span><span class="stat-value" id="stat-impulse">--</span></div>
+    <div class="stat-item"><span class="stat-label">平均反应时</span><span class="stat-value" id="stat-rt">--</span></div>
+    <div class="panel-title">适用人群</div>
+    <div class="mode-switch" id="user-mode-switch">
+      <button class="mode-btn active" data-umode="child">儿童</button>
+      <button class="mode-btn" data-umode="adult">成人</button>
+    </div>
+    <div class="panel-title">游戏模式</div>
+    <div class="mode-switch" id="game-mode-switch">
+      <button class="mode-btn active" data-gmode="train">训练模式</button>
+      <button class="mode-btn" data-gmode="practice">实际练习</button>
+    </div>
+  </div>
+  <div class="right-panel" id="game-area">
+    <div class="game-header">
+      <span class="game-title">西蒙说</span>
+      <button class="back-btn" onclick="location.href='index.html'">返回大厅</button>
+    </div>
+    <div class="game-center">
+    <div class="instruction-display" id="instruction-display"><span class="prefix"></span><span id="cmd-text"></span></div>
+    <div class="character-area" id="character-area">&#x1F916;</div>
+    <div class="action-btns" id="action-btns">
+      <button class="action-btn" data-action="clap"><span class="num-badge">1</span></button>
+      <button class="action-btn" data-action="wave"><span class="num-badge">2</span></button>
+      <button class="action-btn" data-action="hair"><span class="num-badge">3</span></button>
+      <button class="action-btn" data-action="nose"><span class="num-badge">4</span></button>
+    </div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-num">1</span>拍手</span>
+      <span class="legend-item"><span class="legend-num">2</span>挥手</span>
+      <span class="legend-item"><span class="legend-num">3</span>摸摸头发</span>
+      <span class="legend-item"><span class="legend-num">4</span>摸摸鼻子</span>
+    </div>
+    <div class="practice-area" id="practice-area">
+      <div class="practice-cmd" id="practice-cmd"><span class="prefix"></span><span class="action-word"></span></div>
+      <div class="practice-counter" id="practice-counter">练习次数：0</div>
+      <button class="practice-stop" id="practice-stop-btn">停止练习</button>
+    </div>
+    </div>
+    <div class="game-footer">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="footer-row">
+        <span class="score-display">得分：<span id="score">0</span></span>
+        <span class="trial-info" id="trial-info">0 / 0</span>
+        <button class="start-btn" id="start-btn">开始训练</button>
+      </div>
+      <div class="params-row" id="params-row"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DIFF_CONFIG = {
+  'easy-easy':{suppressRatio:0.2,timeout:3000,total:20,label:'初级·简单'},
+  'easy-medium':{suppressRatio:0.25,timeout:2800,total:25,label:'初级·中等'},
+  'easy-hard':{suppressRatio:0.3,timeout:2500,total:30,label:'初级·困难'},
+  'medium-easy':{suppressRatio:0.3,timeout:2500,total:30,label:'中级·简单'},
+  'medium-medium':{suppressRatio:0.35,timeout:2200,total:35,label:'中级·中等'},
+  'medium-hard':{suppressRatio:0.4,timeout:2000,total:40,label:'中级·困难'},
+  'hard-easy':{suppressRatio:0.4,timeout:2000,total:40,label:'高级·简单'},
+  'hard-medium':{suppressRatio:0.45,timeout:1800,total:45,label:'高级·中等'},
+  'hard-hard':{suppressRatio:0.5,timeout:1500,total:50,label:'高级·困难'},
+};
+const ADULT_DIFF = {
+  'easy-easy':{suppressRatio:0.3,timeout:2500,total:30,label:'初级·简单'},
+  'easy-medium':{suppressRatio:0.35,timeout:2200,total:35,label:'初级·中等'},
+  'easy-hard':{suppressRatio:0.4,timeout:2000,total:40,label:'初级·困难'},
+  'medium-easy':{suppressRatio:0.4,timeout:2000,total:40,label:'中级·简单'},
+  'medium-medium':{suppressRatio:0.45,timeout:1800,total:45,label:'中级·中等'},
+  'medium-hard':{suppressRatio:0.5,timeout:1500,total:50,label:'中级·困难'},
+  'hard-easy':{suppressRatio:0.5,timeout:1500,total:50,label:'高级·简单'},
+  'hard-medium':{suppressRatio:0.55,timeout:1300,total:55,label:'高级·中等'},
+  'hard-hard':{suppressRatio:0.6,timeout:1200,total:60,label:'高级·困难'},
+};
+const ACTIONS=['clap','wave','hair','nose'];
+const ACTION_LABELS={clap:'拍手',wave:'挥手',hair:'摸摸头发',nose:'摸摸鼻子'};
+const ACTION_NUM={clap:'1',wave:'2',hair:'3',nose:'4'};
+const NUM_AUDIO_MAP={'1':{m:'/public/audio/b2/m_num1.mp3',f:'/public/audio/b2/f_num1.mp3'},'2':{m:'/public/audio/b2/m_num2.mp3',f:'/public/audio/b2/f_num2.mp3'},'3':{m:'/public/audio/b2/m_num3.mp3',f:'/public/audio/b2/f_num3.mp3'},'4':{m:'/public/audio/b2/m_num4.mp3',f:'/public/audio/b2/f_num4.mp3'}};
+const AUDIO_MAP={clap:{m:'/public/audio/b2/m_clap.mp3',f:'/public/audio/b2/f_clap.mp3'},wave:{m:'/public/audio/b2/m_wave.mp3',f:'/public/audio/b2/f_wave.mp3'},hair:{m:'/public/audio/b2/m_hair.mp3',f:'/public/audio/b2/f_hair.mp3'},nose:{m:'/public/audio/b2/m_nose.mp3',f:'/public/audio/b2/f_nose.mp3'}};
+
+let state={
+  userMode:'child',
+  gameMode:'train',
+  level:'easy',
+  subLevel:'easy',
+  running:false,
+  trials:[],
+  currentTrial:0,
+  score:0,
+  trialStartTime:0,
+  responded:false,
+  timeoutId:null,
+  results:[],
+  practiceActive:false,
+  practiceTimer:null,
+  practiceCount:0
+};
+
+let audioCtx=null;
+const audioBuffers={};
+let audioPreloaded=false;
+function initAudio(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+}
+async function preloadAllAudio(){
+  if(audioPreloaded)return;
+  initAudio();
+  const urls=[];
+  for(const num of['1','2','3','4']){urls.push(NUM_AUDIO_MAP[num].m);urls.push(NUM_AUDIO_MAP[num].f);}
+  for(const act of ACTIONS){urls.push(AUDIO_MAP[act].m);urls.push(AUDIO_MAP[act].f);}
+  const unique=[...new Set(urls)];
+  await Promise.all(unique.map(async url=>{
+    try{
+      const resp=await fetch(url);
+      const buf=await resp.arrayBuffer();
+      const ab=await audioCtx.decodeAudioData(buf);
+      audioBuffers[url]=ab;
+    }catch(e){console.warn('preload fail:',url,e);}
+  }));
+  audioPreloaded=true;
+}
+function playAudioBuffer(url){
+  if(!audioCtx||!audioBuffers[url])return;
+  const src=audioCtx.createBufferSource();
+  src.buffer=audioBuffers[url];
+  src.connect(audioCtx.destination);
+  src.start();
+}
+function playBeep(freq,dur,vol=0.12){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(vol,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
+
+function getConfig(){const key=state.level+'-'+state.subLevel;return state.userMode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];}
+
+function buildDiffBtns(){
+  ['easy','medium','hard'].forEach(lvl=>{
+    const c=document.getElementById('diff-'+lvl);c.innerHTML='';
+    ['easy','medium','hard'].forEach(sub=>{
+      const key=lvl+'-'+sub;
+      const cfg=state.userMode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
+      const btn=document.createElement('button');
+      btn.className='diff-btn';btn.textContent=cfg.label.split('·')[1];
+      btn.dataset.key=key;
+      btn.addEventListener('click',()=>selectDiff(lvl,sub));
+      if(state.level===lvl&&state.subLevel===sub)btn.classList.add('active');
+      c.appendChild(btn);
+    });
+  });
+  updateParams();
+}
+
+function selectDiff(lvl,sub){
+  state.level=lvl;state.subLevel=sub;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  const target=document.querySelector('.diff-btn[data-key="'+lvl+'-'+sub+'"]');
+  if(target)target.classList.add('active');
+  updateParams();
+}
+
+function updateParams(){
+  const cfg=getConfig();
+  document.getElementById('params-row').innerHTML='<span class="param-tag">抑制 '+Math.round(cfg.suppressRatio*100)+'%</span><span class="param-tag">窗口 '+cfg.timeout+'ms</span><span class="param-tag">共'+cfg.total+'题</span>';
+}
+
+// 用户模式切换（儿童/成人）
+document.querySelectorAll('#user-mode-switch .mode-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('#user-mode-switch .mode-btn').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    state.userMode=this.dataset.umode;
+    buildDiffBtns();
+  });
+});
+
+// 游戏模式切换（训练/实际练习）
+document.querySelectorAll('#game-mode-switch .mode-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('#game-mode-switch .mode-btn').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    state.gameMode=this.dataset.gmode;
+    updateGameModeUI();
+  });
+});
+
+function updateGameModeUI(){
+  const actionBtns=document.getElementById('action-btns');
+  const legendRow=document.querySelector('.legend-row');
+  const practiceArea=document.getElementById('practice-area');
+  const startBtn=document.getElementById('start-btn');
+  const progressBar=document.querySelector('.progress-bar');
+  const paramsRow=document.getElementById('params-row');
+  if(state.gameMode==='practice'){
+    // 先停止训练（清除 timeout、停止音频、重置状态）
+    stopTraining();
+    actionBtns.style.display='none';
+    if(legendRow)legendRow.style.display='none';
+    practiceArea.classList.add('show');
+    startBtn.textContent='开始练习';
+    startBtn.onclick=startPractice;
+    startBtn.disabled=false;
+    document.getElementById('instruction-display').style.display='none';
+    document.getElementById('character-area').style.display='none';
+    if(paramsRow)paramsRow.style.display='none';
+    document.getElementById('score').parentElement.style.display='none';
+    document.getElementById('trial-info').textContent='练习中...';
+  }else{
+    // 先停止练习
+    stopPractice();
+    actionBtns.style.display='grid';
+    if(legendRow)legendRow.style.display='none';
+    practiceArea.classList.remove('show');
+    startBtn.textContent='开始训练';
+    startBtn.onclick=startGame;
+    startBtn.disabled=false;
+    document.getElementById('instruction-display').style.display='';
+    document.getElementById('character-area').style.display='';
+    if(progressBar)progressBar.style.display='';
+    if(paramsRow)paramsRow.style.display='';
+    document.getElementById('score').parentElement.style.display='';
+    document.getElementById('trial-info').style.display='';
+  }
+}
+
+function stopTraining(){
+  state.running=false;
+  clearTimeout(state.timeoutId);
+  state.timeoutId=null;
+  document.getElementById('start-btn').disabled=false;
+  document.getElementById('instruction-display').innerHTML='<span class="prefix"></span><span id="cmd-text"></span>';
+}
+
+function generateTrials(){
+  const cfg=getConfig();const trials=[];
+  for(let i=0;i<cfg.total;i++){
+    const action=ACTIONS[Math.floor(Math.random()*ACTIONS.length)];
+    trials.push({action,isSimon:Math.random()>=cfg.suppressRatio});
+  }
+  return trials;
+}
+
+// ========== 训练模式 ==========
+function startGame(){
+  if(state.running)return;initAudio();
+  preloadAllAudio().then(()=>{
+    state.trials=generateTrials();state.currentTrial=0;state.score=0;state.results=[];state.running=true;
+    document.getElementById('start-btn').disabled=true;
+    document.getElementById('score').textContent='0';
+    document.getElementById('progress-fill').style.width='0%';
+    document.getElementById('trial-info').textContent='0 / '+state.trials.length;
+    const oldModal=document.querySelector('.modal-overlay');if(oldModal)oldModal.remove();
+    countdown(3,()=>runTrial());
+  });
+}
+
+function countdown(n,cb){
+  const area=document.querySelector('.game-center');
+  const el=document.createElement('div');el.className='countdown';el.textContent=n;
+  el.style.position='absolute';area.appendChild(el);
+  if(n>0){setTimeout(()=>{el.remove();countdown(n-1,cb);},800);}
+  else{el.remove();cb();}
+}
+
+function runTrial(){
+  if(!state.running)return;
+  if(state.currentTrial>=state.trials.length){endGame();return;}
+  const cfg=getConfig();const trial=state.trials[state.currentTrial];
+  state.responded=false;state.trialStartTime=0;
+  const actionNum=ACTION_NUM[trial.action];
+  const prefix=trial.isSimon?'西蒙说：':'反向：';
+  document.getElementById('instruction-display').innerHTML='<span class="prefix">'+prefix+'</span><span id="cmd-text">'+actionNum+'</span>';
+  const char=document.getElementById('character-area');
+  char.classList.add('speaking');setTimeout(()=>char.classList.remove('speaking'),600);
+  // 播放预生成数字音频（只读数字，不含前缀）
+  const gender=trial.isSimon?'m':'f';
+  playAudioBuffer(NUM_AUDIO_MAP[actionNum][gender]);
+  state.trialStartTime=performance.now();
+  state.timeoutId=setTimeout(()=>{
+    if(!state.responded){
+      if(!trial.isSimon){state.results.push({type:'nogo_correct',rt:cfg.timeout});state.score+=10;}
+      else{state.results.push({type:'go_wrong',rt:cfg.timeout});}
+      document.getElementById('score').textContent=state.score;
+      nextTrial();
+    }
+  },cfg.timeout);
+}
+
+function handleAction(action){
+  if(!state.running||state.responded||!state.trialStartTime)return;
+  state.responded=true;clearTimeout(state.timeoutId);
+  const rt=performance.now()-state.trialStartTime;
+  const trial=state.trials[state.currentTrial];
+  if(!trial.isSimon){
+    state.results.push({type:'nogo_wrong',rt});
+    state.score=Math.max(0,state.score-5);
+    document.getElementById('score').textContent=state.score;
+    flashBtn(action,'wrong-flash');playBeep(200,0.2);
+    showImpulseToast();
+  }else{
+    if(trial.action===action){
+      state.results.push({type:'go_correct',rt});state.score+=10;
+      document.getElementById('score').textContent=state.score;
+      flashBtn(action,'correct-flash');playBeep(800,0.1);
+    }else{
+      state.results.push({type:'go_wrong',rt});
+      state.score=Math.max(0,state.score-5);
+      document.getElementById('score').textContent=state.score;
+      flashBtn(action,'wrong-flash');playBeep(300,0.15);
+    }
+  }
+  nextTrial();
+}
+
+function flashBtn(action,cls){
+  const btn=document.querySelector('.action-btn[data-action="'+action+'"]');
+  if(btn){btn.classList.add(cls);setTimeout(()=>btn.classList.remove(cls),400);}
+}
+
+function showImpulseToast(){
+  const area=document.getElementById('game-area');
+  const toast=document.createElement('div');toast.className='impulse-toast';
+  toast.textContent='女声反向，不要做！';area.appendChild(toast);
+  setTimeout(()=>toast.remove(),1500);
+}
+
+function nextTrial(){
+  state.currentTrial++;const total=state.trials.length;
+  document.getElementById('progress-fill').style.width=(state.currentTrial/total*100)+'%';
+  document.getElementById('trial-info').textContent=state.currentTrial+' / '+total;
+  setTimeout(()=>runTrial(),400);
+}
+
+function endGame(){
+  state.running=false;clearTimeout(state.timeoutId);
+  document.getElementById('start-btn').disabled=false;
+  document.getElementById('instruction-display').innerHTML='<span class="prefix"></span><span id="cmd-text"></span>';
+  const goCorrect=state.results.filter(r=>r.type==='go_correct');
+  const goWrong=state.results.filter(r=>r.type==='go_wrong');
+  const nogoCorrect=state.results.filter(r=>r.type==='nogo_correct');
+  const nogoWrong=state.results.filter(r=>r.type==='nogo_wrong');
+  const goTotal=goCorrect.length+goWrong.length;
+  const nogoTotal=nogoCorrect.length+nogoWrong.length;
+  const goAcc=goTotal>0?(goCorrect.length/goTotal*100).toFixed(1):'--';
+  const nogoAcc=nogoTotal>0?(nogoCorrect.length/nogoTotal*100).toFixed(1):'--';
+  const impulseRate=nogoTotal>0?(nogoWrong.length/nogoTotal*100).toFixed(1):'--';
+  const avgRT=goCorrect.length>0?Math.round(goCorrect.reduce((s,r)=>s+r.rt,0)/goCorrect.length):0;
+  document.getElementById('stat-go').textContent=goAcc+'%';
+  document.getElementById('stat-nogo').textContent=nogoAcc+'%';
+  document.getElementById('stat-impulse').textContent=impulseRate+'%';
+  document.getElementById('stat-rt').textContent=avgRT+'ms';
+  let grade='';const acc=parseFloat(nogoAcc);
+  if(acc>=85)grade='优秀（冲动控制达人）';else if(acc>=70)grade='良好';else if(acc>=50)grade='需努力';else grade='继续加油';
+  // 弹窗展示结果
+  const oldModal=document.querySelector('.modal-overlay');if(oldModal)oldModal.remove();
+  const overlay=document.createElement('div');overlay.className='modal-overlay show';
+  overlay.innerHTML='<div class="modal-card"><div class="result-title">训练完成！</div><div class="result-grade">'+grade+'</div><div class="result-grid"><div class="result-item"><div class="val">'+goAcc+'%</div><div class="lbl">Go正确率</div></div><div class="result-item"><div class="val">'+nogoAcc+'%</div><div class="lbl">No-Go正确率</div></div><div class="result-item"><div class="val">'+impulseRate+'%</div><div class="lbl">冲动率</div></div><div class="result-item"><div class="val">'+avgRT+'ms</div><div class="lbl">平均反应时</div></div></div><div class="result-btns"><button class="btn-retry">再来一次</button><button class="btn-home">返回大厅</button></div></div>';
+  overlay.querySelector('.btn-retry').addEventListener('click',()=>{overlay.remove();startGame();});
+  overlay.querySelector('.btn-home').addEventListener('click',()=>{location.href='index.html';});
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  document.body.appendChild(overlay);
+  try{const data=JSON.parse(localStorage.getItem('b2_reverse')||'{}');data[state.level+'-'+state.subLevel]={goAcc,nogoAcc,impulseRate,avgRT,date:new Date().toISOString()};localStorage.setItem('b2_reverse',JSON.stringify(data));}catch(e){}
+}
+
+// ========== 实际练习模式 ==========
+function startPractice(){
+  if(state.practiceActive)return;
+  initAudio();
+  preloadAllAudio().then(()=>{
+    state.practiceActive=true;
+    state.practiceCount=0;
+    document.getElementById('start-btn').disabled=true;
+    document.getElementById('practice-stop-btn').style.display='';
+    document.getElementById('practice-counter').textContent='练习次数：0';
+    document.getElementById('progress-fill').style.width='0%';
+    document.getElementById('trial-info').textContent='练习中...';
+    document.getElementById('score').parentElement.style.display='none';
+    runPracticeTrial();
+  });
+}
+
+function stopPractice(){
+  state.practiceActive=false;
+  if(state.practiceTimer)clearTimeout(state.practiceTimer);
+  document.getElementById('start-btn').disabled=false;
+  document.getElementById('practice-stop-btn').style.display='none';
+  document.getElementById('practice-cmd').innerHTML='<span class="prefix"></span><span class="action-word"></span>';
+  document.getElementById('practice-counter').textContent='练习次数：0';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('trial-info').textContent='0 / 0';
+  document.getElementById('score').parentElement.style.display='';
+}
+
+function runPracticeTrial(){
+  if(!state.practiceActive)return;
+  const cfg=getConfig();
+  const isSimon=Math.random()>=cfg.suppressRatio;
+  const action=ACTIONS[Math.floor(Math.random()*ACTIONS.length)];
+  const actionLabel=ACTION_LABELS[action];
+  const prefix=isSimon?'西蒙说：':'反向：';
+  document.getElementById('practice-cmd').innerHTML='<span class="prefix">'+prefix+'</span><span class="action-word">'+actionLabel+'</span>';
+  const gender=isSimon?'m':'f';
+  playAudioBuffer(AUDIO_MAP[action][gender]);
+  state.practiceCount++;
+  document.getElementById('practice-counter').textContent='练习次数：'+state.practiceCount;
+  const pct=Math.min(100,Math.round(state.practiceCount/20*100));
+  document.getElementById('progress-fill').style.width=pct+'%';
+  state.practiceTimer=setTimeout(runPracticeTrial,cfg.timeout+500);
+}
+
+// 停止练习按钮
+document.getElementById('practice-stop-btn').addEventListener('click',stopPractice);
+
+// 动作按钮点击
+document.querySelectorAll('.action-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){handleAction(this.dataset.action);});
+});
+
+// 键盘快捷键 1-4
+document.addEventListener('keydown',(e)=>{
+  const map={'1':'clap','2':'wave','3':'hair','4':'nose'};
+  if(map[e.key])handleAction(map[e.key]);
+});
+
+// 初始化
+buildDiffBtns();
+updateGameModeUI();
+document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+
+function showRulesPopup(){
+  const visited=localStorage.getItem('b2_visited');
+  if(visited) return;
+  const overlay=document.createElement('div');
+  overlay.className='rules-overlay';
+  overlay.id='rules-overlay';
+  overlay.innerHTML=`
+    <div class="rules-dialog">
+      <h2>🤖 西蒙说 · 玩法</h2>
+      <div class="rd-row">
+        <div class="rd-icon train">🎮</div>
+        <div class="rd-text"><strong>训练模式</strong><br>男声"西蒙说"→ 点击对应动作<br>女声"反向"→ <strong>不要点！忍住！</strong></div>
+      </div>
+      <div class="rd-row">
+        <div class="rd-icon practice">🏃</div>
+        <div class="rd-text"><strong>实际练习模式</strong><br>系统只播报指令，人在现实中做动作<br>不统计不判题，点击停止结束</div>
+      </div>
+      <div class="rd-note">
+        按钮 1-4 对应：拍手 / 挥手 / 摸摸头发 / 摸摸鼻子<br>
+        键盘快捷键 1-4 也可作答<br><br>
+        <strong>👦 儿童建议：</strong>初级·简单（抑制题少、时间长）<br>
+        <strong>👨 成人建议：</strong>中级·中等起步
+      </div>
+      <button onclick="document.getElementById('rules-overlay').remove();localStorage.setItem('b2_visited','1');">我知道了</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+</script>
+</body>
+</html>

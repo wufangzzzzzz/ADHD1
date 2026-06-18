@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>指令解码器 - 听知觉训练</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    html, body { touch-action: manipulation; overscroll-behavior: none; width: 100%; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(160deg, #e8f5e9 0%, #c8e6c9 30%, #dcedc8 60%, #f1f8e9 100%);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #1B5E20;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 矩阵网格装饰 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(76, 175, 80, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76, 175, 80, 0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 二进制数字雨动画 */
+    @keyframes matrixRain {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 0.15; }
+      90% { opacity: 0.15; }
+      100% { opacity: 0; transform: translateY(100vh); }
+    }
+    .matrix-digit {
+      position: fixed;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: rgba(76, 175, 80, 0.08);
+      pointer-events: none;
+      z-index: 0;
+      animation: matrixRain 8s linear infinite;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      position: relative;
+      z-index: 1;
+      padding: 10px;
+    }
+
+    /* 标题 */
+    .title-area {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 2px;
+      color: #1B5E20;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      color: #2E7D32;
+      font-size: 10px;
+      padding: 3px 12px;
+      background: rgba(76, 175, 80, 0.15);
+      border-radius: 15px;
+      display: inline-block;
+    }
+
+    /* 顶部信息栏 */
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(76, 175, 80, 0.1);
+      border-radius: 12px;
+      padding: 8px 14px;
+      margin-bottom: 8px;
+      backdrop-filter: blur(10px);
+    }
+    .info-item {
+      text-align: center;
+      flex: 1;
+    }
+    .info-label {
+      font-size: 10px;
+      color: rgba(46, 125, 50, 0.6);
+    }
+    .info-value {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .info-value.score {
+      color: #FFD700;
+    }
+    .info-value.level {
+      color: #2E7D32;
+    }
+    .info-value.round {
+      color: #1B5E20;
+    }
+
+    /* 进度条 */
+    .progress-container {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .progress-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(76, 175, 80, 0.12);
+      border: 1px solid rgba(76, 175, 80, 0.2);
+      transition: all 0.3s;
+    }
+    .progress-dot.active {
+      background: #4CAF50;
+      border-color: #4CAF50;
+      box-shadow: 0 0 8px rgba(76,175,80,0.4);
+    }
+    .progress-dot.correct {
+      background: #4CAF50;
+      border-color: #4CAF50;
+      box-shadow: 0 0 8px rgba(76,175,80,0.4);
+    }
+    .progress-dot.wrong {
+      background: #f44336;
+      border-color: #f44336;
+      box-shadow: 0 0 8px rgba(244,67,54,0.3);
+    }
+
+    /* 难度选择 - 主级别 */
+    .level-select {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .level-btn {
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(76, 175, 80, 0.3);
+      border-radius: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: transparent;
+      color: rgba(46, 125, 50, 0.7);
+      font-family: inherit;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    .level-btn.active {
+      border-color: #4CAF50;
+      background: rgba(76,175,80,0.25);
+      color: #1B5E20;
+      box-shadow: 0 0 12px rgba(76,175,80,0.25);
+    }
+    .level-btn:active { transform: scale(0.95); }
+
+    /* 内部难度显示 */
+    .sub-level-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .sub-level-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(76,175,80,0.12);
+      color: #388E3C;
+      border: 1.5px solid rgba(76,175,80,0.25);
+    }
+    .sub-level-badge:hover {
+      transform: scale(1.1);
+      filter: brightness(1.2);
+    }
+    .sub-level-badge:active {
+      transform: scale(0.94);
+    }
+    .sub-level-badge.active {
+      background: rgba(76,175,80,0.35);
+      color: #1B5E20;
+      border: 2px solid #4CAF50;
+      box-shadow: 0 0 10px rgba(76,175,80,0.3);
+      transform: scale(1.08);
+    }
+    .sub-level-arrow {
+      font-size: 14px;
+      color: rgba(46,125,50,0.5);
+    }
+
+    /* 玩法说明 + 难度说明 */
+    .game-rules {
+      background: rgba(255,152,0,0.06);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 8px 0;
+      font-size: clamp(14px, 3vw, 18px);
+      line-height: 1.7;
+      border: 1px solid rgba(255,152,0,0.12);
+    }
+    .game-rules .rules-title {
+      font-size: clamp(15px, 3.2vw, 20px);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .difficulty-hint {
+      background: rgba(255,152,0,0.06);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin: 8px 0;
+      font-size: clamp(13px, 2.8vw, 17px);
+      line-height: 1.6;
+      border: 1px solid rgba(255,152,0,0.12);
+    }
+    .difficulty-hint .hint-title {
+      font-size: clamp(14px, 3vw, 18px);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .difficulty-hint .hint-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4px;
+    }
+    .difficulty-hint .hint-col {
+      background: rgba(255,255,255,0.5);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: clamp(12px, 2.5vw, 16px);
+      line-height: 1.7;
+    }
+    .difficulty-hint .hint-col strong {
+      color: #2E7D32;
+    }
+    .difficulty-hint .hint-note {
+      text-align: center;
+      margin-top: 4px;
+      font-size: 11px;
+      color: rgba(46,125,50,0.7);
+    }
+
+    /* 自适应提示 */
+    .adapt-notice {
+      text-align: center;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin-bottom: 4px;
+      animation: fadeIn 0.4s;
+    }
+    .adapt-notice.up {
+      background: rgba(76,175,80,0.12);
+      color: #2E7D32;
+    }
+    .adapt-notice.down {
+      background: rgba(198,40,40,0.12);
+      color: #EF9A9A;
+    }
+
+    /* 状态提示 */
+    .status-area {
+      text-align: center;
+      padding: 14px 10px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 14px;
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(76, 175, 80, 0.2);
+    }
+    .status-icon {
+      font-size: 30px;
+      margin-bottom: 4px;
+    }
+    .status-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1B5E20;
+    }
+    .status-sub {
+      font-size: 12px;
+      color: rgba(46, 125, 50, 0.6);
+      margin-top: 2px;
+    }
+
+    /* 映射规则显示区 */
+    .mapping-area {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 2px solid rgba(76, 175, 80, 0.4);
+    }
+    .mapping-title {
+      font-size: 12px;
+      color: rgba(46, 125, 50, 0.7);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .mapping-rules {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+    }
+    .mapping-rule {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid #4CAF50;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .mapping-rule .rule-icon {
+      font-size: 16px;
+    }
+    .mapping-rule .rule-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(76, 175, 80, 0.2);
+      color: #2E7D32;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    /* 词语朗读区 - 当前词 */
+    .word-display-area {
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 8px;
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      border: 2px dashed rgba(76, 175, 80, 0.3);
+      transition: all 0.3s;
+    }
+    .word-display-area.listening {
+      border-color: rgba(76,175,80,0.5);
+      background: rgba(76,175,80,0.08);
+    }
+    .word-display-area.word-flash {
+      border-color: #4CAF50;
+      background: rgba(76,175,80,0.12);
+    }
+    .current-word {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1B5E20;
+      text-shadow: 0 0 15px rgba(76,175,80,0.3), 0 0 30px rgba(76,175,80,0.1);
+      animation: wordPop 0.35s ease-out;
+    }
+    @keyframes wordPop {
+      0% { transform: scale(0.3); opacity: 0; }
+      70% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .word-placeholder {
+      color: rgba(46, 125, 50, 0.45);
+      font-size: 14px;
+    }
+    .word-index-hint {
+      font-size: 11px;
+      color: rgba(46, 125, 50, 0.5);
+      margin-top: 2px;
+    }
+
+    /* 输入序列显示区 */
+    .input-sequence {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: nowrap;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      min-height: 48px;
+      border: 1px solid rgba(76, 175, 80, 0.2);
+    }
+    .input-slot {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: clamp(48px, 7vw, 68px);
+      border-radius: 10px;
+      background: rgba(76, 175, 80, 0.06);
+      border: 2px dashed rgba(76, 175, 80, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(20px, 4vw, 48px);
+      font-weight: 800;
+      color: #1B5E20;
+      transition: all 0.3s;
+    }
+    .input-slot.filled {
+      border-style: solid;
+      border-color: rgba(76,175,80,0.5);
+      background: rgba(76,175,80,0.15);
+      animation: slotPop 0.25s ease-out;
+    }
+    @keyframes slotPop {
+      0% { transform: scale(0.7); }
+      60% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .input-slot.correct-slot {
+      border-color: #4CAF50;
+      background: rgba(76,175,80,0.15);
+    }
+    .input-slot.wrong-slot {
+      border-color: #c62828;
+      background: rgba(198,40,40,0.12);
+    }
+    .input-slot.reveal-slot {
+      border-color: #4CAF50;
+      background: rgba(76,175,80,0.2);
+    }
+
+    /* 数字键盘 */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .num-btn {
+      aspect-ratio: 1;
+      border: none;
+      border-radius: 14px;
+      font-size: clamp(32px, 6vw, 64px);
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      background: rgba(76, 175, 80, 0.15);
+      color: #333333;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(76, 175, 80, 0.3);
+    }
+    .num-btn:active { transform: scale(0.88); background: rgba(76,175,80,0.3); }
+    .num-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .num-btn.highlight-num {
+      background: rgba(76,175,80,0.3);
+      border-color: rgba(76,175,80,0.5);
+    }
+
+    /* 底部按钮区 */
+    .bottom-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+    .action-btn {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      flex: 1;
+      min-height: 44px;
+    }
+    .action-btn:active { transform: scale(0.95); }
+    .action-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .btn-replay {
+      background: rgba(76, 175, 80, 0.15);
+      color: #2E7D32;
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    .btn-submit {
+      background: linear-gradient(135deg, #4CAF50, #2E7D32);
+      color: white;
+      box-shadow: 0 0 20px rgba(76,175,80,0.3);
+    }
+    .btn-delete {
+      background: rgba(255,152,0,0.15);
+      color: #E65100;
+      border: 1px solid rgba(255,152,0,0.3);
+    }
+    .btn-start {
+      background: linear-gradient(135deg, #4CAF50, #2E7D32);
+      color: white;
+      box-shadow: 0 0 20px rgba(76,175,80,0.3);
+    }
+
+    /* 覆盖层 */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.3s;
+    }
+    .overlay.show { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .result-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 24px;
+      padding: 30px 28px;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+      backdrop-filter: blur(20px);
+      border: 2px solid rgba(76, 175, 80, 0.3);
+      animation: cardBounce 0.5s ease-out;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    @keyframes cardBounce {
+      0% { transform: scale(0.7); opacity: 0; }
+      60% { transform: scale(1.05); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .result-emoji { font-size: 56px; margin-bottom: 10px; }
+    .result-title { font-size: 22px; font-weight: bold; margin-bottom: 6px; color: #1B5E20; }
+    .result-stats { font-size: 14px; color: #333; line-height: 1.8; margin-bottom: 16px; }
+    .result-stats span { color: #FFD700; font-weight: bold; }
+    .result-btn {
+      padding: 10px 30px;
+      border: none;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      background: linear-gradient(135deg, #4CAF50, #2E7D32);
+      color: white;
+    }
+    .result-btn:active { transform: scale(0.95); }
+
+    /* 反馈浮层 */
+    .feedback-badge {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 900;
+      pointer-events: none;
+      text-align: center;
+      animation: badgePop 0.6s ease-out forwards;
+    }
+    @keyframes badgePop {
+      0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    .feedback-badge.hide { animation: badgeFade 0.3s ease-out forwards; }
+    @keyframes badgeFade {
+      to { transform: translate(-50%, -60%) scale(0.8); opacity: 0; }
+    }
+    .feedback-badge .fb-emoji { font-size: 64px; }
+    .feedback-badge .fb-text { font-size: 24px; font-weight: bold; margin-top: 4px; }
+    .feedback-badge .fb-text.correct-text { color: #2E7D32; }
+    .feedback-badge .fb-text.wrong-text { color: #c62828; }
+
+    /* 星星爆发 */
+    .star-particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      font-size: 20px;
+      animation: starFly 0.8s ease-out forwards;
+    }
+    @keyframes starFly {
+      0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+      100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(360deg); }
+    }
+
+    /* 正确对比展示 */
+    .compare-section {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 12px;
+    }
+    .compare-title {
+      font-size: 12px;
+      color: rgba(46,125,50,0.6);
+      margin-bottom: 6px;
+    }
+    .compare-row {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .compare-item {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .compare-item.correct-item { background: rgba(76,175,80,0.15); border: 1px solid #4CAF50; color: #2E7D32; }
+    .compare-item.wrong-item { background: rgba(198,40,40,0.2); border: 1px solid #c62828; color: #EF9A9A; }
+
+    /* 响应式 */
+    @media (max-width: 380px) {
+      h1 { font-size: 22px; color: #1B5E20; }
+      .num-btn { font-size: clamp(24px, 7vw, 36px); min-height: 56px; }
+      .current-word { font-size: 28px; }
+    }
+    @media (min-width: 600px) {
+      .numpad { margin-left: auto; margin-right: auto; width: 100%; }
+    }
+
+    /* 高亮映射规则中的数字按钮 */
+    .mapping-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 800;
+      margin-left: 2px;
+    }
+  
+    /* ===== 横屏布局：左功能 + 右游戏 ===== */
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .container {
+    max-width: 860px;
+    width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    align-items: stretch;
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    flex: 0 1 auto;
+    margin: 0 auto;
+  }
+  .deco-float, .deco-ring, .deco-wave, .deco-scanline,
+  .ripple-container { display: none !important; }
+  
+  .land-left {
+    width: 320px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 6px;
+    overflow-y: auto;
+    border-right: 1px solid rgba(0,0,0,0.06);
+  }
+  .land-right {
+    width: 480px;
+    flex: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px;
+    overflow-y: auto;
+    justify-content: flex-start;
+  }
+  
+  .land-left .title-area { padding: 4px 6px; margin-bottom: 4px; }
+  .land-left .title-area h1 { font-size: 18px; }
+  .land-left .title-area .subtitle { font-size: 11px; }
+  .land-left .info-bar { flex-wrap: nowrap; gap: 2px; padding: 4px 6px; margin-bottom: 4px; }
+  .land-left .info-label { font-size: 10px; }
+  .land-left .info-value { font-size: 15px; }
+  .land-left .level-select { gap: 3px; padding: 3px 6px; margin-bottom: 3px; flex-wrap: wrap; }
+  .land-left .level-btn { font-size: 13px; padding: 4px 10px; min-height: 30px; }
+  .land-left .sub-level-row { gap: 3px; padding: 3px 6px; flex-wrap: wrap; }
+  .land-left .sub-level-btn { font-size: 11px; padding: 3px 7px; min-height: 24px; }
+  .land-left .status-area { padding: 6px 6px; min-height: 44px; }
+  .land-left .status-icon { font-size: 18px; }
+  .land-left .status-text { font-size: 14px; }
+  .land-left .status-sub { font-size: 11px; }
+  .land-left .tip-bar { padding: 3px 6px; font-size: 11px; margin-bottom: 3px; }
+  .land-left .progress-container { padding: 2px 6px; min-height: 10px; display: flex; gap: 3px; }
+  .land-left .mapping-area { padding: 4px 6px; }
+  .land-left .mapping-title { font-size: 11px; }
+  .land-left .mapping-row { font-size: 11px; gap: 3px; }
+  .land-left .mapping-item { padding: 3px 6px; font-size: 11px; }
+  .land-left .adapt-notice { font-size: 11px; padding: 2px 6px; }
+  .land-left .game-rules { padding: 8px; margin-bottom: 6px; font-size: clamp(13px, 1.8vw, 17px); background: rgba(255,152,0,0.06); border-radius: 8px; line-height: 1.6; }
+  .land-left .game-rules .rules-title { font-size: clamp(14px, 2vw, 18px); font-weight: 700; margin-bottom: 4px; }
+  .land-left .difficulty-hint { font-size: clamp(12px, 1.6vw, 16px); padding: 6px 8px; margin: 6px 0; }
+  .land-left .difficulty-hint .hint-title { font-size: clamp(13px, 1.8vw, 17px); }
+  .land-left .difficulty-hint .hint-col { font-size: clamp(11px, 1.4vw, 15px); padding: 4px 6px; }
+  .land-left .difficulty-hint .hint-note { font-size: clamp(11px, 1.4vw, 15px); }
+  
+  .land-right .word-display { font-size: 42px; padding: 10px 24px; min-height: 68px; }
+  .land-right .numpad { gap: 10px; padding: 6px; }
+  .land-right .num-btn { font-size: clamp(40px, 5vw, 72px); min-height: 80px; }
+  .land-right .bottom-actions { gap: 8px; padding: 6px 0; flex-wrap: wrap; }
+  .land-right .action-btn { font-size: 18px; padding: 10px 24px; min-height: 48px; }
+  .land-right .answer-area { gap: 4px; padding: 6px; min-height: 48px; }
+  .land-right .answer-digit { font-size: 32px; padding: 4px 14px; }
+
+  /* 规则弹窗 */
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
+.rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
+.rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
+.rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
+.rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
+.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+</style>
+<script src="/public/audio-helper.js"></script>
+<script>
+function showRulesPopup(){
+    if(!localStorage.getItem('g4_visited')){
+        document.getElementById('rulesOverlay').style.display='flex';
+    }
+}
+function closeRules(){
+    localStorage.setItem('g4_visited','1');
+    document.getElementById('rulesOverlay').style.display='none';
+}
+document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+</script>
+</head>
+<body>
+<div class="container">
+  <div class="land-left">
+  <!-- 标题 -->
+  <div class="title-area">
+    <h1>🎯 指令解码器</h1>
+    <span class="subtitle">听知觉训练 · 听觉译码</span>
+  </div>
+
+  <!-- 信息栏 -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="info-label">题号</div>
+      <div class="info-value round" id="questionNum">-</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">难度</div>
+      <div class="info-value level" id="levelDisplay">中级·简单</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">⭐ 得分</div>
+      <div class="info-value score" id="scoreDisplay">0</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">进度</div>
+      <div class="info-value round" id="progressDisplay">0/10</div>
+    </div>
+  </div>
+
+  <!-- 进度点 -->
+  <div class="progress-container" id="progressDots"></div>
+
+  <!-- 难度选择 -->
+  <div class="level-select" id="levelSelect">
+    <button class="level-btn" data-level="beginner" onclick="selectLevel('beginner')">🌱 初级</button>
+    <button class="level-btn active" data-level="intermediate" onclick="selectLevel('intermediate')">📈 中级</button>
+    <button class="level-btn" data-level="advanced" onclick="selectLevel('advanced')">🔥 高级</button>
+  </div>
+
+  <!-- 内部难度标签 -->
+  <div class="sub-level-row" id="subLevelRow">
+    <span class="sub-level-badge easy" id="subEasy" onclick="selectSubLevel('easy')" title="点击选择">简单</span>
+    <span class="sub-level-arrow">→</span>
+    <span class="sub-level-badge medium" id="subMedium" onclick="selectSubLevel('medium')" title="点击选择">中等</span>
+    <span class="sub-level-arrow">→</span>
+    <span class="sub-level-badge hard" id="subHard" onclick="selectSubLevel('hard')" title="点击选择">困难</span>
+  </div>
+
+  <!-- 自适应提示 -->
+  <div id="adaptNotice" class="adapt-notice" style="display:none;"></div>
+
+  <!-- 状态区 -->
+  <div class="status-area" id="statusArea">
+    <div class="status-text" id="statusText">选择难度开始训练</div>
+    <div class="status-sub" id="statusSub">记住映射规则，听到词语按对应数字键</div>
+  </div>
+
+  <!-- 映射规则区 -->
+  <div class="mapping-area" id="mappingArea" style="display:none;">
+    <div class="mapping-title">📋 映射规则</div>
+    <div class="mapping-rules" id="mappingRules"></div>
+  </div>
+
+  <!-- 玩法说明 -->
+  <div class="game-rules" id="gameRules">
+    <div class="rules-title">📋 玩法说明</div>
+    <div>• 先听映射规则（如1=水果）<br>• 再听数字序列 → 按规则解码<br>• 每个数字对应一个类别，逐一破解</div>
+  </div>
+
+  <!-- 难度说明 -->
+  <div class="difficulty-hint">
+    <div class="hint-title">🎯 难度说明</div>
+    <div class="hint-body">
+      <div class="hint-col"><strong>初级</strong> — 2类映射 · 慢速<br>简单3个词 · 中等4个词 · 困难5个词</div>
+      <div class="hint-col"><strong>中级</strong> — 2~3类映射<br>简单5个词 · 中等8个词 · 困难10个词</div>
+      <div class="hint-col"><strong>高级</strong> — 3~4类映射 · 快速<br>简单8个词 · 中等10个词 · 困难12个词</div>
+    </div>
+    <div class="hint-note">💡 点击「简单·中等·困难」标签可切换子难度</div>
+  </div>
+</div>
+
+  <div class="land-right">
+  <!-- 词语朗读区 -->
+  <div class="word-display-area" id="wordDisplayArea">
+    <div class="current-word" id="currentWord" style="display:none;"></div>
+    <span class="word-placeholder" id="wordPlaceholder">👂 等待开始...</span>
+    <div class="word-index-hint" id="wordIndexHint" style="display:none;"></div>
+  </div>
+
+  <!-- 输入序列显示区 -->
+  <div class="input-sequence" id="inputSequence"></div>
+
+  <!-- 数字键盘 -->
+  <div class="numpad" id="numpad">
+    <button class="num-btn" data-num="1" onclick="pressNum(1)">1</button>
+    <button class="num-btn" data-num="2" onclick="pressNum(2)">2</button>
+    <button class="num-btn" data-num="3" onclick="pressNum(3)">3</button>
+    <button class="num-btn" data-num="4" onclick="pressNum(4)">4</button>
+    <button class="num-btn" data-num="5" onclick="pressNum(5)">5</button>
+    <button class="num-btn" data-num="6" onclick="pressNum(6)">6</button>
+    <button class="num-btn" data-num="7" onclick="pressNum(7)">7</button>
+    <button class="num-btn" data-num="8" onclick="pressNum(8)">8</button>
+    <button class="num-btn" data-num="9" onclick="pressNum(9)">9</button>
+  </div>
+
+  <!-- 底部按钮 -->
+  <div class="bottom-actions">
+    <button class="action-btn btn-replay" id="replayBtn" onclick="replayAudio()" disabled>🔊 再听一遍</button>
+    <button class="action-btn btn-delete" id="deleteBtn" onclick="deleteLast()" disabled>⌫ 删除</button>
+    <button class="action-btn btn-submit" id="submitBtn" onclick="submitAnswer()" disabled>✅ 提交</button>
+    <button class="action-btn btn-start" id="startBtn" onclick="startNewGame()">🚀 开始挑战</button>
+  </div>
+</div>
+</div>
+
+<!-- 反馈浮层 -->
+<div class="feedback-badge" id="feedbackBadge" style="display:none;">
+  <div class="fb-emoji" id="fbEmoji">⭐</div>
+  <div class="fb-text" id="fbText">正确！</div>
+</div>
+
+<!-- 结算覆盖层 -->
+<div class="overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="result-emoji" id="resultEmoji">🎉</div>
+    <div class="result-title" id="resultTitle">太棒了！</div>
+    <div class="result-stats" id="resultStats">
+      正确 <span id="finalCorrect">0</span>/<span id="finalTotal">10</span> 题<br>
+      正确率 <span id="finalRate">0%</span><br>
+      获得 ⭐ <span id="finalScore">0</span> 分
+    </div>
+    <button class="result-btn" onclick="closeResult()">继续挑战</button>
+  </div>
+</div>
+
+<script>
+// ============================================
+//  指令解码器 - 核心逻辑
+// ============================================
+
+// ---- 映射规则与词库数据 ----
+// 每个映射规则：{ category, icon, mapping: 数字, words: [...] }
+const MAPPING_DATA = {
+  水果:      { icon: '🍎', words: ['桃子','芒果','榴莲','菠萝','葡萄','香蕉','苹果','桔子','西瓜','樱桃','荔枝','柠檬','柚子','山竹','石榴','火龙果'] },
+  动物:      { icon: '🐾', words: ['河马','鳄鱼','大象','狮子','野猪','考拉','海豹','袋鼠','鲨鱼','章鱼','梅花鹿','老虎','鹦鹉','蜻蜓','螃蟹','刺猬'] },
+  文具:      { icon: '✏️', words: ['铅笔','橡皮','文具盒','钢笔','蜡笔','圆珠笔','毛笔','直尺','卷笔刀','作业本','修正带','文件夹'] },
+  交通工具:  { icon: '🚗', words: ['汽车','火车','飞机','轮船','自行车','地铁','摩托车','公交车','出租车','高铁','帆船','卡车'] },
+  家用电器:  { icon: '📺', words: ['电视','冰箱','洗衣机','空调','微波炉','电饭煲','吸尘器','电磁炉','电烤箱','热水器','收音机','电风扇'] },
+  食物:      { icon: '🍚', words: ['面条','米饭','面包','蛋糕','饺子','包子','牛奶','鸡蛋','豆浆','馄饨','炸鸡','烤鸭','薯片','饼干','奶茶','油条','汤圆','粽子'] },
+  花卉:      { icon: '🌸', words: ['玫瑰','菊花','百合','兰花','荷花','梅花','樱花','牡丹','茉莉','桂花','栀子花','牵牛花'] },
+  职业:      { icon: '👨‍⚕️', words: ['医生','老师','警察','护士','司机','厨师','理发师','工程师','律师','保安','清洁工','渔民'] },
+  家具:      { icon: '🪑', words: ['桌子','椅子','床','沙发','柜子','书架','茶几','餐桌','鞋柜','梳妆台'] },
+  蔬菜:      { icon: '🥬', words: ['芹菜','白菜','香菜','茄子','豆角','菠菜','萝卜','生菜','韭菜','花菜','丝瓜','黄瓜','蘑菇','青椒','西红柿','洋葱'] },
+  鱼类:      { icon: '🐟', words: ['金鱼','鲤鱼','鲈鱼','鲫鱼','草鱼','黄鱼','鳕鱼','黑鱼','金枪鱼','带鱼'] }
+};
+
+// ---- 难度配置 ----
+// 每级内部3档：简单/中等/困难
+const LEVEL_CONFIG = {
+  beginner: {
+    label: '初级',
+    subLevels: [
+      {
+        key: 'easy', label: '简单', speechRate: 0.7,
+        wordCount: 3,
+        mappings: [
+          { category: '水果', mapNum: 1 },
+          { category: '动物', mapNum: 2 }
+        ]
+      },
+      {
+        key: 'medium', label: '中等', speechRate: 0.75,
+        wordCount: 4,
+        mappings: [
+          { category: '水果', mapNum: 1 },
+          { category: '动物', mapNum: 2 }
+        ]
+      },
+      {
+        key: 'hard', label: '困难', speechRate: 0.8,
+        wordCount: 5,
+        mappings: [
+          { category: '水果', mapNum: 1 },
+          { category: '动物', mapNum: 2 },
+          { category: '文具', mapNum: 3 }
+        ]
+      }
+    ]
+  },
+  intermediate: {
+    label: '中级',
+    subLevels: [
+      {
+        key: 'easy', label: '简单', speechRate: 0.85,
+        // 2个映射，5个词，具体类别
+        wordCount: 5,
+        mappings: [
+          { category: '水果', mapNum: 1 },
+          { category: '动物', mapNum: 2 }
+        ]
+      },
+      {
+        key: 'medium', label: '中等', speechRate: 0.85,
+        // 2个映射，8个词，抽象类别
+        wordCount: 8,
+        mappings: [
+          { category: '文具', mapNum: 3 },
+          { category: '交通工具', mapNum: 4 }
+        ]
+      },
+      {
+        key: 'hard', label: '困难', speechRate: 0.85,
+        // 3个映射，10个词，混合类别
+        wordCount: 10,
+        mappings: [
+          { category: '家用电器', mapNum: 5 },
+          { category: '食物', mapNum: 6 },
+          { category: '花卉', mapNum: 7 }
+        ]
+      }
+    ]
+  },
+  advanced: {
+    label: '高级',
+    subLevels: [
+      {
+        key: 'easy', label: '简单', speechRate: 0.95,
+        // 2-3个映射，8个词
+        wordCount: 8,
+        mappings: [
+          { category: '水果', mapNum: 1 },
+          { category: '动物', mapNum: 2 },
+          { category: '文具', mapNum: 3 }
+        ]
+      },
+      {
+        key: 'medium', label: '中等', speechRate: 0.95,
+        // 3个映射，10个词，抽象映射
+        wordCount: 10,
+        mappings: [
+          { category: '花卉', mapNum: 8 },
+          { category: '职业', mapNum: 9 },
+          { category: '蔬菜', mapNum: 4 }
+        ]
+      },
+      {
+        key: 'hard', label: '困难', speechRate: 1.0,
+        // 4个映射，12个词，快速
+        wordCount: 12,
+        mappings: [
+          { category: '花卉', mapNum: 8 },
+          { category: '职业', mapNum: 9 },
+          { category: '家具', mapNum: 7 },
+          { category: '水果', mapNum: 1 }
+        ]
+      }
+    ]
+  }
+};
+
+// ---- 游戏状态 ----
+let state = {
+  level: 'intermediate',
+  subLevel: 0,
+  questionIndex: 0,
+  questions: [],
+  currentQuestion: null,
+  currentWordIndex: 0,
+  wordList: [],
+  correctSequence: [],
+  userSequence: [],
+  score: 0,
+  correctCount: 0,
+  totalAnswered: 0,
+  consecutiveCorrect: 0,
+  consecutiveWrong: 0,
+  isPlaying: false,
+  isListening: false,
+  canInput: false,
+  isAnswered: false,
+  isReadingWords: false,
+  gameOver: false
+};
+
+// ---- DOM 引用 ----
+const $ = id => document.getElementById(id);
+const qNum = $('questionNum');
+const levelDisplay = $('levelDisplay');
+const scoreDisplay = $('scoreDisplay');
+const progressDisplay = $('progressDisplay');
+const progressDots = $('progressDots');
+const statusText = $('statusText');
+const statusSub = $('statusSub');
+const mappingArea = $('mappingArea');
+const mappingRules = $('mappingRules');
+const wordDisplayArea = $('wordDisplayArea');
+const currentWord = $('currentWord');
+const wordPlaceholder = $('wordPlaceholder');
+const wordIndexHint = $('wordIndexHint');
+const inputSequence = $('inputSequence');
+const numBtns = document.querySelectorAll('.num-btn');
+const replayBtn = $('replayBtn');
+const deleteBtn = $('deleteBtn');
+const submitBtn = $('submitBtn');
+const startBtn = $('startBtn');
+const feedbackBadge = $('feedbackBadge');
+const fbEmoji = $('fbEmoji');
+const fbText = $('fbText');
+const resultOverlay = $('resultOverlay');
+const resultEmoji = $('resultEmoji');
+const resultTitle = $('resultTitle');
+const finalCorrect = $('finalCorrect');
+const finalTotal = $('finalTotal');
+const finalRate = $('finalRate');
+const finalScore = $('finalScore');
+const adaptNotice = $('adaptNotice');
+const subEasy = $('subEasy');
+const subMedium = $('subMedium');
+const subHard = $('subHard');
+
+// ---- 工具函数 ----
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ---- 初始化 ----
+function init() {
+  progressDots.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    dot.id = 'dot-' + i;
+    progressDots.appendChild(dot);
+  }
+  selectLevel('intermediate');
+  // 初始禁用数字键盘和操作按钮
+  setNumpadEnabled(false);
+  loadProgress();
+}
+
+// ---- 选择难度 ----
+function selectLevel(level) {
+  if (state.isPlaying || state.isListening) {
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    if (window.stopAllAudio) window.stopAllAudio();
+    state.isPlaying = false;
+    state.isListening = false;
+  }
+  state.level = level;
+  document.querySelectorAll('.level-btn[data-level]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === level);
+  });
+  state.subLevel = 0;
+  updateSubLevelDisplay();
+
+  // 显示开始按钮
+  startBtn.style.display = 'block';
+  replayBtn.style.display = 'none';
+  deleteBtn.style.display = 'none';
+  submitBtn.style.display = 'none';
+
+  statusText.textContent = '准备就绪';
+  const cfg = LEVEL_CONFIG[level];
+  statusSub.textContent = cfg.label + ' · ' + cfg.subLevels[0].label + ' · 点击开始';
+
+  // 清空映射、输入区
+  mappingArea.style.display = 'none';
+  mappingRules.innerHTML = '';
+  inputSequence.innerHTML = '';
+  currentWord.style.display = 'none';
+  wordPlaceholder.style.display = 'inline';
+  wordPlaceholder.textContent = '👂 准备开始...';
+  wordDisplayArea.className = 'word-display-area';
+
+  state.isPlaying = false;
+  state.questions = [];
+  state.questionIndex = 0;
+  state.score = 0;
+  qNum.textContent = '-';
+  scoreDisplay.textContent = '0';
+  progressDisplay.textContent = '0/10';
+  setNumpadEnabled(false);
+}
+
+// ---- 手动选择子难度 ----
+function selectSubLevel(key) {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return;
+  const idx = config.subLevels.findIndex(s => s.key === key);
+  if (idx === -1 || idx === state.subLevel) return;
+  if (state.isPlaying || state.isListening) {
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    if (window.stopAllAudio) window.stopAllAudio();
+    state.isPlaying = false;
+    state.isListening = false;
+  }
+  state.subLevel = idx;
+  updateSubLevelDisplay();
+  const subs = config.subLevels;
+  statusSub.textContent = config.label + ' · ' + subs[idx].label + ' · 点击开始';
+  // 清空已生成的题目
+  state.questions = [];
+  state.questionIndex = 0;
+  state.score = 0;
+  qNum.textContent = '-';
+  scoreDisplay.textContent = '0';
+  progressDisplay.textContent = '0/10';
+  mappingArea.style.display = 'none';
+  mappingRules.innerHTML = '';
+  inputSequence.innerHTML = '';
+  currentWord.style.display = 'none';
+  wordPlaceholder.style.display = 'inline';
+  wordPlaceholder.textContent = '👂 准备开始...';
+  wordDisplayArea.className = 'word-display-area';
+  startBtn.style.display = 'block';
+  replayBtn.style.display = 'none';
+  deleteBtn.style.display = 'none';
+  submitBtn.style.display = 'none';
+  setNumpadEnabled(false);
+}
+
+// ---- 更新子难度显示 ----
+function updateSubLevelDisplay() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return;
+  subLevelRow.style.display = 'flex';
+  const subs = config.subLevels;
+  subEasy.textContent = subs[0].label;
+  subMedium.textContent = subs[1].label;
+  subHard.textContent = subs[2].label;
+  [subEasy, subMedium, subHard].forEach((el, i) => {
+    el.className = 'sub-level-badge';
+    if (i === state.subLevel) {
+      el.classList.add('active');
+    }
+  });
+  levelDisplay.textContent = config.label + ' · ' + subs[state.subLevel].label;
+}
+
+// ---- 生成10道题 ----
+function generateQuestions(levelKey, subLevelIdx) {
+  const config = LEVEL_CONFIG[levelKey];
+  const subConfig = config.subLevels[subLevelIdx];
+  const mappings = subConfig.mappings;
+  const wordCount = subConfig.wordCount;
+
+  const questions = [];
+
+  for (let q = 0; q < 10; q++) {
+    // 为每个映射类别取若干词，组成wordCount长度的序列
+    const seq = [];
+    const correctSeq = [];
+
+    // 尽量平均分配各类别的词
+    const perCat = Math.max(1, Math.floor(wordCount / mappings.length));
+    let remaining = wordCount;
+
+    // 先每类取 perCat 个
+    const mappingCopy = shuffle([...mappings]);
+    mappingCopy.forEach(m => {
+      const pool = MAPPING_DATA[m.category] ? [...MAPPING_DATA[m.category].words] : [];
+      const shuffled = shuffle(pool);
+      const count = Math.min(perCat, shuffled.length, remaining);
+      for (let i = 0; i < count; i++) {
+        seq.push({ word: shuffled[i], category: m.category, mapNum: m.mapNum });
+        correctSeq.push(m.mapNum);
+      }
+      remaining -= count;
+    });
+
+    // 剩余从所有映射类别中补充
+    if (remaining > 0) {
+      const allOptions = [];
+      mappings.forEach(m => {
+        const pool = MAPPING_DATA[m.category] ? [...MAPPING_DATA[m.category].words] : [];
+        pool.forEach(w => {
+          if (!seq.find(item => item.word === w)) {
+            allOptions.push({ word: w, category: m.category, mapNum: m.mapNum });
+          }
+        });
+      });
+      const shuffled = shuffle(allOptions);
+      for (let i = 0; i < Math.min(remaining, shuffled.length); i++) {
+        seq.push(shuffled[i]);
+        correctSeq.push(shuffled[i].mapNum);
+      }
+    }
+
+    // 再次打乱整个序列顺序
+    const indices = shuffle(seq.map((_, idx) => idx));
+    const shuffledSeq = indices.map(i => seq[i]);
+    const shuffledCorrect = indices.map(i => correctSeq[i]);
+
+    questions.push({
+      wordList: shuffledSeq,
+      correctSequence: shuffledCorrect.map(n => String(n))
+    });
+  }
+
+  return questions;
+}
+
+// ---- 开始新游戏 ----
+function startNewGame() {
+  if (window.stopAllAudio) window.stopAllAudio();
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+
+  const questions = generateQuestions(state.level, state.subLevel);
+  if (questions.length < 10) {
+    statusText.textContent = '题库不足，请换难度';
+    return;
+  }
+
+  state.questions = questions;
+  state.questionIndex = 0;
+  state.score = 0;
+  state.correctCount = 0;
+  state.totalAnswered = 0;
+  state.consecutiveCorrect = 0;
+  state.consecutiveWrong = 0;
+  state.isPlaying = true;
+  state.gameOver = false;
+  state.isAnswered = false;
+
+  // 隐藏开始按钮，显示操作按钮
+  startBtn.style.display = 'none';
+  replayBtn.style.display = 'inline-block';
+  deleteBtn.style.display = 'inline-block';
+  submitBtn.style.display = 'inline-block';
+  replayBtn.disabled = true;
+  deleteBtn.disabled = true;
+  submitBtn.disabled = true;
+
+  updateInfoBar();
+  resetProgressDots();
+
+  // 开始第一题
+  setTimeout(() => startQuestion(), 500);
+}
+
+// ---- 开始单题 ----
+function startQuestion() {
+  if (!state.isPlaying || state.questionIndex >= 10) {
+    endGame();
+    return;
+  }
+
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+
+  const q = state.questions[state.questionIndex];
+  state.currentQuestion = q;
+  state.wordList = q.wordList;
+  state.correctSequence = q.correctSequence;
+  state.userSequence = [];
+  state.currentWordIndex = -1;
+  state.canInput = false;
+  state.isAnswered = false;
+  state.isReadingWords = false;
+
+  // 清空反馈
+  feedbackBadge.style.display = 'none';
+
+  // 更新进度点
+  updateProgressDots();
+
+  // 更新信息
+  qNum.textContent = (state.questionIndex + 1);
+  progressDisplay.textContent = (state.questionIndex) + '/10';
+  updateInfoBar();
+
+  // 显示映射规则
+  renderMappings(subConfig.mappings);
+
+  // 渲染输入槽位
+  renderInputSlots(state.wordList.length);
+
+  // 重置词语显示
+  currentWord.style.display = 'none';
+  wordPlaceholder.style.display = 'inline';
+  wordPlaceholder.textContent = '👂 请仔细听映射规则...';
+  wordIndexHint.style.display = 'none';
+  wordDisplayArea.className = 'word-display-area';
+
+  // 禁用按钮
+  setNumpadEnabled(false);
+  replayBtn.disabled = true;
+  deleteBtn.disabled = true;
+  submitBtn.disabled = true;
+
+  // 状态
+  statusText.textContent = '仔细听词语';
+  statusSub.textContent = '边听边按数字键...';
+  wordPlaceholder.textContent = '👂 正在朗读词语...';
+
+  // 直接开始逐词朗读（不朗读映射规则语音）
+  state.isReadingWords = true;
+  readNextWord(0);
+}
+
+// ---- 逐词朗读 ----
+function readNextWord(index) {
+  if (!state.isReadingWords || index >= state.wordList.length) {
+    // 全部朗读完毕
+    state.isReadingWords = false;
+    state.canInput = true;
+    state.isListening = false;
+
+    statusText.textContent = '输入解码结果';
+    statusSub.textContent = '按顺序输入每个词对应的数字';
+
+    wordPlaceholder.textContent = '✅ 朗读完毕，请输入';
+    wordDisplayArea.className = 'word-display-area';
+
+    setNumpadEnabled(true);
+    replayBtn.disabled = false;
+
+    // 如果用户还没填满但已可操作
+    checkSubmitReady();
+
+    return;
+  }
+
+  state.currentWordIndex = index;
+  const item = state.wordList[index];
+
+  // 高亮当前输入槽位
+  highlightCurrentSlot(index);
+
+  // 不显示词语文字（只听不看）
+  currentWord.style.display = 'none';
+  wordPlaceholder.style.display = 'block';
+  wordPlaceholder.textContent = '🔊 第 ' + (index + 1) + ' / ' + state.wordList.length + ' 个词';
+  wordIndexHint.style.display = 'none';
+  wordDisplayArea.className = 'word-display-area word-flash';
+
+  statusText.textContent = '第 ' + (index + 1) + ' 个词';
+  statusSub.textContent = '按对应数字键...';
+
+  // 朗读期间禁用键盘，朗读完再启用
+  setNumpadEnabled(false);
+  state.isListening = true;
+
+  // 朗读当前词
+  speakText(item.word, LEVEL_CONFIG[state.level].subLevels[state.subLevel].speechRate, function() {
+    state.isListening = false;
+    // 朗读完当前词，启用数字键盘让用户输入
+    setNumpadEnabled(true);
+    replayBtn.disabled = false;
+    // 等待用户输入当前词对应的数字
+    // 用户按数字键后会调用 pressNum，自动推进到下一个词
+  });
+}
+
+// ---- 渲染映射规则 ----
+function renderMappings(mappings) {
+  mappingRules.innerHTML = '';
+  mappingArea.style.display = 'block';
+  mappings.forEach((m, idx) => {
+    const rule = document.createElement('div');
+    rule.className = 'mapping-rule';
+    rule.innerHTML =
+      '<span style="font-size:15px;font-weight:700;">' + m.category + '</span>' +
+      '<span class="rule-number">' + m.mapNum + '</span>';
+    mappingRules.appendChild(rule);
+  });
+}
+
+// ---- 渲染输入槽位 ----
+function renderInputSlots(count) {
+  inputSequence.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'input-slot';
+    slot.id = 'slot-' + i;
+    slot.dataset.index = i;
+    inputSequence.appendChild(slot);
+  }
+}
+
+// ---- 高亮当前槽位 ----
+function highlightCurrentSlot(index) {
+  document.querySelectorAll('.input-slot').forEach((slot, i) => {
+    if (i === index) {
+      slot.style.borderColor = 'rgba(76,175,80,0.6)';
+      slot.style.background = 'rgba(76,175,80,0.12)';
+    } else if (slot.classList.contains('filled')) {
+      // already styled
+    } else {
+      slot.style.borderColor = 'rgba(76,175,80,0.2)';
+      slot.style.background = 'rgba(76, 175, 80, 0.12)';
+    }
+  });
+}
+
+// ---- 按下数字键 ----
+function pressNum(num) {
+  if (state.isListening || state.isAnswered) return;
+  if (state.currentWordIndex < 0) return;
+
+  const idx = state.currentWordIndex;
+
+  // 如果当前槽位已填，先清掉再填（防止重复）
+  if (state.userSequence[idx] !== undefined) {
+    // 允许替换
+  }
+
+  state.userSequence[idx] = String(num);
+
+  // 填充槽位
+  const slot = $('slot-' + idx);
+  if (slot) {
+    slot.textContent = num;
+    slot.className = 'input-slot filled';
+  }
+
+  // 自动推进到下一个词
+  const nextIdx = idx + 1;
+
+  if (nextIdx < state.wordList.length) {
+    // 朗读下一个词
+    readNextWord(nextIdx);
+  } else {
+    // 所有词都已输入完毕
+    state.currentWordIndex = state.wordList.length;
+    state.canInput = true;
+    state.isReadingWords = false;
+    replayBtn.disabled = false;
+
+    // 去掉高亮
+    document.querySelectorAll('.input-slot').forEach(slot => {
+      slot.style.borderColor = '';
+      slot.style.background = '';
+    });
+
+    currentWord.style.display = 'none';
+    wordPlaceholder.style.display = 'inline';
+    wordPlaceholder.textContent = '✅ 全部输入完毕，点击提交';
+    wordDisplayArea.className = 'word-display-area';
+
+    statusText.textContent = '全部输入完毕';
+    statusSub.textContent = '点击「提交」检查结果';
+
+    setNumpadEnabled(true);
+    replayBtn.disabled = false;
+    checkSubmitReady();
+  }
+}
+
+// ---- 删除最后一个输入 ----
+function deleteLast() {
+  if (!state.canInput || state.isListening || state.isAnswered) return;
+  if (state.userSequence.length === 0) return;
+
+  // 找到最后一个有值的索引
+  let lastIdx = -1;
+  for (let i = state.userSequence.length - 1; i >= 0; i--) {
+    if (state.userSequence[i] !== undefined) {
+      lastIdx = i;
+      break;
+    }
+  }
+  if (lastIdx < 0) return;
+
+  state.userSequence[lastIdx] = undefined;
+  const slot = $('slot-' + lastIdx);
+  if (slot) {
+    slot.textContent = '';
+    slot.className = 'input-slot';
+  }
+
+  // 回退当前词索引，让用户重新输入该词
+  state.currentWordIndex = Math.max(0, lastIdx);
+
+  // 重置高亮
+  highlightCurrentSlot(state.currentWordIndex);
+
+  // 显示状态提示
+  statusText.textContent = '重新输入第 ' + (state.currentWordIndex + 1) + ' 个词';
+  statusSub.textContent = '按对应数字键';
+  wordPlaceholder.textContent = '按对应数字键...';
+
+  checkSubmitReady();
+}
+
+// ---- 检查提交按钮状态 ----
+function checkSubmitReady() {
+  const filledCount = state.userSequence.filter(v => v !== undefined).length;
+  submitBtn.disabled = (filledCount < state.wordList.length || state.isAnswered);
+
+  // 如果有任何输入，删除按钮可用
+  deleteBtn.disabled = (filledCount === 0 || state.isAnswered);
+}
+
+// ---- 提交答案 ----
+function submitAnswer() {
+  if (!state.canInput || state.isAnswered) return;
+  state.isAnswered = true;
+  state.canInput = false;
+  setNumpadEnabled(false);
+  replayBtn.disabled = true;
+  deleteBtn.disabled = true;
+  submitBtn.disabled = true;
+
+  state.totalAnswered++;
+
+  const correct = state.correctSequence;
+  const user = state.userSequence;
+
+  // 逐位比较
+  let allCorrect = true;
+  for (let i = 0; i < correct.length; i++) {
+    const slot = $('slot-' + i);
+    if (slot) {
+      if (user[i] === correct[i]) {
+        slot.className = 'input-slot correct-slot';
+      } else {
+        slot.className = 'input-slot wrong-slot';
+        allCorrect = false;
+      }
+    }
+  }
+
+  if (allCorrect) {
+    // 全部正确
+    state.score += 10;
+    state.correctCount++;
+    state.consecutiveCorrect++;
+    state.consecutiveWrong = 0;
+
+    const dot = $('dot-' + state.questionIndex);
+    if (dot) dot.className = 'progress-dot correct';
+
+    showFeedbackBadge('⭐', '🎉 全部正确！', true);
+    createStarBurst();
+
+    statusText.textContent = '解码正确！';
+    statusSub.textContent = '太棒了！';
+
+    wordPlaceholder.textContent = '✅ 完全正确！';
+    wordDisplayArea.className = 'word-display-area word-flash';
+
+    scoreDisplay.textContent = state.score;
+
+    checkAdaptation();
+
+    state.questionIndex++;
+    setTimeout(() => startQuestion(), 1500);
+  } else {
+    // 有错误
+    state.consecutiveCorrect = 0;
+    state.consecutiveWrong++;
+
+    const dot = $('dot-' + state.questionIndex);
+    if (dot) dot.className = 'progress-dot wrong';
+
+    showFeedbackBadge('😊', '再检查一下~', false);
+
+    // 显示正确序列对比
+    showCorrectComparison(correct, user);
+
+    statusText.textContent = '有错误';
+    statusSub.textContent = '看看正确答案';
+
+    wordPlaceholder.textContent = '🔍 对比正确答案';
+    wordDisplayArea.className = 'word-display-area';
+
+    checkAdaptation();
+
+    state.questionIndex++;
+    setTimeout(() => startQuestion(), 2800);
+  }
+}
+
+// ---- 显示正确序列对比 ----
+function showCorrectComparison(correct, user) {
+  // 在映射区下方显示对比
+  const compareDiv = document.createElement('div');
+  compareDiv.className = 'compare-section';
+  compareDiv.id = 'compareSection';
+
+  // 你的答案
+  let userHtml = '<div class="compare-title">🧾 你的答案</div><div class="compare-row">';
+  user.forEach((val, i) => {
+    const isOk = val === correct[i];
+    userHtml += '<div class="compare-item ' + (isOk ? 'correct-item' : 'wrong-item') + '">' + (val !== undefined ? val : '?') + '</div>';
+  });
+  userHtml += '</div>';
+
+  // 正确答案
+  userHtml += '<div class="compare-title" style="margin-top:6px;">✅ 正确答案</div><div class="compare-row">';
+  correct.forEach((val) => {
+    userHtml += '<div class="compare-item correct-item">' + val + '</div>';
+  });
+  userHtml += '</div>';
+
+  compareDiv.innerHTML = userHtml;
+  mappingArea.appendChild(compareDiv);
+
+  // 自动清理
+  setTimeout(() => {
+    const el = $('compareSection');
+    if (el) el.remove();
+  }, 4000);
+}
+
+// ---- 语音朗读 ----
+function speakText(text, rate, callback) {
+  window.playAudio(text, callback, rate);
+}
+
+// ---- 再听一遍 ----
+function replayAudio() {
+  if (state.isListening || state.isAnswered || !state.currentQuestion) return;
+
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+  const q = state.currentQuestion;
+
+  // 如果正在阅读中，从当前词重新开始
+  if (state.isReadingWords) {
+    // 重新从当前词开始朗读
+    setNumpadEnabled(false);
+    speakText(q.wordList[state.currentWordIndex].word, subConfig.speechRate, function() {
+      state.isListening = false;
+      setNumpadEnabled(true);
+      replayBtn.disabled = false;
+    });
+    return;
+  }
+
+  // 如果已经朗读完毕，重新朗读全部
+  if (state.canInput && !state.isReadingWords) {
+    state.isReadingWords = true;
+    state.canInput = false;
+    setNumpadEnabled(false);
+    replayBtn.disabled = true;
+
+    // 重置所有未填槽位
+    statusText.textContent = '再听一遍';
+    statusSub.textContent = '仔细听...';
+    wordPlaceholder.textContent = '👂 再听一遍...';
+    currentWord.style.display = 'none';
+
+    // 重新从第一个未填的词开始朗读
+    let startIdx = 0;
+    for (let i = 0; i < state.userSequence.length; i++) {
+      if (state.userSequence[i] === undefined) {
+        startIdx = i;
+        break;
+      }
+      startIdx = i + 1;
+    }
+    if (startIdx >= state.wordList.length) startIdx = 0;
+
+    state.currentWordIndex = startIdx - 1;
+    // 朗读映射规则再读词
+    speakText('请听', subConfig.speechRate, function() {
+      readNextWord(startIdx);
+    });
+  }
+}
+
+// ---- 设置数字键盘启用/禁用 ----
+function setNumpadEnabled(enabled) {
+  numBtns.forEach(btn => {
+    btn.disabled = !enabled;
+  });
+}
+
+// ---- 显示反馈徽章 ----
+function showFeedbackBadge(emoji, text, isCorrect) {
+  fbEmoji.textContent = emoji;
+  fbText.textContent = text;
+  fbText.className = 'fb-text ' + (isCorrect ? 'correct-text' : 'wrong-text');
+  feedbackBadge.style.display = 'block';
+  feedbackBadge.className = 'feedback-badge';
+  // 自动隐藏
+  setTimeout(() => {
+    feedbackBadge.style.display = 'none';
+  }, 1500);
+}
+
+// ---- 星星爆发动画 ----
+function createStarBurst() {
+  const emojis = ['⭐', '🌟', '✨', '💫', '🎉'];
+  for (let i = 0; i < 8; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'star-particle';
+    particle.textContent = emojis[i % emojis.length];
+    const angle = (i / 8) * 360;
+    const dist = 60 + Math.random() * 60;
+    const tx = Math.cos(angle * Math.PI / 180) * dist;
+    const ty = Math.sin(angle * Math.PI / 180) * dist - 40;
+    particle.style.setProperty('--tx', tx + 'px');
+    particle.style.setProperty('--ty', ty + 'px');
+    particle.style.left = '50%';
+    particle.style.top = '50%';
+    particle.style.position = 'fixed';
+    particle.style.pointerEvents = 'none';
+    particle.style.zIndex = '999';
+    document.body.appendChild(particle);
+    setTimeout(() => particle.remove(), 900);
+  }
+}
+
+// ---- 自适应升降档 ----
+function checkAdaptation() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return;
+  const maxSub = config.subLevels.length - 1;
+
+  if (state.consecutiveCorrect >= 5) {
+    if (state.subLevel < maxSub) {
+      state.subLevel++;
+      state.consecutiveCorrect = 0;
+      // 重新生成后续题目以适应新难度
+      const remaining = 10 - state.questionIndex;
+      if (remaining > 0) {
+        const newQs = generateQuestions(state.level, state.subLevel);
+        // 替换剩余的题目
+        for (let i = 0; i < remaining && i < newQs.length; i++) {
+          state.questions[state.questionIndex + i] = newQs[i];
+        }
+      }
+      showAdaptNotice('up', '🎉 连续答对5题，升档至「' + config.subLevels[state.subLevel].label + '」！');
+      updateSubLevelDisplay();
+    } else {
+      showAdaptNotice('up', '🎉 已满级，挑战更高难度吧！');
+    }
+  } else if (state.consecutiveWrong >= 3) {
+    if (state.subLevel > 0) {
+      state.subLevel--;
+      state.consecutiveWrong = 0;
+      // 重新生成后续题目以适应新难度
+      const remaining = 10 - state.questionIndex;
+      if (remaining > 0) {
+        const newQs = generateQuestions(state.level, state.subLevel);
+        for (let i = 0; i < remaining && i < newQs.length; i++) {
+          state.questions[state.questionIndex + i] = newQs[i];
+        }
+      }
+      showAdaptNotice('down', '💪 连续错3题，降档至「' + config.subLevels[state.subLevel].label + '」，慢慢来');
+      updateSubLevelDisplay();
+    } else {
+      showAdaptNotice('down', '💪 已是最低档，多练习就会进步！');
+    }
+  }
+}
+
+// ---- 显示自适应提示 ----
+function showAdaptNotice(type, msg) {
+  adaptNotice.className = 'adapt-notice ' + type;
+  adaptNotice.textContent = msg;
+  adaptNotice.style.display = 'block';
+  setTimeout(() => {
+    adaptNotice.style.display = 'none';
+  }, 3000);
+}
+
+// ---- 更新信息栏 ----
+function updateInfoBar() {
+  scoreDisplay.textContent = state.score;
+  progressDisplay.textContent = state.totalAnswered + '/10';
+}
+
+// ---- 重置进度点 ----
+function resetProgressDots() {
+  for (let i = 0; i < 10; i++) {
+    const dot = $('dot-' + i);
+    if (dot) dot.className = 'progress-dot';
+  }
+}
+
+// ---- 更新进度点 ----
+function updateProgressDots() {
+  for (let i = 0; i < 10; i++) {
+    const dot = $('dot-' + i);
+    if (!dot) continue;
+    if (i === state.questionIndex) {
+      dot.className = 'progress-dot active';
+    } else if (!dot.className.includes('correct') && !dot.className.includes('wrong')) {
+      dot.className = 'progress-dot';
+    }
+  }
+}
+
+// ---- 结束游戏 ----
+function endGame() {
+  state.isPlaying = false;
+  state.isReadingWords = false;
+
+  replayBtn.style.display = 'none';
+  deleteBtn.style.display = 'none';
+  submitBtn.style.display = 'none';
+  startBtn.style.display = 'block';
+  startBtn.textContent = '🔄 再来一局';
+
+  statusText.textContent = '本轮结束！';
+  statusSub.textContent = '看看你的成绩吧';
+
+  setNumpadEnabled(false);
+
+  showResult();
+  saveProgress();
+}
+
+// ---- 显示结算 ----
+function showResult() {
+  const total = 10;
+  const correct = state.correctCount;
+  const rate = Math.round((correct / total) * 100);
+  const score = state.score;
+
+  let emoji = '💪';
+  let title = '继续加油！';
+  if (rate >= 90) { emoji = '🏆'; title = '太厉害了！'; }
+  else if (rate >= 70) { emoji = '🎉'; title = '做得不错！'; }
+  else if (rate >= 50) { emoji = '👍'; title = '有进步！'; }
+
+  resultEmoji.textContent = emoji;
+  resultTitle.textContent = title;
+  finalCorrect.textContent = correct;
+  finalTotal.textContent = total;
+  finalRate.textContent = rate + '%';
+  finalScore.textContent = score;
+
+  resultOverlay.className = 'overlay show';
+}
+
+// ---- 关闭结算 ----
+function closeResult() {
+  resultOverlay.className = 'overlay';
+}
+
+// ---- localStorage 进度保存 ----
+function saveProgress() {
+  try {
+    const data = {
+      lastLevel: state.level,
+      lastSubLevel: state.subLevel,
+      totalScore: (parseInt(localStorage.getItem('codeDecoder_totalScore') || '0')) + state.score,
+      totalGames: (parseInt(localStorage.getItem('codeDecoder_totalGames') || '0')) + 1,
+      bestScore: Math.max(
+        parseInt(localStorage.getItem('codeDecoder_bestScore') || '0'),
+        state.score
+      ),
+      timestamp: Date.now()
+    };
+    localStorage.setItem('codeDecoder_progress', JSON.stringify(data));
+    localStorage.setItem('codeDecoder_totalScore', String(data.totalScore));
+    localStorage.setItem('codeDecoder_totalGames', String(data.totalGames));
+    localStorage.setItem('codeDecoder_bestScore', String(data.bestScore));
+  } catch(e) {
+    // localStorage不可用时忽略
+  }
+}
+
+// ---- 读取进度 ----
+function loadProgress() {
+  try {
+    const saved = localStorage.getItem('codeDecoder_progress');
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.lastLevel) {
+        selectLevel(data.lastLevel);
+        if (data.lastSubLevel !== undefined) {
+          state.subLevel = data.lastSubLevel;
+          updateSubLevelDisplay();
+        }
+      }
+    }
+  } catch(e) {
+    // 忽略
+  }
+}
+
+// ---- 页面加载完成后初始化 ----
+document.addEventListener('DOMContentLoaded', function() {
+  // 生成矩阵二进制数字装饰
+  const digits = '01';
+  for (let i = 0; i < 30; i++) {
+    const el = document.createElement('div');
+    el.className = 'matrix-digit';
+    el.textContent = digits[Math.floor(Math.random() * digits.length)];
+    el.style.left = Math.random() * 100 + '%';
+    el.style.top = Math.random() * 100 + '%';
+    el.style.animationDelay = (Math.random() * 8) + 's';
+    el.style.animationDuration = (6 + Math.random() * 6) + 's';
+    el.style.fontSize = (10 + Math.random() * 8) + 'px';
+    document.body.appendChild(el);
+  }
+  init();
+});
+</script>
+
+<div class="rules-overlay" id="rulesOverlay">
+<div class="rules-dialog">
+<h2>🎮 指令解码器</h2>
+<p>听一串指令序列（如"先点红色，再点蓝色"），然后<b>按顺序</b>点击对应的按钮。</p><p>记住指令的顺序和内容，考验听觉记忆和执行力！</p>
+<p class="rd-note">每次进入游戏都会显示，点击下方按钮开始</p>
+<button onclick="closeRules()">我知道了，开始游戏！</button>
+</div>
+</div>
+</body>
+</html>

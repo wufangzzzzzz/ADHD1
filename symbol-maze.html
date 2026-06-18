@@ -54,7 +54,8 @@
     .game-container { background: white; border-radius: 15px; padding: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 2px solid #eee; flex-shrink: 0; }
     .level-title { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; }
-    .hint-text { font-size: 0.75rem; color: #666; }
+    .timer-display { font-size: 0.85rem; font-weight: 600; color: #1a1a2e; display: flex; align-items: center; gap: 4px; }
+    .timer-display .icon { font-size: 1rem; }
     
     .maze-area { position: relative; background: #f8f9fa; border-radius: 12px; padding: 5px; display: flex; justify-content: center; align-items: center; flex: 1; min-height: 0; overflow: hidden; }
     #mazeCanvas { display: block; cursor: pointer; max-width: 100%; max-height: 100%; }
@@ -176,7 +177,7 @@
     <div class="game-container">
       <div class="game-header">
         <span class="level-title">符号迷宫 10×10</span>
-        <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+        <span class="timer-display"><span class="icon">⏱</span><span id="timerDisplay">00:00</span></span>
         <span class="hint-text" id="hintText">点击格子开始走迷宫</span>
       </div>
       
@@ -277,7 +278,10 @@
       nextSymbolIndex: 1,
       steps: 0,
       bestSteps: null,
-      completed: false
+      completed: false,
+      startTime: null,
+      elapsedSeconds: 0,
+      timerInterval: null
     };
     
     // 初始化画布 - 自适应屏幕
@@ -762,8 +766,9 @@
       
       if (col === 9 && isDivide) {
         game.completed = true;
+        stopTimer();
         playWinSound();
-        showModal('恭喜你成功找到了出口！');
+        showModal('恭喜你成功找到了出口！', game.elapsedSeconds);
       }
       
       updateUI();
@@ -777,8 +782,44 @@
       document.getElementById('hintText').textContent = hint;
     }
     
-    function showModal(text) {
-      document.getElementById('modalText').textContent = text;
+    function updateTimer() {
+      if (!game.startTime) return;
+      var now = Date.now();
+      game.elapsedSeconds = Math.floor((now - game.startTime) / 1000);
+      var mins = Math.floor(game.elapsedSeconds / 60);
+      var secs = game.elapsedSeconds % 60;
+      document.getElementById('timerDisplay').textContent = 
+        (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+
+    function startTimer() {
+      if (game.timerInterval) clearInterval(game.timerInterval);
+      game.startTime = Date.now();
+      game.elapsedSeconds = 0;
+      document.getElementById('timerDisplay').textContent = '00:00';
+      game.timerInterval = setInterval(updateTimer, 200);
+    }
+
+    function stopTimer() {
+      if (game.timerInterval) {
+        clearInterval(game.timerInterval);
+        game.timerInterval = null;
+      }
+      updateTimer();
+    }
+
+    function formatTime(secs) {
+      var m = Math.floor(secs / 60);
+      var s = secs % 60;
+      return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function showModal(text, time) {
+      var content = document.getElementById('modalText');
+      content.innerHTML = text;
+      if (time !== undefined) {
+        content.innerHTML += '<br><span style="font-size:0.8rem;color:#666;">⏱ 用时 ' + formatTime(time) + '</span>';
+      }
       document.getElementById('modal').classList.add('show');
     }
     
@@ -788,6 +829,7 @@
     
     function newGame() {
       generateMaze();
+      startTimer();
       draw();
       updateUI();
     }
@@ -888,20 +930,7 @@
     
     document.addEventListener('DOMContentLoaded', init);
   </script>
-<style>
-    .qrcode-fixed {
-      position: fixed;
-      bottom: 15px;
-      right: 15px;
-      width: 80px;
-      height: 80px;
-      z-index: 9999;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      pointer-events: none;
-      -webkit-user-drag: none;
-    }
-    </style>
-    <img src="qrcode.jpg" alt="公众号二维码" class="qrcode-fixed">
+
+    
   </body>
 </html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>玻璃质感按钮演示</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 20px;
+  }
+  .demo-container {
+    max-width: 480px;
+    width: 100%;
+    background: #fff;
+    border-radius: 24px;
+    padding: 32px 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.06);
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: #333;
+    text-align: center;
+  }
+  .section {
+    margin-bottom: 28px;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  /* === 玻璃质感基类 === */
+  .glass-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: 1px solid rgba(200,200,210,0.35);
+    background: rgba(255,255,255,0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);
+    color: #37474f;
+    outline: none;
+    user-select: none;
+  }
+  .glass-btn:hover {
+    background: rgba(255,255,255,0.55);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .glass-btn:active {
+    transform: scale(0.94);
+  }
+  
+  /* 绿色系 */
+  .glass-btn.green {
+    background: rgba(76,175,80,0.15);
+    border-color: rgba(76,175,80,0.25);
+    color: #2E7D32;
+  }
+  .glass-btn.green:active {
+    border-color: #4CAF50;
+    box-shadow: 0 0 16px rgba(76,175,80,0.25);
+  }
+  .glass-btn.green.active {
+    background: rgba(76,175,80,0.25);
+    border-color: #4CAF50;
+    color: #000000;
+  }
+  
+  /* 蓝色系 */
+  .glass-btn.blue {
+    background: rgba(33,150,243,0.12);
+    border-color: rgba(33,150,243,0.2);
+    color: #1565c0;
+  }
+  .glass-btn.blue:active {
+    border-color: #42A5F5;
+    box-shadow: 0 0 16px rgba(33,150,243,0.2);
+  }
+  .glass-btn.blue.active {
+    background: rgba(33,150,243,0.22);
+    border-color: #42A5F5;
+    color: #000000;
+  }
+  
+  /* 橙色系 */
+  .glass-btn.orange {
+    background: rgba(255,152,0,0.12);
+    border-color: rgba(255,152,0,0.2);
+    color: #E65100;
+  }
+  .glass-btn.orange:active {
+    border-color: #FF9800;
+    box-shadow: 0 0 16px rgba(255,152,0,0.2);
+  }
+  
+  /* 红色系 */
+  .glass-btn.red {
+    background: rgba(244,67,54,0.1);
+    border-color: rgba(244,67,54,0.18);
+    color: #C62828;
+  }
+  .glass-btn.red:active {
+    border-color: #F44336;
+    box-shadow: 0 0 16px rgba(244,67,54,0.2);
+  }
+  .glass-btn.red.active {
+    background: rgba(244,67,54,0.2);
+    border-color: #F44336;
+    color: #000000;
+  }
+  
+  /* 大按钮 */
+  .glass-btn.large {
+    padding: 14px 32px;
+    font-size: 18px;
+    min-width: 160px;
+  }
+  
+  /* 圆形数字键盘式 */
+  .glass-btn.circle {
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .glass-btn.circle:active {
+    transform: scale(0.90);
+  }
+  
+  /* 状态描述 */
+  .note {
+    font-size: 11px;
+    color: #999;
+    margin-top: 6px;
+    padding-left: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="demo-container">
+  <h1>玻璃质感按钮</h1>
+  
+  <div class="section">
+    <div class="section-title">默认灰色玻璃</div>
+    <div class="btn-group">
+      <button class="glass-btn">默认按钮</button>
+      <button class="glass-btn" style="background:rgba(255,255,255,0.2)">浅色</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">绿色系</div>
+    <div class="btn-group">
+      <button class="glass-btn green">开始游戏</button>
+      <button class="glass-btn green active">选中状态</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">蓝色系</div>
+    <div class="btn-group">
+      <button class="glass-btn blue">再听一遍</button>
+      <button class="glass-btn blue active">选中状态</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">橙色系</div>
+    <div class="btn-group">
+      <button class="glass-btn orange">清除</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">红色系</div>
+    <div class="btn-group">
+      <button class="glass-btn red">错误提示</button>
+      <button class="glass-btn red active">选中状态</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">数字键盘风格</div>
+    <div class="btn-group">
+      <button class="glass-btn circle">1</button>
+      <button class="glass-btn circle">2</button>
+      <button class="glass-btn circle">3</button>
+      <button class="glass-btn circle">4</button>
+      <button class="glass-btn circle">5</button>
+      <button class="glass-btn circle">6</button>
+      <button class="glass-btn circle">7</button>
+      <button class="glass-btn circle">8</button>
+      <button class="glass-btn circle">9</button>
+    </div>
+    <div class="note">点击有缩小动画反馈</div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">大按钮</div>
+    <div class="btn-group">
+      <button class="glass-btn green large">开始游戏</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

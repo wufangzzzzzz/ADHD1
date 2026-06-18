@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>数字回音壁 - 听知觉训练</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    html, body { touch-action: manipulation; overscroll-behavior: none; width: 100%; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #e8ecf1 0%, #f5f7fa 50%, #eef1f5 100%);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #333;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    /* 标题 */
+    .title-area {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 2px;
+      color: #1565c0;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      color: #01579B;
+      font-size: 10px;
+      padding: 3px 12px;
+      background: rgba(0,188,212,0.1);
+      border-radius: 15px;
+      display: inline-block;
+    }
+
+    /* 顶部信息栏 */
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,188,212,0.1);
+      border-radius: 12px;
+      padding: 8px 14px;
+      margin-bottom: 8px;
+      backdrop-filter: blur(10px);
+    }
+    .info-item {
+      text-align: center;
+    }
+    .info-label {
+      font-size: 10px;
+      color: #78909C;
+    }
+    .info-value {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .info-value.score {
+      color: #FFD700;
+    }
+    .info-value.level {
+      color: #01579B;
+    }
+    .info-value.round {
+      color: #333;
+    }
+
+    /* 进度条 */
+    .progress-container {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .progress-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(0,188,212,0.15);
+      border: 1px solid rgba(0,188,212,0.2);
+      transition: all 0.3s;
+    }
+    .progress-dot.active {
+      background: #00BCD4;
+      border-color: #00BCD4;
+      box-shadow: 0 0 8px rgba(0,188,212,0.5);
+    }
+    .progress-dot.correct {
+      background: #00BCD4;
+      border-color: #00BCD4;
+      box-shadow: 0 0 8px rgba(0,188,212,0.5);
+    }
+    .progress-dot.wrong {
+      background: #f44336;
+      border-color: #f44336;
+      box-shadow: 0 0 8px rgba(244,67,54,0.3);
+    }
+
+    /* 难度选择 */
+    .level-select {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .level-btn {
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid rgba(180,190,200,0.3);
+      border-radius: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(255,255,255,0.3);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      color: #37474f;
+      font-family: inherit;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .level-btn.active {
+      border-color: #43a047;
+      background: rgba(76,175,80,0.2);
+      color: #000000;
+      box-shadow: 0 0 12px rgba(76,175,80,0.3);
+    }
+    .level-btn:active { transform: scale(0.95); }
+
+    /* 内部难度显示 */
+    .sub-level-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .sub-level-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .sub-level-badge.easy {
+      background: rgba(76,175,80,0.15);
+      color: #2E7D32;
+      border: 1px solid rgba(76,175,80,0.2);
+    }
+    .sub-level-badge.medium {
+      background: rgba(255,193,7,0.15);
+      color: #F57F17;
+      border: 1px solid rgba(255,193,7,0.2);
+    }
+    .sub-level-badge.hard {
+      background: rgba(244,67,54,0.15);
+      color: #C62828;
+      border: 1px solid rgba(244,67,54,0.2);
+    }
+    .sub-level-arrow {
+      font-size: 14px;
+      color: #90A4AE;
+    }
+
+    /* 状态提示 */
+    .status-area {
+      text-align: center;
+      padding: 14px 10px;
+      margin-bottom: 8px;
+      background: rgba(0,188,212,0.08);
+      border-radius: 14px;
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .status-icon {
+      font-size: 30px;
+      margin-bottom: 4px;
+    }
+    .status-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    .status-sub {
+      font-size: 12px;
+      color: #78909C;
+      margin-top: 2px;
+    }
+
+    /* 答案显示区 */
+    .answer-area {
+      background: rgba(0,188,212,0.08);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      border: 2px dashed rgba(0,188,212,0.2);
+    }
+    .answer-digit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 46px;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0,188,212,0.25);
+      border-radius: 10px;
+      color: #01579B;
+      transition: all 0.3s;
+      position: relative;
+      animation: digitPop 0.25s ease-out;
+    }
+    @keyframes digitPop {
+      0% { transform: scale(0.5); opacity: 0; }
+      70% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .answer-digit.correct-answer {
+      background: rgba(0,188,212,0.3);
+      border: 2px solid #00BCD4;
+    }
+    .answer-digit.wrong-answer {
+      background: rgba(244,67,54,0.25);
+      border: 2px solid #f44336;
+    }
+    .answer-digit .compare-mark {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      font-size: 14px;
+    }
+    .answer-placeholder {
+      color: #90A4AE;
+      font-size: 14px;
+    }
+
+    /* 数字键盘 */
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .key-btn {
+      width: 100%;
+      aspect-ratio: 1.2;
+      border: 1px solid rgba(180, 190, 200, 0.35);
+      border-radius: 14px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(255,255,255,0.35);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #000000;
+      font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.6);
+      min-height: 54px;
+    }
+    .key-btn:hover, .key-btn:focus-visible {
+      background: rgba(255,255,255,0.55);
+      border-color: rgba(150,160,170,0.4);
+    }
+    .key-btn:active {
+      transform: scale(0.92);
+      border-color: #00BCD4;
+      box-shadow: 0 0 12px rgba(0,188,212,0.3);
+    }
+
+    .key-btn.btn-clear {
+      background: rgba(255,152,0,0.13);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #F57C00;
+      border-color: rgba(255,152,0,0.2);
+      font-size: 16px;
+    }
+    .key-btn.btn-clear:active {
+      border-color: #FFB74D;
+      box-shadow: 0 0 12px rgba(255,152,0,0.2);
+    }
+
+    /* 子难度按钮 */
+    .sub-level-btn {
+      padding: 5px 14px;
+      border: 1px solid rgba(180,190,200,0.25);
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.25);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      font-family: inherit;
+      color: #000000;
+      min-width: 52px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .sub-level-btn:active { transform: scale(0.93); }
+    .sub-level-btn.easy {
+      border-color: rgba(76,175,80,0.3);
+      color: #37474f;
+    }
+    .sub-level-btn.easy.active {
+      background: rgba(76,175,80,0.3);
+      border-color: #4CAF50;
+      box-shadow: 0 0 10px rgba(76,175,80,0.3);
+      color: #000000;
+    }
+    .sub-level-btn.medium {
+      border-color: rgba(255,193,7,0.3);
+      color: #F57F17;
+    }
+    .sub-level-btn.medium.active {
+      background: rgba(255,193,7,0.3);
+      border-color: #FFC107;
+      box-shadow: 0 0 10px rgba(255,193,7,0.3);
+      color: #000000;
+    }
+    .sub-level-btn.hard {
+      border-color: rgba(244,67,54,0.3);
+      color: #C62828;
+    }
+    .sub-level-btn.hard.active {
+      background: rgba(244,67,54,0.3);
+      border-color: #f44336;
+      box-shadow: 0 0 10px rgba(244,67,54,0.3);
+      color: #000000;
+    }
+    .sub-level-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .key-btn.btn-submit {
+      background: rgba(76,175,80,0.18);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #000000;
+      border-color: rgba(76,175,80,0.25);
+      font-size: 16px;
+    }
+
+    .key-btn:disabled {
+      background: #fafafa;
+      color: rgba(0,0,0,0.2);
+      border-color: #e0e0e0;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* 底部按钮区 */
+    .bottom-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+    .action-btn {
+      padding: 10px 22px;
+      border: 1px solid rgba(180,190,200,0.3);
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      flex: 1;
+      min-height: 44px;
+      background: rgba(255,255,255,0.3);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+    .action-btn:active { transform: scale(0.95); }
+    .btn-replay {
+      background: rgba(21,101,192,0.12);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #1565c0;
+      border: 1px solid rgba(21,101,192,0.2);
+    }
+    .btn-delete {
+      background: rgba(230,81,0,0.1);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #e65100;
+      border: 1px solid rgba(230,81,0,0.15);
+    }
+    .btn-delete:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .btn-start-game {
+      background: rgba(76,175,80,0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #2e7d32;
+      border: 1px solid rgba(76,175,80,0.3);
+      box-shadow: 0 4px 12px rgba(76,175,80,0.12), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .btn-next {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: white;
+      box-shadow: 0 4px 12px rgba(124,58,237,0.3);
+    }
+
+    /* 覆盖层 */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      background: rgba(0,0,0,0.7);
+      animation: fadeIn 0.3s;
+    }
+    .overlay.show { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .result-card {
+      background: rgba(255,255,255,0.7);
+      border-radius: 24px;
+      padding: 30px 28px;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.3);
+      animation: cardBounce 0.5s ease-out;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    @keyframes cardBounce {
+      0% { transform: scale(0.7); opacity: 0; }
+      60% { transform: scale(1.05); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    /* 结果按钮 */
+    .result-btn {
+      padding: 10px 30px;
+      border: 1px solid rgba(76,175,80,0.3);
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      background: rgba(76,175,80,0.2);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #2e7d32;
+      box-shadow: 0 4px 12px rgba(76,175,80,0.1), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .result-btn:active { transform: scale(0.95); }
+
+    /* 答对/答错反馈浮层 */
+    .feedback-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: none;
+      z-index: 800;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .feedback-overlay.show { display: flex; }
+    .feedback-overlay.correct { background: rgba(76,175,80,0.15); }
+    .feedback-overlay.wrong { background: rgba(244,67,54,0.12); }
+    .feedback-content {
+      text-align: center;
+      background: rgba(255,255,255,0.5);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 24px 32px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      animation: feedbackBounce 0.5s ease-out;
+    }
+    @keyframes feedbackBounce {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .feedback-emoji { font-size: 64px; margin-bottom: 8px; }
+    .feedback-text { font-size: 24px; font-weight: bold; }
+    .feedback-text.correct-text { color: #2e7d32; }
+    .feedback-text.wrong-text { color: #c62828; }
+    .feedback-compare { font-size: 14px; color: #555; margin-top: 8px; line-height: 1.6; }
+    .feedback-compare .correct-seq { color: #00BCD4; font-weight: bold; }
+    .feedback-compare .your-seq { color: #f44336; font-weight: bold; }
+
+    /* 正确对比区 */
+    .comparison-row {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .comparison-col {
+      text-align: center;
+    }
+    .comparison-label {
+      font-size: 11px;
+      color: #78909C;
+      margin-bottom: 4px;
+    }
+    .comparison-digits {
+      display: flex;
+      gap: 4px;
+    }
+    .comparison-digits .cd {
+      width: 32px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .cd.correct { background: rgba(0,188,212,0.3); color: #00BCD4; }
+    .cd.wrong { background: rgba(244,67,54,0.25); color: #f44336; }
+
+    /* 自适应升降提示 */
+    .adapt-notice {
+      text-align: center;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin-bottom: 4px;
+      animation: fadeIn 0.4s;
+    }
+    .adapt-notice.up {
+      background: rgba(76,175,80,0.15);
+      color: #2E7D32;
+    }
+    .adapt-notice.down {
+      background: rgba(244,67,54,0.15);
+      color: #C62828;
+    }
+
+    .game-rules { font-size: clamp(14px, 2.5vw, 18px); line-height: 1.6; margin-bottom: 6px; }
+    .game-rules .rules-title { font-size: clamp(15px, 2.8vw, 20px); font-weight: 700; margin-bottom: 4px; }
+
+    .difficulty-hint { background: rgba(76,175,80,0.06); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; font-size: clamp(13px, 2vw, 16px); line-height: 1.5; border: 1px solid rgba(76,175,80,0.1); }
+    .difficulty-hint .hint-title { font-size: clamp(14px, 2.3vw, 17px); font-weight: 700; margin-bottom: 4px; color: #2E7D32; }
+    .difficulty-hint table { width: 100%; border-collapse: collapse; font-size: clamp(12px, 1.8vw, 14px); }
+    .difficulty-hint td, .difficulty-hint th { padding: 2px 6px; text-align: center; border: 1px solid rgba(76,175,80,0.1); }
+    .difficulty-hint td:first-child { font-weight: 600; color: #2E7D32; text-align: left; }
+    .difficulty-hint .hint-foot { margin-top: 4px; font-size: clamp(11px, 1.5vw, 13px); color: #666; text-align: center; }
+
+    /* 玩法提示条 */
+    .tip-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,188,212,0.10);
+      border-radius: 10px;
+      padding: 6px 12px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(0,188,212,0.15);
+    }
+    .tip-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .tip-text {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.4;
+    }
+    .tip-text strong {
+      color: #01579B;
+    }
+
+    /* 响应式 */
+    @media (max-width: 380px) {
+      .key-btn { font-size: 24px; min-height: 48px; }
+      .answer-digit { width: 34px; height: 40px; font-size: 20px; }
+      h1 { font-size: 22px; }
+    }
+    @media (min-width: 600px) {
+      .key-btn { min-height: 64px; font-size: 32px; }
+    }
+  
+  
+
+/* ===== 横屏布局：左功能 + 右游戏 ===== */
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+  .container {
+    max-width: 760px;
+    width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    align-items: stretch;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+    flex: 0 1 auto;
+    margin: 0 auto;
+    max-height: calc(100vh - 24px);
+  }
+  
+  .land-left {
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 12px;
+    overflow-y: auto;
+    border-right: 1px solid rgba(0,0,0,0.06);
+  }
+  .land-right {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 14px;
+    overflow: hidden;
+  }
+  
+  /* Left panel */
+  .land-left .title-area { padding: 4px 6px; margin-bottom: 4px; }
+  .land-left .title-area h1 { font-size: 18px; }
+  .land-left .title-area .subtitle { font-size: 12px; }
+  .land-left .info-bar { flex-wrap: nowrap; gap: 2px; padding: 4px 6px; margin-bottom: 4px; }
+  .land-left .info-item { gap: 2px; }
+  .land-left .info-label { font-size: 11px; }
+  .land-left .info-value { font-size: 16px; }
+  .land-left .level-select { gap: 4px; padding: 4px 6px; margin-bottom: 4px; }
+  .land-left .level-btn { font-size: 13px; padding: 5px 10px; min-height: 32px; min-width: 52px; }
+  .land-left .sub-level-row { gap: 4px; padding: 4px 6px; }
+  .land-left .sub-level-btn { font-size: 12px; padding: 4px 8px; min-height: 28px; }
+  .land-left .status-area { padding: 6px 6px; min-height: 48px; }
+  .land-left .status-icon { font-size: 20px; }
+  .land-left .status-text { font-size: 14px; }
+  .land-left .status-sub { font-size: 11px; }
+  .land-left .tip-bar { padding: 4px 6px; font-size: 12px; margin-bottom: 4px; }
+  .land-left .progress-container { padding: 2px 6px; min-height: 10px; }
+  .land-left .adapt-notice { font-size: 12px; padding: 3px 6px; }
+  .land-left .game-rules { padding: 10px; margin-bottom: 6px; font-size: 14px; background: rgba(255,255,255,0.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 10px; line-height: 1.6; border: 1px solid rgba(180,190,200,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.3); }
+  .land-left .game-rules .rules-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .land-left .difficulty-hint { font-size: clamp(12px, 1.1vw, 14px); padding: 6px 8px; }
+  .land-left .difficulty-hint table { font-size: clamp(11px, 1vw, 13px); }
+  .land-left .difficulty-hint .hint-title { font-size: clamp(13px, 1.2vw, 15px); }
+  
+  /* Right panel - content must fit without scroll */
+  .land-right .answer-area { min-height: 34px; margin-bottom: 1px; }
+  .land-right .answer-placeholder { font-size: 14px; }
+  .land-right .answer-digits { gap: 4px; }
+  .land-right .answer-digit { font-size: 22px; min-width: 30px; padding: 2px 6px; }
+  .land-right .keypad { gap: 6px; padding: 3px; }
+  .land-right .key-btn { font-size: 26px; min-height: 46px; border-radius: 10px; }
+  .land-right .key-btn.btn-clear { font-size: 13px; }
+  .land-right .key-btn.btn-replay { font-size: 14px; }
+  .land-right .bottom-actions { gap: 6px; padding: 3px 0; flex-wrap: wrap; justify-content: center; }
+  .land-right .action-btn { font-size: 13px; padding: 6px 16px; min-height: 34px; }
+  
+  /* Overlays */
+  .feedback-overlay, .result-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    padding: 10px;
+  }
+  .feedback-overlay .feedback-card,
+  .result-overlay .result-card {
+    max-width: 90vw;
+    padding: 12px 16px;
+  }
+
+
+
+  /* 规则弹窗 */
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
+.rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
+.rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
+.rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
+.rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
+.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+</style>
+<script src="/public/audio-helper.js"></script>
+<script>
+function showRulesPopup(){
+    if(!localStorage.getItem('g2_visited')){
+        document.getElementById('rulesOverlay').style.display='flex';
+    }
+}
+function closeRules(){
+    localStorage.setItem('g2_visited','1');
+    document.getElementById('rulesOverlay').style.display='none';
+}
+document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+</script>
+</head>
+<body>
+<div class="container">
+  
+  <div class="land-left"><!-- 标题 -->
+  <div class="title-area">
+    <h1>数字回音壁</h1>
+    <span class="subtitle">听知觉训练 · 正听反说</span>
+  </div>
+
+  <!-- 信息栏 -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="info-label">题号</div>
+      <div class="info-value round" id="questionNum">-</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">难度</div>
+      <div class="info-value level" id="levelDisplay">初级·简单</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">得分</div>
+      <div class="info-value score" id="scoreDisplay">0</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">进度</div>
+      <div class="info-value round" id="progressDisplay">0/10</div>
+    </div>
+  </div>
+
+  <!-- 玩法说明 -->
+  <div class="game-rules" id="gameRules">
+    <div class="rules-title">玩法说明</div>
+    <div>• 听数字串 → 按<strong>倒序</strong>点击数字<br>• 如"3 7"→按"7"→"3"<br>• 连续答对升级，答错降级</div>
+  </div>
+
+  <!-- 难度说明 -->
+  <div class="difficulty-hint">
+    <div class="hint-title">📊 难度对照表</div>
+    <table>
+      <tr><th></th><th>简单</th><th>中等</th><th>困难</th></tr>
+      <tr><td>初级</td><td>2位·慢速</td><td>2位(含重复)</td><td>2~3位过渡</td></tr>
+      <tr><td>中级</td><td>3位数字</td><td>3位(含0)</td><td>3位(字母映射)</td></tr>
+      <tr><td>高级</td><td>5位数字</td><td>6~7位(含0)</td><td>7~8位长串</td></tr>
+    </table>
+    <div class="hint-foot">💡 点击「简单·中等·困难」标签切换子难度</div>
+  </div>
+
+  <!-- 进度点 -->
+  <div class="progress-container" id="progressDots"></div>
+
+  <!-- 难度选择 -->
+  <div class="level-select" id="levelSelect">
+    <button class="level-btn" data-level="primary" onclick="selectLevel('primary')">初级</button>
+    <button class="level-btn" data-level="intermediate" onclick="selectLevel('intermediate')">中级</button>
+    <button class="level-btn" data-level="advanced" onclick="selectLevel('advanced')">高级</button>
+    <button class="level-btn" onclick="resetGame()">重置</button>
+  </div>
+
+  <!-- 内部难度标签 -->
+  <div class="sub-level-row" id="subLevelRow" style="display:none;">
+    <button class="sub-level-btn easy" id="subEasy" onclick="selectSubLevel(0)">简单</button>
+    <span class="sub-level-arrow">→</span>
+    <button class="sub-level-btn medium" id="subMedium" onclick="selectSubLevel(1)">中等</button>
+    <span class="sub-level-arrow">→</span>
+    <button class="sub-level-btn hard" id="subHard" onclick="selectSubLevel(2)">困难</button>
+  </div>
+
+  <!-- 自适应提示 -->
+  <div id="adaptNotice" class="adapt-notice" style="display:none;"></div>
+
+  <!-- 状态区 -->
+  <div class="status-area" id="statusArea">
+    <div class="status-icon" id="statusIcon"></div>
+    <div class="status-text" id="statusText">选择难度开始训练</div>
+    <div class="status-sub" id="statusSub">听到数字串后，按倒序点击数字键</div>
+  </div>
+  <!-- 开始按钮 -->
+  <button class="btn-start-game" id="startGameBtn" onclick="startNewGame()" style="width:100%;padding:8px 0;border-radius:12px;font-size:13px;font-weight:bold;font-family:inherit;cursor:pointer;">开始游戏</button>
+</div><!-- end land-left -->
+  <div class="land-right"><!-- 答案显示区 -->
+  <div class="answer-area" id="answerArea">
+    <span class="answer-placeholder" id="answerPlaceholder">点击下方数字输入答案</span>
+    <div id="answerDigits" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- 数字键盘 -->
+  <div class="keypad" id="keypad">
+    <button class="key-btn" data-digit="1" onclick="pressDigit('1')">1</button>
+    <button class="key-btn" data-digit="2" onclick="pressDigit('2')">2</button>
+    <button class="key-btn" data-digit="3" onclick="pressDigit('3')">3</button>
+    <button class="key-btn" data-digit="4" onclick="pressDigit('4')">4</button>
+    <button class="key-btn" data-digit="5" onclick="pressDigit('5')">5</button>
+    <button class="key-btn" data-digit="6" onclick="pressDigit('6')">6</button>
+    <button class="key-btn" data-digit="7" onclick="pressDigit('7')">7</button>
+    <button class="key-btn" data-digit="8" onclick="pressDigit('8')">8</button>
+    <button class="key-btn" data-digit="9" onclick="pressDigit('9')">9</button>
+    <button class="key-btn btn-clear" onclick="deleteDigit()">⌫ 清除</button>
+    <button class="key-btn" data-digit="0" onclick="pressDigit('0')">0</button>
+    <button class="key-btn btn-replay" id="replayBtn" onclick="replayAudio()" disabled>再听一遍</button>
+  </div>
+
+  <!-- 底部按钮 -->
+  <div class="bottom-actions"></div>
+</div><!-- end land-right -->
+</div>
+
+
+<!-- 反馈覆盖层 -->
+<div class="feedback-overlay" id="feedbackOverlay">
+  <div class="feedback-content">
+    <div class="feedback-text" id="feedbackText">正确！</div>
+    <div class="feedback-compare" id="feedbackCompare"></div>
+  </div>
+</div>
+
+<!-- 结算覆盖层 -->
+<div class="overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="result-title" id="resultTitle">训练完成</div>
+    <div class="result-stats" id="resultStats">
+      正确 <span id="finalCorrect">0</span>/<span id="finalTotal">10</span> 题<br>
+      正确率 <span id="finalRate">0%</span><br>
+      得分 <span id="finalScore">0</span> 分
+    </div>
+    <button class="result-btn" onclick="closeResult()">继续挑战</button>
+  </div>
+</div>
+
+<script>
+// ============================================
+//  数字回音壁 - 核心逻辑
+// ============================================
+
+// ---- 素材数据（直接使用设计文档中的数据） ----
+const DATA = {
+  // 初级2位数（第1-24周）
+  primary_easy: [
+    '23','54','76','89','32','98','09','65','29','38',
+    '35','48','86','23','05','37','45','64','98','03',
+    '47','51','69','28','14','73','82','90','16','58'
+  ],
+  // 初级中等（2位含重复）
+  primary_medium: [
+    '22','55','77','88','33','99','00','66','11','44',
+    '32','28','83','39','93','11','55','77','22','66',
+    '44','88','99','00','55','33','22','11','77','66'
+  ],
+  // 初级困难（2位→3位过渡）
+  primary_hard: [
+    '237','548','769','893','324','981','096','654','298','387',
+    '354','482','863','231','052','371','458','645','983','037',
+    '473','516','694','283','148','738','826','901','165','583'
+  ],
+  // 中级简单（3位数字）
+  intermediate_easy: [
+    '478','673','309','046','894','834','362','438',
+    '652','379','498','641','927','056','387','297',
+    '317','487','234','208'
+  ],
+  // 中级中等（3位含0）
+  intermediate_medium: [
+    '309','046','056','208','089','201','603','027',
+    '108','307','501','409','702','804','605','906',
+    '203','407','508','609'
+  ],
+  // 中级困难（3位字母串 - 用数字映射 A=1,B=2,...）
+  intermediate_hard: [
+    '123','456','789','321','654','987','147','258','369','159',
+    '753','951','843','627','489','263','174','385','296','417'
+  ],
+  // 高级简单（5位数字）
+  advanced_easy: [
+    '58371','92640','71485','36829',
+    '49372','15806','24793','83516',
+    '67148','30925'
+  ],
+  // 高级中等（6-7位含0）
+  advanced_medium: [
+    '471826','593047','281634','905728',
+    '361890','472905','183647','509281',
+    '637401','819023'
+  ],
+  // 高级困难（7-8位长串）
+  advanced_hard: [
+    '3846175','7290518','4618327','5802946',
+    '51738294','83926174','26184935','79405183',
+    '61827934','35261748'
+  ]
+};
+
+// ---- 难度配置 ----
+const LEVEL_CONFIG = {
+  primary: {
+    label: '初级',
+    subLevels: [
+      { key: 'easy', label: '简单', dataKey: 'primary_easy', speechRate: 0.7, digitInterval: 500 },
+      { key: 'medium', label: '中等', dataKey: 'primary_medium', speechRate: 0.8, digitInterval: 500 },
+      { key: 'hard', label: '困难', dataKey: 'primary_hard', speechRate: 0.8, digitInterval: 500 }
+    ]
+  },
+  intermediate: {
+    label: '中级',
+    subLevels: [
+      { key: 'easy', label: '简单', dataKey: 'intermediate_easy', speechRate: 0.85, digitInterval: 500 },
+      { key: 'medium', label: '中等', dataKey: 'intermediate_medium', speechRate: 0.85, digitInterval: 500 },
+      { key: 'hard', label: '困难', dataKey: 'intermediate_hard', speechRate: 0.85, digitInterval: 500 }
+    ]
+  },
+  advanced: {
+    label: '高级',
+    subLevels: [
+      { key: 'easy', label: '简单', dataKey: 'advanced_easy', speechRate: 0.95, digitInterval: 450 },
+      { key: 'medium', label: '中等', dataKey: 'advanced_medium', speechRate: 1.0, digitInterval: 400 },
+      { key: 'hard', label: '困难', dataKey: 'advanced_hard', speechRate: 1.0, digitInterval: 350 }
+    ]
+  }
+};
+
+// ---- 游戏状态 ----
+let state = {
+  level: 'primary',        // primary / intermediate / advanced
+  subLevel: 0,             // 0=简单, 1=中等, 2=困难
+  questionIndex: 0,        // 当前第几题 (0-9)
+  questions: [],           // 当前局10题的题目数组
+  currentQuestion: '',     // 当前题目数字串
+  userAnswer: '',          // 用户倒序输入的答案
+  score: 0,                // 得分
+  correctCount: 0,         // 正确计数
+  totalAnswered: 0,        // 已回答总数
+  consecutiveCorrect: 0,   // 连续正确
+  consecutiveWrong: 0,     // 连续错误
+  isPlaying: false,        // 是否在游戏中
+  isListening: false,      // 正在播放语音
+  canInput: false,         // 用户可输入
+  usedIndices: {},         // 各数据源已用索引
+  gameOver: false          // 本局结束
+};
+
+// ---- DOM 引用 ----
+const $ = id => document.getElementById(id);
+const qNum = $('questionNum');
+const levelDisplay = $('levelDisplay');
+const scoreDisplay = $('scoreDisplay');
+const progressDisplay = $('progressDisplay');
+const progressDots = $('progressDots');
+const statusIcon = $('statusIcon');
+const statusText = $('statusText');
+const statusSub = $('statusSub');
+const answerDigits = $('answerDigits');
+const answerPlaceholder = $('answerPlaceholder');
+const keyBtns = document.querySelectorAll('.key-btn');
+const submitBtn = $('submitBtn');
+const replayBtn = $('replayBtn');
+// deleteBtn removed - clear function now in keypad (btn-clear)
+const feedbackOverlay = $('feedbackOverlay');
+const feedbackText = $('feedbackText');
+const feedbackCompare = $('feedbackCompare');
+const resultOverlay = $('resultOverlay');
+const resultTitle = $('resultTitle');
+const finalCorrect = $('finalCorrect');
+const finalTotal = $('finalTotal');
+const finalRate = $('finalRate');
+const finalScore = $('finalScore');
+const adaptNotice = $('adaptNotice');
+const subLevelRow = $('subLevelRow');
+const subEasy = $('subEasy');
+const subMedium = $('subMedium');
+const subHard = $('subHard');
+
+// ---- 工具函数 ----
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function pickQuestions(dataKey, count) {
+  const pool = DATA[dataKey] || [];
+  if (pool.length === 0) return [];
+  // 打乱后取前count个
+  const shuffled = shuffle([...pool]);
+  return shuffled.slice(0, count);
+}
+
+// ---- 初始化 ----
+function init() {
+  // 初始化10个进度点
+  progressDots.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    dot.id = 'dot-' + i;
+    progressDots.appendChild(dot);
+  }
+  // 默认选中初级（但不开始游戏）
+  state.level = 'primary';
+  document.querySelectorAll('.level-btn[data-level]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === 'primary');
+  });
+  state.subLevel = 0;
+  updateSubLevelDisplay();
+  // 读取localStorage
+  loadProgress();
+  // 显示欢迎页
+  const wo = document.getElementById('welcomeOverlay');
+  if (wo) wo.classList.add('show');
+}
+
+// ---- 选择难度 ----
+function selectLevel(level) {
+  // 强制中断当前游戏
+  if (window.stopAllAudio) window.stopAllAudio();
+  state.isPlaying = false;
+  state.isListening = false;
+  state.gameOver = false;
+  state.level = level;
+  // 更新按钮状态
+  document.querySelectorAll('.level-btn[data-level]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === level);
+  });
+  // 重置子等级
+  state.subLevel = 0;
+  updateSubLevelDisplay();
+  updateInfoBar();
+  resetProgressDots();
+  setInputEnabled(false);
+  replayBtn.disabled = true;
+  statusIcon.textContent = '🎮';
+  statusText.textContent = '选择难度后点击开始';
+}
+
+// ---- 更新子难度显示 ----
+function updateSubLevelDisplay() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return;
+  subLevelRow.style.display = 'flex';
+  const subs = config.subLevels;
+  subEasy.textContent = subs[0].label;
+  subMedium.textContent = subs[1].label;
+  subHard.textContent = subs[2].label;
+  [subEasy, subMedium, subHard].forEach((el, i) => {
+    el.className = 'sub-level-btn ' + subs[i].key;
+    if (i === state.subLevel) {
+      el.classList.add('active');
+    }
+    // Disable if game is playing
+    el.disabled = state.isPlaying || state.isListening;
+  });
+  // 更新显示
+  levelDisplay.textContent = config.label + ' · ' + subs[state.subLevel].label;
+}
+
+// ---- 开始新游戏（10题一局） ----
+function startNewGame() {
+  // 先停止任何正在播放的音频
+  if (window.stopAllAudio) window.stopAllAudio();
+
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+  // 取10题
+  const questions = pickQuestions(subConfig.dataKey, 10);
+  if (questions.length < 10) {
+    statusIcon.textContent = '';
+    statusText.textContent = '题库不足，请换难度';
+    return;
+  }
+
+  state.questions = questions;
+  state.questionIndex = 0;
+  state.score = 0;
+  state.correctCount = 0;
+  state.totalAnswered = 0;
+  state.consecutiveCorrect = 0;
+  state.consecutiveWrong = 0;
+  state.isPlaying = true;
+  state.gameOver = false;
+  state.usedIndices = {};
+
+  // 重置UI
+  updateInfoBar();
+  resetProgressDots();
+  setInputEnabled(false);
+  replayBtn.disabled = true;
+
+  // 开始第一题
+  setTimeout(() => startQuestion(), 300);
+}
+
+// ---- 开始单题 ----
+function startQuestion() {
+  if (!state.isPlaying || state.questionIndex >= 10) {
+    endGame();
+    return;
+  }
+
+  state.currentQuestion = state.questions[state.questionIndex];
+  state.userAnswer = '';
+  state.canInput = false;
+  state.gameOver = false;
+
+  // 更新进度点
+  updateProgressDots();
+
+  // 清空答案区
+  answerDigits.innerHTML = '';
+  answerPlaceholder.style.display = 'inline';
+
+  // 禁用输入
+  setInputEnabled(false);
+  // submitBtn.disabled = true;  // removed with submit button
+  replayBtn.disabled = true;
+
+  // 更新状态 -> 提示听
+  statusIcon.textContent = '';
+  statusText.textContent = '请仔细听';
+  statusSub.textContent = '系统正在朗读数字串...';
+
+  // 更新题号
+  qNum.textContent = (state.questionIndex + 1);
+
+  // 语音播放
+  state.isListening = true;
+  speakDigits(state.currentQuestion, () => {
+    // 朗读结束
+    state.isListening = false;
+    statusIcon.textContent = '';
+    statusText.textContent = '轮到你了！';
+    statusSub.textContent = '按倒序点击数字键回答';
+    state.canInput = true;
+    setInputEnabled(true);
+  // submitBtn.disabled = true;  // 开始不能提交  // removed with submit button
+    replayBtn.disabled = false;
+  });
+}
+
+// ---- 语音朗读 ----
+function getCurrentRate() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return 0.85;
+  const subConfig = config.subLevels[state.subLevel];
+  return subConfig ? subConfig.speechRate : 0.85;
+}
+function speakDigits(digits, callback) {
+  window.playAudioSequence(digits, 0, callback, getCurrentRate(), 300);
+}
+
+// ---- 再听一遍 ----
+function replayAudio() {
+  if (state.isListening || !state.currentQuestion) return;
+  // 清空用户输入
+  state.userAnswer = '';
+  answerDigits.innerHTML = '';
+  answerPlaceholder.style.display = 'inline';
+  setInputEnabled(false);
+  // submitBtn.disabled = true;  // removed with submit button
+  replayBtn.disabled = true;
+
+  statusIcon.textContent = '';
+  statusText.textContent = '再听一遍';
+  statusSub.textContent = '请认真听...';
+
+  state.isListening = true;
+  speakDigits(state.currentQuestion, () => {
+    state.isListening = false;
+    statusIcon.textContent = '';
+    statusText.textContent = '轮到你了！';
+    statusSub.textContent = '按倒序点击数字键回答';
+    state.canInput = true;
+    setInputEnabled(true);
+  // submitBtn.disabled = true;  // removed with submit button
+    replayBtn.disabled = false;
+  });
+}
+
+// ---- 点击数字 ----
+function pressDigit(digit) {
+  if (!state.canInput || state.isListening) return;
+  // 限制：不能超过原数字串长度
+  if (state.userAnswer.length >= state.currentQuestion.length) return;
+
+  state.userAnswer += digit;
+  renderAnswer();
+  answerPlaceholder.style.display = 'none';
+
+  // 当用户点够了所有数字，自动提交
+  if (state.userAnswer.length === state.currentQuestion.length) {
+  // submitBtn.disabled = false;  // removed with submit button
+    // 自动提交（延迟一点让用户看到最后输入的数字）
+    setTimeout(() => submitAnswer(), 400);
+  }
+}
+
+// ---- 删除数字 ----
+function deleteDigit() {
+  if (!state.canInput || state.userAnswer.length === 0) return;
+  state.userAnswer = state.userAnswer.slice(0, -1);
+  renderAnswer();
+  if (state.userAnswer.length === 0) {
+    answerPlaceholder.style.display = 'inline';
+  }
+  // submitBtn.disabled = true;  // removed with submit button
+}
+
+// ---- 渲染答案 ----
+function renderAnswer() {
+  answerDigits.innerHTML = '';
+  const digits = state.userAnswer.split('');
+  digits.forEach(d => {
+    const span = document.createElement('span');
+    span.className = 'answer-digit';
+    span.textContent = d;
+    answerDigits.appendChild(span);
+  });
+}
+
+// ---- 提交答案 ----
+function submitAnswer() {
+  if (!state.canInput || state.userAnswer.length !== state.currentQuestion.length) return;
+  state.canInput = false;
+  setInputEnabled(false);
+  replayBtn.disabled = true;
+
+  // 正确答案（倒序）
+  const correctReverse = state.currentQuestion.split('').reverse().join('');
+  const isCorrect = state.userAnswer === correctReverse;
+
+  state.totalAnswered++;
+
+  if (isCorrect) {
+    handleCorrect();
+  } else {
+    handleWrong(correctReverse);
+  }
+}
+
+// ---- 答对处理 ----
+function handleCorrect() {
+  state.score += 10;
+  state.correctCount++;
+  state.consecutiveCorrect++;
+  state.consecutiveWrong = 0;
+
+  // 更新进度点
+  const dot = $('dot-' + state.questionIndex);
+  if (dot) { dot.className = 'progress-dot correct'; }
+
+  // 显示正确反馈
+  showFeedback(true);
+
+  // 更新得分
+  scoreDisplay.textContent = state.score;
+
+  // 检查是否降/升档
+  checkAdaptation();
+
+  // 进入下一题
+  state.questionIndex++;
+  setTimeout(() => startQuestion(), 1200);
+}
+
+// ---- 答错处理 ----
+function handleWrong(correctReverse) {
+  state.consecutiveCorrect = 0;
+  state.consecutiveWrong++;
+
+  // 更新进度点
+  const dot = $('dot-' + state.questionIndex);
+  if (dot) { dot.className = 'progress-dot wrong'; }
+
+  // 显示错误反馈（含对比）
+  showFeedback(false, correctReverse);
+
+  // 检查降档
+  checkAdaptation();
+
+  // 下一题
+  state.questionIndex++;
+  setTimeout(() => startQuestion(), 2000);
+}
+
+// ---- 显示反馈 ----
+function showFeedback(isCorrect, correctReverse) {
+  feedbackOverlay.className = 'feedback-overlay show ' + (isCorrect ? 'correct' : 'wrong');
+
+  if (isCorrect) {
+    feedbackText.className = 'feedback-text correct-text';
+    feedbackText.textContent = '完全正确！';
+    feedbackCompare.innerHTML = '';
+  } else {
+    feedbackText.className = 'feedback-text wrong-text';
+    feedbackText.textContent = '差一点点，继续加油！';
+    // 对比显示
+    const userDigits = state.userAnswer.split('');
+    const correctDigits = correctReverse.split('');
+    let compareHtml = '<div class="comparison-row">';
+    // 你的答案
+    compareHtml += '<div class="comparison-col"><div class="comparison-label">你的答案</div><div class="comparison-digits">';
+    userDigits.forEach((d, i) => {
+      const isMatch = d === correctDigits[i];
+      compareHtml += '<span class="cd ' + (isMatch ? 'correct' : 'wrong') + '">' + d + '</span>';
+    });
+    compareHtml += '</div></div>';
+    // 正确答案
+    compareHtml += '<div class="comparison-col"><div class="comparison-label">正确答案</div><div class="comparison-digits">';
+    correctDigits.forEach(d => {
+      compareHtml += '<span class="cd correct">' + d + '</span>';
+    });
+    compareHtml += '</div></div>';
+    compareHtml += '</div>';
+    feedbackCompare.innerHTML = compareHtml;
+  }
+
+  // 自动隐藏
+  setTimeout(() => {
+    feedbackOverlay.className = 'feedback-overlay';
+    feedbackCompare.innerHTML = '';
+  }, isCorrect ? 1000 : 1800);
+}
+
+// ---- 自适应升降档检测 ----
+function checkAdaptation() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return;
+  const maxSub = config.subLevels.length - 1;
+
+  if (state.consecutiveCorrect >= 5) {
+    // 升档
+    if (state.subLevel < maxSub) {
+      state.subLevel++;
+      state.consecutiveCorrect = 0;
+      showAdaptNotice('up', '连续答对5题，升档至「' + config.subLevels[state.subLevel].label + '」！');
+      updateSubLevelDisplay();
+    } else {
+      showAdaptNotice('up', '已满级，挑战更高难度吧！');
+    }
+  } else if (state.consecutiveWrong >= 3) {
+    // 降档
+    if (state.subLevel > 0) {
+      state.subLevel--;
+      state.consecutiveWrong = 0;
+      showAdaptNotice('down', '连续错3题，降档至「' + config.subLevels[state.subLevel].label + '」，别着急，慢慢来');
+      updateSubLevelDisplay();
+    } else {
+      showAdaptNotice('down', '已是最低档，多练习就会进步！');
+    }
+  }
+}
+
+// ---- 显示自适应提示 ----
+function showAdaptNotice(type, msg) {
+  adaptNotice.className = 'adapt-notice ' + type;
+  adaptNotice.textContent = msg;
+  adaptNotice.style.display = 'block';
+  setTimeout(() => {
+    adaptNotice.style.display = 'none';
+  }, 2500);
+}
+
+// ---- 启用/禁用输入 ----
+function setInputEnabled(enabled) {
+  keyBtns.forEach(btn => {
+    if (btn.id !== 'submitBtn') {
+      btn.disabled = !enabled;
+    }
+  });
+  if (!enabled) {
+  // submitBtn.disabled = true;  // removed with submit button
+  }
+}
+
+// ---- 更新信息栏 ----
+function updateInfoBar() {
+  scoreDisplay.textContent = state.score;
+  progressDisplay.textContent = (state.questionIndex) + '/10';
+  qNum.textContent = state.questionIndex + 1;
+}
+
+// ---- 重置进度点 ----
+function resetProgressDots() {
+  for (let i = 0; i < 10; i++) {
+    const dot = $('dot-' + i);
+    if (dot) dot.className = 'progress-dot';
+  }
+}
+
+function updateProgressDots() {
+  for (let i = 0; i < 10; i++) {
+    const dot = $('dot-' + i);
+    if (dot) {
+      if (i === state.questionIndex) {
+        dot.className = 'progress-dot active';
+      } else if (i < state.questionIndex) {
+        // 保持已有状态（correct/wrong）
+      }
+    }
+  }
+}
+
+// ---- 结束游戏 ----
+function endGame() {
+  state.isPlaying = false;
+  state.canInput = false;
+  setInputEnabled(false);
+  replayBtn.disabled = true;
+  // submitBtn.disabled = true;  // removed with submit button
+
+  statusIcon.textContent = '';
+  statusText.textContent = '本局完成！';
+  statusSub.textContent = '查看成绩';
+
+  // 显示结果
+  showResult();
+}
+
+// ---- 显示结算 ----
+function showResult() {
+  const total = 10;
+  const correct = state.correctCount;
+  const rate = Math.round((correct / total) * 100);
+  let title;
+  if (rate >= 90) { title = '太棒了！你是回音壁大师！'; }
+  else if (rate >= 70) { title = '表现不错，继续加油！'; }
+  else if (rate >= 50) { title = '有进步空间，多练习！'; }
+  else { title = '没关系，休息一下再挑战！'; }
+
+  resultTitle.textContent = title;
+  finalCorrect.textContent = correct;
+  finalTotal.textContent = total;
+  finalRate.textContent = rate + '%';
+  finalScore.textContent = state.score;
+
+  resultOverlay.classList.add('show');
+
+  // 保存到localStorage
+  saveProgress();
+}
+
+// ---- 关闭结算 ----
+function closeResult() {
+  resultOverlay.classList.remove('show');
+  // 回到选难度状态
+  statusIcon.textContent = '';
+  statusText.textContent = '选择难度开始训练';
+  statusSub.textContent = '听到数字串后，按倒序点击数字键';
+  qNum.textContent = '-';
+}
+
+// ---- 重置游戏 ----
+function resetGame() {
+  // 停止语音
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  state.isPlaying = false;
+  state.isListening = false;
+  state.canInput = false;
+  state.questionIndex = 0;
+  state.score = 0;
+  state.correctCount = 0;
+  state.totalAnswered = 0;
+  state.consecutiveCorrect = 0;
+  state.consecutiveWrong = 0;
+  state.subLevel = 0;
+  state.questions = [];
+  state.currentQuestion = '';
+  state.userAnswer = '';
+
+  setInputEnabled(false);
+  replayBtn.disabled = true;
+  // submitBtn.disabled = true;  // removed with submit button
+  feedbackOverlay.className = 'feedback-overlay';
+  resultOverlay.classList.remove('show');
+
+  answerDigits.innerHTML = '';
+  answerPlaceholder.style.display = 'inline';
+
+  statusIcon.textContent = '';
+  statusText.textContent = '选择难度开始训练';
+  statusSub.textContent = '听到数字串后，按倒序点击数字键';
+  qNum.textContent = '-';
+  scoreDisplay.textContent = '0';
+  progressDisplay.textContent = '0/10';
+  updateSubLevelDisplay();
+  resetProgressDots();
+  adaptNotice.style.display = 'none';
+
+  const config = LEVEL_CONFIG[state.level];
+  if (config) {
+    const subConfig = config.subLevels[state.subLevel];
+    levelDisplay.textContent = config.label + ' · ' + subConfig.label;
+  }
+}
+
+// ---- localStorage 存取 ----
+function saveProgress() {
+  try {
+    const data = {
+      lastScore: state.score,
+      lastCorrect: state.correctCount,
+      lastRate: state.totalAnswered > 0 ? Math.round((state.correctCount / state.totalAnswered) * 100) : 0,
+      totalGames: (parseInt(localStorage.getItem('g2_totalGames') || '0')) + 1,
+      totalScore: (parseInt(localStorage.getItem('g2_totalScore') || '0')) + state.score,
+      totalCorrect: (parseInt(localStorage.getItem('g2_totalCorrect') || '0')) + state.correctCount,
+      totalQuestions: (parseInt(localStorage.getItem('g2_totalQuestions') || '0')) + state.totalAnswered,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('g2_progress', JSON.stringify(data));
+    localStorage.setItem('g2_totalGames', data.totalGames);
+    localStorage.setItem('g2_totalScore', data.totalScore);
+    localStorage.setItem('g2_totalCorrect', data.totalCorrect);
+    localStorage.setItem('g2_totalQuestions', data.totalQuestions);
+  } catch(e) { /* ignore */ }
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem('g2_progress');
+    if (raw) {
+      const data = JSON.parse(raw);
+      // 可选：显示历史成绩
+    }
+  } catch(e) { /* ignore */ }
+}
+
+
+
+// ---- 选择子难度 ----
+function selectSubLevel(index) {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config || index < 0 || index >= config.subLevels.length) return;
+  // 强制中断当前游戏
+  if (window.stopAllAudio) window.stopAllAudio();
+  state.isPlaying = false;
+  state.isListening = false;
+  state.gameOver = false;
+  state.subLevel = index;
+  updateSubLevelDisplay();
+  updateInfoBar();
+  resetProgressDots();
+  setInputEnabled(false);
+  replayBtn.disabled = true;
+  statusIcon.textContent = '🎮';
+  statusText.textContent = '选择难度后点击开始';
+}
+
+// ---- 开始挑战（欢迎页按钮回调） ----
+function startChallenge() {
+  const wo = document.getElementById('welcomeOverlay');
+  if (wo) wo.classList.remove('show');
+  selectLevel(state.level || 'primary');
+}
+
+// ---- 启动 ----
+document.addEventListener('DOMContentLoaded', init);
+
+// 禁止右键、复制等
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('selectstart', e => e.preventDefault());
+document.addEventListener('copy', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && ['s','S','u','U','c','C'].includes(e.key)) {
+    e.preventDefault();
+  }
+});
+</script>
+
+<div class="rules-overlay" id="rulesOverlay">
+<div class="rules-dialog">
+<h2>🎮 数字回音壁</h2>
+<p>听一串数字，然后<b>倒序</b>输入你听到的数字。</p><p>例如听到"1-2-3"，你应该输入"3-2-1"。</p><p>共12题，答对越多越好！</p>
+<p class="rd-note">每次进入游戏都会显示，点击下方按钮开始</p>
+<button onclick="closeRules()">我知道了，开始游戏！</button>
+</div>
+</div>
+</body>
+</html>

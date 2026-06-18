@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>视觉N-back - 视觉工作记忆更新训练</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;
+  background:#1a1a2e;
+  height:100dvh;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  user-select:none;-webkit-user-select:none;
+}
+.container{
+  width:min(98vw,1100px);
+  height:min(98vh,760px);
+  display:flex;
+  gap:16px;
+  padding:12px;
+}
+/* 左面板 */
+.left-panel{
+  width:300px;min-width:300px;
+  background:rgba(255,255,255,0.06);
+  border-radius:16px;
+  padding:10px 12px;
+  display:flex;flex-direction:column;
+  gap:8px;
+  border:1px solid rgba(255,255,255,0.08);
+  overflow:hidden;
+}
+.panel-title{
+  color:rgba(255,255,255,0.9);
+  font-size:13px;font-weight:700;
+  text-align:center;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.diff-group{margin-bottom:4px;}
+.diff-label{
+  color:rgba(255,255,255,0.6);
+  font-size:12px;font-weight:600;
+  margin-bottom:6px;
+}
+.diff-btns{display:flex;gap:6px;}
+.diff-btn{
+  flex:1;
+  padding:7px 4px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.05);
+  color:rgba(255,255,255,0.7);
+  font-size:11px;font-weight:600;
+  cursor:pointer;
+  transition:all 0.2s;
+  text-align:center;
+}
+.diff-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(255,94,14,0.1);}
+.diff-btn:hover{background:rgba(255,255,255,0.12);}
+.diff-btn:active{transform:scale(0.95);}
+
+/* 颜色按钮 */
+.color-btns{display:flex;gap:6px;}
+.color-btn{
+  flex:1;aspect-ratio:1;
+  border-radius:8px;
+  border:2px solid transparent;
+  cursor:pointer;
+  transition:all 0.2s;
+  max-width:36px;
+}
+.color-btn.active{border-color:#fff;box-shadow:0 0 6px rgba(255,255,255,0.3);}
+.color-btn:active{transform:scale(0.9);}
+
+/* 当前配置说明 */
+.config-desc{
+  background:rgba(255,255,255,0.04);
+  border-radius:8px;
+  padding:8px 10px;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.config-desc .config-title{
+  font-size:11px;font-weight:700;
+  color:rgba(255,255,255,0.7);
+  margin-bottom:4px;
+}
+.config-desc .config-row{
+  font-size:11px;color:rgba(255,255,255,0.5);
+  line-height:1.7;
+  display:flex;justify-content:space-between;
+}
+.config-desc .config-row .cv{color:var(--accent);font-weight:600;font-family:'JetBrains Mono',monospace;}
+
+/* 玩法说明（左栏内嵌） */
+.rules-box{
+  background:rgba(255,94,14,0.08);
+  border:1px solid rgba(255,94,14,0.2);
+  border-radius:10px;
+  padding:10px 12px;
+}
+.rules-box .rules-title{
+  font-size:12px;font-weight:700;
+  color:rgba(255,255,255,0.8);
+  margin-bottom:6px;
+}
+.rules-box .rules-item{
+  font-size:11px;color:rgba(255,255,255,0.65);
+  line-height:1.6;
+  margin-bottom:4px;
+}
+.rules-box .rules-item b{color:rgba(255,255,255,0.85);}
+
+/* 右面板 */
+.right-panel{
+  flex:1;
+  background:rgba(255,255,255,0.04);
+  border-radius:16px;
+  padding:16px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  border:1px solid rgba(255,255,255,0.06);
+  position:relative;
+  overflow:hidden;
+  min-width:0;
+}
+
+.game-title{
+  font-size:22px;
+  font-weight:800;
+  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  text-align:center;
+}
+
+/* N级显示 */
+.n-level{
+  background:rgba(255,94,14,0.15);
+  border:2px solid var(--accent);
+  border-radius:10px;
+  padding:6px 24px;
+  font-size:20px;
+  font-weight:800;
+  color:var(--accent);
+  font-family:'JetBrains Mono','Courier New',monospace;
+}
+
+/* 网格 */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(3,1fr);
+  gap:8px;
+  width:320px;
+  height:320px;
+}
+.cell{
+  background:rgba(255,255,255,0.08);
+  border-radius:14px;
+  border:2px solid rgba(255,255,255,0.1);
+  transition:all 0.1s;
+}
+.cell.lit{
+  background:var(--accent);
+  border-color:var(--accent);
+  box-shadow:0 0 24px var(--glow);
+}
+
+/* 按钮 */
+.match-btn{
+  width:320px;
+  padding:14px;
+  border-radius:12px;
+  border:2px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.9);
+  font-size:18px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.match-btn:active{transform:scale(0.95);background:rgba(255,94,14,0.2);border-color:var(--accent);}
+.match-btn.flash-green{background:rgba(50,205,50,0.2);border-color:#32CD32;}
+.match-btn.flash-red{background:rgba(255,7,58,0.2);border-color:#FF073A;animation:shake 0.4s ease;}
+
+/* 信息栏 */
+.info-row{
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+}
+.info-badge{
+  background:rgba(255,255,255,0.06);
+  border-radius:8px;
+  padding:6px 14px;
+  font-size:14px;
+  color:rgba(255,255,255,0.7);
+  font-weight:600;
+}
+.info-badge .val{
+  color:var(--accent);
+  font-weight:800;
+  font-family:'JetBrains Mono','Courier New',monospace;
+}
+
+/* 状态文字 */
+.status-text{
+  font-size:15px;
+  font-weight:700;
+  color:rgba(255,255,255,0.8);
+  text-align:center;
+  min-height:22px;
+}
+
+/* 结果卡片 */
+.result-card{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:#1a1a2e;
+  border-radius:16px;
+  padding:20px;
+  border:2px solid rgba(255,255,255,0.15);
+  box-shadow:0 8px 40px rgba(0,0,0,0.4);
+  display:none;
+  flex-direction:column;
+  gap:6px;
+  min-width:260px;
+  z-index:10;
+}
+.result-card.show{display:flex;}
+.result-card h3{
+  font-size:18px;font-weight:800;
+  color:rgba(255,255,255,0.9);
+  text-align:center;
+}
+.result-row{
+  display:flex;justify-content:space-between;
+  font-size:14px;color:rgba(255,255,255,0.7);
+  padding:4px 0;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.result-row .rv{font-weight:700;color:var(--accent);}
+
+.btn{
+  padding:10px 24px;
+  border-radius:10px;
+  border:none;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.btn:active{transform:scale(0.95);}
+.btn-primary{
+  background:linear-gradient(135deg,#FF5E0E,#FF9800);
+  color:#fff;
+}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-6px);}
+  40%{transform:translateX(6px);}
+  60%{transform:translateX(-4px);}
+  80%{transform:translateX(4px);}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .match-btn.flash-red{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="left-panel">
+    <!-- N级选择 -->
+    <div class="diff-group">
+      <div class="diff-label">N 级别</div>
+      <div class="diff-btns" id="nLevelBtns">
+        <button class="diff-btn active" data-n="n1">N1</button>
+        <button class="diff-btn" data-n="n2">N2</button>
+        <button class="diff-btn" data-n="n3">N3</button>
+      </div>
+    </div>
+
+    <!-- 难度等级 -->
+    <div class="diff-group">
+      <div class="diff-label">难度等级</div>
+      <div class="diff-btns" id="diffBtns">
+        <button class="diff-btn active" data-diff="easy">初级</button>
+        <button class="diff-btn" data-diff="medium">中级</button>
+        <button class="diff-btn" data-diff="hard">高级</button>
+      </div>
+    </div>
+
+    <!-- 显示颜色 -->
+    <div class="diff-group">
+      <div class="diff-label">显示颜色</div>
+      <div class="color-btns" id="colorBtns">
+        <button class="color-btn active" data-color="orange" style="background:#FF5E0E;" title="活力橙"></button>
+        <button class="color-btn" data-color="blue" style="background:#1E90FF;" title="专注蓝"></button>
+        <button class="color-btn" data-color="green" style="background:#32CD32;" title="平静绿"></button>
+        <button class="color-btn" data-color="purple" style="background:#AB47BC;" title="想象紫"></button>
+        <button class="color-btn" data-color="pink" style="background:#FF69B4;" title="温暖粉"></button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="startGame()" style="width:100%;">开始训练</button>
+
+    <!-- 当前配置差异说明 -->
+    <div class="config-desc" id="configDesc">
+      <div class="config-title">当前配置</div>
+      <div class="config-row"><span>N-back 级别</span><span class="cv" id="cfgN">1-back</span></div>
+      <div class="config-row"><span>起始 N 值</span><span class="cv" id="cfgStartN">1</span></div>
+      <div class="config-row"><span>试次间隔</span><span class="cv" id="cfgInterval">3.0s</span></div>
+      <div class="config-row"><span>闪烁时长</span><span class="cv" id="cfgFlash">800ms</span></div>
+      <div class="config-row"><span>Block 数</span><span class="cv" id="cfgBlocks">10</span></div>
+      <div class="config-row"><span>每 Block 试次</span><span class="cv" id="cfgTrials">20</span></div>
+    </div>
+
+    <!-- 玩法说明（内嵌左栏） -->
+    <div class="rules-box">
+      <div class="rules-title">玩法说明</div>
+      <div class="rules-item"><b>目标：</b>3×3网格中方块随机闪现，判断当前位置是否与N步前相同。</div>
+      <div class="rules-item"><b>操作：</b>观察方块→判断匹配→点击<b>匹配按钮</b>。</div>
+      <div class="rules-item"><b>自适应：</b>Block正确率≥80%则N+1升级；&lt;50%累计3次则N-1降级。</div>
+      <div class="rules-item" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);"><b>N1（1-back）：</b>判断当前位置是否与<b>上一步</b>相同。适合初学者，锻炼短期位置记忆。</div>
+      <div class="rules-item"><b>N2（2-back）：</b>判断当前位置是否与<b>前两步</b>相同。需要同时记住最近两个位置，中等难度。</div>
+      <div class="rules-item"><b>N3（3-back）：</b>判断当前位置是否与<b>前三步</b>相同。需要持续更新三个位置记忆，高难度。</div>
+      <div class="rules-item" id="rulesDiff" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);"><b>当前：</b>N1 1-back / 初级 3.0s间隔 / 800ms闪烁 / 10 Blocks。</div>
+    </div>
+
+  </div>
+
+  <div class="right-panel" id="rightPanel">
+    <div class="game-title">视觉 N-back</div>
+    <div class="n-level" id="nLevel">N = 1</div>
+    <div class="grid" id="grid">
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    </div>
+    <button class="match-btn" id="matchBtn">匹配</button>
+    <div class="status-text" id="statusText">点击匹配按钮表示位置匹配</div>
+    <div class="info-row">
+      <div class="info-badge">Block <span class="val" id="blockNum">1/10</span></div>
+      <div class="info-badge">试次 <span class="val" id="trialNum">0/20</span></div>
+      <div class="info-badge">正确率 <span class="val" id="accuracy">-</span></div>
+    </div>
+
+    <div class="result-card" id="resultCard">
+      <h3>训练结束</h3>
+      <div class="result-row"><span>平均N-back等级</span><span class="rv" id="rAvgN">-</span></div>
+      <div class="result-row"><span>总正确匹配</span><span class="rv" id="rCorrect">-</span></div>
+      <div class="result-row"><span>误报数</span><span class="rv" id="rFalse">-</span></div>
+      <div class="result-row"><span>遗漏数</span><span class="rv" id="rMiss">-</span></div>
+      <button class="btn btn-primary" onclick="startGame()" style="margin-top:8px;">再玩一次</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 配置 ==========
+const N_LEVELS = {
+  n1: { label:'N1', desc:'1-back', startN:1 },
+  n2: { label:'N2', desc:'2-back', startN:2 },
+  n3: { label:'N3', desc:'3-back', startN:3 }
+};
+
+const DIFFICULTY = {
+  easy:   { label:'初级', interval:3000, flashDuration:800,  blocks:10, trialsPerBlock:20 },
+  medium: { label:'中级', interval:2500, flashDuration:600,  blocks:10, trialsPerBlock:20 },
+  hard:   { label:'高级', interval:2000, flashDuration:400,  blocks:10, trialsPerBlock:20 }
+};
+
+const COLORS = {
+  orange: { name:'活力橙', hex:'#FF5E0E', glow:'rgba(255,94,14,0.5)', bg:'rgba(255,94,14,0.15)' },
+  blue:   { name:'专注蓝', hex:'#1E90FF', glow:'rgba(30,144,255,0.5)', bg:'rgba(30,144,255,0.15)' },
+  green:  { name:'平静绿', hex:'#32CD32', glow:'rgba(50,205,50,0.5)', bg:'rgba(50,205,50,0.15)' },
+  purple: { name:'想象紫', hex:'#AB47BC', glow:'rgba(171,71,188,0.5)', bg:'rgba(171,71,188,0.15)' },
+  pink:   { name:'温暖粉', hex:'#FF69B4', glow:'rgba(255,105,180,0.5)', bg:'rgba(255,105,180,0.15)' }
+};
+
+let state = {
+  nLevel: 'n1',
+  difficulty: 'easy',
+  color: 'orange',
+  n: 1,
+  blockIdx: 0,
+  trialIdx: 0,
+  history: [],
+  running: false,
+  correctMatches: 0,
+  falseAlarms: 0,
+  misses: 0,
+  blockCorrect: 0,
+  blockTotal: 0,
+  blockResults: [],
+  consecutiveBad: 0,
+  currentPosition: -1,
+  isMatch: false,
+  responded: false,
+  timeoutId: null
+};
+
+const grid = document.getElementById('grid');
+const matchBtn = document.getElementById('matchBtn');
+const statusText = document.getElementById('statusText');
+const resultCard = document.getElementById('resultCard');
+// ========== CSS 变量更新 ==========
+function applyColor(){
+  const c = COLORS[state.color];
+  document.documentElement.style.setProperty('--accent', c.hex);
+  document.documentElement.style.setProperty('--glow', c.glow);
+  document.documentElement.style.setProperty('--accent-bg', c.bg);
+}
+
+// ========== 配置描述更新 ==========
+function updateConfigDesc(){
+  const nl = N_LEVELS[state.nLevel];
+  const diff = DIFFICULTY[state.difficulty];
+  document.getElementById('cfgN').textContent = nl.desc;
+  document.getElementById('cfgStartN').textContent = nl.startN;
+  document.getElementById('cfgInterval').textContent = (diff.interval/1000).toFixed(1) + 's';
+  document.getElementById('cfgFlash').textContent = diff.flashDuration + 'ms';
+  document.getElementById('cfgBlocks').textContent = diff.blocks;
+  document.getElementById('cfgTrials').textContent = diff.trialsPerBlock;
+  document.getElementById('rulesDiff').innerHTML =
+    '<b>当前：</b>' + nl.label + ' ' + nl.desc + ' / ' + diff.label + ' ' + (diff.interval/1000).toFixed(1) + 's间隔 / ' + diff.flashDuration + 'ms闪烁 / ' + diff.blocks + ' Blocks';
+}
+
+// ========== 音频系统 ==========
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playBeep(freq, duration, type, vol){
+  try{
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type||'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol||0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  }catch(e){}
+}
+
+function playFlashSound(){ playBeep(880, 0.08, 'sine', 0.12); }
+function playMatchCorrect(){ playBeep(1200, 0.15, 'sine', 0.18); setTimeout(()=>playBeep(1600, 0.12, 'sine', 0.15), 100); }
+function playMatchWrong(){ playBeep(200, 0.25, 'square', 0.18); }
+
+// ========== 停止当前游戏 ==========
+function stopGame(){
+  if(!state.running) return;
+  state.running = false;
+  clearCells();
+  resultCard.classList.remove('show');
+  statusText.textContent = '已停止，请重新开始';
+  // 重置 UI 显示
+  document.getElementById('nLevel').textContent = 'N = -';
+  document.getElementById('blockNum').textContent = '0/0';
+  document.getElementById('trialNum').textContent = '0/0';
+  document.getElementById('accuracy').textContent = '-';
+}
+
+// ========== N级切换 ==========
+document.getElementById('nLevelBtns').addEventListener('click', e => {
+  if(!e.target.classList.contains('diff-btn')) return;
+  document.querySelectorAll('#nLevelBtns .diff-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.nLevel = e.target.dataset.n;
+  stopGame();
+  updateConfigDesc();
+});
+
+// ========== 难度切换 ==========
+document.getElementById('diffBtns').addEventListener('click', e => {
+  if(!e.target.classList.contains('diff-btn')) return;
+  document.querySelectorAll('#diffBtns .diff-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.difficulty = e.target.dataset.diff;
+  stopGame();
+  updateConfigDesc();
+});
+
+// ========== 颜色切换 ==========
+document.getElementById('colorBtns').addEventListener('click', e => {
+  if(!e.target.classList.contains('color-btn')) return;
+  document.querySelectorAll('#colorBtns .color-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.color = e.target.dataset.color;
+  stopGame();
+  applyColor();
+});
+
+// ========== 游戏逻辑 ==========
+function startGame(){
+  if(state.running) return;
+  const nl = N_LEVELS[state.nLevel];
+  state.n = nl.startN;
+  state.blockIdx = 0;
+  state.trialIdx = 0;
+  state.history = [];
+  state.running = true;
+  state.correctMatches = 0;
+  state.falseAlarms = 0;
+  state.misses = 0;
+  state.blockCorrect = 0;
+  state.blockTotal = 0;
+  state.blockResults = [];
+  state.consecutiveBad = 0;
+  state.currentPosition = -1;
+  state.isMatch = false;
+  state.responded = false;
+  resultCard.classList.remove('show');
+  updateUI();
+  statusText.textContent = '准备开始...';
+
+  setTimeout(()=>runBlock(),1000);
+}
+
+async function runBlock(){
+  if(!state.running) return;
+  const diff = DIFFICULTY[state.difficulty];
+  state.blockIdx++;
+  state.trialIdx = 0;
+  state.blockCorrect = 0;
+  state.blockTotal = 0;
+  updateUI();
+
+  for(let t = 0; t < diff.trialsPerBlock; t++){
+    if(!state.running) return;
+    state.trialIdx = t + 1;
+    state.responded = false;
+    updateUI();
+
+    // 生成位置
+    let pos;
+    const shouldMatch = state.history.length >= state.n && Math.random() < 0.3;
+    if(shouldMatch){
+      pos = state.history[state.history.length - state.n];
+      state.isMatch = true;
+    } else {
+      do {
+        pos = Math.floor(Math.random() * 9);
+      } while(pos === state.history[state.history.length - state.n]);
+      state.isMatch = false;
+    }
+
+    state.currentPosition = pos;
+    state.history.push(pos);
+    if(state.history.length > 20) state.history.shift();
+
+    // 显示方块 + 闪烁音效
+    highlightCell(pos);
+    playFlashSound();
+    await sleep(diff.flashDuration);
+    clearCells();
+
+    // 等待响应
+    await sleep(diff.interval - diff.flashDuration);
+
+    if(!state.responded){
+      if(state.isMatch){
+        state.misses++;
+        state.blockTotal++;
+      }
+    }
+
+    updateUI();
+  }
+
+  // Block 结束
+  const blockAcc = state.blockTotal > 0 ? state.blockCorrect / state.blockTotal : 0;
+  state.blockResults.push({n:state.n,acc:blockAcc});
+
+  if(blockAcc >= 0.8){
+    state.n++;
+    state.consecutiveBad = 0;
+    statusText.textContent = 'Block完成！N升级到 ' + state.n;
+  } else if(blockAcc < 0.5){
+    state.consecutiveBad++;
+    if(state.consecutiveBad >= 3 && state.n > 1){
+      state.n--;
+      state.consecutiveBad = 0;
+      statusText.textContent = 'Block完成，N降级到 ' + state.n;
+    } else {
+      statusText.textContent = 'Block完成，正确率偏低';
+    }
+  } else {
+    state.consecutiveBad = 0;
+    statusText.textContent = 'Block完成';
+  }
+
+  if(state.blockIdx >= diff.blocks){
+    endGame();
+    return;
+  }
+
+  await sleep(2000);
+  runBlock();
+}
+
+function highlightCell(pos){
+  const cells = grid.querySelectorAll('.cell');
+  cells.forEach(c=>c.classList.remove('lit'));
+  cells[pos].classList.add('lit');
+}
+
+function clearCells(){
+  grid.querySelectorAll('.cell').forEach(c=>c.classList.remove('lit'));
+}
+
+function onMatch(){
+  if(!state.running || state.responded) return;
+  state.responded = true;
+  state.blockTotal++;
+
+  if(state.isMatch){
+    state.correctMatches++;
+    state.blockCorrect++;
+    playMatchCorrect();
+    matchBtn.classList.add('flash-green');
+    setTimeout(()=>matchBtn.classList.remove('flash-green'),200);
+  } else {
+    state.falseAlarms++;
+    playMatchWrong();
+    matchBtn.classList.add('flash-red');
+    setTimeout(()=>matchBtn.classList.remove('flash-red'),400);
+  }
+  updateUI();
+}
+
+matchBtn.addEventListener('click',onMatch);
+
+function endGame(){
+  state.running = false;
+  clearCells();
+  const avgN = state.blockResults.length > 0
+    ? Math.round(state.blockResults.reduce((s,r)=>s+r.n,0) / state.blockResults.length * 10) / 10
+    : state.n;
+
+  document.getElementById('rAvgN').textContent = avgN;
+  document.getElementById('rCorrect').textContent = state.correctMatches;
+  document.getElementById('rFalse').textContent = state.falseAlarms;
+  document.getElementById('rMiss').textContent = state.misses;
+  resultCard.classList.add('show');
+  statusText.textContent = '训练结束';
+  saveResult(avgN);
+}
+
+function saveResult(avgN){
+  const data = JSON.parse(localStorage.getItem('visual_nback')||'[]');
+  data.push({
+    avgN,correct:state.correctMatches,false:state.falseAlarms,miss:state.misses,
+    nLevel:state.nLevel,difficulty:state.difficulty,color:state.color,time:Date.now()
+  });
+  if(data.length > 20) data.shift();
+  localStorage.setItem('visual_nback',JSON.stringify(data));
+}
+
+function updateUI(){
+  const diff = DIFFICULTY[state.difficulty];
+  document.getElementById('nLevel').textContent = 'N = ' + state.n;
+  document.getElementById('blockNum').textContent = state.blockIdx + '/' + diff.blocks;
+  document.getElementById('trialNum').textContent = state.trialIdx + '/' + diff.trialsPerBlock;
+  const acc = state.blockTotal > 0 ? Math.round(state.blockCorrect/state.blockTotal*100) + '%' : '-';
+  document.getElementById('accuracy').textContent = acc;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// 初始化
+applyColor();
+updateConfigDesc();
+</script>
+</body>
+</html>

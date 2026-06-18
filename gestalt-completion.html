@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>图形完形匹配 - 视知觉训练</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;
+  background:#FFFBFA;
+  height:100dvh;
+  display:flex;flex-direction:column;align-items:center;
+  color:#2D2B55;
+  user-select:none;-webkit-user-select:none;
+  overflow:hidden;
+}
+.container{
+  width:100%;
+  max-width:min(96vw,1100px);
+  height:100dvh;
+  display:flex;flex-direction:column;
+  padding:6px 10px;
+  gap:4px;
+  overflow:hidden;
+}
+h1{
+  font-size:clamp(20px,4vw,28px);
+  font-weight:800;
+  text-align:center;
+  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+/* 模式切换 */
+.mode-row{
+  display:flex;gap:8px;
+  justify-content:center;
+  margin-bottom:8px;
+}
+.mode-btn{
+  padding:5px 16px;
+  border-radius:10px;
+  border:2px solid rgba(45,43,85,0.12);
+  background:#fff;
+  color:#2D2B55;
+  font-size:13px;font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.mode-btn.active{
+  background:#FF5E0E;
+  color:#fff;
+  border-color:transparent;
+}
+.mode-btn:hover:not(.active){background:rgba(255,94,14,0.06);}
+.mode-btn:active{transform:scale(0.96);}
+/* 难度 */
+.diff-row{
+  display:flex;gap:8px;
+  align-items:center;
+  margin-bottom:12px;
+}
+.diff-btn{
+  padding:7px 18px;
+  border-radius:10px;
+  border:2px solid rgba(45,43,85,0.12);
+  background:#fff;
+  color:#2D2B55;
+  font-size:14px;font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s;
+  flex-shrink:0;
+}
+.diff-btn.active{
+  background:#FF5E0E;
+  color:#fff;
+  border-color:transparent;
+}
+.diff-btn:hover:not(.active){background:rgba(255,94,14,0.06);}
+.diff-btn:active{transform:scale(0.96);}
+/* 刷新按钮 */
+.refresh-row{
+  display:flex;align-items:center;gap:6px;
+  margin-left:auto;
+  flex-shrink:0;
+}
+.refresh-hint{
+  font-size:clamp(10px,1.4vw,12px);
+  color:#2D2B55;opacity:0.5;
+  white-space:nowrap;
+}
+/* 信息栏 */
+.info-bar{
+  display:flex;justify-content:space-between;
+  align-items:center;
+  padding:8px 16px;
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(45,43,85,0.05);
+}
+.info-item{font-size:14px;font-weight:600;color:#2D2B55;}
+.info-item span{color:#FF5E0E;font-family:'JetBrains Mono',monospace;}
+/* 游戏区 — 横版左右分栏 */
+.game-area{
+  display:flex;
+  gap:16px;
+  width:100%;
+  flex:1;
+  min-height:0;
+}
+.puzzle-panel,.options-panel{
+  flex:1;
+  background:rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:12px;
+  box-shadow:0 2px 12px rgba(45,43,85,0.05);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  min-height:0;
+  overflow:hidden;
+}
+.panel-label{
+  font-size:14px;font-weight:700;
+  color:rgba(45,43,85,0.5);
+  letter-spacing:1px;
+  text-align:center;
+  margin-bottom:6px;
+  padding:4px 16px;
+  border-radius:8px;
+  border:2px solid rgba(45,43,85,0.12);
+}
+.panel-label-left{
+  background:rgba(255,218,0,0.35);
+}
+.panel-label-right{
+  background:rgba(30,144,255,0.3);
+}
+.gameplay-hint{
+  text-align:center;
+  font-size:13px;font-weight:600;
+  color:rgba(45,43,85,0.45);
+  padding:4px 0;
+}
+/* 拼图网格 */
+.puzzle-grid{
+  display:grid;
+  gap:3px;
+  width:100%;
+  aspect-ratio:1;
+  aspect-ratio:1;
+  max-height:100%;
+}
+.puzzle-piece{
+  border-radius:6px;
+  background-color:#FFFBFA;
+  background-repeat:no-repeat;
+  transition:opacity 0.3s;
+  min-height:0;
+}
+.puzzle-slot{
+  border-radius:6px;
+  border:2.5px dashed rgba(45,43,85,0.2);
+  background:rgba(45,43,85,0.02);
+  transition:all 0.2s;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.puzzle-slot:hover{
+  border-color:#FF5E0E;
+  background:rgba(255,94,14,0.04);
+}
+.puzzle-slot.target{
+  border-color:#FF5E0E;
+  border-style:solid;
+  background:rgba(255,94,14,0.08);
+  box-shadow:0 0 12px rgba(255,94,14,0.2);
+}
+.puzzle-slot.slot-selected{
+  border-color:#FF5E0E;
+  border-width:4px;
+  box-shadow:0 0 20px rgba(255,94,14,0.35);
+  transform:scale(1.04);
+}
+.puzzle-slot.filled{
+  border:none;
+  cursor:default;
+  background-repeat:no-repeat;
+}
+.puzzle-slot.filled.correct-fill{
+  box-shadow:0 0 16px rgba(50,205,50,0.4);
+}
+.puzzle-slot.filled.wrong-fill{
+  box-shadow:0 0 16px rgba(255,7,58,0.4);
+}
+/* 选项网格 */
+.options-grid{
+  display:grid;
+  gap:6px;
+  width:100%;
+  aspect-ratio:1;
+  max-height:100%;
+  overflow:hidden;
+}
+.option-piece{
+  border-radius:8px;
+  border:3px solid rgba(45,43,85,0.1);
+  background-color:#FFFBFA;
+  background-repeat:no-repeat;
+  background-size:cover;
+  background-position:center;
+  cursor:pointer;
+  transition:all 0.15s;
+  aspect-ratio:1;
+}
+.option-piece:hover{
+  border-color:#FF5E0E;
+  box-shadow:0 4px 16px rgba(255,94,14,0.15);
+}
+.option-piece:active{transform:scale(0.95);}
+.option-piece.selected{
+  border-color:#FF5E0E;
+  border-width:4px;
+  box-shadow:0 0 20px rgba(255,94,14,0.3);
+  transform:scale(1.03);
+}
+.option-piece.used{
+  opacity:0.2;
+  pointer-events:none;
+  border-color:rgba(45,43,85,0.05);
+}
+.option-piece.target{
+  border-color:#FF5E0E;
+  border-style:dashed;
+  border-width:3px;
+  box-shadow:0 0 14px rgba(255,94,14,0.18);
+}
+.option-piece.wrong-flash{
+  box-shadow:0 0 20px rgba(255,7,58,0.5);
+  border-color:#FF073A;
+}
+/* 反馈 */
+.feedback-text{
+  font-size:15px;font-weight:700;
+  text-align:center;
+  min-height:22px;
+  line-height:22px;
+}
+.feedback-text.correct{color:#32CD32;}
+.feedback-text.wrong{color:#FF073A;}
+/* 按钮 */
+.btn-row{display:flex;gap:10px;justify-content:center;}
+.btn{
+  padding:10px 24px;
+  border-radius:12px;
+  border:none;
+  font-size:14px;font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.btn:active{transform:scale(0.96);}
+.btn-start{
+  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
+  color:#fff;
+  box-shadow:0 4px 16px rgba(255,94,14,0.25);
+}
+.btn-start:hover{box-shadow:0 6px 20px rgba(255,94,14,0.35);}
+.btn-back{
+  background:rgba(45,43,85,0.06);
+  color:#2D2B55;
+}
+/* 结果卡片 */
+.result-card{
+  background:#fff;
+  border-radius:16px;
+  padding:20px;
+  text-align:center;
+  box-shadow:0 4px 20px rgba(45,43,85,0.06);
+}
+.result-card h2{font-size:20px;font-weight:800;margin-bottom:12px;}
+.result-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;margin-bottom:14px;
+}
+.result-item{
+  background:rgba(45,43,85,0.03);
+  border-radius:10px;
+  padding:12px;
+}
+.result-item .val{
+  font-size:22px;font-weight:800;
+  font-family:'JetBrains Mono',monospace;
+  color:#FF5E0E;
+}
+.result-item .lbl{font-size:11px;color:rgba(45,43,85,0.45);margin-top:2px;}
+/* 图案选择指示 */
+.pattern-indicator{
+  display:flex;gap:6px;align-items:center;
+  justify-content:center;
+  font-size:12px;color:rgba(45,43,85,0.5);
+}
+.pattern-dot{
+  width:10px;height:10px;
+  border-radius:50%;
+  border:1.5px solid rgba(45,43,85,0.2);
+}
+.pattern-dot.current{
+  border-color:#FF5E0E;
+  background:#FF5E0E;
+}
+/* 刷新按钮 */
+.refresh-row{
+  display:flex;gap:6px;
+  align-items:center;
+}
+.btn-refresh{
+  background:rgba(45,43,85,0.06);
+  color:#2D2B55;
+  font-size:13px;
+  padding:6px 14px;
+  border-radius:10px;
+  border:none;
+  cursor:pointer;
+  font-weight:700;
+  transition:all 0.2s;
+  white-space:nowrap;
+}
+.btn-refresh:hover{background:rgba(45,43,85,0.12);}
+.btn-refresh:active{transform:scale(0.96);}
+.refresh-hint{
+  font-size:11px;
+  color:rgba(45,43,85,0.4);
+  white-space:nowrap;
+}
+/* 响应式 */
+@media(max-width:700px){
+  .game-area{flex-direction:column;gap:8px;}
+  .puzzle-panel,.options-panel{flex:1;min-height:0;}
+  .puzzle-grid{max-width:min(320px,100%);margin:0 auto;}
+  .options-grid{max-width:min(320px,100%);margin:0 auto;}
+}
+@media(orientation:landscape) and (max-height:500px){
+  .container{padding:2px 6px;gap:2px;}
+  h1{font-size:14px;}
+  .diff-btn{padding:3px 10px;font-size:11px;}
+  .info-bar{padding:3px 8px;}
+  .info-item{font-size:11px;}
+  .game-area{gap:4px;}
+  .puzzle-panel,.options-panel{padding:4px;border-radius:8px;}
+  .panel-label{font-size:11px;padding:2px 10px;margin-bottom:3px;}
+  .gameplay-hint{font-size:10px;padding:2px 0;}
+  .btn{padding:5px 14px;font-size:11px;}
+  .btn-refresh{padding:4px 10px;font-size:11px;}
+  .refresh-hint{font-size:10px;}
+  .feedback-text{font-size:12px;min-height:16px;line-height:16px;}
+}
+@media(min-width:768px) and (orientation:portrait){
+  .game-area{flex-direction:column;gap:10px;}
+  .puzzle-panel,.options-panel{flex:1;min-height:0;}
+  .puzzle-grid{max-width:min(400px,100%);margin:0 auto;}
+  .options-grid{max-width:min(400px,100%);margin:0 auto;}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>图形完形匹配</h1>
+  <div class="mode-row">
+    <button class="mode-btn active" id="mode-adult" onclick="setMode('adult')">成人模式</button>
+    <button class="mode-btn" id="mode-child" onclick="setMode('child')">儿童模式</button>
+  </div>
+  <div class="diff-row" id="diff-row">
+    <button class="diff-btn active" id="diff-easy" onclick="setDiff('easy')">初级</button>
+    <button class="diff-btn" id="diff-medium" onclick="setDiff('medium')">中级</button>
+    <button class="diff-btn" id="diff-hard" onclick="setDiff('hard')">高级</button>
+    <div class="refresh-row" id="refresh-row">
+      <button class="btn btn-refresh" onclick="refreshQuestion()">🔄 刷新</button>
+      <span class="refresh-hint">图形随机生成，若左右无法关联请点刷新</span>
+    </div>
+  </div>
+  <div class="info-bar">
+    <div class="info-item">风格：<span id="info-style">-</span></div>
+    <div class="info-item">得分：<span id="info-score">0</span></div>
+    <div class="info-item">题数：<span id="info-q">0/10</span></div>
+    <div class="info-item"><span id="info-time">0s</span></div>
+  </div>
+  <div class="gameplay-hint" id="gameplay-hint">💡 先点击左侧缺失区，再点击选择区对应答案</div>
+  <div class="game-area" id="game-area">
+    <div class="puzzle-panel" id="left-panel">
+      <div class="panel-label panel-label-left" id="left-label">展示区</div>
+      <div class="puzzle-grid" id="puzzle-grid"></div>
+    </div>
+    <div class="options-panel" id="right-panel">
+      <div class="panel-label panel-label-right" id="right-label">选择区</div>
+      <div class="options-grid" id="options-grid"></div>
+    </div>
+  </div>
+  <div class="feedback-text" id="feedback"></div>
+  <div class="btn-row">
+    <button class="btn btn-start" id="btn-start" onclick="startGame()">开始挑战</button>
+    <button class="btn btn-back" onclick="location.href='index.html'">返回大厅</button>
+  </div>
+  <div id="result-container"></div>
+</div>
+
+<script>
+// ===== Canvas 图案生成器（7 种抽象艺术风格，固定配色，随机构图）=====
+var PATTERN_STYLES = ['suprematism','mondrian','bauhaus','orphism','geometric','rayonism','shapes'];
+var PATTERN_NAMES = ['至上主义','蒙德里安','包豪斯','俄耳甫斯','几何艺术','轴射光线','几何图形'];
+var SIZE = 400;
+
+var PALETTES = {
+  suprematism:   { bg:'#F8F8F5', c1:'#1a1a2e', c2:'#E63946', c3:'#457B9D', c4:'#F4A261' },
+  mondrian:      { bg:'#FEFEFE', c1:'#E63946', c2:'#264653', c3:'#F4A261', c4:'#1a1a2e' },
+  bauhaus:       { bg:'#F8F8F5', c1:'#E63946', c2:'#F4A261', c3:'#264653', c4:'#1a1a2e' },
+  orphism:       { bg:'#1a1a2e', c1:'#F72585', c2:'#F4A261', c3:'#06D6A0', c4:'#7209B7' },
+  geometric:     { bg:'#F8F8F5', c1:'#457B9D', c2:'#E76F51', c3:'#2A9D8F', c4:'#E9C46A' },
+  rayonism:      { bg:'#FEFEFE', c1:'#E63946', c2:'#F4A261', c3:'#264653', c4:'#1a1a2e' },
+  shapes:        { bg:'#F8F8F5', c1:'#7209B7', c2:'#06D6A0', c3:'#F72585', c4:'#457B9D' }
+};
+
+function seededRandom(seed) {
+  var s = seed;
+  return function() {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function randInt(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
+function randChoice(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+function generatePattern(styleId, seed) {
+  var canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  var ctx = canvas.getContext('2d');
+  var pal = PALETTES[PATTERN_STYLES[styleId]];
+  var rng = seededRandom(seed);
+  var colors = [pal.c1, pal.c2, pal.c3, pal.c4];
+
+  ctx.fillStyle = pal.bg;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  switch (PATTERN_STYLES[styleId]) {
+    case 'suprematism':   drawSuprematism(ctx, rng, colors, pal); break;
+    case 'mondrian':      drawMondrian(ctx, rng, colors, pal); break;
+    case 'bauhaus':       drawBauhaus(ctx, rng, colors, pal); break;
+    case 'orphism':       drawOrphism(ctx, rng, colors, pal); break;
+    case 'geometric':     drawGeometric(ctx, rng, colors, pal); break;
+    case 'rayonism':      drawRayonism(ctx, rng, colors, pal); break;
+    case 'shapes':        drawShapes(ctx, rng, colors, pal); break;
+  }
+  return canvas;
+}
+
+function drawSuprematism(ctx, rng, colors, pal) {
+  var count = randInt(rng, 5, 9);
+  for (var i = 0; i < count; i++) {
+    var x = rng() * SIZE * 0.9;
+    var y = rng() * SIZE * 0.9;
+    var w = randInt(rng, 30, 180);
+    var h = randInt(rng, 20, 140);
+    var angle = (randInt(rng, 0, 3) * 15) * Math.PI / 180;
+    ctx.save();
+    ctx.translate(x + w/2, y + h/2);
+    ctx.rotate(angle);
+    ctx.fillStyle = randChoice(rng, colors);
+    ctx.globalAlpha = 0.7 + rng() * 0.3;
+    if (rng() < 0.25) {
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.min(w, h) / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(-w/2, -h/2, w, h);
+    }
+    ctx.restore();
+  }
+  // 散布小色块确保每格有内容
+  for (var j = 0; j < 12; j++) {
+    ctx.fillStyle = randChoice(rng, colors);
+    ctx.globalAlpha = 0.5 + rng() * 0.5;
+    var sx = rng() * SIZE;
+    var sy = rng() * SIZE;
+    var ss = randInt(rng, 8, 25);
+    ctx.fillRect(sx, sy, ss, ss);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMondrian(ctx, rng, colors, pal) {
+  var lineW = randInt(rng, 4, 8);
+  ctx.strokeStyle = pal.c4;
+  ctx.lineWidth = lineW;
+  // 随机分割线
+  var hLines = [0];
+  var vLines = [0];
+  var y = 0;
+  while (y < SIZE - 20) { y += randInt(rng, 40, 180); if (y < SIZE) hLines.push(y); }
+  hLines.push(SIZE);
+  var x = 0;
+  while (x < SIZE - 20) { x += randInt(rng, 40, 180); if (x < SIZE) vLines.push(x); }
+  vLines.push(SIZE);
+  // 填充 60%+ 格子
+  for (var i = 0; i < hLines.length - 1; i++) {
+    for (var j = 0; j < vLines.length - 1; j++) {
+      if (rng() < 0.65) {
+        ctx.fillStyle = randChoice(rng, [pal.c1, pal.c2, pal.c3, pal.bg]);
+        ctx.fillRect(vLines[j] + lineW/2, hLines[i] + lineW/2,
+          vLines[j+1] - vLines[j] - lineW, hLines[i+1] - hLines[i] - lineW);
+      }
+    }
+  }
+  // 画线
+  for (var k = 0; k < hLines.length; k++) {
+    ctx.beginPath(); ctx.moveTo(0, hLines[k]); ctx.lineTo(SIZE, hLines[k]); ctx.stroke();
+  }
+  for (var l = 0; l < vLines.length; l++) {
+    ctx.beginPath(); ctx.moveTo(vLines[l], 0); ctx.lineTo(vLines[l], SIZE); ctx.stroke();
+  }
+}
+
+function drawBauhaus(ctx, rng, colors, pal) {
+  var count = randInt(rng, 6, 12);
+  for (var i = 0; i < count; i++) {
+    ctx.fillStyle = randChoice(rng, colors);
+    ctx.globalAlpha = 0.6 + rng() * 0.4;
+    var x = rng() * SIZE * 0.85;
+    var y = rng() * SIZE * 0.85;
+    var s = randInt(rng, 40, 200);
+    var t = rng();
+    if (t < 0.35) {
+      ctx.beginPath(); ctx.arc(x, y, s/2, 0, Math.PI * 2); ctx.fill();
+    } else if (t < 0.7) {
+      ctx.fillRect(x, y, s, s * (0.5 + rng() * 0.5));
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x, y + s);
+      ctx.lineTo(x + s/2, y);
+      ctx.lineTo(x + s, y + s);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawOrphism(ctx, rng, colors, pal) {
+  var cx = SIZE * (0.3 + rng() * 0.4);
+  var cy = SIZE * (0.3 + rng() * 0.4);
+  var rings = randInt(rng, 4, 8);
+  for (var i = rings; i >= 0; i--) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 30 + i * randInt(rng, 25, 50), 0, Math.PI * 2);
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.globalAlpha = 0.5 + rng() * 0.5;
+    ctx.fill();
+  }
+  // 第二组同心圆
+  var cx2 = SIZE * (0.3 + rng() * 0.4);
+  var cy2 = SIZE * (0.3 + rng() * 0.4);
+  var rings2 = randInt(rng, 3, 6);
+  for (var j = rings2; j >= 0; j--) {
+    ctx.beginPath();
+    ctx.arc(cx2, cy2, 20 + j * randInt(rng, 20, 40), 0, Math.PI * 2);
+    ctx.fillStyle = colors[(j + 2) % colors.length];
+    ctx.globalAlpha = 0.4 + rng() * 0.5;
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawGeometric(ctx, rng, colors, pal) {
+  var count = randInt(rng, 8, 16);
+  for (var i = 0; i < count; i++) {
+    ctx.fillStyle = randChoice(rng, colors);
+    ctx.globalAlpha = 0.5 + rng() * 0.5;
+    var x = rng() * SIZE * 0.9;
+    var y = rng() * SIZE * 0.9;
+    var s = randInt(rng, 25, 160);
+    var t = rng();
+    var angle = rng() * Math.PI * 2;
+    ctx.save();
+    ctx.translate(x + s/2, y + s/2);
+    ctx.rotate(angle);
+    if (t < 0.3) {
+      ctx.beginPath(); ctx.arc(0, 0, s/2, 0, Math.PI * 2); ctx.fill();
+    } else if (t < 0.55) {
+      ctx.fillRect(-s/2, -s/2, s, s);
+    } else if (t < 0.8) {
+      ctx.beginPath();
+      ctx.moveTo(0, -s/2); ctx.lineTo(s/2, s/2); ctx.lineTo(-s/2, s/2);
+      ctx.closePath(); ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(0, -s/2); ctx.lineTo(s/2 * 0.95, s/2 * 0.3);
+      ctx.lineTo(s/2 * 0.58, s/2 * 0.8); ctx.lineTo(-s/2 * 0.58, s/2 * 0.8);
+      ctx.lineTo(-s/2 * 0.95, s/2 * 0.3);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawRayonism(ctx, rng, colors, pal) {
+  var cx = SIZE * (0.3 + rng() * 0.4);
+  var cy = SIZE * (0.3 + rng() * 0.4);
+  var lines = randInt(rng, 12, 24);
+  for (var i = 0; i < lines; i++) {
+    var angle = (i / lines) * Math.PI * 2 + rng() * 0.3;
+    var len = SIZE * (0.4 + rng() * 0.6);
+    var ex = cx + Math.cos(angle) * len;
+    var ey = cy + Math.sin(angle) * len;
+    ctx.strokeStyle = colors[i % colors.length];
+    ctx.globalAlpha = 0.4 + rng() * 0.5;
+    ctx.lineWidth = randInt(rng, 1, 5);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
+  // 交叉短线
+  for (var j = 0; j < 8; j++) {
+    var a2 = rng() * Math.PI * 2;
+    var d2 = SIZE * (0.15 + rng() * 0.5);
+    var sx2 = cx + Math.cos(a2) * d2;
+    var sy2 = cy + Math.sin(a2) * d2;
+    ctx.strokeStyle = randChoice(rng, colors);
+    ctx.globalAlpha = 0.5 + rng() * 0.5;
+    ctx.lineWidth = randInt(rng, 2, 6);
+    ctx.beginPath();
+    ctx.moveTo(sx2 - 30, sy2 - 30);
+    ctx.lineTo(sx2 + 30, sy2 + 30);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawShapes(ctx, rng, colors, pal) {
+  var count = randInt(rng, 6, 10);
+  for (var i = 0; i < count; i++) {
+    ctx.fillStyle = randChoice(rng, colors);
+    ctx.globalAlpha = 0.6 + rng() * 0.4;
+    var x = rng() * SIZE * 0.85;
+    var y = rng() * SIZE * 0.85;
+    var s = randInt(rng, 50, 180);
+    var t = rng();
+    if (t < 0.35) {
+      ctx.beginPath(); ctx.arc(x + s/2, y + s/2, s/2, 0, Math.PI * 2); ctx.fill();
+    } else if (t < 0.65) {
+      ctx.fillRect(x, y, s, s);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x + s/2, y);
+      ctx.lineTo(x + s, y + s);
+      ctx.lineTo(x, y + s);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ===== 难度配置 =====
+var DIFF_CONFIG = {
+  easy:   { cols: 2, rows: 2, missing: 1, opts: 3 },
+  medium: { cols: 3, rows: 3, missing: 3, opts: 6 },
+  hard:   { cols: 4, rows: 4, missing: 6, opts: 12 }
+};
+var DIFF_LABELS = { easy: '初级', medium: '中级', hard: '高级' };
+
+// ===== 状态 =====
+var state = {
+  diff: 'easy',
+  questions: [],
+  qIdx: 0,
+  score: 0,
+  selectedSlot: null,
+  selectedOption: null,
+  filledSlots: {},
+  answered: false,
+  startTime: 0,
+  totalTime: 0,
+  timerInterval: null
+};
+
+// ===== 模式切换 =====
+var gameMode = 'adult'; // 'adult' | 'child'
+
+// ===== 儿童模式图片素材 =====
+var CHILD_IMAGES = [];
+var CHILD_IMAGES_LOADED = false;
+
+function preloadChildImages() {
+  if (CHILD_IMAGES_LOADED) return;
+  var total = 50;
+  var loaded = 0;
+  for (var i = 1; i <= total; i++) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = '/public/images/gestalt/child/img-' + String(i).padStart(2, '0') + '.jpg';
+    img.onload = function() {
+      loaded++;
+      if (loaded >= total) { CHILD_IMAGES_LOADED = true; }
+    };
+    img.onerror = function() {
+      loaded++;
+      if (loaded >= total) { CHILD_IMAGES_LOADED = true; }
+    };
+    CHILD_IMAGES.push(img);
+  }
+}
+preloadChildImages();
+
+function setMode(mode) {
+  gameMode = mode;
+  document.getElementById('mode-adult').className = 'mode-btn' + (mode === 'adult' ? ' active' : '');
+  document.getElementById('mode-child').className = 'mode-btn' + (mode === 'child' ? ' active' : '');
+  var hint = document.querySelector('.refresh-hint');
+  if (mode === 'child') {
+    hint.textContent = '图片随机切换，若左右无法关联请点刷新';
+  } else {
+    hint.textContent = '图形随机生成，若左右无法关联请点刷新';
+  }
+  // 清除旧状态，直接开始新游戏
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+  state.questions = [];
+  state.qIdx = 0;
+  state.score = 0;
+  state.selectedSlot = null;
+  state.selectedOption = null;
+  state.filledSlots = {};
+  state.answered = false;
+  startGame();
+}
+
+// ===== 难度切换 =====
+function setDiff(d) {
+  state.diff = d;
+  document.getElementById('diff-easy').className = 'diff-btn' + (d === 'easy' ? ' active' : '');
+  document.getElementById('diff-medium').className = 'diff-btn' + (d === 'medium' ? ' active' : '');
+  document.getElementById('diff-hard').className = 'diff-btn' + (d === 'hard' ? ' active' : '');
+  startGame();
+}
+
+// ===== 图片转 Canvas（统一尺寸）=====
+function imageToCanvas(img) {
+  var canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  var ctx = canvas.getContext('2d');
+  // 居中裁剪为正方形
+  var minDim = Math.min(img.naturalWidth, img.naturalHeight);
+  var sx = (img.naturalWidth - minDim) / 2;
+  var sy = (img.naturalHeight - minDim) / 2;
+  ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, SIZE, SIZE);
+  return canvas;
+}
+
+// ===== 生成题目（Canvas 实时绘制 / 儿童模式图片）=====
+function generateQuestion(diff, forceStyleId) {
+  var cfg = DIFF_CONFIG[diff];
+
+  var displayCanvas, displayURL, styleId;
+
+  if (gameMode === 'child') {
+    // 儿童模式：从图片素材中随机选一张
+    var validImgs = [];
+    for (var vi = 0; vi < CHILD_IMAGES.length; vi++) {
+      if (CHILD_IMAGES[vi].complete && CHILD_IMAGES[vi].naturalWidth > 0) {
+        validImgs.push(CHILD_IMAGES[vi]);
+      }
+    }
+    if (validImgs.length === 0) {
+      // 图片未加载完，fallback 到成人模式
+      styleId = (forceStyleId !== undefined) ? forceStyleId : Math.floor(Math.random() * PATTERN_STYLES.length);
+      var fallbackSeed = Math.floor(Math.random() * 100000);
+      displayCanvas = generatePattern(styleId, fallbackSeed);
+      displayURL = displayCanvas.toDataURL();
+    } else {
+      var chosenImg = validImgs[Math.floor(Math.random() * validImgs.length)];
+      displayCanvas = imageToCanvas(chosenImg);
+      displayURL = displayCanvas.toDataURL();
+      styleId = -1; // 儿童模式无风格
+    }
+  } else {
+    // 成人模式：Canvas 程序化生成
+    styleId = (forceStyleId !== undefined) ? forceStyleId : Math.floor(Math.random() * PATTERN_STYLES.length);
+    var displaySeed = Math.floor(Math.random() * 100000);
+    displayCanvas = generatePattern(styleId, displaySeed);
+    displayURL = displayCanvas.toDataURL();
+  }
+
+  // 生成缺失位置和选项
+  var total = cfg.cols * cfg.rows;
+  var allPos = [];
+  for (var r = 0; r < cfg.rows; r++)
+    for (var c = 0; c < cfg.cols; c++)
+      allPos.push({ row: r, col: c });
+
+  var missingPos, options;
+
+  if (gameMode === 'child') {
+    // 儿童模式：全部碎片拼图 — 所有格子都是空的，所有碎片都是正确选项（来自同一张图）
+    missingPos = allPos.slice();
+    options = [];
+    for (var ci = 0; ci < allPos.length; ci++) {
+      options.push({
+        row: allPos[ci].row, col: allPos[ci].col,
+        canvas: displayCanvas,
+        isCorrect: true
+      });
+    }
+  } else {
+    // 成人模式：部分缺失 + 干扰项
+    for (var i = allPos.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = allPos[i]; allPos[i] = allPos[j]; allPos[j] = t;
+    }
+    missingPos = allPos.slice(0, cfg.missing);
+
+    var distractorCount = cfg.opts - cfg.missing;
+    var distractorPool = [];
+    var usedSeeds = [displaySeed];
+    for (var mc = 0; mc < missingPos.length; mc++) {
+      var mp2 = missingPos[mc];
+      var perSlot2 = Math.floor(distractorCount / cfg.missing);
+      var extra2 = (mc < distractorCount % cfg.missing) ? 1 : 0;
+      var count2 = perSlot2 + extra2;
+      for (var dc = 0; dc < count2 && distractorPool.length < distractorCount; dc++) {
+        var dSeed;
+        do { dSeed = Math.floor(Math.random() * 100000); } while (usedSeeds.indexOf(dSeed) !== -1);
+        usedSeeds.push(dSeed);
+        var dCanvas2 = generatePattern(styleId, dSeed);
+        distractorPool.push({
+          row: mp2.row, col: mp2.col,
+          canvas: dCanvas2,
+          isCorrect: false
+        });
+      }
+    }
+
+    options = [];
+    for (var mc2 = 0; mc2 < missingPos.length; mc2++) {
+      options.push({
+        row: missingPos[mc2].row, col: missingPos[mc2].col,
+        canvas: displayCanvas,
+        isCorrect: true
+      });
+    }
+    for (var dc2 = 0; dc2 < distractorPool.length; dc2++) {
+      options.push(distractorPool[dc2]);
+    }
+  }
+
+  // 洗牌选项
+  for (var k = options.length - 1; k > 0; k--) {
+    var jj = Math.floor(Math.random() * (k + 1));
+    var tt = options[k]; options[k] = options[jj]; options[jj] = tt;
+  }
+
+  return {
+    styleId: styleId,
+    displayCanvas: displayCanvas,
+    displayURL: displayURL,
+    cols: cfg.cols,
+    rows: cfg.rows,
+    missing: cfg.missing,
+    missingPositions: missingPos,
+    options: options
+  };
+}
+
+// ===== 重置 =====
+function resetGame() {
+  state.questions = [];
+  state.qIdx = 0;
+  state.score = 0;
+  state.selectedSlot = null;
+  state.selectedOption = null;
+  state.filledSlots = {};
+  state.answered = false;
+  state.totalTime = 0;
+  clearInterval(state.timerInterval);
+  document.getElementById('info-score').textContent = '0';
+  document.getElementById('info-q').textContent = '0/10';
+  document.getElementById('info-time').textContent = '0s';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback-text';
+  document.getElementById('puzzle-grid').innerHTML = '';
+  document.getElementById('options-grid').innerHTML = '';
+  document.getElementById('result-container').innerHTML = '';
+  document.getElementById('btn-start').style.display = '';
+  // 重置面板标签
+  if (gameMode === 'child') {
+    document.getElementById('left-label').textContent = '碎片区';
+    document.getElementById('right-label').textContent = '拼图区';
+    document.getElementById('gameplay-hint').textContent = '💡 先点击左侧碎片，再点击右侧空槽位填入';
+  } else {
+    document.getElementById('left-label').textContent = '展示区';
+    document.getElementById('right-label').textContent = '选择区';
+    document.getElementById('gameplay-hint').textContent = '💡 先点击左侧缺失区，再点击选择区对应答案';
+  }
+}
+
+// ===== 刷新题目（重新生成当前题）=====
+function refreshQuestion() {
+  if (state.answered) return;
+  var curQ = state.questions[state.qIdx];
+  state.questions[state.qIdx] = generateQuestion(state.diff);
+  state.selectedSlot = null;
+  state.selectedOption = null;
+  state.filledSlots = {};
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback-text';
+  showQuestion();
+}
+
+// ===== 开始 =====
+function startGame() {
+  resetGame();
+  // 洗牌 7 种风格，10 题循环取用（保证每种风格至少出现 1 次）
+  var styleQueue = [];
+  var pool = [0,1,2,3,4,5,6];
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+  }
+  styleQueue = pool.slice();
+  for (var k = 0; k < 10; k++) {
+    if (styleQueue.length === 0) {
+      // 重新洗牌补充
+      var pool2 = [0,1,2,3,4,5,6];
+      for (var i2 = pool2.length - 1; i2 > 0; i2--) {
+        var j2 = Math.floor(Math.random() * (i2 + 1));
+        var t2 = pool2[i2]; pool2[i2] = pool2[j2]; pool2[j2] = t2;
+      }
+      styleQueue = pool2.slice();
+    }
+    state.questions.push(generateQuestion(state.diff, styleQueue.shift()));
+  }
+  state.qIdx = 0;
+  state.score = 0;
+  state.startTime = Date.now();
+  state.timerInterval = setInterval(function() {
+    state.totalTime = Math.floor((Date.now() - state.startTime) / 1000);
+    document.getElementById('info-time').textContent = state.totalTime + 's';
+  }, 1000);
+  document.getElementById('btn-start').style.display = 'none';
+  showQuestion();
+}
+
+// ===== 渲染题目 =====
+function showQuestion() {
+  if (state.qIdx >= state.questions.length) { endGame(); return; }
+  state.answered = false;
+  state.selectedSlot = null;
+  state.selectedOption = null;
+  state.filledSlots = {};
+  var q = state.questions[state.qIdx];
+  document.getElementById('info-q').textContent = (state.qIdx + 1) + '/10';
+  document.getElementById('info-style').textContent = (gameMode === 'child') ? '儿童图片' : PATTERN_NAMES[q.styleId];
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback-text';
+
+  if (gameMode === 'child') {
+    // 儿童模式：左=碎片选择区，右=拼图展示区（与成人模式互换）
+    renderOptions(q, 'puzzle-grid');
+    renderPuzzle(q, 'options-grid');
+    document.getElementById('left-label').textContent = '碎片区';
+    document.getElementById('right-label').textContent = '拼图区';
+    document.getElementById('gameplay-hint').textContent = '💡 先点击左侧碎片，再点击右侧空槽位填入';
+    // 儿童模式：右侧拼图区面板透明底，让参考底图可见
+    document.getElementById('right-panel').style.background = 'transparent';
+    document.getElementById('right-panel').style.boxShadow = 'none';
+  } else {
+    // 成人模式：恢复面板默认背景
+    document.getElementById('right-panel').style.background = '';
+    document.getElementById('right-panel').style.boxShadow = '';
+    // 成人模式：左=拼图展示区，右=碎片选择区
+    renderPuzzle(q, 'puzzle-grid');
+    renderOptions(q, 'options-grid');
+    document.getElementById('left-label').textContent = '展示区';
+    document.getElementById('right-label').textContent = '选择区';
+    document.getElementById('gameplay-hint').textContent = '💡 先点击左侧缺失区，再点击选择区对应答案';
+  }
+}
+
+// ===== 渲染拼图展示区 =====
+function renderPuzzle(q, targetId) {
+  var grid = document.getElementById(targetId || 'puzzle-grid');
+  grid.style.gridTemplateColumns = 'repeat(' + q.cols + ', 1fr)';
+  grid.style.gridTemplateRows = 'repeat(' + q.rows + ', 1fr)';
+  grid.innerHTML = '';
+
+  var missingSet = {};
+  for (var m = 0; m < q.missingPositions.length; m++) {
+    var mp = q.missingPositions[m];
+    missingSet[mp.row + ',' + mp.col] = true;
+  }
+
+  for (var r = 0; r < q.rows; r++) {
+    for (var c = 0; c < q.cols; c++) {
+      var key = r + ',' + c;
+      if (missingSet[key]) {
+        var slot = document.createElement('div');
+        slot.className = 'puzzle-slot';
+        slot.dataset.row = r;
+        slot.dataset.col = c;
+        // 儿童模式：空槽位半透明显示底图参考
+        if (gameMode === 'child') {
+          slot.style.background = 'rgba(255,255,255,0.55)';
+          slot.style.border = '2px dashed rgba(45,43,85,0.3)';
+        }
+        slot.onclick = (function(sr, sc) {
+          return function() { onSlotClick(sr, sc); };
+        })(r, c);
+        grid.appendChild(slot);
+      } else {
+        var piece = document.createElement('div');
+        piece.className = 'puzzle-piece';
+        piece.style.backgroundImage = 'url(' + q.displayURL + ')';
+        piece.style.backgroundSize = (q.cols * 100) + '% ' + (q.rows * 100) + '%';
+        piece.style.backgroundPosition =
+          (q.cols > 1 ? (c / (q.cols - 1)) * 100 : 0) + '% ' +
+          (q.rows > 1 ? (r / (q.rows - 1)) * 100 : 0) + '%';
+        grid.appendChild(piece);
+      }
+    }
+  }
+
+  // 儿童模式：拼图区背景用完整图片做参考底图
+  if (gameMode === 'child') {
+    grid.style.backgroundImage = 'url(' + q.displayURL + ')';
+    grid.style.backgroundSize = '100% 100%';
+    grid.style.backgroundRepeat = 'no-repeat';
+    grid.style.backgroundPosition = 'center';
+  } else {
+    grid.style.backgroundImage = '';
+  }
+}
+
+// ===== 渲染选项区 =====
+function renderOptions(q, targetId) {
+  var grid = document.getElementById(targetId || 'options-grid');
+  var optsCount = q.options.length;
+  var optCols = Math.ceil(Math.sqrt(optsCount));
+  var optRows = Math.ceil(optsCount / optCols);
+  grid.style.gridTemplateColumns = 'repeat(' + optCols + ', 1fr)';
+  grid.style.gridTemplateRows = 'repeat(' + optRows + ', 1fr)';
+  grid.innerHTML = '';
+
+  for (var i = 0; i < q.options.length; i++) {
+    var opt = q.options[i];
+    var piece = document.createElement('div');
+    piece.className = 'option-piece';
+    piece.dataset.index = i;
+    var optURL = opt.canvas.toDataURL();
+    piece.style.backgroundImage = 'url(' + optURL + ')';
+    piece.style.backgroundSize = (q.cols * 100) + '% ' + (q.rows * 100) + '%';
+    piece.style.backgroundPosition =
+      (q.cols > 1 ? (opt.col / (q.cols - 1)) * 100 : 0) + '% ' +
+      (q.rows > 1 ? (opt.row / (q.rows - 1)) * 100 : 0) + '%';
+    piece.style.aspectRatio = q.rows + ' / ' + q.cols;
+    piece.onclick = (function(idx) {
+      return function() { onOptionClick(idx); };
+    })(i);
+    grid.appendChild(piece);
+  }
+}
+
+// ===== 点击空槽位 =====
+function onSlotClick(row, col) {
+  if (state.answered) return;
+
+  if (gameMode === 'child') {
+    // 儿童模式：先点碎片 → 再点空槽位。此时必须有已选中的选项
+    if (state.selectedOption === null) return;
+    var optIdx = state.selectedOption;
+    var q = state.questions[state.qIdx];
+    var opt = q.options[optIdx];
+    tryPlaceFragment(optIdx, opt, row, col);
+  } else {
+    // 成人模式：先点空槽位 → 再点碎片
+    var prevSlot = document.querySelector('.puzzle-slot.slot-selected');
+    if (prevSlot) prevSlot.classList.remove('slot-selected');
+
+    state.selectedSlot = { row: row, col: col };
+    var slots = document.querySelectorAll('.puzzle-slot');
+    for (var i = 0; i < slots.length; i++) {
+      var s = slots[i];
+      if (parseInt(s.dataset.row) === row && parseInt(s.dataset.col) === col && !s.classList.contains('filled')) {
+        s.classList.add('slot-selected');
+        break;
+      }
+    }
+
+    // 高亮所有可用选项
+    var opts = document.querySelectorAll('.option-piece');
+    for (var j = 0; j < opts.length; j++) {
+      if (!opts[j].classList.contains('used')) {
+        opts[j].classList.add('target');
+      }
+    }
+  }
+}
+
+// ===== 点击选项 =====
+function onOptionClick(idx) {
+  if (state.answered) return;
+  var q = state.questions[state.qIdx];
+  if (q.options[idx].used) return;
+
+  if (gameMode === 'child') {
+    // 儿童模式：先点碎片，选中它
+    var prevOpt = document.querySelector('.option-piece.selected');
+    if (prevOpt) prevOpt.classList.remove('selected');
+
+    state.selectedOption = idx;
+    state.selectedSlot = null;
+    var optPieces = document.querySelectorAll('.option-piece');
+    optPieces[idx].classList.add('selected');
+
+    // 高亮所有空槽位
+    var slots = document.querySelectorAll('.puzzle-slot');
+    for (var i = 0; i < slots.length; i++) {
+      if (!slots[i].classList.contains('filled')) {
+        slots[i].classList.add('target');
+      }
+    }
+  } else {
+    // 成人模式：先点空槽位 → 再点碎片
+    if (!state.selectedSlot) return;
+    var row = state.selectedSlot.row;
+    var col = state.selectedSlot.col;
+    var opt = q.options[idx];
+    tryPlaceFragment(idx, opt, row, col);
+  }
+}
+
+// ===== 尝试放置碎片 =====
+function tryPlaceFragment(optIdx, opt, row, col) {
+  var q = state.questions[state.qIdx];
+  var key = row + ',' + col;
+
+  // 检查是否匹配
+  if (opt.row === row && opt.col === col) {
+    // 正确！
+    state.filledSlots[key] = true;
+    q.options[optIdx].used = true;
+
+    // 填充槽位
+    var slots = document.querySelectorAll('.puzzle-slot');
+    for (var i = 0; i < slots.length; i++) {
+      var s = slots[i];
+      if (parseInt(s.dataset.row) === row && parseInt(s.dataset.col) === col) {
+        s.classList.add('filled', 'correct-fill');
+        s.classList.remove('slot-selected', 'target');
+        // 儿童模式：清除半透明遮罩，显示完整碎片
+        if (gameMode === 'child') { s.style.background = ''; }
+        s.style.backgroundImage = 'url(' + q.displayURL + ')';
+        s.style.backgroundSize = (q.cols * 100) + '% ' + (q.rows * 100) + '%';
+        s.style.backgroundPosition =
+          (q.cols > 1 ? (col / (q.cols - 1)) * 100 : 0) + '% ' +
+          (q.rows > 1 ? (row / (q.rows - 1)) * 100 : 0) + '%';
+        s.onclick = null;
+        break;
+      }
+    }
+
+    // 标记选项已用
+    var optPieces = document.querySelectorAll('.option-piece');
+    optPieces[optIdx].classList.add('used');
+    optPieces[optIdx].classList.remove('selected');
+
+    // 清除选中
+    state.selectedSlot = null;
+    state.selectedOption = null;
+    clearTargets();
+
+    // 播放正确音效
+    playFeedbackSound(true);
+
+    // 检查是否全部填完
+    checkAllFilled(q);
+  } else {
+    // 错误！
+    var fb = document.getElementById('feedback');
+    fb.textContent = '位置不对，再试试！';
+    fb.className = 'feedback-text wrong';
+    playFeedbackSound(false);
+
+    // 闪烁选项
+    var optPieces2 = document.querySelectorAll('.option-piece');
+    optPieces2[optIdx].classList.add('wrong-flash');
+    optPieces2[optIdx].classList.remove('selected');
+    setTimeout((function(el) { return function() { el.classList.remove('wrong-flash'); }; })(optPieces2[optIdx]), 400);
+
+    // 清除选中
+    state.selectedSlot = null;
+    state.selectedOption = null;
+    var prevSlot2 = document.querySelector('.puzzle-slot.slot-selected');
+    if (prevSlot2) prevSlot2.classList.remove('slot-selected');
+    clearTargets();
+  }
+}
+
+function clearTargets() {
+  var slots = document.querySelectorAll('.puzzle-slot.target');
+  for (var i = 0; i < slots.length; i++) slots[i].classList.remove('target');
+  var opts = document.querySelectorAll('.option-piece.target');
+  for (var j = 0; j < opts.length; j++) opts[j].classList.remove('target');
+}
+
+function checkAllFilled(q) {
+  var filledCount = Object.keys(state.filledSlots).length;
+  var needCount = (gameMode === 'child') ? q.cols * q.rows : q.missing;
+  if (filledCount >= needCount) {
+    state.answered = true;
+    state.score += 10;
+    document.getElementById('info-score').textContent = state.score;
+    var fb = document.getElementById('feedback');
+    fb.textContent = '全部正确！';
+    fb.className = 'feedback-text correct';
+
+    setTimeout(function() {
+      state.qIdx++;
+      showQuestion();
+    }, 1000);
+  }
+}
+
+// ===== 音效反馈 =====
+var audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return audioCtx;
+}
+
+function playFeedbackSound(correct) {
+  var ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if (correct) {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    } else {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    }
+  } catch(e) {}
+}
+
+// ===== 结束 =====
+function endGame() {
+  clearInterval(state.timerInterval);
+  state.totalTime = Math.floor((Date.now() - state.startTime) / 1000);
+  document.getElementById('info-time').textContent = state.totalTime + 's';
+  document.getElementById('btn-start').style.display = '';
+  document.getElementById('puzzle-grid').innerHTML = '';
+  document.getElementById('options-grid').innerHTML = '';
+  var acc = (state.score / 100 * 100).toFixed(0);
+  var container = document.getElementById('result-container');
+  container.innerHTML =
+    '<div class="result-card">' +
+      '<h2>拼图完成！</h2>' +
+      '<div class="result-grid">' +
+        '<div class="result-item"><div class="val">' + state.score + '</div><div class="lbl">得分</div></div>' +
+        '<div class="result-item"><div class="val">' + acc + '%</div><div class="lbl">正确率</div></div>' +
+        '<div class="result-item"><div class="val">' + state.totalTime + 's</div><div class="lbl">用时</div></div>' +
+        '<div class="result-item"><div class="val">' + DIFF_LABELS[state.diff] + '</div><div class="lbl">难度</div></div>' +
+      '</div>' +
+      '<button class="btn btn-start" onclick="startGame()">再来一局</button>' +
+    '</div>';
+  try {
+    var data = JSON.parse(localStorage.getItem('gestalt_puzzle') || '{}');
+    var key = state.diff;
+    data[key] = { score: state.score, time: state.totalTime, date: new Date().toISOString() };
+    localStorage.setItem('gestalt_puzzle', JSON.stringify(data));
+  } catch(e) {}
+}
+
+// ===== 初始化 =====
+</script>
+</body>
+</html>

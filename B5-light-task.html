@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>灯语任务 - 认知灵活性训练</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100dvh;overflow:hidden}
+body{
+  font-family:'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+  background:linear-gradient(180deg,#F3EDF7 0%,#EDE0F5 50%,#E8D5F0 100%);
+  color:#4A3F6B;
+  display:flex;align-items:center;justify-content:center;
+  height:100dvh;
+}
+.container{
+  display:flex;gap:14px;
+  width:min(96vw,800px);
+  min-height:min(92vh,650px);
+  padding:10px;
+}
+
+/* 左侧面板 */
+.left-panel{
+  width:240px;min-width:240px;
+  background:#fff;
+  border-radius:16px;padding:14px 12px;
+  display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 2px 12px rgba(156,39,176,0.06);
+  overflow-y:auto;
+}
+.panel-title{color:#9C27B0;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:#5A4F7A;font-size:13px;margin-bottom:3px;font-weight:600;}
+.diff-btns{display:flex;gap:4px;}
+.diff-btn{
+  flex:1;padding:6px 0;border-radius:8px;
+  border:1px solid rgba(156,39,176,0.2);
+  background:rgba(156,39,176,0.03);
+  color:#5A4F7A;
+  font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.diff-btn:hover{background:rgba(156,39,176,0.08);}
+.diff-btn.active{background:rgba(156,39,176,0.15);border-color:#9C27B0;color:#7B1FA2;font-weight:700;}
+.diff-table{width:100%;border-collapse:collapse;font-size:12px;}
+.diff-table th{color:#5A4F7A;font-weight:600;padding:3px 4px;text-align:left;border-bottom:1px solid rgba(156,39,176,0.1);}
+.diff-table td{color:#4A3F6B;padding:3px 4px;border-bottom:1px solid rgba(156,39,176,0.06);}
+.guide-card{background:rgba(156,39,176,0.03);border-radius:10px;padding:10px;border:1px solid rgba(156,39,176,0.1);}
+.guide-title{color:#9C27B0;font-size:13px;font-weight:700;margin-bottom:4px;}
+.guide-text{color:#4A3F6B;font-size:12px;line-height:1.6;}
+.guide-text b{color:#6A1B9A;font-weight:700;}
+.stat-item{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(156,39,176,0.06);}
+.stat-label{color:#5A4F7A;font-size:13px;font-weight:600;}
+.stat-value{color:#7B1FA2;font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+/* 右侧游戏区 */
+.game-area{
+  flex:1;background:#fff;border-radius:16px;
+  display:flex;flex-direction:column;align-items:center;
+  padding:16px;gap:10px;
+  box-shadow:0 2px 12px rgba(156,39,176,0.06);
+  min-width:0;position:relative;
+}
+
+/* 顶部栏 */
+.top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;padding:0 4px;
+}
+.back-btn{
+  background:none;border:none;color:#7B6F9E;
+  font-size:14px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:2px;
+  padding:4px 8px;border-radius:8px;
+  transition:background 0.2s;
+}
+.back-btn:hover{background:rgba(123,111,158,0.1);}
+.game-title{font-size:18px;font-weight:800;color:#4A3F6B;}
+
+/* 计时条 */
+.timer-wrap{width:100%;}
+.timer-bar{
+  width:100%;height:8px;background:rgba(156,39,176,0.12);
+  border-radius:4px;overflow:hidden;
+}
+.timer-fill{
+  height:100%;background:linear-gradient(90deg,#9C27B0,#AB47BC);
+  border-radius:4px;transition:width 1s linear;
+}
+.timer-text{text-align:right;font-size:12px;color:#9C27B0;font-weight:600;margin-top:2px;font-family:'JetBrains Mono',monospace;}
+
+/* 规则栏 */
+.rule-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;padding:0 4px;
+}
+.diff-label-text{font-size:13px;font-weight:700;color:#7B6F9E;}
+.rule-desc{font-size:12px;color:#9C27B0;font-weight:600;}
+
+/* 任务指示器 - 圆形按钮 */
+.task-indicator{
+  display:flex;gap:10px;justify-content:center;
+}
+.task-btn{
+  width:64px;height:64px;border-radius:50%;
+  border:2px solid rgba(156,39,176,0.15);
+  font-size:14px;font-weight:800;cursor:default;
+  transition:all 0.3s;display:flex;align-items:center;justify-content:center;
+  background:#fff;color:#B0A3C8;flex:none;
+}
+.task-btn.active-color{
+  background:#4CAF50;border-color:#4CAF50;color:#fff;
+  box-shadow:0 4px 16px rgba(76,175,80,0.35);
+}
+.task-btn.active-shape{
+  background:#F44336;border-color:#F44336;color:#fff;
+  box-shadow:0 4px 16px rgba(244,67,54,0.35);
+}
+
+/* 目标图形卡片 */
+.target-card{
+  background:#F8F4FC;border-radius:20px;
+  padding:20px;display:flex;align-items:center;justify-content:center;
+  width:100%;min-height:120px;
+}
+
+/* 选项排 */
+.options-row{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+  max-width:320px;
+}
+.option-card{
+  background:#fff;border-radius:16px;
+  padding:16px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 10px rgba(156,39,176,0.06);
+  cursor:pointer;transition:all 0.15s;
+  border:3px solid rgba(156,39,176,0.1);
+  width:100px;height:100px;flex:none;
+}
+.option-card:hover{border-color:rgba(156,39,176,0.3);transform:translateY(-2px);}
+.option-card:active{transform:scale(0.95);}
+.option-card.correct{border-color:#4CAF50!important;box-shadow:0 0 20px rgba(76,175,80,0.3)!important;background:#F1F8E9!important;}
+.option-card.wrong{border-color:#F44336!important;box-shadow:0 0 20px rgba(244,67,54,0.3)!important;background:#FFF3F0!important;}
+
+/* 规则切换提示 */
+.switch-toast{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  padding:12px 24px;border-radius:12px;
+  font-size:16px;font-weight:800;z-index:50;pointer-events:none;
+  opacity:0;transition:opacity 0.3s;
+}
+.switch-toast.show{opacity:1;animation:toastPop 0.8s ease-out;}
+.switch-toast.to-color{background:#E8F5E9;color:#2E7D32;}
+.switch-toast.to-shape{background:#FFEBEE;color:#C62828;}
+@keyframes toastPop{
+  0%{transform:translate(-50%,-50%) scale(0.5);opacity:0}
+  30%{transform:translate(-50%,-50%) scale(1.1);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(1);opacity:0}
+}
+
+/* 结果区 */
+.result-area{
+  display:none;flex-direction:column;align-items:center;gap:12px;
+  width:100%;padding:10px 0;
+}
+.result-area.show{display:flex;}
+.result-card{
+  background:#F8F4FC;border-radius:20px;padding:24px;
+  width:100%;text-align:center;
+}
+.result-card .r-title{font-size:20px;font-weight:800;color:#4A3F6B;margin-bottom:4px;}
+.result-card .r-sub{font-size:13px;color:#9C27B0;margin-bottom:16px;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.result-item{
+  background:#fff;border-radius:12px;padding:14px 8px;text-align:center;
+}
+.result-item .val{font-size:28px;font-weight:800;color:#9C27B0;font-family:'JetBrains Mono',monospace;}
+.result-item .lbl{font-size:11px;color:#7B6F9E;margin-top:2px;}
+.result-btns{display:flex;gap:10px;}
+.result-btns button{
+  flex:1;padding:12px 0;border-radius:12px;font-size:15px;font-weight:700;
+  cursor:pointer;border:none;transition:transform 0.15s;
+}
+.result-btns button:active{transform:scale(0.96);}
+.btn-retry{background:#9C27B0;color:#fff;}
+.btn-home{background:#F3EDF7;color:#9C27B0;border:2px solid rgba(156,39,176,0.2)!important;}
+
+/* 开始按钮 */
+.start-area{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 0;width:100%;}
+.start-area.hidden{display:none;}
+.btn-start-game{
+  width:100%;padding:16px 0;border-radius:16px;border:none;
+  background:linear-gradient(135deg,#9C27B0,#AB47BC);
+  color:#fff;font-size:18px;font-weight:800;cursor:pointer;
+  box-shadow:0 4px 16px rgba(156,39,176,0.3);
+  transition:transform 0.15s;
+}
+.btn-start-game:active{transform:scale(0.96);}
+.start-hint{font-size:12px;color:#7B6F9E;text-align:center;line-height:1.6;}
+
+@media(min-width:768px){
+  .option-card{width:110px;height:110px;}
+}
+@media(max-width:600px){
+  .container{flex-direction:column;width:min(96vw,500px);}
+  .left-panel{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;gap:6px;padding:10px;max-height:120px;}
+  .left-panel>*{flex:1;min-width:100px;}
+  .left-panel .diff-table,.left-panel .guide-card{display:none;}
+}
+@media(max-height:600px){
+  .container{min-height:auto;}
+  .game-area{gap:6px;padding:10px;}
+  .target-card{min-height:90px;padding:12px;}
+  .task-btn{width:50px;height:50px;font-size:12px;}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
+/* 规则弹窗 */
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
+.rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
+.rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
+.rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
+.rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
+.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 左侧面板 -->
+  <div class="left-panel">
+    <div class="panel-title">难度选择</div>
+    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
+    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
+    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="panel-title">难度差异</div>
+    <table class="diff-table">
+      <tr><th>难度</th><th>选项</th><th>切换</th><th>时长</th></tr>
+      <tr><td>简单</td><td>2-3</td><td>6题</td><td>2分</td></tr>
+      <tr><td>中等</td><td>3-4</td><td>4题</td><td>2.5分</td></tr>
+      <tr><td>困难</td><td>4-6</td><td>2题</td><td>3分</td></tr>
+    </table>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        <b>绿灯亮</b> → 找<b>颜色相同</b>的选项<br>
+        <b>红灯亮</b> → 找<b>形状相同</b>的选项<br>
+        规则会随时切换，注意指示灯！<br>
+        目标与正确选项<b>不会完全相同</b>，需抽象出当前规则维度。
+      </div>
+    </div>
+    <div class="panel-title">统计数据</div>
+    <div class="stat-item"><span class="stat-label">得分</span><span class="stat-value" id="stat-score">0</span></div>
+    <div class="stat-item"><span class="stat-label">正确率</span><span class="stat-value" id="stat-acc">--</span></div>
+    <div class="stat-item"><span class="stat-label">答对/答错</span><span class="stat-value" id="stat-cw">0/0</span></div>
+    <div class="stat-item"><span class="stat-label">规则切换</span><span class="stat-value" id="stat-switches">0</span></div>
+  </div>
+
+  <!-- 右侧游戏区 -->
+  <div class="game-area" id="game-area">
+    <div class="top-bar">
+      <button class="back-btn" onclick="location.href='index.html'">← 返回</button>
+      <span class="game-title">灯语任务</span>
+      <span style="width:50px"></span>
+    </div>
+
+    <div class="timer-wrap">
+      <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+      <div class="timer-text" id="timer-text">3:00</div>
+    </div>
+
+    <div class="rule-bar">
+      <span class="diff-label-text" id="diff-label">难度2级(递增)</span>
+      <span class="rule-desc">绿灯找颜色，红灯找形状</span>
+    </div>
+
+    <div class="task-indicator">
+      <div class="task-btn active-color" id="btn-color">颜色</div>
+      <div class="task-btn" id="btn-shape">形状</div>
+    </div>
+
+    <div class="target-card" id="target-card"></div>
+
+    <div class="options-row" id="options-row"></div>
+
+    <div class="start-area" id="start-area">
+      <button class="btn-start-game" onclick="startGame()">开始训练</button>
+      <div class="start-hint">
+        绿灯亮 → 找<b>颜色相同</b>的选项<br>
+        红灯亮 → 找<b>形状相同</b>的选项<br>
+        规则会随时切换，注意指示灯！
+      </div>
+    </div>
+
+    <div class="result-area" id="result-area">
+      <div class="result-card">
+        <div class="r-title">训练完成！</div>
+        <div class="r-sub" id="result-sub"></div>
+        <div class="result-grid">
+          <div class="result-item"><div class="val" id="r-score">0</div><div class="lbl">总分</div></div>
+          <div class="result-item"><div class="val" id="r-acc">0%</div><div class="lbl">正确率</div></div>
+          <div class="result-item"><div class="val" id="r-correct">0</div><div class="lbl">答对</div></div>
+          <div class="result-item"><div class="val" id="r-switches">0</div><div class="lbl">规则切换</div></div>
+        </div>
+        <div class="result-btns">
+          <button class="btn-retry" onclick="startGame()">再来一次</button>
+          <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="switch-toast" id="switch-toast"></div>
+
+<script>
+// ===== 音频 =====
+let audioCtx=null;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();}
+function playBeep(freq,dur,vol=0.08){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sine';o.frequency.value=freq;
+  g.gain.setValueAtTime(vol,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+dur);
+}
+
+// ===== 图形 =====
+const SHAPES=['square','triangle','hexagon','star','diamond','circle'];
+const COLORS=[
+  {name:'玫红',hex:'#E91E63'},
+  {name:'紫色',hex:'#9C27B0'},
+  {name:'蓝色',hex:'#2196F3'},
+  {name:'橙色',hex:'#FF9800'},
+  {name:'绿色',hex:'#4CAF50'},
+  {name:'黄色',hex:'#FFC107'},
+];
+
+function drawShapeSVG(shape,colorHex,size){
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 100 100');
+  svg.setAttribute('width',size);svg.setAttribute('height',size);
+  let d='';
+  switch(shape){
+    case'square':d='M22,22 L78,22 L78,78 L22,78 Z';break;
+    case'triangle':d='M50,14 L86,82 L14,82 Z';break;
+    case'hexagon':
+      for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6,x=50+36*Math.cos(a),y=50+36*Math.sin(a);d+=(i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';}
+      d+='Z';break;
+    case'star':
+      for(let i=0;i<10;i++){const r=i%2===0?36:15,a=Math.PI/5*i-Math.PI/2,x=50+r*Math.cos(a),y=50+r*Math.sin(a);d+=(i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';}
+      d+='Z';break;
+    case'diamond':d='M50,12 L88,50 L50,88 L12,50 Z';break;
+    case'circle':d='M50,16 A34,34 0 1,1 49.9,16 Z';break;
+  }
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d',d);p.setAttribute('fill',colorHex);
+  svg.appendChild(p);
+  return svg;
+}
+
+// ===== 难度按钮 =====
+function buildDiffBtns(){
+  const diffs=[
+    {id:'easy',label:'简单',optStart:2,optMax:3,switchEvery:6,time:120},
+    {id:'medium',label:'中等',optStart:3,optMax:4,switchEvery:4,time:150},
+    {id:'hard',label:'困难',optStart:4,optMax:6,switchEvery:2,time:180},
+  ];
+  diffs.forEach(d=>{
+    const row=document.getElementById('diff-'+d.id);
+    const btn=document.createElement('button');
+    btn.className='diff-btn'+(d.id==='hard'?' active':'');
+    btn.textContent=d.label;
+    btn.onclick=()=>{
+      document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.diffCfg=d;
+      updateDiffLabel();
+    };
+    row.appendChild(btn);
+  });
+}
+
+// ===== 状态 =====
+let state={
+  score:0,correct:0,wrong:0,switches:0,
+  currentRule:'color',trialCount:0,ruleTrialCount:0,
+  switchEvery:2,optCount:4,optMax:6,
+  gameActive:false,timerInterval:null,
+  timeLeft:180,totalTime:180,
+  currentTarget:null,
+  diffCfg:{id:'hard',optStart:4,optMax:6,switchEvery:2,time:180}
+};
+
+function formatTime(s){
+  const m=Math.floor(s/60),sec=s%60;
+  return m+':'+(sec<10?'0':'')+sec;
+}
+
+function updateTimerUI(){
+  document.getElementById('timer-fill').style.width=(state.timeLeft/state.totalTime*100)+'%';
+  document.getElementById('timer-text').textContent=formatTime(state.timeLeft);
+}
+
+function updateTaskBtns(){
+  const bc=document.getElementById('btn-color');
+  const bs=document.getElementById('btn-shape');
+  bc.className='task-btn'+(state.currentRule==='color'?' active-color':'');
+  bs.className='task-btn'+(state.currentRule==='shape'?' active-shape':'');
+}
+
+function updateDiffLabel(){
+  document.getElementById('diff-label').textContent='难度'+state.optCount+'级(递增)';
+}
+
+function updateStats(){
+  document.getElementById('stat-score').textContent=state.score;
+  const total=state.correct+state.wrong;
+  document.getElementById('stat-acc').textContent=total>0?Math.round(state.correct/total*100)+'%':'--';
+  document.getElementById('stat-cw').textContent=state.correct+'/'+state.wrong;
+  document.getElementById('stat-switches').textContent=state.switches;
+}
+
+function startGame(){
+  initAudio();
+  const d=state.diffCfg;
+  state.score=0;state.correct=0;state.wrong=0;state.switches=0;
+  state.currentRule='color';state.trialCount=0;state.ruleTrialCount=0;
+  state.switchEvery=d.switchEvery;state.optCount=d.optStart;state.optMax=d.optMax;
+  state.totalTime=d.time;state.timeLeft=d.time;
+  state.gameActive=true;
+
+  document.getElementById('start-area').classList.add('hidden');
+  document.getElementById('result-area').classList.remove('show');
+  updateTimerUI();
+  updateTaskBtns();
+  updateDiffLabel();
+  updateStats();
+
+  state.timerInterval=setInterval(()=>{
+    state.timeLeft--;
+    updateTimerUI();
+    if(state.timeLeft<=0)endGame();
+  },1000);
+  nextTrial();
+}
+
+function nextTrial(){
+  if(!state.gameActive)return;
+
+  state.ruleTrialCount++;
+  if(state.ruleTrialCount>state.switchEvery){
+    state.ruleTrialCount=1;
+    state.currentRule=state.currentRule==='color'?'shape':'color';
+    state.switches++;
+    updateTaskBtns();
+    updateStats();
+    showSwitchToast();
+  }
+
+  // 难度递增：每答对4题+1选项
+  if(state.correct>0 && state.correct%4===0 && state.optCount<state.optMax){
+    state.optCount++;
+    state.switchEvery=Math.max(2,state.switchEvery-1);
+    updateDiffLabel();
+  }
+
+  state.trialCount++;
+
+  const tColor=COLORS[Math.floor(Math.random()*COLORS.length)];
+  const tShape=SHAPES[Math.floor(Math.random()*SHAPES.length)];
+  state.currentTarget={color:tColor,shape:tShape};
+
+  const tc=document.getElementById('target-card');
+  tc.innerHTML='';
+  tc.appendChild(drawShapeSVG(tShape,tColor.hex,100));
+
+  const options=[];
+  if(state.currentRule==='color'){
+    // 颜色模式：正确选项=同色异形，干扰项=异色异形
+    const usedColors=new Set([tColor.hex]);
+    const usedShapes=new Set([tShape]);
+    const altShapes=SHAPES.filter(s=>s!==tShape);
+    const cShape=altShapes[Math.floor(Math.random()*altShapes.length)];
+    options.push({color:tColor,shape:cShape});
+    usedShapes.add(cShape);
+    while(options.length<state.optCount){
+      const c=COLORS[Math.floor(Math.random()*COLORS.length)];
+      const s=SHAPES[Math.floor(Math.random()*SHAPES.length)];
+      if(!usedColors.has(c.hex)&&!usedShapes.has(s)){
+        usedColors.add(c.hex);usedShapes.add(s);
+        options.push({color:c,shape:s});
+      }
+    }
+  }else{
+    // 形状模式：正确选项=同形异色，干扰项=异形
+    const usedShapes=new Set([tShape]);
+    const altColors=COLORS.filter(c=>c.hex!==tColor.hex);
+    const sColor=altColors[Math.floor(Math.random()*altColors.length)];
+    options.push({color:sColor,shape:tShape});
+    while(options.length<state.optCount){
+      const s=SHAPES[Math.floor(Math.random()*SHAPES.length)];
+      if(!usedShapes.has(s)){
+        usedShapes.add(s);
+        const c=COLORS[Math.floor(Math.random()*COLORS.length)];
+        options.push({color:c,shape:s});
+      }
+    }
+  }
+
+  // 洗牌
+  for(let i=options.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [options[i],options[j]]=[options[j],options[i]];
+  }
+
+  const row=document.getElementById('options-row');
+  row.innerHTML='';
+  options.forEach(opt=>{
+    const card=document.createElement('div');
+    card.className='option-card';
+    card.appendChild(drawShapeSVG(opt.shape,opt.color.hex,64));
+    card.addEventListener('click',()=>handleChoice(opt,card));
+    row.appendChild(card);
+  });
+}
+
+function handleChoice(chosen,card){
+  if(!state.gameActive)return;
+  const correct=state.currentTarget;
+  let isCorrect;
+  if(state.currentRule==='color'){
+    isCorrect=chosen.color.hex===correct.color.hex;
+  }else{
+    isCorrect=chosen.shape===correct.shape;
+  }
+
+  document.querySelectorAll('.option-card').forEach(c=>c.style.pointerEvents='none');
+
+  if(isCorrect){
+    state.correct++;state.score+=10;
+    card.style.cssText='border-color:#4CAF50!important;box-shadow:0 0 20px rgba(76,175,80,0.3)!important;background:#F1F8E9!important;';
+    playBeep(880,0.12,0.1);
+  }else{
+    state.wrong++;state.score=Math.max(0,state.score-5);
+    card.style.cssText='border-color:#F44336!important;box-shadow:0 0 20px rgba(244,67,54,0.3)!important;background:#FFF3F0!important;';
+    playBeep(220,0.2,0.1);
+    // 高亮正确答案
+    document.querySelectorAll('.option-card').forEach(c=>{
+      const svg=c.querySelector('path');
+      if(svg){
+        const fill=svg.getAttribute('fill');
+        if(state.currentRule==='color'&&fill===correct.color.hex){
+          c.style.cssText='border-color:#4CAF50!important;box-shadow:0 0 20px rgba(76,175,80,0.3)!important;background:#F1F8E9!important;';
+        }
+        if(state.currentRule==='shape'){
+          const d=svg.getAttribute('d');
+          const targetD=document.querySelector('#target-card path').getAttribute('d');
+          if(d===targetD){
+            c.style.cssText='border-color:#4CAF50!important;box-shadow:0 0 20px rgba(76,175,80,0.3)!important;background:#F1F8E9!important;';
+          }
+        }
+      }
+    });
+  }
+
+  updateStats();
+  setTimeout(nextTrial,600);
+}
+
+function showSwitchToast(){
+  const toast=document.getElementById('switch-toast');
+  const isColor=state.currentRule==='color';
+  toast.textContent=isColor?'切换为 绿灯·找颜色':'切换为 红灯·找形状';
+  toast.className='switch-toast show '+(isColor?'to-color':'to-shape');
+  setTimeout(()=>{toast.className='switch-toast';},800);
+}
+
+function endGame(){
+  state.gameActive=false;
+  clearInterval(state.timerInterval);
+  document.getElementById('timer-fill').style.width='0%';
+  document.getElementById('timer-text').textContent='0:00';
+  document.getElementById('target-card').innerHTML='';
+  document.getElementById('options-row').innerHTML='';
+
+  const total=state.correct+state.wrong;
+  const acc=total>0?Math.round(state.correct/total*100):0;
+
+  document.getElementById('result-sub').textContent='灯语任务 · 最高难度'+state.optCount+'级';
+  document.getElementById('r-score').textContent=state.score;
+  document.getElementById('r-acc').textContent=acc+'%';
+  document.getElementById('r-correct').textContent=state.correct;
+  document.getElementById('r-switches').textContent=state.switches;
+  document.getElementById('result-area').classList.add('show');
+  document.getElementById('start-area').classList.add('hidden');
+  updateStats();
+}
+
+// 初始化
+buildDiffBtns();
+state.diffCfg={id:'hard',optStart:4,optMax:6,switchEvery:2,time:180};
+updateDiffLabel();
+
+function showRulesPopup(){
+    if(!localStorage.getItem('b5_visited')){
+        document.getElementById('rulesOverlay').style.display='flex';
+    }
+}
+function closeRules(){
+    localStorage.setItem('b5_visited','1');
+    document.getElementById('rulesOverlay').style.display='none';
+}
+document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+
+</script>
+
+<div class="rules-overlay" id="rulesOverlay">
+<div class="rules-dialog">
+<h2>🎮 灯语任务</h2>
+<p>根据灯光的<b>颜色</b>和<b>形状</b>两个属性，匹配对应的按钮。</p><p>需要同时关注两个维度，考验认知灵活性和任务切换能力！</p>
+<p class="rd-note">每次进入游戏都会显示，点击下方按钮开始</p>
+<button onclick="closeRules()">我知道了，开始游戏！</button>
+</div>
+</div>
+</body>
+</html>

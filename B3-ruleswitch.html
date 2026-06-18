@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>规则跳跳 - 认知灵活性训练</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100dvh;overflow:hidden}
+body{
+  font-family:'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+  background:#0A1418;
+  color:#D4E8EC;
+  display:flex;align-items:center;justify-content:center;
+  height:100dvh;
+}
+.container{
+  display:flex;gap:16px;
+  width:min(96vw,1100px);
+  min-height:min(92vh,700px);
+  padding:12px;
+}
+.left-panel{
+  width:260px;min-width:260px;
+  background:#0F1C22;
+  border-radius:16px;
+  padding:14px 12px;
+  display:flex;flex-direction:column;
+  gap:8px;
+  border:1px solid rgba(0,188,212,0.08);
+  overflow-y:auto;
+}
+.panel-title{color:#00BCD4;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:rgba(212,232,236,0.45);font-size:11px;margin-bottom:3px;}
+.diff-btns{display:flex;gap:4px;}
+.diff-btn{
+  flex:1;padding:5px 0;border-radius:8px;
+  border:1px solid rgba(212,232,236,0.1);
+  background:rgba(212,232,236,0.03);
+  color:rgba(212,232,236,0.55);
+  font-size:11px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.diff-btn:hover{background:rgba(0,188,212,0.08);}
+.diff-btn.active{background:rgba(0,188,212,0.15);border-color:#00BCD4;color:#00BCD4;}
+.diff-table{width:100%;border-collapse:collapse;font-size:10px;}
+.diff-table th{color:rgba(212,232,236,0.35);font-weight:600;padding:3px 4px;text-align:left;border-bottom:1px solid rgba(212,232,236,0.06);}
+.diff-table td{color:rgba(212,232,236,0.55);padding:3px 4px;border-bottom:1px solid rgba(212,232,236,0.04);}
+.guide-card{background:rgba(0,188,212,0.04);border-radius:10px;padding:10px;border:1px solid rgba(0,188,212,0.08);}
+.guide-title{color:#00BCD4;font-size:11px;font-weight:700;margin-bottom:4px;}
+.guide-text{color:rgba(212,232,236,0.5);font-size:10px;line-height:1.5;}
+.guide-text b{color:rgba(212,232,236,0.7);}
+.stat-item{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(212,232,236,0.04);}
+.stat-label{color:rgba(212,232,236,0.4);font-size:11px;}
+.stat-value{color:#00BCD4;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.mode-switch{display:flex;gap:6px;margin-top:4px;}
+.mode-btn{
+  flex:1;padding:6px 0;border-radius:8px;
+  border:1px solid rgba(212,232,236,0.1);
+  background:rgba(212,232,236,0.03);
+  color:rgba(212,232,236,0.55);
+  font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.mode-btn.active{background:rgba(0,188,212,0.15);border-color:#00BCD4;color:#00BCD4;}
+
+.right-panel{
+  flex:1;background:#0F1C22;border-radius:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;border:1px solid rgba(0,188,212,0.08);min-width:0;
+}
+.game-header{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;}
+.game-title{color:#D4E8EC;font-size:18px;font-weight:800;}
+.back-btn{background:rgba(212,232,236,0.06);border:none;color:rgba(212,232,236,0.5);padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.2s;}
+.back-btn:hover{background:rgba(212,232,236,0.12);}
+
+.rule-badge{
+  padding:8px 20px;border-radius:12px;
+  font-size:15px;font-weight:800;margin-bottom:12px;
+  transition:all 0.3s;
+}
+.rule-badge.normal{background:rgba(0,188,212,0.12);color:#00BCD4;border:1px solid rgba(0,188,212,0.2);}
+.rule-badge.reverse{background:rgba(255,152,0,0.12);color:#FF9800;border:1px solid rgba(255,152,0,0.2);}
+
+.stimulus-number{
+  font-size:clamp(64px,12vw,120px);font-weight:900;
+  color:#D4E8EC;margin-bottom:20px;
+  font-family:'JetBrains Mono',monospace;
+  line-height:1;user-select:none;
+}
+
+.option-btns{display:flex;gap:20px;margin-bottom:16px;}
+.option-btn{
+  width:clamp(120px,20vw,180px);height:clamp(60px,10vw,80px);
+  border-radius:16px;border:2px solid rgba(212,232,236,0.15);
+  background:rgba(212,232,236,0.04);
+  color:rgba(212,232,236,0.7);
+  font-size:clamp(18px,3vw,24px);font-weight:800;
+  cursor:pointer;transition:all 0.15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.option-btn:hover{background:rgba(0,188,212,0.08);border-color:rgba(0,188,212,0.3);}
+.option-btn:active{transform:scale(0.96);}
+.option-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.option-btn.correct-flash{box-shadow:0 0 30px rgba(76,175,80,0.5);border-color:#4CAF50;color:#4CAF50;background:rgba(76,175,80,0.1);}
+.option-btn.wrong-flash{box-shadow:0 0 30px rgba(244,67,54,0.5);border-color:#F44336;color:#F44336;background:rgba(244,67,54,0.1);}
+
+.rule-switch-toast{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(255,152,0,0.9);color:#fff;
+  padding:12px 24px;border-radius:12px;
+  font-size:16px;font-weight:800;z-index:5;
+  animation:toastPop 1.5s ease-out forwards;pointer-events:none;
+}
+@keyframes toastPop{0%{transform:translate(-50%,-50%) scale(0.5);opacity:0;}20%{transform:translate(-50%,-50%) scale(1.1);opacity:1;}80%{opacity:1;}100%{transform:translate(-50%,-50%) scale(1);opacity:0;}}
+
+.game-footer{position:absolute;bottom:16px;left:16px;right:16px;display:flex;flex-direction:column;gap:8px;}
+.progress-bar{width:100%;height:6px;background:rgba(212,232,236,0.06);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#00BCD4,#0097A7);border-radius:3px;transition:width 0.3s;}
+.footer-row{display:flex;justify-content:space-between;align-items:center;}
+.score-display{color:#D4E8EC;font-size:14px;font-weight:700;}
+.trial-info{color:rgba(212,232,236,0.4);font-size:12px;}
+.start-btn{padding:10px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#00BCD4,#0097A7);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(0,188,212,0.2);}
+.start-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,188,212,0.3);}
+.start-btn:active{transform:scale(0.96);}
+.start-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+.countdown{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:72px;font-weight:800;color:#D4E8EC;animation:cdPop 0.5s ease-out;}
+@keyframes cdPop{0%{transform:translate(-50%,-50%) scale(2);opacity:0;}100%{transform:translate(-50%,-50%) scale(1);opacity:1;}}
+
+.result-inline{display:none;}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center;}
+.modal-overlay.show{display:flex;}
+.modal-card{background:#0F1C22;border:2px solid #00BCD4;border-radius:20px;padding:32px 28px;max-width:400px;width:90%;text-align:center;box-shadow:0 0 40px rgba(0,188,212,0.3);}
+.modal-card .result-title{color:#00BCD4;font-size:24px;font-weight:800;margin-bottom:8px;}
+.modal-card .result-subtitle{color:#D4E8EC;font-size:15px;opacity:0.7;margin-bottom:20px;}
+.modal-card .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.modal-card .result-item{background:rgba(0,188,212,0.08);border-radius:12px;padding:14px 10px;text-align:center;}
+.modal-card .val{color:#00BCD4;font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.modal-card .lbl{color:rgba(212,232,236,0.5);font-size:12px;margin-top:4px;}
+.modal-card .result-grade{color:#4CAF50;font-size:16px;font-weight:700;margin-bottom:16px;}
+.modal-card .result-btns{display:flex;gap:10px;justify-content:center;}
+.modal-card .result-btns button{padding:12px 24px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:transform 0.15s;}
+.modal-card .result-btns button:active{transform:scale(0.96);}
+.modal-card .btn-retry{background:linear-gradient(135deg,#00BCD4,#0097A7);color:#fff;}
+.modal-card .btn-home{background:rgba(212,232,236,0.06);color:rgba(212,232,236,0.6);border:1px solid rgba(212,232,236,0.1);}
+
+.params-row{display:flex;gap:10px;justify-content:center;margin-top:4px;}
+.param-tag{background:rgba(212,232,236,0.04);padding:4px 10px;border-radius:6px;color:rgba(212,232,236,0.35);font-size:11px;font-family:'JetBrains Mono',monospace;}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
+/* 规则弹窗 */
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
+.rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
+.rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
+.rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
+.rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
+.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="left-panel">
+    <div class="panel-title">模式选择</div>
+    <div class="mode-switch" style="margin-bottom:12px;">
+      <button class="mode-btn active" data-gamemode="odd" onclick="setGameMode('odd')">A 奇偶</button>
+      <button class="mode-btn" data-gamemode="size" onclick="setGameMode('size')">B 大小</button>
+    </div>
+    <div class="panel-title">难度选择</div>
+    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
+    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
+    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="panel-title">难度差异</div>
+    <table class="diff-table">
+      <tr><th>难度</th><th>切换频率</th><th>窗口</th><th>题数</th></tr>
+      <tr><td>简单</td><td>每10题</td><td>3.0s</td><td>30</td></tr>
+      <tr><td>中等</td><td>每7题</td><td>1.8s</td><td>40</td></tr>
+      <tr><td>困难</td><td>每4题</td><td>1.0s</td><td>50</td></tr>
+    </table>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        屏幕中央出现数字，根据当前<b>规则</b>点击左右按钮。<br>
+        <b>模式A（奇偶）</b>：奇数→左 / 偶数→右<br>
+        <b>模式B（大小）</b>：小于50→左 / 大于50→右<br>
+        规则会<b>突然反转</b>，左右按钮含义对调！<br>
+        训练大脑放下旧规则、加载新规则的能力。
+      </div>
+    </div>
+    <div class="panel-title">统计数据</div>
+    <div class="stat-item"><span class="stat-label">总正确率</span><span class="stat-value" id="stat-acc">--</span></div>
+    <div class="stat-item"><span class="stat-label">切换后正确率</span><span class="stat-value" id="stat-switch">--</span></div>
+    <div class="stat-item"><span class="stat-label">切换代价</span><span class="stat-value" id="stat-cost">--</span></div>
+    <div class="stat-item"><span class="stat-label">平均反应时</span><span class="stat-value" id="stat-rt">--</span></div>
+    <div class="mode-switch">
+      <button class="mode-btn active" data-mode="child" onclick="setMode('child')">儿童</button>
+      <button class="mode-btn" data-mode="adult" onclick="setMode('adult')">成人</button>
+    </div>
+  </div>
+  <div class="right-panel" id="game-area">
+    <div class="game-header"><span class="game-title">规则跳跳</span><button class="back-btn" onclick="location.href='index.html'">返回大厅</button></div>
+    <div class="rule-badge normal" id="rule-badge">正常方向</div>
+    <div class="stimulus-number" id="stimulus-number"></div>
+    <div class="option-btns">
+      <button class="option-btn" id="btn-left" disabled>奇数</button>
+      <button class="option-btn" id="btn-right" disabled>偶数</button>
+    </div>
+    <div class="game-footer">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="footer-row">
+        <span class="score-display">得分：<span id="score">0</span></span>
+        <span class="trial-info" id="trial-info">0 / 0</span>
+        <button class="start-btn" id="start-btn" onclick="startGame()">开始训练</button>
+      </div>
+      <div class="params-row" id="params-row"></div>
+    </div>
+  </div>
+</div>
+<script>
+const DIFF_CONFIG={
+  'easy-easy':{switchEvery:10,timeout:3000,total:30,label:'初级·简单'},
+  'easy-medium':{switchEvery:9,timeout:2500,total:36,label:'初级·中等'},
+  'easy-hard':{switchEvery:8,timeout:2000,total:40,label:'初级·困难'},
+  'medium-easy':{switchEvery:7,timeout:1800,total:40,label:'中级·简单'},
+  'medium-medium':{switchEvery:6,timeout:1500,total:48,label:'中级·中等'},
+  'medium-hard':{switchEvery:5,timeout:1200,total:48,label:'中级·困难'},
+  'hard-easy':{switchEvery:5,timeout:1000,total:50,label:'高级·简单'},
+  'hard-medium':{switchEvery:4,timeout:800,total:60,label:'高级·中等'},
+  'hard-hard':{switchEvery:3,timeout:600,total:60,label:'高级·困难'},
+};
+const ADULT_DIFF={
+  'easy-easy':{switchEvery:8,timeout:2500,total:30,label:'初级·简单'},
+  'easy-medium':{switchEvery:7,timeout:2000,total:36,label:'初级·中等'},
+  'easy-hard':{switchEvery:6,timeout:1800,total:40,label:'初级·困难'},
+  'medium-easy':{switchEvery:5,timeout:1500,total:40,label:'中级·简单'},
+  'medium-medium':{switchEvery:4,timeout:1200,total:48,label:'中级·中等'},
+  'medium-hard':{switchEvery:3,timeout:1000,total:48,label:'中级·困难'},
+  'hard-easy':{switchEvery:3,timeout:800,total:50,label:'高级·简单'},
+  'hard-medium':{switchEvery:2,timeout:700,total:60,label:'高级·中等'},
+  'hard-hard':{switchEvery:2,timeout:500,total:60,label:'高级·困难'},
+};
+
+let state={
+  mode:'child',level:'easy',subLevel:'easy',gameMode:'odd',
+  running:false,trials:[],currentTrial:0,score:0,
+  currentRule:'normal',trialStartTime:0,responded:false,timeoutId:null,
+  results:[]
+};
+let audioCtx=null;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();}
+function playBeep(freq,dur,vol=0.12){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(vol,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
+
+function getConfig(){
+  const key=state.level+'-'+state.subLevel;
+  return state.mode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
+}
+
+function buildDiffBtns(){
+  ['easy','medium','hard'].forEach(lvl=>{
+    const c=document.getElementById('diff-'+lvl);c.innerHTML='';
+    ['easy','medium','hard'].forEach(sub=>{
+      const key=lvl+'-'+sub;
+      const cfg=state.mode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
+      const btn=document.createElement('button');btn.className='diff-btn';
+      btn.textContent=cfg.label.split('·')[1];btn.dataset.key=key;
+      btn.onclick=()=>selectDiff(lvl,sub);
+      if(state.level===lvl&&state.subLevel===sub)btn.classList.add('active');
+      c.appendChild(btn);
+    });
+  });
+  updateParams();
+}
+
+function selectDiff(lvl,sub){
+  state.level=lvl;state.subLevel=sub;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.diff-btn[data-key="'+lvl+'-'+sub+'"]')?.classList.add('active');
+  updateParams();
+}
+
+function updateParams(){
+  const cfg=getConfig();
+  document.getElementById('params-row').innerHTML='<span class="param-tag">模式'+(state.gameMode==='odd'?'A 奇偶':'B 大小')+'</span><span class="param-tag">切换每'+cfg.switchEvery+'题</span><span class="param-tag">窗口'+cfg.timeout+'ms</span><span class="param-tag">共'+cfg.total+'题</span>';
+}
+
+function setGameMode(gm){
+  state.gameMode=gm;
+  document.querySelectorAll('[data-gamemode]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-gamemode="'+gm+'"]')?.classList.add('active');
+  updateParams();
+  updateButtons();
+}
+
+function setMode(mode){
+  state.mode=mode;
+  document.querySelectorAll('.mode-btn[data-mode]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.mode-btn[data-mode="'+mode+'"]')?.classList.add('active');
+  buildDiffBtns();
+}
+
+function generateTrials(){
+  const cfg=getConfig();const trials=[];
+  for(let i=0;i<cfg.total;i++){
+    let num;
+    if(state.gameMode==='odd'){
+      num=Math.floor(Math.random()*99)+1;
+    }else{
+      num=Math.floor(Math.random()*98)+2;
+      if(num===50)num=49;
+    }
+    trials.push({number:num});
+  }
+  return trials;
+}
+
+function updateButtons(){
+  const btnL=document.getElementById('btn-left');
+  const btnR=document.getElementById('btn-right');
+  if(state.gameMode==='odd'){
+    if(state.currentRule==='normal'){
+      btnL.textContent='奇数';btnR.textContent='偶数';
+    }else{
+      btnL.textContent='偶数';btnR.textContent='奇数';
+    }
+  }else{
+    if(state.currentRule==='normal'){
+      btnL.textContent='< 50';btnR.textContent='> 50';
+    }else{
+      btnL.textContent='> 50';btnR.textContent='< 50';
+    }
+  }
+}
+
+function startGame(){
+  if(state.running)return;initAudio();
+  state.trials=generateTrials();state.currentTrial=0;state.score=0;state.results=[];state.currentRule='normal';state.running=true;
+  document.getElementById('start-btn').disabled=true;
+  document.getElementById('score').textContent='0';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('trial-info').textContent='0 / '+state.trials.length;
+  document.getElementById('rule-badge').className='rule-badge normal';
+  document.getElementById('rule-badge').textContent='正常方向';
+  document.getElementById('btn-left').disabled=false;
+  document.getElementById('btn-right').disabled=false;
+  updateButtons();
+  const old=document.querySelector('.modal-overlay');if(old)old.remove();
+  document.getElementById('stimulus-number').textContent='';
+  countdown(3,()=>runTrial());
+}
+
+function countdown(n,cb){
+  const area=document.getElementById('game-area');
+  const el=document.createElement('div');el.className='countdown';el.textContent=n;
+  el.style.position='absolute';area.appendChild(el);
+  if(n>0){setTimeout(()=>{el.remove();countdown(n-1,cb);},800);}
+  else{el.remove();cb();}
+}
+
+function runTrial(){
+  if(!state.running)return;
+  if(state.currentTrial>=state.trials.length){endGame();return;}
+  const cfg=getConfig();
+  if(state.currentTrial>0&&state.currentTrial%cfg.switchEvery===0){
+    state.currentRule=state.currentRule==='normal'?'reverse':'normal';
+    const badge=document.getElementById('rule-badge');
+    badge.className='rule-badge '+(state.currentRule==='normal'?'normal':'reverse');
+    badge.textContent=state.currentRule==='normal'?'正常方向':'方向反转';
+    updateButtons();
+    if(state.currentRule==='reverse')showRuleSwitchToast();
+  }
+  const trial=state.trials[state.currentTrial];
+  state.responded=false;state.trialStartTime=0;
+  document.getElementById('stimulus-number').textContent=trial.number;
+  document.getElementById('btn-left').disabled=false;
+  document.getElementById('btn-right').disabled=false;
+  state.trialStartTime=performance.now();
+  state.timeoutId=setTimeout(()=>{
+    if(!state.responded){state.results.push({type:'timeout',rule:state.currentRule});nextTrial();}
+  },cfg.timeout);
+}
+
+function handleChoice(side){
+  if(!state.running||state.responded||!state.trialStartTime)return;
+  state.responded=true;clearTimeout(state.timeoutId);
+  const rt=performance.now()-state.trialStartTime;
+  const trial=state.trials[state.currentTrial];
+  const cfg=getConfig();
+  const num=trial.number;
+  let correctSide;
+  if(state.gameMode==='odd'){
+    const isOdd=num%2===1;
+    if(state.currentRule==='normal'){
+      correctSide=isOdd?'left':'right';
+    }else{
+      correctSide=isOdd?'right':'left';
+    }
+  }else{
+    const isSmall=num<50;
+    if(state.currentRule==='normal'){
+      correctSide=isSmall?'left':'right';
+    }else{
+      correctSide=isSmall?'right':'left';
+    }
+  }
+  const correct=side===correctSide;
+  const btn=document.getElementById(side==='left'?'btn-left':'btn-right');
+  if(correct){
+    state.score+=10;
+    state.results.push({type:'correct',rule:state.currentRule,rt});
+    document.getElementById('score').textContent=state.score;
+    btn.classList.add('correct-flash');setTimeout(()=>btn.classList.remove('correct-flash'),400);
+    playBeep(800,0.1);
+  }else{
+    state.score=Math.max(0,state.score-5);
+    state.results.push({type:'wrong',rule:state.currentRule,rt});
+    document.getElementById('score').textContent=state.score;
+    btn.classList.add('wrong-flash');setTimeout(()=>btn.classList.remove('wrong-flash'),400);
+    playBeep(300,0.15);
+  }
+  document.getElementById('btn-left').disabled=true;
+  document.getElementById('btn-right').disabled=true;
+  nextTrial();
+}
+
+function showRuleSwitchToast(){
+  const area=document.getElementById('game-area');
+  const toast=document.createElement('div');toast.className='rule-switch-toast';
+  toast.textContent='方向反转！';area.appendChild(toast);
+  setTimeout(()=>toast.remove(),1500);
+}
+
+function nextTrial(){
+  state.currentTrial++;
+  const total=state.trials.length;
+  document.getElementById('progress-fill').style.width=(state.currentTrial/total*100)+'%';
+  document.getElementById('trial-info').textContent=state.currentTrial+' / '+total;
+  setTimeout(()=>runTrial(),400);
+}
+
+function endGame(){
+  state.running=false;clearTimeout(state.timeoutId);
+  document.getElementById('start-btn').disabled=false;
+  document.getElementById('btn-left').disabled=true;
+  document.getElementById('btn-right').disabled=true;
+  document.getElementById('stimulus-number').textContent='';
+  const correct=state.results.filter(r=>r.type==='correct');
+  const wrong=state.results.filter(r=>r.type==='wrong');
+  const total=correct.length+wrong.length;
+  const acc=total>0?(correct.length/total*100).toFixed(1):'--';
+  const switchTrials=state.results.filter(r=>r.type!=='timeout'&&r.rule==='reverse');
+  const switchCorrect=switchTrials.filter(r=>r.type==='correct');
+  const switchAcc=switchTrials.length>0?(switchCorrect.length/switchTrials.length*100).toFixed(1):'--';
+  const normalTrials=state.results.filter(r=>r.type!=='timeout'&&r.rule==='normal');
+  const normalCorrect=normalTrials.filter(r=>r.type==='correct');
+  const normalAcc=normalTrials.length>0?(normalCorrect.length/normalTrials.length*100).toFixed(1):'--';
+  const cost=normalAcc!=='--'&&switchAcc!=='--'?(parseFloat(normalAcc)-parseFloat(switchAcc)).toFixed(1):'--';
+  const avgRT=correct.length>0?Math.round(correct.reduce((s,r)=>s+r.rt,0)/correct.length):0;
+  document.getElementById('stat-acc').textContent=acc+'%';
+  document.getElementById('stat-switch').textContent=switchAcc+'%';
+  document.getElementById('stat-cost').textContent=cost!=='--'?cost+'%':'--';
+  document.getElementById('stat-rt').textContent=avgRT+'ms';
+  let grade='';const a=parseFloat(acc);
+  if(a>=85)grade='优秀（切换达人）';else if(a>=70)grade='良好';else if(a>=50)grade='需努力';else grade='继续加油';
+  const old=document.querySelector('.modal-overlay');if(old)old.remove();
+  const overlay=document.createElement('div');overlay.className='modal-overlay show';
+  overlay.innerHTML='<div class="modal-card"><div class="result-title">训练完成！</div><div class="result-subtitle">'+grade+'</div><div class="result-grid"><div class="result-item"><div class="val">'+acc+'%</div><div class="lbl">总正确率</div></div><div class="result-item"><div class="val">'+switchAcc+'%</div><div class="lbl">切换后正确率</div></div><div class="result-item"><div class="val">'+cost+'%</div><div class="lbl">切换成本</div></div><div class="result-item"><div class="val">'+avgRT+'ms</div><div class="lbl">平均反应时</div></div></div><div class="result-btns"><button class="btn-retry" onclick="this.closest(\'.modal-overlay\').remove();startGame();">再来一次</button><button class="btn-home" onclick="location.href=\'index.html\'">返回大厅</button></div></div>';
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  document.body.appendChild(overlay);
+  try{const data=JSON.parse(localStorage.getItem('b3_ruleswitch')||'{}');data[state.level+'-'+state.subLevel]={acc,switchAcc,cost,avgRT,date:new Date().toISOString()};localStorage.setItem('b3_ruleswitch',JSON.stringify(data));}catch(e){}
+}
+
+document.getElementById('btn-left').addEventListener('click',()=>handleChoice('left'));
+document.getElementById('btn-right').addEventListener('click',()=>handleChoice('right'));
+buildDiffBtns();
+
+function showRulesPopup(){
+    if(!localStorage.getItem('b3_visited')){
+        document.getElementById('rulesOverlay').style.display='flex';
+    }
+}
+function closeRules(){
+    localStorage.setItem('b3_visited','1');
+    document.getElementById('rulesOverlay').style.display='none';
+}
+document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+
+</script>
+
+<div class="rules-overlay" id="rulesOverlay">
+<div class="rules-dialog">
+<h2>🎮 规则跳跳</h2>
+<p>屏幕上会出现不同形状和颜色的图形，根据当前<b>规则</b>做出反应。</p><p>规则会随时切换——你需要快速调整，考验认知灵活性！</p>
+<p class="rd-note">每次进入游戏都会显示，点击下方按钮开始</p>
+<button onclick="closeRules()">我知道了，开始游戏！</button>
+</div>
+</div>
+</body>
+</html>

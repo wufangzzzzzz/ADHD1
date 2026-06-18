@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>故事小侦探 - 听知觉训练</title>
+  <!-- v=6 -->
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    html, body { touch-action: manipulation; overscroll-behavior: none; width: 100%; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(160deg, #fce4ec 0%, #f8bbd0 30%, #f3e5f5 60%, #fce4ec 100%);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #880E4F;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      position: relative;
+      z-index: 1;
+      border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(136,14,79,0.12);
+      overflow: hidden;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+		margin: 10px;
+    }
+    .content-row {
+      display: flex;
+      flex-direction: row;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .land-left {
+      width: 180px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px;
+      overflow-y: auto;
+      border-right: 1px solid rgba(233,30,99,0.1);
+    }
+    .land-right {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 标题 */
+    .title-area { text-align: center; }
+    h1 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 2px;
+      background: linear-gradient(135deg, #E91E63 0%, #AB47BC 40%, #EC407A 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      color: #880E4F;
+      font-size: 10px;
+      padding: 2px 10px;
+      background: rgba(233,30,99,0.08);
+      border-radius: 15px;
+      display: inline-block;
+    }
+
+    /* 顶部信息栏 */
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(233,30,99,0.08);
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+    .info-item { text-align: center; flex: 1; }
+    .info-label { font-size: 9px; color: rgba(136,14,79,0.55); }
+    .info-value { font-size: 15px; font-weight: bold; }
+    .info-value.score { color: #E91E63; }
+    .info-value.level { color: #AB47BC; }
+    .info-value.round { color: #880E4F; }
+
+    /* 进度点 */
+    .progress-container {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      min-height: 12px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(233,30,99,0.2); margin-top: 4px; }
+    .dot.active { background: #FFDA00; box-shadow: 0 0 6px rgba(255,218,0,0.6); }
+    .dot.correct { background: #32CD32; }
+    .dot.wrong { background: #FF073A; }
+
+    /* 左侧 - 难度按钮 */
+    .level-btn {
+      width: 100%;
+      padding: 14px 10px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #E91E63, #AB47BC);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 3px 10px rgba(233,30,99,0.2);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .level-btn:last-child { margin-bottom: 0; }
+    .level-btn:active { transform: scale(0.95); }
+    .level-btn .ldesc { font-size: 10px; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+
+    .btn-back {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid rgba(233,30,99,0.2);
+      border-radius: 10px;
+      background: transparent;
+      color: #880E4F;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: auto;
+    }
+    .btn-back:active { transform: scale(0.95); background: rgba(233,30,99,0.05); }
+
+    /* 故事卡片网格（左侧） */
+    .story-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .story-card {
+      padding: 10px 8px;
+      border-radius: 10px;
+      background: rgba(233,30,99,0.06);
+      border: 1px solid rgba(233,30,99,0.1);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .story-card:active { transform: scale(0.96); background: rgba(233,30,99,0.12); }
+    .story-card .s-week { font-size: 9px; color: rgba(136,14,79,0.4); }
+    .story-card .s-title { font-size: 13px; font-weight: 700; color: #880E4F; line-height: 1.2; }
+
+    /* 中央区域 */
+    .phase { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 8px; padding: 8px 10px; overflow: hidden; }
+    .phase.hidden { display: none; }
+    #phaseLevel { justify-content: center; }
+    #phaseListen { justify-content: flex-start; }
+    #phaseReview { justify-content: flex-start; overflow: hidden; padding-top: 4%; gap: 14px; }
+    .phase-icon { font-size: 56px; }
+    .phase-title { font-size: 20px; font-weight: 800; color: #880E4F; }
+    .phase-desc { font-size: 14px; color: rgba(136,14,79,0.5); text-align: center; max-width: 280px; line-height: 1.5; }
+
+    /* 故事卡片（中央） */
+    .story-card-big {
+      background: rgba(255,255,255,0.6);
+      border-radius: 14px;
+      padding: 12px 16px 10px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(136,14,79,0.06);
+      width: 100%;
+      max-width: 420px;
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    .story-card-big .s-icon { font-size: 28px; margin-bottom: 4px; display: block; }
+    .story-card-big .s-title { font-size: clamp(15px, 2.2vw, 18px); font-weight: 800; color: #880E4F; margin-bottom: 2px; }
+    .story-card-big .s-hint { font-size: clamp(11px, 1.5vw, 13px); color: rgba(136,14,79,0.45); }
+
+    /* 故事文字 */
+    .story-text-area {
+      width: 100%;
+      max-width: 420px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      background: rgba(255,255,255,0.7);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: clamp(13px, 1.8vw, 15px);
+      line-height: 1.7;
+      color: #880E4F;
+      border: 1px solid rgba(233,30,99,0.08);
+      display: none;
+    }
+    .story-text-area.show { display: block; }
+    /* .hl not used - text is plain via textContent */
+
+    /* 进度指示器 */
+    .listening-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: rgba(136,14,79,0.5);
+    }
+    .listening-indicator .bar-group { display: flex; gap: 2px; height: 20px; align-items: flex-end; }
+    .listening-indicator .bar { width: 3px; border-radius: 2px; background: #E91E63; }
+    .bar-1 { height: 8px; animation: wave 0.5s ease-in-out infinite alternate; }
+    .bar-2 { height: 14px; animation: wave 0.5s ease-in-out 0.1s infinite alternate; }
+    .bar-3 { height: 20px; animation: wave 0.5s ease-in-out 0.2s infinite alternate; }
+    .bar-4 { height: 12px; animation: wave 0.5s ease-in-out 0.15s infinite alternate; }
+    .bar-5 { height: 6px; animation: wave 0.5s ease-in-out 0.05s infinite alternate; }
+    @keyframes wave { 0% { opacity: 0.3; transform: scaleY(0.6); } 100% { opacity: 1; transform: scaleY(1); } }
+
+    /* 播放控制 */
+    .audio-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .btn-audio {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #E91E63, #AB47BC);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 3px 12px rgba(233,30,99,0.3);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-audio:active { transform: scale(0.92); }
+    .progress-bar-area { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .progress-track {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(233,30,99,0.12);
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #E91E63, #AB47BC);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.15s;
+    }
+    .progress-time { font-size: 11px; color: rgba(136,14,79,0.4); display: flex; justify-content: space-between; }
+
+    .action-btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: linear-gradient(135deg, #E91E63, #AB47BC); color: #fff; box-shadow: 0 3px 12px rgba(233,30,99,0.3); }
+    .btn-primary:active { transform: scale(0.95); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* 答题 */
+    .question-box {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 16px;
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+    .q-text {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 700;
+      color: #880E4F;
+      text-align: center;
+      line-height: 1.4;
+    }
+    /* 滚动条 */
+    .story-grid::-webkit-scrollbar, .story-text-area::-webkit-scrollbar { width: 3px; }
+    .story-grid::-webkit-scrollbar-track, .story-text-area::-webkit-scrollbar-track { background: transparent; }
+    .story-grid::-webkit-scrollbar-thumb, .story-text-area::-webkit-scrollbar-thumb { background: rgba(233,30,99,0.15); border-radius: 2px; }
+
+    /* 响应式 */
+    @media (max-width: 640px) {
+      body { padding: 8px; }
+      .container { border-radius: 16px; }
+      .land-left { width: 140px; padding: 10px; }
+      .land-right { padding: 10px; }
+      .story-card { padding: 8px 6px; }
+      .story-card .s-title { font-size: 11px; }
+      .phase-icon { font-size: 40px; }
+      .phase-title { font-size: 17px; }
+      h1 { font-size: 17px; }
+      .btn-audio { width: 40px; height: 40px; font-size: 15px; }
+    }
+
+    @media (max-width: 400px) {
+      .land-left { width: 110px; padding: 8px; }
+      .level-btn { padding: 8px 6px; font-size: 12px; }
+      .story-card .s-week { font-size: 8px; }
+      .story-card .s-title { font-size: 10px; }
+    }
+
+    /* 回顾列表 */
+    .review-list {
+      width: 100%;
+      max-width: 420px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+    .review-item {
+      background: rgba(255,255,255,0.7);
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1px solid rgba(233,30,99,0.1);
+    }
+    .review-q {
+      font-size: 14px;
+      font-weight: 700;
+      color: #880E4F;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .review-a {
+      font-size: 14px;
+      color: #E91E63;
+      font-weight: 600;
+      padding: 8px 12px;
+      background: rgba(233,30,99,0.06);
+      border-radius: 10px;
+      line-height: 1.4;
+    }
+    .review-a::before { content: "✅ "; }
+    .btn-secondary {
+      background: rgba(233,30,99,0.08);
+      color: #880E4F;
+      border: 2px solid rgba(233,30,99,0.15);
+    }
+    .btn-secondary:active { transform: scale(0.95); background: rgba(233,30,99,0.12); }
+    .review-list::-webkit-scrollbar { width: 3px; }
+    .review-list::-webkit-scrollbar-track { background: transparent; }
+    .review-list::-webkit-scrollbar-thumb { background: rgba(233,30,99,0.15); border-radius: 2px; }
+
+/* 规则弹窗 */
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
+.rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
+.rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
+.rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
+.rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
+.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 信息栏 -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="info-label">📖 当前故事</div>
+      <div class="info-value level" id="levelDisplay">选择</div>
+    </div>
+  </div>
+
+  <div class="content-row">
+    <!-- 左侧面板 -->
+    <div class="land-left" id="leftPanel">
+      <div class="title-area">
+        <h1>🔍 故事小侦探</h1>
+        <div class="subtitle" id="subtitleText">听知觉训练 · 30个侦探故事</div>
+      </div>
+
+      <div id="leftContent"></div>
+    </div>
+
+    <!-- 右侧面板 -->
+    <div class="land-right" id="rightPanel">
+      <!-- 难度选择 -->
+      <div class="phase" id="phaseLevel">
+        <div class="phase-icon">📖</div>
+        <div class="phase-title">欢迎来到故事小侦探</div>
+        <div class="phase-desc">选择难度，开始你的故事冒险之旅吧！<br>仔细听故事，听完后查看问题和答案！</div>
+      </div>
+
+      <!-- 听故事 -->
+      <div class="phase hidden" id="phaseListen">
+        <div class="story-card-big" id="storyCard">
+          <div class="s-icon" id="storyIcon">📖</div>
+          <div class="s-title" id="storyTitle">《故事标题》</div>
+          <div class="s-hint" id="storyHint">点击 ▶ 播放按钮开始听故事</div>
+        </div>
+        <div class="story-text-area" id="storyTextArea"></div>
+        <div class="listening-indicator hidden" id="listeningIndicator">
+          <span>🔊 正在播放</span>
+          <div class="bar-group">
+            <div class="bar bar-1"></div><div class="bar bar-2"></div><div class="bar bar-3"></div><div class="bar bar-4"></div><div class="bar bar-5"></div>
+          </div>
+        </div>
+        <div class="audio-controls">
+          <button class="btn-audio" id="btnPlay">▶</button>
+          <div class="progress-bar-area">
+            <div class="progress-track" id="progressTrack">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-time">
+              <span id="timeCurrent">0:00</span>
+              <span id="timeTotal">0:00</span>
+            </div>
+          </div>
+          <button class="action-btn btn-primary" id="btnShowReview" disabled>📋 查看答案</button>
+        </div>
+      </div>
+
+      <!-- 回顾 -->
+      <div class="phase hidden" id="phaseReview">
+        <div style="font-size:14px;color:rgba(136,14,79,0.5);font-weight:600;text-align:center;">📋 故事回顾 — 问题与答案</div>
+        <div class="review-list" id="reviewList"></div>
+        <div style="display:flex;gap:10px;flex-shrink:0;">
+          <button class="action-btn btn-secondary" id="btnReplay">🔄 再听一次</button>
+          <button class="action-btn btn-primary" id="btnBackToStories">📖 返回选故事</button>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+(function(){
+'use strict';
+
+// ===== 资源 =====
+const STORIES = []; // loaded via fetch
+
+const LEVELS = [
+  { id:'easy', label:'🌱 初级', desc:'1-10周故事 · 简单入门', range:[1,10], rules:'故事较短，问题直接来自故事内容，适合初次接触' },
+  { id:'medium', label:'📚 中级', desc:'11-16周故事 · 进阶挑战', range:[11,16], rules:'故事较长，需理解情节前后关键信息作答' },
+  { id:'hard', label:'🔥 高级', desc:'17-30周故事 · 高阶训练', range:[17,30], rules:'故事完整独立，考验深层理解与记忆能力' },
+];
+
+// ===== 状态 =====
+const state = {
+  stories: [],
+  current: null,   // current story object
+};
+
+// ===== 音频 =====
+let audioCtx = null, audioBuffer = null, source = null;
+let isPlaying = false, pauseAt = 0, startAt = 0, dur = 0;
+let raf = null;
+
+// ===== DOM =====
+const $ = id => document.getElementById(id);
+const dom = {
+  level: $('levelDisplay'),
+  subtitle: $('subtitleText'),
+  left: $('leftContent'), right: $('rightPanel'),
+  phaseLevel: $('phaseLevel'), phaseListen: $('phaseListen'),
+  phaseReview: $('phaseReview'),
+  storyIcon: $('storyIcon'), storyTitle: $('storyTitle'), storyHint: $('storyHint'),
+  storyText: $('storyTextArea'),
+  listening: $('listeningIndicator'),
+  btnPlay: $('btnPlay'), progressFill: $('progressFill'), progressTrack: $('progressTrack'),
+  timeCur: $('timeCurrent'), timeTotal: $('timeTotal'),
+  btnShowReview: $('btnShowReview'),
+  reviewList: $('reviewList'),
+  btnReplay: $('btnReplay'), btnBackToStories: $('btnBackToStories'),
+};
+
+// ===== 页面切换 =====
+function showPhase(name){
+  ['phaseLevel','phaseListen','phaseReview'].forEach(id => {
+    $(id).classList.toggle('hidden', id !== 'phase'+name);
+  });
+}
+
+// ===== 加载故事 =====
+async function loadStories(){
+  try{
+    const r = await fetch('/public/story-db.json?'+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    state.stories = await r.json();
+    renderLevels();
+  }catch(e){
+    console.error('Load error:', e);
+    dom.left.innerHTML = '<div style="color:#E91E63;padding:10px;">⚠️ 加载失败，请刷新</div>';
+  }
+}
+
+// ===== 渲染左侧难度按钮 =====
+function renderLevels(){
+  dom.left.innerHTML = LEVELS.map(l => {
+    const count = state.stories.filter(s => s.week >= l.range[0] && s.week <= l.range[1]).length;
+    return `<button class="level-btn" data-id="${l.id}">
+        <div style="font-size:15px;font-weight:800;margin-bottom:2px;">${l.label}</div>
+        <div class="ldesc">${l.desc} · ${count}个故事</div>
+        <div style="font-size:10px;font-weight:400;opacity:0.7;margin-top:3px;line-height:1.3;padding:0 4px;">${l.rules}</div>
+      </button>`;
+  }).join('') +
+    '<div style="font-size:11px;color:rgba(136,14,79,0.35);text-align:center;margin-top:6px;">共30个故事</div>';
+  dom.left.querySelectorAll('.level-btn').forEach(btn => {
+    btn.onclick = ()=>{
+      const lv = LEVELS.find(l => l.id === btn.dataset.id);
+      if(lv) showStories(lv);
+    };
+  });
+}
+
+// ===== 故事选择 =====
+function showStories(lv){
+  const filtered = state.stories.filter(s => s.week >= lv.range[0] && s.week <= lv.range[1]);
+  dom.subtitle.textContent = lv.label;
+  dom.level.textContent = lv.label.slice(0,4);
+
+  dom.left.innerHTML = `<button class="btn-back" id="btnBackLv">← 返回难度</button>
+    <div style="font-size:12px;color:rgba(136,14,79,0.4);text-align:center;padding:4px;">选择故事</div>
+    <div class="story-grid" id="storyGrid"></div>`;
+
+  const grid = $('storyGrid');
+  grid.innerHTML = filtered.map(s =>
+    `<div class="story-card" data-week="${s.week}">
+      <div class="s-week">第${s.week}周</div>
+      <div class="s-title">${s.title}</div>
+    </div>`
+  ).join('');
+  grid.querySelectorAll('.story-card').forEach(card => {
+    card.onclick = ()=>{
+      const week = parseInt(card.dataset.week);
+      const story = state.stories.find(s => s.week === week);
+      if(story) startStory(story);
+    };
+  });
+  $('btnBackLv').onclick = ()=>{ showPhase('Level'); renderLevels(); };
+}
+
+// ===== 开始故事 =====
+function startStory(story){
+  state.current = story;
+  pauseAudio();
+
+  dom.storyIcon.textContent = '📖';
+  dom.storyTitle.textContent = '《'+story.title+'》';
+  dom.storyHint.textContent = '点击 ▶ 播放按钮开始听故事';
+  dom.btnShowReview.disabled = true;
+  dom.btnPlay.textContent = '▶';
+  dom.progressFill.style.width = '0%';
+  dom.timeCur.textContent = '0:00';
+  dom.timeTotal.textContent = '0:00';
+  dom.listening.classList.add('hidden');
+  dom.storyText.classList.remove('show');
+
+  // Show story text
+  dom.storyText.textContent = story.text || '';
+  dom.storyText.classList.add('show');
+
+  dom.level.textContent = '第'+story.week+'周';
+
+  showPhase('Listen');
+
+  // Load and auto-play
+  loadAudio(story.week).then(()=>{
+    if(audioBuffer && typeof audioBuffer.duration === 'number') playAudio();
+  }).catch(()=>{
+    dom.storyHint.textContent = '⚠️ 音频加载失败，可点击 ▶ 重试';
+  });
+}
+
+// ===== 音频 =====
+async function loadAudio(week){
+  const url = '/public/audio/story_'+String(week).padStart(2,'0')+'.mp3';
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    audioBuffer = await r.arrayBuffer();
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const buf = await audioCtx.decodeAudioData(audioBuffer);
+    audioBuffer = buf;
+    dur = buf.duration;
+    dom.timeTotal.textContent = fmt(dur);
+    pauseAt = 0; isPlaying = false;
+    dom.btnPlay.textContent = '▶';
+    dom.btnShowReview.disabled = false;
+  }catch(e){
+    console.error('Audio:', e);
+    dom.storyHint.textContent = '⚠️ 音频加载失败，可直接查看答案';
+    dom.btnShowReview.disabled = false;
+  }
+}
+
+function fmt(s){ if(!s||isNaN(s)) return '0:00'; const m=Math.floor(s/60), sec=Math.floor(s%60); return m+':'+String(sec).padStart(2,'0'); }
+
+function playAudio(){
+  if(!audioBuffer || !audioCtx) return;
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  if(isPlaying) { pauseAudio(); return; }
+  const buf = audioBuffer;
+  source = audioCtx.createBufferSource();
+  source.buffer = buf;
+  source.connect(audioCtx.destination);
+  const off = pauseAt || 0;
+  source.start(0, off);
+  startAt = audioCtx.currentTime - off;
+  isPlaying = true;
+  dom.btnPlay.textContent = '⏸';
+  dom.listening.classList.remove('hidden');
+  dom.storyHint.textContent = '🔊 正在播放，请仔细听...';
+
+  source.onended = ()=>{
+    if(isPlaying){
+      isPlaying = false;
+      dom.btnPlay.textContent = '▶';
+      dom.listening.classList.add('hidden');
+      dom.progressFill.style.width = '100%';
+      dom.timeCur.textContent = fmt(dur);
+      dom.storyHint.textContent = '✅ 播放完毕，点击"查看答案"回顾问题！';
+    }
+  };
+
+  if(raf) cancelAnimationFrame(raf);
+  function upd(){
+    if(!isPlaying) return;
+    const elapsed = audioCtx.currentTime - startAt;
+    const pct = Math.min(elapsed/dur*100, 100);
+    dom.progressFill.style.width = pct+'%';
+    dom.timeCur.textContent = fmt(elapsed);
+    raf = requestAnimationFrame(upd);
+  }
+  upd();
+}
+
+function pauseAudio(){
+  if(!isPlaying || !source) return;
+  try{ const el = audioCtx.currentTime - startAt; pauseAt = Math.min(el, dur); source.stop(); }catch(e){}
+  source = null; isPlaying = false;
+  dom.btnPlay.textContent = '▶';
+  dom.listening.classList.add('hidden');
+  if(raf) cancelAnimationFrame(raf);
+}
+
+function resetAudioState(){
+  if(source) try{ source.stop(); }catch(e){}
+  source = null; isPlaying = false;
+  pauseAt = 0; startAt = 0;
+  if(raf) cancelAnimationFrame(raf); raf = null;
+  dom.btnPlay.textContent = '▶';
+  dom.listening.classList.add('hidden');
+  dom.progressFill.style.width = '0%';
+  dom.timeCur.textContent = '0:00';
+}
+
+// ===== 展示回顾（问题+答案） =====
+function showReview(){
+  pauseAudio();
+  resetAudioState();
+  const s = state.current;
+  if(!s || !s.questions || !s.questions.length) return;
+
+  dom.reviewList.innerHTML = s.questions.map((q, i) => {
+    const a = s.answers[i] || '';
+    return `<div class="review-item">
+      <div class="review-q">${i+1}. ${q}</div>
+      <div class="review-a">${a}</div>
+    </div>`;
+  }).join('');
+
+  showPhase('Review');
+}
+
+// ===== 事件绑定 =====
+dom.btnPlay.onclick = playAudio;
+dom.btnShowReview.onclick = showReview;
+
+// "再听一次" — 直接重新开始当前故事
+dom.btnReplay.onclick = ()=>{
+  const story = state.current;
+  if(story) startStory(story);
+};
+
+// "返回选故事" — 回到故事列表
+dom.btnBackToStories.onclick = ()=>{
+  const s = state.current;
+  if(!s) return;
+  // Find which level this story belongs to
+  const lv = LEVELS.find(l => s.week >= l.range[0] && s.week <= l.range[1]);
+  if(lv) showStories(lv);
+};
+
+// ===== 进度条拖拽寻址 =====
+let isDragging = false;
+
+function seekAudio(pct){
+  if(!audioBuffer || !audioCtx || !dur) return;
+  const clamped = Math.max(0, Math.min(pct, 1));
+  pauseAt = clamped * dur;
+  dom.progressFill.style.width = (clamped * 100)+'%';
+  dom.timeCur.textContent = fmt(pauseAt);
+}
+
+dom.progressTrack.onmousedown = (e)=>{
+  isDragging = true;
+  const rect = dom.progressTrack.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  seekAudio(pct);
+};
+document.addEventListener('mousemove', (e)=>{
+  if(!isDragging) return;
+  const rect = dom.progressTrack.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  seekAudio(pct);
+});
+document.addEventListener('mouseup', (e)=>{
+  if(!isDragging) return;
+  isDragging = false;
+  const rect = dom.progressTrack.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  seekAudio(pct);
+  // Resume playback at new position
+  if(pauseAt < dur){
+    if(source) try{ source.stop(); }catch(e){}
+    source = null; isPlaying = false;
+    const buf = audioBuffer;
+    source = audioCtx.createBufferSource();
+    source.buffer = buf;
+    source.connect(audioCtx.destination);
+    source.start(0, pauseAt);
+    startAt = audioCtx.currentTime - pauseAt;
+    isPlaying = true;
+    dom.btnPlay.textContent = '⏸';
+    dom.listening.classList.remove('hidden');
+    source.onended = ()=>{
+      if(isPlaying){
+        isPlaying = false;
+        dom.btnPlay.textContent = '▶';
+        dom.listening.classList.add('hidden');
+        dom.progressFill.style.width = '100%';
+        dom.timeCur.textContent = fmt(dur);
+        dom.storyHint.textContent = '✅ 播放完毕，点击"查看答案"回顾问题！';
+      }
+    };
+    if(raf) cancelAnimationFrame(raf);
+    function upd2(){
+      if(!isPlaying) return;
+      const elapsed = audioCtx.currentTime - startAt;
+      const pct2 = Math.min(elapsed/dur*100, 100);
+      dom.progressFill.style.width = pct2+'%';
+      dom.timeCur.textContent = fmt(elapsed);
+      raf = requestAnimationFrame(upd2);
+    }
+    upd2();
+  }
+});
+
+// Touch support for progress bar
+dom.progressTrack.addEventListener('touchstart', (e)=>{
+  isDragging = true;
+  const rect = dom.progressTrack.getBoundingClientRect();
+  const pct = (e.touches[0].clientX - rect.left) / rect.width;
+  seekAudio(pct);
+  e.preventDefault();
+});
+document.addEventListener('touchmove', (e)=>{
+  if(!isDragging) return;
+  const rect = dom.progressTrack.getBoundingClientRect();
+  const pct = (e.touches[0].clientX - rect.left) / rect.width;
+  seekAudio(pct);
+  e.preventDefault();
+});
+document.addEventListener('touchend', (e)=>{
+  if(!isDragging) return;
+  isDragging = false;
+  const rect = dom.progressTrack.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.changedTouches[0].clientX - rect.left) / rect.width));
+  seekAudio(pct);
+  if(pauseAt < dur){
+    if(source) try{ source.stop(); }catch(e){}
+    source = null; isPlaying = false;
+    const buf = audioBuffer;
+    source = audioCtx.createBufferSource();
+    source.buffer = buf;
+    source.connect(audioCtx.destination);
+    source.start(0, pauseAt);
+    startAt = audioCtx.currentTime - pauseAt;
+    isPlaying = true;
+    dom.btnPlay.textContent = '⏸';
+    dom.listening.classList.remove('hidden');
+    source.onended = ()=>{
+      if(isPlaying){
+        isPlaying = false;
+        dom.btnPlay.textContent = '▶';
+        dom.listening.classList.add('hidden');
+        dom.progressFill.style.width = '100%';
+        dom.timeCur.textContent = fmt(dur);
+        dom.storyHint.textContent = '✅ 播放完毕，点击"查看答案"回顾问题！';
+      }
+    };
+    if(raf) cancelAnimationFrame(raf);
+    function upd3(){
+      if(!isPlaying) return;
+      const elapsed = audioCtx.currentTime - startAt;
+      const pct3 = Math.min(elapsed/dur*100, 100);
+      dom.progressFill.style.width = pct3+'%';
+      dom.timeCur.textContent = fmt(elapsed);
+      raf = requestAnimationFrame(upd3);
+    }
+    upd3();
+  }
+});
+
+// ===== 启动 =====
+showPhase('Level');
+loadStories();
+
+})();
+
+function showRulesPopup(){
+    if(!localStorage.getItem('g7_visited')){
+        document.getElementById('rulesOverlay').style.display='flex';
+    }
+}
+function closeRules(){
+    localStorage.setItem('g7_visited','1');
+    document.getElementById('rulesOverlay').style.display='none';
+}
+document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+
+</script>

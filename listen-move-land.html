@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>听动乐园 - 听知觉训练</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;
+  background:linear-gradient(135deg,#FFF5E6 0%,#FFEAEE 30%,#FFF8E0 60%,#F0E6FF 100%);
+  height:100dvh;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  user-select:none;-webkit-user-select:none;
+}
+.container{
+  width:min(98vw,1100px);
+  height:min(96vh,650px);
+  display:flex;
+  gap:16px;
+  padding:12px;
+}
+.left-panel{
+  width:280px;min-width:280px;
+  background:#fff;
+  border-radius:16px;
+  padding:10px;
+  display:flex;flex-direction:column;
+  gap:6px;
+  box-shadow:0 2px 12px rgba(45,43,85,0.06);
+  overflow-y:auto;
+}
+.panel-title{
+  color:#2D2B55;
+  font-size:12px;font-weight:700;
+  text-align:center;
+  padding-bottom:4px;
+  border-bottom:1px solid rgba(45,43,85,0.08);
+}
+.mode-btns{display:flex;gap:5px;}
+.mode-btn{
+  flex:1;
+  padding:6px 2px;
+  border-radius:8px;
+  border:2px solid rgba(45,43,85,0.1);
+  background:#fff;
+  color:#2D2B55;
+  font-size:11px;font-weight:600;
+  cursor:pointer;
+  transition:all 0.2s;
+  text-align:center;
+}
+.mode-btn.active{
+  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
+  color:#fff;
+  border-color:transparent;
+}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:rgba(45,43,85,0.5);font-size:11px;font-weight:600;margin-bottom:3px;}
+.diff-btns{display:flex;gap:4px;}
+.diff-btn{
+  flex:1;
+  padding:4px 2px;
+  border-radius:6px;
+  border:1px solid rgba(45,43,85,0.12);
+  background:#fff;
+  color:#2D2B55;
+  font-size:10px;font-weight:600;
+  cursor:pointer;
+  transition:all 0.2s;
+  text-align:center;
+}
+.diff-btn.active{
+  background:#FF5E0E;
+  color:#fff;
+  border-color:transparent;
+}
+.rules-card{
+  background:rgba(255,94,14,0.05);
+  border:1px solid rgba(255,94,14,0.15);
+  border-radius:10px;
+  padding:10px;
+  font-size:11px;
+  color:rgba(45,43,85,0.65);
+  line-height:1.6;
+}
+.rules-card strong{color:#FF5E0E;}
+.right-panel{
+  flex:1;
+  background:#fff;
+  border-radius:16px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  box-shadow:0 2px 12px rgba(45,43,85,0.06);
+  min-width:0;
+  overflow:hidden;
+}
+.game-header{
+  position:absolute;top:12px;left:16px;right:16px;
+  display:flex;justify-content:space-between;
+  align-items:center;
+  z-index:2;
+}
+.game-title{
+  color:#2D2B55;
+  font-size:18px;font-weight:800;
+}
+.back-btn{
+  background:rgba(45,43,85,0.06);
+  border:none;color:#2D2B55;
+  padding:6px 14px;border-radius:8px;
+  font-size:13px;cursor:pointer;
+}
+/* 指令提示 */
+.cmd-display{
+  font-size:clamp(28px,5vw,40px);
+  font-weight:800;
+  color:#2D2B55;
+  text-align:center;
+  margin-bottom:8px;
+  min-height:50px;
+  display:flex;align-items:center;
+  justify-content:center;
+  gap:8px;
+  z-index:2;
+}
+.cmd-display .emoji{font-size:36px;}
+/* 按钮网格 */
+.btns-grid{
+  display:grid;
+  gap:12px;
+  z-index:2;
+  padding:0 20px;
+}
+.btns-grid.col3{grid-template-columns:repeat(3,1fr);}
+.btns-grid.col4{grid-template-columns:repeat(2,2fr);}
+.btns-grid.col6{grid-template-columns:repeat(3,1fr);}
+.action-btn{
+  aspect-ratio:1;
+  border-radius:16px;
+  border:3px solid rgba(45,43,85,0.1);
+  background:#fff;
+  cursor:pointer;
+  transition:all 0.2s;
+  display:flex;flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  font-size:14px;font-weight:700;
+  color:#2D2B55;
+  min-width:120px;
+  min-height:120px;
+  position:relative;
+  overflow:hidden;
+}
+.action-btn:hover{border-color:#FF5E0E;box-shadow:0 4px 16px rgba(255,94,14,0.12);}
+.action-btn:active{transform:scale(0.94);}
+.action-btn .icon{font-size:clamp(36px,6vw,52px);}
+.action-btn .label{font-size:clamp(14px,2.5vw,18px);}
+.action-btn.correct{
+  border-color:#32CD32;
+  background:rgba(50,205,50,0.1);
+  box-shadow:0 0 20px rgba(50,205,50,0.3);
+  animation:btnPulse 0.4s ease;
+}
+.action-btn.wrong{
+  border-color:#FF073A;
+  background:rgba(255,7,58,0.08);
+  box-shadow:0 0 20px rgba(255,7,58,0.3);
+}
+@keyframes btnPulse{
+  0%{transform:scale(1);}
+  50%{transform:scale(1.08);}
+  100%{transform:scale(1);}
+}
+/* 星星粒子 */
+.star-particle{
+  position:absolute;
+  font-size:20px;
+  pointer-events:none;
+  animation:starBurst 0.8s ease-out forwards;
+}
+@keyframes starBurst{
+  0%{transform:translate(0,0) scale(0);opacity:1;}
+  100%{transform:translate(var(--dx),var(--dy)) scale(1.5);opacity:0;}
+}
+/* 听指令提示 */
+.listening-text{
+  color:rgba(45,43,85,0.5);
+  font-size:16px;
+  font-weight:600;
+  z-index:2;
+}
+/* 底部 */
+.game-footer{
+  position:absolute;bottom:16px;left:16px;right:16px;
+  display:flex;flex-direction:column;gap:8px;
+  z-index:2;
+}
+.progress-bar{
+  width:100%;height:6px;
+  background:rgba(45,43,85,0.08);
+  border-radius:3px;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg,#FF5E0E,#FF69B4);
+  border-radius:3px;
+  transition:width 0.3s;
+}
+.footer-row{
+  display:flex;justify-content:space-between;
+  align-items:center;
+}
+.score-display{
+  color:#2D2B55;
+  font-size:14px;font-weight:700;
+}
+.trial-info{
+  color:rgba(45,43,85,0.5);
+  font-size:12px;
+}
+.start-btn{
+  padding:10px 28px;
+  border-radius:12px;
+  border:none;
+  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
+  color:#fff;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s;
+  box-shadow:0 4px 16px rgba(255,94,14,0.25);
+}
+.start-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.35);}
+.start-btn:active{transform:scale(0.97);}
+.start-btn:disabled{opacity:0.4;cursor:not-allowed;}
+/* 结果 */
+.result-card{
+  position:absolute;inset:0;
+  background:rgba(255,255,255,0.97);
+  border-radius:16px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  z-index:10;
+}
+.result-title{color:#2D2B55;font-size:22px;font-weight:800;}
+.result-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;width:80%;max-width:360px;
+}
+.result-item{
+  background:rgba(45,43,85,0.03);
+  border-radius:10px;
+  padding:12px;
+  text-align:center;
+}
+.result-item .val{
+  color:#FF5E0E;font-size:22px;font-weight:800;
+  font-family:'JetBrains Mono',monospace;
+}
+.result-item .lbl{color:rgba(45,43,85,0.5);font-size:11px;margin-top:2px;}
+.result-btns{display:flex;gap:10px;}
+.result-btns button{
+  padding:10px 24px;
+  border-radius:10px;
+  border:none;
+  font-size:14px;font-weight:700;
+  cursor:pointer;
+}
+.btn-retry{background:linear-gradient(135deg,#FF5E0E,#FF69B4);color:#fff;}
+.btn-home{background:rgba(45,43,85,0.08);color:#2D2B55;}
+/* 弹窗 */
+.rules-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.6);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;
+}
+.rules-dialog{
+  background:#fff;
+  border-radius:20px;
+  padding:24px;
+  max-width:400px;width:90%;
+  text-align:center;
+}
+.rules-dialog h2{font-size:20px;font-weight:800;color:#2D2B55;margin-bottom:12px;}
+.rules-dialog p{font-size:14px;color:rgba(45,43,85,0.7);line-height:1.7;margin-bottom:8px;text-align:left;}
+.rules-dialog .btn{
+  margin-top:12px;
+  padding:12px 36px;
+  border-radius:12px;
+  border:none;
+  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
+  color:#fff;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="left-panel">
+    <div class="panel-title">🎵 听动乐园</div>
+    <div class="mode-btns" id="mode-btns"></div>
+    <div class="diff-group">
+      <div class="diff-label">难度</div>
+      <div class="diff-btns" id="diff-btns"></div>
+    </div>
+    <div class="panel-title" style="margin-top:4px;">玩法说明</div>
+    <div class="rules-card" id="rules-card">
+      <strong>模式一：颜色指令官</strong><br>
+      听颜色词，点击对应颜色按钮。<br>
+      初级：播报间隔 4.5s | 中级：3.5s | 高级：2.5s<br><br>
+      <strong>模式二：动物指令串</strong><br>
+      播报结束后按顺序点击动物。<br>
+      初级：指令串 2 步 | 中级：4 步 | 高级：6 步
+    </div>
+  </div>
+  <div class="right-panel" id="game-area">
+    <div class="game-header">
+      <span class="game-title">🎵 听动乐园</span>
+      <button class="back-btn" onclick="location.href='index.html'">← 返回大厅</button>
+    </div>
+    <div class="cmd-display" id="cmd-display"></div>
+    <div class="btns-grid" id="btns-grid"></div>
+    <div class="game-footer">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="footer-row">
+        <span class="score-display">⭐ <span id="score">0</span></span>
+        <span class="trial-info" id="trial-info">0 / 0</span>
+        <button class="start-btn" id="start-btn" onclick="startGame()">开始游戏</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/public/audio-helper.js"></script>
+<script>
+// ===== 配置 =====
+const MODES = [
+  {
+    name:'颜色指令官',
+    icon:'🎨',
+    actions:[
+      {id:'red',icon:'🔴',label:'红色',word:'红色'},
+      {id:'blue',icon:'🔵',label:'蓝色',word:'蓝色'},
+      {id:'green',icon:'🟢',label:'绿色',word:'绿色'},
+      {id:'yellow',icon:'🟡',label:'黄色',word:'黄色'},
+    ],
+    cols:4,
+    totalQ:10,
+    cmdInterval:{easy:4500,medium:3500,hard:2500},
+  },
+  {
+    name:'动物指令串',
+    icon:'🐾',
+    actions:[
+      {id:'cat',icon:'🐱',label:'猫咪',word:'猫咪'},
+      {id:'dog',icon:'🐶',label:'小狗',word:'小狗'},
+      {id:'bird',icon:'🐦',label:'小鸟',word:'小鸟'},
+      {id:'fish',icon:'🐟',label:'小鱼',word:'小鱼'},
+      {id:'rabbit',icon:'🐰',label:'兔子',word:'兔子'},
+      {id:'bear',icon:'🐻',label:'小熊',word:'小熊'},
+    ],
+    cols:3,
+    totalQ:10,
+    cmdInterval:{easy:5000,medium:4000,hard:3000},
+    chainLen:{easy:2,medium:4,hard:6},
+  },
+];
+
+// ===== 状态 =====
+let state={
+  mode:0,
+  diff:'easy',
+  questions:[],
+  qIdx:0,
+  score:0,
+  running:false,
+  answered:false,
+  chainStep:0,
+  chainTargets:[],
+};
+
+// ===== 音频 =====
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+}
+
+function speakWord(word){
+  return new Promise(resolve=>{
+    if(window.playAudio){ window.playAudio(word, resolve); }
+    else{ setTimeout(resolve, 800); }
+  });
+}
+
+function playSuccess(){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='sine';
+  o.frequency.setValueAtTime(523,audioCtx.currentTime);
+  o.frequency.setValueAtTime(659,audioCtx.currentTime+0.1);
+  o.frequency.setValueAtTime(784,audioCtx.currentTime+0.2);
+  g.gain.setValueAtTime(0.1,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.4);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+0.4);
+}
+
+function playError(){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='square';
+  o.frequency.setValueAtTime(200,audioCtx.currentTime);
+  g.gain.setValueAtTime(0.08,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+0.3);
+}
+
+// ===== UI =====
+function buildModeBtns(){
+  const row=document.getElementById('mode-btns');
+  row.innerHTML='';
+  MODES.forEach((m,i)=>{
+    const btn=document.createElement('button');
+    btn.className='mode-btn'+(state.mode===i?' active':'');
+    btn.textContent=m.icon+' '+m.name;
+    btn.onclick=()=>{state.mode=i;buildModeBtns();buildBtnsGrid();resetGame();};
+    row.appendChild(btn);
+  });
+}
+
+function buildDiffBtns(){
+  const row=document.getElementById('diff-btns');
+  row.innerHTML='';
+  ['easy','medium','hard'].forEach(d=>{
+    const btn=document.createElement('button');
+    btn.className='diff-btn'+(state.diff===d?' active':'');
+    btn.textContent={easy:'初级',medium:'中级',hard:'高级'}[d];
+    btn.onclick=()=>{state.diff=d;buildDiffBtns();resetGame();};
+    row.appendChild(btn);
+  });
+}
+
+function buildBtnsGrid(){
+  const grid=document.getElementById('btns-grid');
+  const m=MODES[state.mode];
+  grid.className='btns-grid col'+m.cols;
+  grid.innerHTML='';
+  m.actions.forEach(a=>{
+    const btn=document.createElement('button');
+    btn.className='action-btn';
+    btn.dataset.id=a.id;
+    btn.innerHTML=`<span class="icon">${a.icon}</span><span class="label">${a.label}</span>`;
+    btn.onclick=()=>handleClick(a.id);
+    grid.appendChild(btn);
+  });
+}
+
+function resetGame(){
+  state.questions=[];
+  state.qIdx=0;
+  state.score=0;
+  state.running=false;
+  state.answered=false;
+  state.chainStep=0;
+  state.chainTargets=[];
+  document.getElementById('score').textContent='0';
+  document.getElementById('trial-info').textContent='0 / 0';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('cmd-display').innerHTML='';
+  document.getElementById('start-btn').disabled=false;
+  const old=document.querySelector('.result-card');
+  if(old) old.remove();
+}
+
+// ===== 游戏逻辑 =====
+function generateQuestions(){
+  const m=MODES[state.mode];
+  const qs=[];
+  if(state.mode===1){
+    // 动物指令串
+    for(let i=0;i<m.totalQ;i++){
+      const len=m.chainLen[state.diff];
+      const chain=[];
+      const pool=[...m.actions];
+      for(let j=0;j<len;j++){
+        const idx=Math.floor(Math.random()*pool.length);
+        chain.push(pool[idx]);
+      }
+      qs.push({type:'chain',chain});
+    }
+  }else{
+    // 单步指令
+    for(let i=0;i<m.totalQ;i++){
+      const idx=Math.floor(Math.random()*m.actions.length);
+      qs.push({type:'single',target:m.actions[idx]});
+    }
+  }
+  return qs;
+}
+
+async function startGame(){
+  if(state.running) return;
+  initAudio();
+  state.questions=generateQuestions();
+  state.qIdx=0;
+  state.score=0;
+  state.running=true;
+  document.getElementById('start-btn').disabled=true;
+  document.getElementById('score').textContent='0';
+  document.getElementById('trial-info').textContent='0 / '+state.questions.length;
+  document.getElementById('progress-fill').style.width='0%';
+  const old=document.querySelector('.result-card');
+  if(old) old.remove();
+  runTrial();
+}
+
+async function runTrial(){
+  if(!state.running||state.qIdx>=state.questions.length){endGame();return;}
+  state.answered=false;
+  state.chainStep=0;
+  state.chainTargets=[];
+  const q=state.questions[state.qIdx];
+  document.getElementById('trial-info').textContent=(state.qIdx+1)+' / '+state.questions.length;
+  document.getElementById('progress-fill').style.width=((state.qIdx)/state.questions.length*100)+'%';
+  // 清除按钮状态
+  document.querySelectorAll('.action-btn').forEach(b=>{b.classList.remove('correct','wrong');});
+  // 显示"正在听指令..."，不用耳朵图标
+  document.getElementById('cmd-display').innerHTML='<span class="listening-text">🔊 正在听指令...</span>';
+	if(q.type==='single'){
+		state.chainTargets=[q.target.id];
+		state.chainStep=0;
+		await speakWord(q.target.word);
+		// 播完后不显示答案，清空等待点击
+		document.getElementById('cmd-display').innerHTML='';
+		}else{
+			// 指令串：逐词顺序播放，播完前不可点击
+			state.chainStep=0;
+			for(let i=0;i<q.chain.length;i++){
+				await speakWord(q.chain[i].word);
+				if(i<q.chain.length-1) await sleep(300);
+			}
+			// 播完后才设置目标，允许点击
+			state.chainTargets=q.chain.map(c=>c.id);
+			document.getElementById('cmd-display').innerHTML='';
+		}
+  }
+}
+
+function handleClick(id){
+  if(!state.running||state.answered) return;
+  const expected=state.chainTargets[state.chainStep];
+  const btn=document.querySelector(`.action-btn[data-id="${id}"]`);
+  if(id===expected){
+    state.chainStep++;
+    btn.classList.add('correct');
+    playSuccess();
+    spawnStars(btn);
+    if(state.chainStep>=state.chainTargets.length){
+      state.answered=true;
+      state.score+=10;
+      document.getElementById('score').textContent=state.score;
+      document.getElementById('cmd-display').innerHTML='<span style="color:#32CD32;font-size:24px;">✅ 太棒了！</span>';
+      setTimeout(()=>{state.qIdx++;runTrial();},1000);
+    }
+  }else{
+    btn.classList.add('wrong');
+    playError();
+    document.getElementById('cmd-display').innerHTML='<span style="color:#FF073A;font-size:24px;">❌ 再试一次</span>';
+    setTimeout(()=>{
+      btn.classList.remove('wrong');
+      document.getElementById('cmd-display').innerHTML='';
+    },800);
+  }
+}
+
+function spawnStars(el){
+  const rect=el.getBoundingClientRect();
+  const cx=rect.left+rect.width/2;
+  const cy=rect.top+rect.height/2;
+  for(let i=0;i<6;i++){
+    const star=document.createElement('div');
+    star.className='star-particle';
+    star.textContent=['⭐','🌟','✨'][i%3];
+    star.style.left=cx+'px';
+    star.style.top=cy+'px';
+    star.style.setProperty('--dx',((Math.random()-0.5)*120)+'px');
+    star.style.setProperty('--dy',((Math.random()-0.5)*120-40)+'px');
+    document.body.appendChild(star);
+    setTimeout(()=>star.remove(),800);
+  }
+}
+
+function endGame(){
+  state.running=false;
+  document.getElementById('start-btn').disabled=false;
+  document.getElementById('cmd-display').innerHTML='';
+  document.getElementById('progress-fill').style.width='100%';
+  const total=state.questions.length;
+  const acc=(state.score/(total*10)*100).toFixed(0);
+  const area=document.getElementById('game-area');
+  const card=document.createElement('div');
+  card.className='result-card';
+  card.innerHTML=`
+    <div class="result-title">🎉 ${MODES[state.mode].name} 完成！</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val">${state.score}</div><div class="lbl">得分</div></div>
+      <div class="result-item"><div class="val">${acc}%</div><div class="lbl">正确率</div></div>
+      <div class="result-item"><div class="val">${total}</div><div class="lbl">总题数</div></div>
+      <div class="result-item"><div class="val">${{easy:'初级',medium:'中级',hard:'高级'}[state.diff]}</div><div class="lbl">难度</div></div>
+    </div>
+    <div class="result-btns">
+      <button class="btn-retry" onclick="this.closest('.result-card').remove();startGame();">再来一局</button>
+      <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
+    </div>
+  `;
+  area.appendChild(card);
+  try{
+    const data=JSON.parse(localStorage.getItem('lm_land')||'{}');
+    const key=state.mode+'-'+state.diff;
+    data[key]={score:state.score,total,date:new Date().toISOString()};
+    localStorage.setItem('lm_land',JSON.stringify(data));
+  }catch(e){}
+}
+
+// ===== 规则弹窗 =====
+function showRules(){
+  const visited=localStorage.getItem('lm_visited');
+  if(visited) return;
+  const overlay=document.createElement('div');
+  overlay.className='rules-overlay';
+  overlay.id='rules-overlay';
+  overlay.innerHTML=`
+    <div class="rules-dialog">
+      <h2>🎵 听动乐园 · 玩法</h2>
+      <p><strong>模式一：颜色指令官</strong>（5-7岁）<br>听颜色词，点击对应颜色按钮。从单色指令到双色排序指令。</p>
+      <p><strong>模式二：动物指令串</strong>（6-8岁）<br>播报结束后按顺序点击动物图标。初级2步 · 中级4步 · 高级6步。</p>
+      <p><strong>难度说明</strong><br>模式一：初级 4.5s · 中级 3.5s · 高级 2.5s<br>模式二：初级 2步 · 中级 4步 · 高级 6步</p>
+      <p style="color:rgba(45,43,85,0.5);font-size:12px;">所有指令通过语音播放，请确保设备音量开启。</p>
+      <button class="btn" onclick="document.getElementById('rules-overlay').remove();localStorage.setItem('lm_visited','1');">我知道了</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// ===== 初始化 =====
+buildModeBtns();
+buildDiffBtns();
+buildBtnsGrid();
+document.addEventListener('DOMContentLoaded',()=>{showRules();});
+</script>
+</body>
+</html>

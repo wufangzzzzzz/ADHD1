@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>数字闪光 - 视觉记忆训练</title>
+<style>
+:root {
+  --bg: #FFFBFA; --text: #2D2B55;
+  --muted: rgba(45,43,85,0.45);
+  --accent: #FF5E0E; --accent2: #FF69B4;
+  --grad: linear-gradient(135deg, var(--accent), var(--accent2));
+  --card: #FEFEFE; --border: rgba(45,43,85,0.08);
+  --correct: #32CD32; --wrong: #FF073A;
+  --flash: #FFDA00; --flash-glow: rgba(255,218,0,0.5);
+  --shadow-sm: 0 1px 3px rgba(45,43,85,0.06);
+  --shadow: 0 4px 20px rgba(45,43,85,0.07);
+  --radius: 14px; --radius-sm: 10px;
+  --font: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+  --status-h: 48px; --answer-h: 60px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font);background:var(--bg);color:var(--text);
+  min-height:100dvh;display:flex;justify-content:center;
+  background-image:radial-gradient(ellipse at 20% 0%, rgba(255,94,14,0.06) 0%, transparent 60%),
+                   radial-gradient(ellipse at 80% 100%, rgba(255,105,180,0.06) 0%, transparent 60%);
+}
+.game-wrap{
+  width:100%;max-width:520px;padding:clamp(12px,3vw,24px);
+  display:flex;flex-direction:column;gap:clamp(8px,1.5vw,14px);
+}
+
+/* ===== 标题栏 ===== */
+.header{
+  text-align:center;padding:clamp(10px,2vw,18px) 0 clamp(4px,1vw,8px);
+}
+.header h1{
+  font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-1px;
+  background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.header .sub{font-size:clamp(12px,1.8vw,14px);color:var(--muted);margin-top:2px;}
+
+/* ===== 模式栏 ===== */
+.mode-bar{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+  padding:clamp(6px,1vw,10px) clamp(8px,1.5vw,16px);
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);align-items:center;
+}
+.mode-btn{
+  font-family:var(--font);font-size:clamp(13px,1.8vw,15px);font-weight:700;
+  padding:6px 18px;border-radius:9999px;border:2px solid var(--border);
+  background:transparent;color:var(--text);cursor:pointer;
+  transition:all 0.2s ease;
+}
+.mode-btn:hover{background:rgba(45,43,85,0.04);border-color:var(--muted);}
+.mode-btn.active{background:var(--grad);color:#fff;border-color:transparent;}
+.mode-btn:disabled{opacity:0.3;pointer-events:none;}
+.mode-btn:active:not(:disabled){transform:scale(0.94);}
+.silent-wrap{
+  display:flex;align-items:center;gap:6px;margin-left:auto;
+  font-size:clamp(12px,1.6vw,14px);color:var(--text);font-weight:600;
+}
+.silent-wrap input[type=checkbox]{
+  width:18px;height:18px;accent-color:var(--accent);cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  width:36px;height:20px;border-radius:10px;
+  background:var(--border);border:2px solid var(--border);cursor:pointer;
+  transition:all 0.25s ease;position:relative;
+}
+.silent-wrap input[type=checkbox]::after{
+  content:'';position:absolute;top:1px;left:1px;
+  width:14px;height:14px;border-radius:50%;background:#fff;
+  transition:all 0.25s ease;
+}
+.silent-wrap input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent);}
+.silent-wrap input[type=checkbox]:checked::after{left:17px;}
+
+/* ===== 顶部状态 ===== */
+.top-status{
+  height:var(--status-h);display:flex;align-items:center;justify-content:center;gap:12px;
+  background:var(--card);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);font-size:clamp(14px,2vw,17px);font-weight:600;
+}
+.top-status .phase-label{color:var(--muted);font-weight:500;}
+.top-status .phase-count{
+  font-family:var(--font-mono);font-weight:800;
+  color:var(--accent);font-size:clamp(18px,2.6vw,22px);
+}
+.top-status .phase-cd{
+  font-family:var(--font-mono);font-weight:800;
+  font-size:clamp(28px,4vw,38px);line-height:1;
+  background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* ===== 星星进度条 ===== */
+.star-progress{
+  display:flex;justify-content:center;gap:clamp(6px,1vw,10px);
+  padding:2px 0;
+}
+.star-progress .star{
+  font-size:clamp(22px,3.5vw,32px);color:rgba(45,43,85,0.12);
+  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  user-select:none;line-height:1;
+}
+.star-progress .star.active{
+  color:#FFDA00;text-shadow:0 0 12px rgba(255,218,0,0.55);
+  transform:scale(1.15);
+}
+
+/* ===== 数字网格 ===== */
+.digit-grid{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(6px,1vw,10px);
+  padding:clamp(8px,1.5vw,14px);background:var(--card);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);
+}
+.digit-btn{
+  aspect-ratio:1;border-radius:var(--radius-sm);border:none;
+  font-family:var(--font-mono);font-size:clamp(28px,5vw,40px);font-weight:800;
+  background:linear-gradient(145deg,#f8f6f5,#eeecf0);color:var(--text);
+  cursor:pointer;transition:all 0.15s ease;user-select:none;
+  position:relative;overflow:hidden;
+  opacity:0;transform:translateY(12px);
+  animation:digitIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
+  animation-delay:calc(var(--i,0)*60ms);
+}
+.digit-btn:hover{background:linear-gradient(145deg,#f0eeed,#e6e4e8);}
+.digit-btn:active:not(:disabled){transform:scale(0.92) !important;}
+.digit-btn.flash{
+  background:var(--flash) !important;box-shadow:0 0 40px var(--flash-glow);
+  transform:scale(1.06);z-index:2;
+}
+.digit-btn.picked{
+  background:rgba(45,43,85,0.08) !important;transform:scale(0.9);opacity:0.4;pointer-events:none;
+}
+.digit-btn:disabled{cursor:default;}
+.digit-btn:disabled:not(.flash):not(.picked){opacity:0.7;}
+@keyframes digitIn{to{opacity:1;transform:translateY(0)}}
+
+/* ===== 答案展示区 ===== */
+.answer-area{
+  height:var(--answer-h);display:flex;align-items:center;justify-content:center;gap:clamp(8px,1.2vw,14px);
+  background:var(--card);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);padding:0 12px;
+}
+.answer-slot{
+  width:clamp(36px,6.5vw,50px);height:clamp(36px,6.5vw,50px);
+  border-radius:var(--radius-sm);border:2px dashed var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:clamp(20px,3.5vw,28px);font-weight:700;
+  transition:all 0.2s ease;
+}
+.answer-slot.filled{border-style:solid;background:rgba(45,43,85,0.04);border-color:var(--text);}
+.answer-slot.correct{border-color:var(--correct);background:rgba(50,205,50,0.08);color:var(--correct);}
+.answer-slot.wrong{border-color:var(--wrong);background:rgba(255,7,58,0.08);color:var(--wrong);text-decoration:line-through;}
+.answer-slot.silent-ans{border-color:var(--correct);background:rgba(50,205,50,0.1);color:var(--correct);border-style:solid;}
+
+/* ===== 操作栏 ===== */
+.action-bar{
+  display:flex;gap:10px;justify-content:center;
+}
+.action-btn{
+  font-family:var(--font);font-size:clamp(15px,2.2vw,18px);font-weight:700;
+  padding:clamp(10px,1.8vw,16px) clamp(24px,4vw,40px);border-radius:var(--radius-sm);
+  border:none;cursor:pointer;transition:all 0.2s ease;flex:0 1 auto;
+  display:flex;align-items:center;gap:6px;justify-content:center;
+}
+.action-btn:active{transform:scale(0.95) !important;}
+.action-btn.primary{
+  background:var(--grad);color:#fff;box-shadow:0 2px 12px rgba(255,94,14,0.25);
+}
+.action-btn.primary:hover{box-shadow:0 4px 20px rgba(255,94,14,0.35);}
+.action-btn.primary:disabled{opacity:0.35;box-shadow:none;pointer-events:none;}
+.action-btn.danger{
+  background:var(--card);color:var(--wrong);border:2px solid rgba(255,7,58,0.2);
+}
+.action-btn.danger:hover{background:rgba(255,7,58,0.05);}
+.hidden{display:none !important;}
+
+/* ===== 底部状态 ===== */
+.status-bar{
+  height:var(--status-h);display:flex;align-items:center;justify-content:center;
+  background:var(--card);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);padding:0 16px;
+  font-size:clamp(13px,1.8vw,15px);color:var(--muted);gap:8px;
+}
+.status-bar .score-display{
+  font-family:var(--font-mono);font-weight:700;color:var(--accent);
+  margin-left:auto;
+}
+
+/* ===== 减少动效 ===== */
+@media(prefers-reduced-motion:reduce){
+  .digit-btn{animation:none;opacity:1;transform:none;}
+  .action-btn:active{transform:none !important;}
+}
+
+/* ===== 响应式 ===== */
+@media(max-width:420px){
+  .game-wrap{padding:8px;gap:6px;}
+  .mode-bar{gap:4px;padding:6px;}
+  .mode-btn{font-size:12px;padding:5px 12px;}
+  .digit-btn{font-size:24px;}
+  .answer-slot{width:30px;height:30px;font-size:16px;}
+  :root{--status-h:42px;--answer-h:48px;}
+}
+@media(min-width:768px){
+  .game-wrap{max-width:560px;padding:32px;gap:16px;}
+  .digit-grid{gap:12px;padding:18px;}
+}
+</style>
+</head>
+<body>
+<div class="game-wrap">
+  <!-- 标题 -->
+  <div class="header">
+    <h1>数字闪光</h1>
+    <div class="sub">序列记忆训练</div>
+  </div>
+
+  <!-- 模式栏 + 默读 -->
+  <div class="mode-bar" id="modeBar">
+    <button class="mode-btn active" data-mode="simple">简单</button>
+    <button class="mode-btn" data-mode="medium">中等</button>
+    <button class="mode-btn" data-mode="hard">困难</button>
+    <button class="mode-btn" data-mode="hell">💀地狱</button>
+    <button class="mode-btn" data-mode="mix">混合</button>
+    <div class="silent-wrap">
+      <input type="checkbox" id="silentCheck">
+      <label for="silentCheck" style="cursor:pointer;user-select:none;">🔇 默读</label>
+    </div>
+  </div>
+
+  <!-- 顶部状态 -->
+  <div class="top-status" id="topStatus">
+    <span class="phase-label" id="phaseLabel">⏳ 准备就绪</span>
+    <span class="phase-count" id="phaseCount"></span>
+    <span class="phase-cd" id="phaseCd"></span>
+  </div>
+
+  <!-- 星星进度条 -->
+  <div class="star-progress" id="starProgress">
+    <span class="star" data-si="0">★</span>
+    <span class="star" data-si="1">★</span>
+    <span class="star" data-si="2">★</span>
+    <span class="star" data-si="3">★</span>
+    <span class="star" data-si="4">★</span>
+    <span class="star" data-si="5">★</span>
+  </div>
+
+  <!-- 数字网格 -->
+  <div class="digit-grid" id="digitGrid"></div>
+
+  <!-- 答案展示区 -->
+  <div class="answer-area" id="answerArea">
+    <div class="answer-slot" data-si="0">?</div>
+    <div class="answer-slot" data-si="1">?</div>
+    <div class="answer-slot" data-si="2">?</div>
+    <div class="answer-slot" data-si="3">?</div>
+    <div class="answer-slot" data-si="4">?</div>
+    <div class="answer-slot" data-si="5">?</div>
+  </div>
+
+  <!-- 操作栏 -->
+  <div class="action-bar">
+    <button class="action-btn primary" id="startBtn">▶ 开始</button>
+    <button class="action-btn danger hidden" id="stopBtn">⏹ 停止</button>
+  </div>
+
+  <!-- 底部状态 -->
+  <div class="status-bar" id="statusBar">
+    <span id="statusMsg">点击「开始」开始训练</span>
+    <span class="score-display" id="scoreDisplay">✅ 0/6</span>
+  </div>
+</div>
+
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+const NUMS = [1,2,3,4,5,6,7,8,9,0];
+const MODES = [
+  {key:'simple', label:'简单', speed:2000, icon:'🐣'},
+  {key:'medium', label:'中等', speed:1000, icon:'⚡'},
+  {key:'hard',  label:'困难', speed:500,  icon:'🔥'},
+  {key:'hell',  label:'地狱', speed:300,  icon:'💀'},
+];
+const TOTAL = 6;
+const CD_SEC = 3;
+const MAX_ROUNDS = 6;
+
+const state = {
+  mode: 0, phase: 'IDLE',
+  seq: [], seqIdx: 0,
+  input: [], inputIdx: 0,
+  round: 0,
+  totalScore: 0,
+  roundResults: [],
+  silent: false,
+  timer: null, cdTimer: null,
+};
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function getRoundMode(r){return state.mode === 4 ? r % 3 : state.mode;}
+function getSpeed(){return MODES[getRoundMode(state.round)].speed;}
+
+/* ===== 按键音 ===== */
+function playBeep(digit){
+  try{
+    const SCALE = {1:261.63,2:293.66,3:329.63,4:349.23,5:392.00,6:440.00,7:493.88,8:523.25,9:587.33,0:659.25};
+    const freq = SCALE[digit] || 440;
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = freq; o.type = 'sine';
+    g.gain.setValueAtTime(0.25, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.15);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime+0.15);
+  }catch(e){}
+}
+
+/* ===== 星星进度 ===== */
+function setStarProgress(n){
+  document.querySelectorAll('.star-progress .star').forEach((s,i)=>{
+    s.classList.toggle('active', i < n);
+  });
+}
+
+/* ===== 网格初始化（仅一次） ===== */
+function initGrid(){
+  const grid = $('digitGrid');
+  grid.innerHTML = NUMS.map((n,i) =>
+    `<button class="digit-btn" data-num="${n}" style="--i:${i}" disabled>${n}</button>`
+  ).join('');
+}
+initGrid();
+
+/* ===== 模式切换 ===== */
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if(state.phase !== 'IDLE' && state.phase !== 'RESULT') return;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.mode = btn.dataset.mode === 'mix' ? 4 : MODES.findIndex(m => m.key === btn.dataset.mode);
+    updateStatus();
+  });
+});
+
+$('silentCheck').addEventListener('change', function(){
+  state.silent = this.checked;
+});
+
+/* ===== 生成不重复序列 ===== */
+function genSeq(){const p=[...NUMS];shuffle(p);return p.slice(0,TOTAL);}
+
+/* ===== 预倒计时 3...2...1... ===== */
+function startPreCountdown(){
+  state.phase = 'PRE_COUNTDOWN';
+  let c = 3;
+  updatePhase('⏳ 准备开始', c);
+  state.cdTimer = setInterval(() => {
+    c--;
+    if(c <= 0){
+      clearInterval(state.cdTimer); state.cdTimer = null;
+      state.phase = 'FLASHING'; state.seqIdx = 0;
+      doFlash();
+    } else {
+      updatePhase('⏳ 准备开始', c);
+    }
+  }, 1000);
+}
+
+/* ===== 闪烁动画 ===== */
+function doFlash(){
+  if(state.phase !== 'FLASHING') return;
+  const btns = document.querySelectorAll('.digit-btn');
+  btns.forEach(b => b.classList.remove('flash'));
+  if(state.seqIdx >= TOTAL){ startCountdown(); return; }
+  const num = state.seq[state.seqIdx];
+  const btn = document.querySelector(`.digit-btn[data-num="${num}"]`);
+  if(btn) btn.classList.add('flash');
+  playBeep(num);
+  const ml = MODES[getRoundMode(state.round)].label;
+  updatePhase(`第${state.round+1}/${MAX_ROUNDS}关 ${ml} · ${state.seqIdx+1}/${TOTAL}个`);
+  state.seqIdx++;
+  state.timer = setTimeout(doFlash, getSpeed());
+}
+
+/* ===== 倒计时（闪烁后） ===== */
+function startCountdown(){
+  state.phase = 'COUNTDOWN';
+  let c = CD_SEC;
+  updatePhase('', c);
+  state.cdTimer = setInterval(() => {
+    c--;
+    if(c <= 0){
+      clearInterval(state.cdTimer); state.cdTimer = null;
+      if(state.silent) showSilentAnswer();
+      else startInput();
+    } else { updatePhase('', c); }
+  }, 1000);
+}
+
+/* ===== 输入阶段 ===== */
+function startInput(){
+  state.phase = 'INPUT';
+  state.input = []; state.inputIdx = 0;
+  document.querySelectorAll('.digit-btn').forEach(b => {
+    b.disabled = false; b.classList.remove('flash','picked');
+  });
+  updatePhase('请按顺序点击数字');
+  $('scoreDisplay').textContent = `📝 第${state.round+1}/${MAX_ROUNDS}关 · 0/${TOTAL}`;
+}
+
+/* ===== 默读展示答案 ===== */
+function showSilentAnswer(){
+  state.phase = 'SILENT_SHOW';
+  const slots = document.querySelectorAll('.answer-slot');
+  slots.forEach((s,i)=>{s.textContent=state.seq[i];s.className='answer-slot silent-ans';});
+  document.querySelectorAll('.digit-btn').forEach(b=>b.classList.remove('flash'));
+  updatePhase('👀 默读答案', 5);
+  let c = 5;
+  state.cdTimer = setInterval(() => {
+    c--;
+    if(c <= 0){
+      clearInterval(state.cdTimer); state.cdTimer = null;
+      setStarProgress(state.round + 1);
+      if(state.round + 1 >= MAX_ROUNDS) showFinalResult();
+      else advanceRound();
+    } else { updatePhase('👀 默读答案', c); }
+  }, 1000);
+}
+
+/* ===== 点击数字按钮 ===== */
+document.getElementById('digitGrid').addEventListener('click', e => {
+  const btn = e.target.closest('.digit-btn');
+  if(!btn || state.phase !== 'INPUT') return;
+  const num = parseInt(btn.dataset.num);
+  playBeep(num);
+  btn.classList.add('picked'); btn.disabled = true;
+  const slots = document.querySelectorAll('.answer-slot');
+  slots[state.inputIdx].textContent = num;
+  slots[state.inputIdx].className = 'answer-slot filled';
+  state.input.push(num); state.inputIdx++;
+  $('scoreDisplay').textContent = `📝 第${state.round+1}/${MAX_ROUNDS}关 · ${state.inputIdx}/${TOTAL}`;
+  if(state.inputIdx >= TOTAL) finishGame();
+});
+
+/* ===== 单关结算 ===== */
+function finishGame(){
+  state.phase = 'ROUND_RESULT';
+  const slots = document.querySelectorAll('.answer-slot');
+  let correct = 0;
+  for(let i=0;i<TOTAL;i++){
+    slots[i].textContent = state.seq[i];
+    if(state.input[i] === state.seq[i]){ slots[i].className='answer-slot correct'; correct++; }
+    else { slots[i].className='answer-slot wrong'; }
+  }
+  state.totalScore += correct;
+  state.roundResults.push(correct);
+  setStarProgress(state.round + 1);
+  updatePhase(`✅ 第${state.round+1}关 答对 ${correct}/${TOTAL}`);
+  $('scoreDisplay').textContent = `✅ ${correct}/${TOTAL} · 累计 ${state.totalScore}/${(state.round+1)*TOTAL}`;
+  // 2 秒后自动推进
+  state.timer = setTimeout(() => {
+    if(state.round + 1 >= MAX_ROUNDS) showFinalResult();
+    else advanceRound();
+  }, 2000);
+}
+
+/* ===== 进入下一关 ===== */
+function advanceRound(){
+  state.round++;
+  document.querySelectorAll('.answer-slot').forEach(s=>{s.textContent='?';s.className='answer-slot';});
+  document.querySelectorAll('.digit-btn').forEach(b=>{b.classList.remove('flash','picked');b.disabled=true;b.removeAttribute('style');});
+  state.seq = genSeq(); state.seqIdx = 0;
+  startPreCountdown();
+}
+
+/* ===== 最终结算 ===== */
+function showFinalResult(){
+  clearTimeout(state.timer); clearInterval(state.cdTimer);
+  state.timer=null; state.cdTimer=null;
+  state.phase = 'RESULT';
+  setStarProgress(MAX_ROUNDS); // 全部点亮
+  const totalPossible = MAX_ROUNDS * TOTAL;
+  const modeLabel = state.mode === 4 ? '混合' : MODES[state.mode].label;
+  updatePhase(`🏆 全部完成！${state.totalScore}/${totalPossible}`);
+  $('scoreDisplay').textContent = `🏆 ${state.totalScore}/${totalPossible}`;
+  $('statusMsg').textContent = `${modeLabel}模式 · ${MAX_ROUNDS}关 × ${TOTAL}题 · 总分 ${state.totalScore}/${totalPossible}`;
+  $('stopBtn').classList.add('hidden');
+  $('startBtn').textContent = '🔄 再来一次';
+  $('startBtn').disabled = false;
+  document.querySelectorAll('.mode-btn').forEach(b => b.disabled = false);
+}
+
+/* ===== 开始游戏 ===== */
+function startGame(){
+  clearTimeout(state.timer); clearInterval(state.cdTimer);
+  state.timer=null; state.cdTimer=null;
+  state.round=0; state.totalScore=0; state.roundResults=[];
+  state.seq=genSeq(); state.seqIdx=0; state.input=[]; state.inputIdx=0;
+
+  document.querySelectorAll('.answer-slot').forEach(s=>{s.textContent='?';s.className='answer-slot';});
+  setStarProgress(0);
+  // ⛔ 不移除网格！只重置按钮状态 → 防位置抖动
+  document.querySelectorAll('.digit-btn').forEach(b=>{b.classList.remove('flash','picked');b.disabled=true;b.removeAttribute('style');});
+
+  $('startBtn').disabled = true;
+  $('startBtn').textContent = '▶ 游戏中...';
+  $('stopBtn').classList.remove('hidden');
+  document.querySelectorAll('.mode-btn').forEach(b => b.disabled = true);
+
+  startPreCountdown();
+}
+
+$('startBtn').addEventListener('click', () => {
+  if(state.phase === 'IDLE' || state.phase === 'RESULT') startGame();
+});
+$('stopBtn').addEventListener('click', stopGame);
+
+function stopGame(){
+  clearTimeout(state.timer); clearInterval(state.cdTimer);
+  state.timer=null; state.cdTimer=null;
+  state.phase = 'IDLE';
+  $('stopBtn').classList.add('hidden');
+  $('startBtn').disabled = false; $('startBtn').textContent = '▶ 开始';
+  document.querySelectorAll('.mode-btn').forEach(b=>b.disabled=false);
+  document.querySelectorAll('.digit-btn').forEach(b=>{b.classList.remove('flash','picked');b.disabled=true;b.removeAttribute('style');});
+  document.querySelectorAll('.answer-slot').forEach(s=>{s.textContent='?';s.className='answer-slot';});
+  setStarProgress(0);
+  updatePhase('⏹ 已停止');
+  updateStatus();
+}
+
+/* ===== 更新显示 ===== */
+function updatePhase(label='', cd=''){
+  $('phaseLabel').textContent = label || '';
+  $('phaseCount').textContent = '';
+  $('phaseCd').textContent = '';
+  if(typeof cd === 'number' && cd > 0) $('phaseCd').textContent = cd;
+  if(label) $('statusMsg').textContent = label;
+}
+
+function updateStatus(){
+  $('statusMsg').textContent = '点击「开始」开始训练';
+  $('scoreDisplay').textContent = '✅ 0/6';
+}
+updateStatus();
+})();
+</script>
+</body>
+</html>

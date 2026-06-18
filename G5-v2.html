@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>数字大侦探 - 听知觉训练</title><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    html, body { touch-action: manipulation; overscroll-behavior: none; width: 100%; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(160deg, #fff8e1 0%, #ffecb3 30%, #fff3e0 60%, #fffde7 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      color: #4E342E;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* 微弱的网格线和放大镜搜索光晕装饰 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-image:
+        linear-gradient(rgba(255,193,7,0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,193,7,0.08) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      top: -30%;
+      right: -20%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(circle at center, rgba(255,193,7,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 标题 */
+    .title-area {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 2px;
+      color: #4E342E;
+      letter-spacing: 2px;
+      text-shadow: 0 1px 2px rgba(255,193,7,0.3);
+    }
+    .subtitle {
+      color: #5D4037;
+      font-size: 10px;
+      padding: 3px 12px;
+      background: rgba(255,193,7,0.3);
+      border-radius: 15px;
+      display: inline-block;
+    }
+
+    /* 顶部信息栏 */
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,193,7,0.1);
+      border-radius: 12px;
+      padding: 8px 14px;
+      margin-bottom: 8px;
+      backdrop-filter: blur(10px);
+    }
+    .info-item {
+      text-align: center;
+      flex: 1;
+    }
+    .info-label {
+      font-size: 10px;
+      color: rgba(78,52,46,0.6);
+    }
+    .info-value {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .info-value.score {
+      color: #F57F17;
+    }
+    .info-value.level {
+      color: #E65100;
+    }
+    .info-value.round {
+      color: #4E342E;
+    }
+
+    /* 进度条 */
+    .progress-container {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .progress-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255,193,7,0.25);
+      border: 1px solid rgba(255,193,7,0.3);
+      transition: all 0.3s;
+    }
+    .progress-dot.active {
+      background: #FFC107;
+      border-color: #FFC107;
+      box-shadow: 0 0 8px rgba(255,193,7,0.5);
+    }
+    .progress-dot.correct {
+      background: #4CAF50;
+      border-color: #4CAF50;
+      box-shadow: 0 0 8px rgba(76,175,80,0.5);
+    }
+    .progress-dot.wrong {
+      background: #f44336;
+      border-color: #f44336;
+      box-shadow: 0 0 8px rgba(244,67,54,0.3);
+    }
+
+    /* 难度选择 */
+    .level-select {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .level-btn {
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,193,7,0.4);
+      border-radius: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(255,255,255,0.6);
+      color: rgba(78,52,46,0.7);
+      font-family: inherit;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    .level-btn.active {
+      border-color: #FF8F00;
+      background: linear-gradient(135deg, #FFE082, #FFD54F);
+      color: #4E342E;
+      box-shadow: 0 0 12px rgba(255,193,7,0.4);
+    }
+    .level-btn:active { transform: scale(0.95); }
+
+    /* 子难度显示 */
+    .sub-level-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .sub-level-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 12px;
+      font-size: clamp(13px, 2vw, 15px);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(76,175,80,0.15);
+      color: #2E7D32;
+      border: 2px solid rgba(76,175,80,0.2);
+      user-select: none;
+    }
+    .sub-level-badge:hover {
+      transform: scale(1.05);
+    }
+    .sub-level-badge.active {
+      background: rgba(76,175,80,0.45);
+      border-color: #2E7D32;
+      color: #1B5E20;
+      box-shadow: 0 2px 8px rgba(76,175,80,0.35);
+      transform: scale(1.08);
+    }
+    .sub-level-arrow {
+      font-size: 14px;
+      color: rgba(78,52,46,0.4);
+    }
+
+    /* 自适应提示 */
+    .adapt-notice {
+      text-align: center;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin-bottom: 4px;
+      animation: fadeIn 0.4s;
+    }
+    .adapt-notice.up {
+      background: rgba(76,175,80,0.2);
+      color: #2E7D32;
+    }
+    .adapt-notice.down {
+      background: rgba(244,67,54,0.2);
+      color: #C62828;
+    }
+
+    /* 状态提示区 */
+    .status-area {
+      text-align: center;
+      padding: 14px 10px;
+      margin-bottom: 8px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 14px;
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,193,7,0.2);
+      box-shadow: 0 2px 8px rgba(255,193,7,0.1);
+    }
+    .status-icon {
+      font-size: 30px;
+      margin-bottom: 4px;
+    }
+    .status-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #4E342E;
+    }
+    .status-sub {
+      font-size: 12px;
+      color: rgba(78,52,46,0.6);
+      margin-top: 2px;
+    }
+
+    /* 数字序列显示区 */
+    .sequence-area {
+      background: rgba(255,255,255,0.8);
+      border-radius: 14px;
+      padding: 14px 12px;
+      margin-bottom: 8px;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      border: 2px dashed rgba(255,193,7,0.4);
+      transition: all 0.3s;
+      box-shadow: 0 2px 8px rgba(255,193,7,0.1);
+    }
+    .sequence-area.listening {
+      border-color: rgba(255,193,7,0.5);
+      background: rgba(255,255,255,0.85);
+    }
+    .sequence-area.first-round {
+      border-color: rgba(255,193,7,0.6);
+      background: rgba(255,255,255,0.9);
+    }
+    .sequence-area.second-round {
+      border-color: rgba(255,193,7,0.6);
+      background: rgba(255,255,255,0.9);
+    }
+    .sequence-area.answer-ready {
+      border-color: rgba(76,175,80,0.5);
+      background: rgba(255,255,255,0.9);
+    }
+
+    .seq-round-label {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 2px 14px;
+      border-radius: 12px;
+      margin-bottom: 2px;
+    }
+    .seq-round-label.first {
+      background: rgba(255,193,7,0.25);
+      color: #E65100;
+    }
+    .seq-round-label.second {
+      background: rgba(255,193,7,0.25);
+      color: #E65100;
+    }
+    .seq-round-label.answer {
+      background: rgba(76,175,80,0.2);
+      color: #2E7D32;
+    }
+
+    .seq-digits {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .seq-digit {
+      width: 40px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(255,193,7,0.2);
+      border: 2px solid rgba(255,193,7,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: #4E342E;
+      transition: all 0.3s;
+      animation: digitPop 0.35s ease-out;
+    }
+    @keyframes digitPop {
+      0% { transform: scale(0.3); opacity: 0; }
+      70% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .seq-digit.highlight {
+      border-color: #FF8F00;
+      background: rgba(255,193,7,0.35);
+      box-shadow: 0 0 12px rgba(255,193,7,0.4);
+    }
+
+    .seq-placeholder {
+      color: rgba(78,52,46,0.4);
+      font-size: 14px;
+    }
+
+    /* 紧凑对比排版 - 替代大块数字方块 */
+    .cmp-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      width: 100%;
+    }
+    .cmp-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .cmp-label {
+      flex: none;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 1px 8px;
+      border-radius: 6px;
+      background: rgba(255,193,7,0.15);
+      color: #795548;
+      min-width: 36px;
+      text-align: center;
+    }
+    .cmp-seq {
+      font-weight: 700;
+      font-size: 16px;
+      color: #4E342E;
+      letter-spacing: 0.5px;
+    }
+    .cmp-missing {
+      display: inline-block;
+      color: #E65100;
+      font-weight: 800;
+      font-size: 15px;
+    }
+    .cmp-result {
+      margin-top: 3px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #795548;
+      text-align: center;
+    }
+    .cmp-answer {
+      display: inline-block;
+      font-size: 18px;
+      font-weight: 800;
+      color: #E65100;
+      padding: 0 6px;
+    }
+
+    /* 问题区 - 漏掉了哪个数字 */
+    .question-area {
+      text-align: center;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 14px;
+      min-height: 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,193,7,0.2);
+      box-shadow: 0 2px 8px rgba(255,193,7,0.1);
+    }
+    .question-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: #4E342E;
+    }
+    .question-sub {
+      font-size: 12px;
+      color: rgba(78,52,46,0.6);
+      margin-top: 2px;
+    }
+
+    /* 数字键盘 */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 0 auto;
+      margin-bottom: 8px;
+    }
+    .num-btn {
+      border: none;
+      border-radius: 14px;
+      font-size: 28px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      background: #FFD54F;
+      color: #4E342E;
+      min-height: 64px;
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #D4A000;
+      box-shadow: 0 3px 6px rgba(183,129,0,0.2);
+    }
+    .num-zero { grid-column: 2; }
+    .num-btn:active { transform: scale(0.88); background: #FFC107; }
+    .num-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .num-btn.selected {
+      background: #FFC107;
+      border-color: #E65100;
+      box-shadow: 0 0 16px rgba(255,193,7,0.5);
+    }
+    .num-btn.correct-answer {
+      background: #C8E6C9;
+      border-color: #4CAF50;
+      box-shadow: 0 0 12px rgba(76,175,80,0.3);
+    }
+    .num-btn.wrong-answer {
+      background: #FFCDD2;
+      border-color: #f44336;
+    }
+
+    /* 底部按钮 */
+    .bottom-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+    .action-btn {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      flex: 1;
+      min-height: 44px;
+    }
+    .action-btn:active { transform: scale(0.95); }
+    .action-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .btn-replay-first {
+      background: linear-gradient(135deg, #FFE082, #FFD54F);
+      color: #4E342E;
+      border: 1px solid rgba(255,193,7,0.4);
+      box-shadow: 0 2px 6px rgba(255,193,7,0.2);
+    }
+    .btn-replay-second {
+      background: linear-gradient(135deg, #FFE082, #FFD54F);
+      color: #4E342E;
+      border: 1px solid rgba(255,193,7,0.4);
+      box-shadow: 0 2px 6px rgba(255,193,7,0.2);
+    }
+    .btn-start {
+      background: linear-gradient(135deg, #FFD54F, #FF8F00);
+      color: #4E342E;
+      box-shadow: 0 4px 12px rgba(255,193,7,0.3);
+    }
+    .btn-next {
+      background: linear-gradient(135deg, #FFD54F, #FF8F00);
+      color: #4E342E;
+      box-shadow: 0 4px 12px rgba(255,193,7,0.3);
+    }
+    .btn-confirm {
+      background: linear-gradient(135deg, #FFE082, #FFC107);
+      color: #4E342E;
+      box-shadow: 0 4px 12px rgba(255,193,7,0.3);
+    }
+
+    /* 对比展示 - 显示完整序列 vs 缺少序列 */
+    .compare-section {
+      margin: 8px 0;
+      padding: 10px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 12px;
+      animation: fadeIn 0.4s;
+      border: 1px solid rgba(255,193,7,0.2);
+      box-shadow: 0 2px 8px rgba(255,193,7,0.1);
+    }
+    .compare-title {
+      font-size: 12px;
+      color: rgba(78,52,46,0.6);
+      margin-bottom: 6px;
+    }
+    .compare-row {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .compare-item {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .compare-item.normal {
+      background: rgba(255,193,7,0.15);
+      border: 1px solid rgba(255,193,7,0.3);
+      color: #4E342E;
+    }
+    .compare-item.missing {
+      background: rgba(255,193,7,0.25);
+      border: 1px solid #FF8F00;
+      color: #E65100;
+      box-shadow: 0 0 8px rgba(255,193,7,0.3);
+    }
+    .compare-item.empty {
+      background: rgba(255,255,255,0.3);
+      border: 1px dashed rgba(78,52,46,0.2);
+      color: rgba(78,52,46,0.3);
+    }
+
+    /* 反馈浮层 */
+    .feedback-badge {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 900;
+      pointer-events: none;
+      text-align: center;
+      animation: badgePop 0.6s ease-out forwards;
+    }
+    @keyframes badgePop {
+      0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    .feedback-badge.hide { animation: badgeFade 0.3s ease-out forwards; }
+    @keyframes badgeFade {
+      to { transform: translate(-50%, -60%) scale(0.8); opacity: 0; }
+    }
+    .feedback-badge .fb-emoji { font-size: 64px; }
+    .feedback-badge .fb-text { font-size: 24px; font-weight: bold; margin-top: 4px; }
+    .feedback-badge .fb-text.correct-text { color: #F57F17; }
+    .feedback-badge .fb-text.wrong-text { color: #C62828; }
+
+    /* 星星爆发 */
+    .star-particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      font-size: 20px;
+      animation: starFly 0.8s ease-out forwards;
+    }
+    @keyframes starFly {
+      0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+      100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(360deg); }
+    }
+
+    /* 覆盖层 */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      background: rgba(78,52,46,0.75);
+      animation: fadeIn 0.3s;
+    }
+    .overlay.show { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .result-card {
+      background: rgba(255,248,225,0.95);
+      border-radius: 24px;
+      padding: 30px 28px;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,193,7,0.3);
+      animation: cardBounce 0.5s ease-out;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 16px rgba(255,193,7,0.15);
+    }
+    @keyframes cardBounce {
+      0% { transform: scale(0.7); opacity: 0; }
+      60% { transform: scale(1.05); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .result-emoji { font-size: 56px; margin-bottom: 10px; }
+    .result-title { font-size: 22px; font-weight: bold; margin-bottom: 6px; color: #4E342E; }
+    .result-stats { font-size: 14px; color: rgba(78,52,46,0.7); line-height: 1.8; margin-bottom: 16px; }
+    .result-stats span { color: #F57F17; font-weight: bold; }
+    .result-btn {
+      padding: 10px 30px;
+      border: none;
+      border-radius: 24px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      background: linear-gradient(135deg, #FFD54F, #FF8F00);
+      color: #4E342E;
+      box-shadow: 0 4px 12px rgba(255,193,7,0.3);
+    }
+    .result-btn:active { transform: scale(0.95); }
+
+    /* 响应式 */
+    @media (max-width: 380px) {
+      h1 { font-size: 22px; }
+      .num-btn { font-size: 18px; min-height: 44px; }
+      .seq-digit { width: 34px; height: 38px; font-size: 18px; }
+    }
+  
+  /* ===== 横屏布局：左功能 + 右游戏（居中卡片） ===== */
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .container {
+    max-width: 860px;
+    width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    align-items: stretch;
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    flex: 0 1 auto;
+    margin: 0 auto;
+  }
+  .deco-float, .deco-ring, .deco-wave, .deco-star,
+  .ripple-container { display: none !important; }
+  
+  .land-left {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 10px;
+    overflow-y: auto;
+    border-right: 1px solid rgba(0,0,0,0.06);
+  }
+  .land-right {
+    flex: none;
+    width: 580px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 12px;
+    overflow-y: auto;
+  }
+  
+  .land-left .title-area { padding: 2px 4px; margin-bottom: 2px; }
+  .land-left .title-area h1 { font-size: 18px; }
+  .land-left .title-area .subtitle { font-size: 11px; }
+  .land-left .info-bar { flex-wrap: nowrap; gap: 2px; padding: 4px 8px; margin-bottom: 2px; }
+  .land-left .info-label { font-size: 10px; }
+  .land-left .info-value { font-size: 15px; }
+  .land-left .level-select { gap: 4px; padding: 4px 8px; margin-bottom: 2px; flex-wrap: wrap; }
+  .land-left .level-btn { font-size: 13px; padding: 4px 10px; min-height: 30px; }
+  .land-left .sub-level-row { gap: 4px; padding: 2px 8px; flex-wrap: wrap; }
+  .land-left .sub-level-badge { font-size: 11px; padding: 3px 8px; min-height: 24px; }
+  .land-left .status-area { padding: 6px 8px; min-height: 44px; }
+  .land-left .status-icon { font-size: 18px; }
+  .land-left .status-text { font-size: 14px; }
+  .land-left .status-sub { font-size: 11px; }
+  .land-left .tip-bar { padding: 3px 8px; font-size: 11px; margin-bottom: 2px; }
+  .land-left .progress-container { padding: 2px 8px; min-height: 10px; display: flex; gap: 3px; }
+  .land-left .hint-area { font-size: 11px; padding: 2px 8px; }
+  .land-left .adapt-notice { font-size: 11px; padding: 2px 8px; }
+  .land-left .game-rules { padding: 8px; margin-bottom: 4px; font-size: clamp(13px,1.8vw,17px); background: rgba(233,30,99,0.06); border-radius: 8px; line-height: 1.5; }
+  .land-left .game-rules .rules-title { font-size: clamp(14px,2vw,18px); font-weight: 700; margin-bottom: 3px; }
+  .land-left .difficulty-hint { padding: 6px 8px; margin-bottom: 4px; font-size: 11px; background: rgba(255,193,7,0.08); border-radius: 8px; border: 1px solid rgba(255,193,7,0.15); line-height: 1.5; }
+  .land-left .difficulty-hint .hint-title { font-size: 12px; font-weight: 700; margin-bottom: 2px; color: #F57C00; }
+  .land-left .difficulty-hint .hint-body { display: flex; flex-direction: column; gap: 2px; }
+  .land-left .difficulty-hint .hint-col { font-size: 11px; padding: 1px 0; }
+  .land-left .difficulty-hint .hint-note { font-size: 10px; margin-top: 3px; color: #888; }
+  
+  .land-right .number-display { gap: 6px; padding: 6px; }
+  .land-right .num-slot { font-size: 28px; min-width: 38px; padding: 4px 8px; }
+  .land-right .question-area { padding: 4px 8px; }
+  .land-right .question-text { font-size: 16px; }
+  .land-right .keypad { gap: 8px; padding: 6px; }
+  .land-right .numpad { width: 100%; gap: 10px; padding: 4px; }
+  .land-right .num-btn { font-size: clamp(26px,3.5vw,46px); min-height: 56px; aspect-ratio: 1; }
+  .land-right .bottom-actions { gap: 8px; padding: 6px 0; flex-wrap: wrap; }
+  .land-right .action-btn { font-size: 18px; padding: 8px 20px; min-height: 48px; }
+
+</style>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+// 缓存爆破：如果URL没有版本参数，重定向自己加上唯一版本号
+if (!location.search.includes('v=')) {
+  location.replace(location.pathname + '?v=' + Date.now());
+}
+</script>
+<script src="/public/audio-helper.js"></script>
+</head>
+<body>
+<div class="container">
+  <div class="land-left">
+  <!-- 标题 -->
+  <div class="title-area">
+    <h1>🔍 数字大侦探</h1>
+    <span class="subtitle">听知觉训练 · 找漏洞</span>
+  </div>
+
+  <!-- 信息栏 -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="info-label">题号</div>
+      <div class="info-value round" id="questionNum">-</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">难度</div>
+      <div class="info-value level" id="levelDisplay">中级·简单</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">⭐ 得分</div>
+      <div class="info-value score" id="scoreDisplay">0</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">进度</div>
+      <div class="info-value round" id="progressDisplay">0/10</div>
+    </div>
+  </div>
+
+  <!-- 进度点 -->
+  <div class="progress-container" id="progressDots"></div>
+
+  <!-- 难度选择 -->
+  <div class="level-select" id="levelSelect">
+    <button class="level-btn active" data-level="intermediate" onclick="selectLevel('intermediate')">📈 中级</button>
+    <button class="level-btn" data-level="advanced" onclick="selectLevel('advanced')">🔥 高级</button>
+  </div>
+
+  <!-- 内部难度标签 -->
+  <div class="sub-level-row" id="subLevelRow">
+    <span class="sub-level-badge easy" id="subEasy" onclick="selectSubLevel('easy')" title="点击选择">简单</span>
+    <span class="sub-level-arrow">→</span>
+    <span class="sub-level-badge medium" id="subMedium" onclick="selectSubLevel('medium')" title="点击选择">中等</span>
+    <span class="sub-level-arrow">→</span>
+    <span class="sub-level-badge hard" id="subHard" onclick="selectSubLevel('hard')" title="点击选择">困难</span>
+  </div>
+
+  <!-- 自适应提示 -->
+  <div id="adaptNotice" class="adapt-notice" style="display:none;"></div>
+
+  <!-- 状态区 -->
+  <div class="status-area" id="statusArea">
+    <div class="status-icon" id="statusIcon">🔍</div>
+    <div class="status-text" id="statusText">选择难度开始训练</div>
+    <div class="status-sub" id="statusSub">仔细听两遍数字串，找出漏掉的那个数字</div>
+  </div>
+
+  <!-- 玩法说明 -->
+  <div class="game-rules" id="gameRules">
+    <div class="rules-title">📋 玩法说明</div>
+    <div>• 听两遍数字串，第二遍漏掉了一个数字<br>• 找出第二遍漏掉了哪个数字<br>• 📝 例如：<br>　<span style="font-size:1.15em;font-weight:700;color:#4E342E;">第一遍：3 7 1 9 4 5</span><br>　<span style="font-size:1.15em;font-weight:700;color:#E65100;">第二遍：3 7 9 4 5</span><br>　→ 漏掉了 <b style="font-size:1.3em;color:#E65100;">1</b><br><br>　<span style="font-size:1.15em;font-weight:700;color:#4E342E;">第一遍：8 2 5 0 7 3 1</span><br>　<span style="font-size:1.15em;font-weight:700;color:#E65100;">第二遍：8 2 5 7 3 1</span><br>　→ 漏掉了 <b style="font-size:1.3em;color:#E65100;">0</b></div>
+  </div>
+  
+  <!-- 难度说明 -->
+  <div class="difficulty-hint" id="difficultyHint">
+    <div class="hint-title">📊 难度说明</div>
+    <div class="hint-body">
+      <div class="hint-col">📈 中级·简单 → 5位（1-9）</div>
+      <div class="hint-col">📈 中级·中等 → 6位（0-9）</div>
+      <div class="hint-col">📈 中级·困难 → 7位（0-9）</div>
+      <div class="hint-col">🔥 高级·加强 → 8位（0-9）</div>
+    </div>
+  </div>
+</div><!-- /land-left -->
+
+<div class="land-right">
+  <!-- 数字序列展示区 -->
+  <div class="sequence-area" id="sequenceArea">
+    <div class="seq-round-label" id="seqRoundLabel" style="display:none;"></div>
+    <div class="seq-digits" id="seqDigits">
+      <span class="seq-placeholder">👂 等待开始...</span>
+    </div>
+  </div>
+
+  <!-- 问题区 -->
+  <div class="question-area" id="questionArea">
+    <div class="question-text" id="questionText">准备好了吗？</div>
+    <div class="question-sub" id="questionSub">点击「开始挑战」进入训练</div>
+  </div>
+
+  <!-- 数字键盘 -->
+  <div class="numpad" id="numpad">
+    <button class="num-btn" data-num="1" onclick="pressNum(1)">1</button>
+    <button class="num-btn" data-num="2" onclick="pressNum(2)">2</button>
+    <button class="num-btn" data-num="3" onclick="pressNum(3)">3</button>
+    <button class="num-btn" data-num="4" onclick="pressNum(4)">4</button>
+    <button class="num-btn" data-num="5" onclick="pressNum(5)">5</button>
+    <button class="num-btn" data-num="6" onclick="pressNum(6)">6</button>
+    <button class="num-btn" data-num="7" onclick="pressNum(7)">7</button>
+    <button class="num-btn" data-num="8" onclick="pressNum(8)">8</button>
+    <button class="num-btn" data-num="9" onclick="pressNum(9)">9</button>
+    <button class="num-btn num-zero" data-num="0" onclick="pressNum(0)">0</button>
+  </div>
+
+  <!-- 底部按钮 -->
+  <div class="bottom-actions">
+    <button class="action-btn btn-replay-first" id="replayFirstBtn" onclick="replayFirst()" disabled>🔊 第一遍</button>
+    <button class="action-btn btn-replay-second" id="replaySecondBtn" onclick="replaySecond()" disabled>🔊 第二遍</button>
+    <button class="action-btn btn-confirm" id="confirmBtn" onclick="confirmAnswer()" disabled>✅ 确定答案</button>
+    <button class="action-btn btn-start" id="startBtn" onclick="startNewGame()">🚀 开始挑战</button>
+  </div>
+</div><!-- /land-right -->
+</div>
+
+<!-- 反馈浮层 -->
+<div class="feedback-badge" id="feedbackBadge" style="display:none;">
+  <div class="fb-emoji" id="fbEmoji">⭐</div>
+  <div class="fb-text" id="fbText">正确！</div>
+</div>
+
+<!-- 结算覆盖层 -->
+<div class="overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="result-emoji" id="resultEmoji">🎉</div>
+    <div class="result-title" id="resultTitle">太棒了！</div>
+    <div class="result-stats" id="resultStats">
+      正确 <span id="finalCorrect">0</span>/<span id="finalTotal">10</span> 题<br>
+      正确率 <span id="finalRate">0%</span><br>
+      获得 ⭐ <span id="finalScore">0</span> 分
+    </div>
+    <button class="result-btn" onclick="closeResult()">继续挑战</button>
+  </div>
+</div>
+
+<script>
+// ============================================
+//  数字大侦探 - 核心逻辑
+// ============================================
+// ---- 难度配置 ----
+const LEVEL_CONFIG = {
+  intermediate: {
+    label: '中级',
+    subLevels: [
+      {
+        key: 'easy', label: '简单', speechRate: 0.7,
+        digitCount: 5,
+        digitRange: [1, 9]
+      },
+      {
+        key: 'medium', label: '中等', speechRate: 0.75,
+        digitCount: 6,
+        digitRange: [0, 9]
+      },
+      {
+        key: 'hard', label: '困难', speechRate: 0.8,
+        digitCount: 7,
+        digitRange: [0, 9]
+      }
+    ]
+  },
+  advanced: {
+    label: '高级',
+    subLevels: [
+      {
+        key: 'hard', label: '加强', speechRate: 0.95,
+        digitCount: 8,
+        digitRange: [0, 9]
+      }
+    ]
+  }
+};
+
+// ---- 游戏状态 ----
+let state = {
+  level: 'intermediate',
+  subLevel: 0,
+  questionIndex: 0,
+  questions: [],
+  currentQuestion: null,
+  // 当前题数据
+  fullSequence: [],      // 完整数字串
+  partialSequence: [],   // 缺少一个的数字串
+  missingDigit: null,     // 漏掉的数字
+  missingIndex: -1,      // 漏掉的位置
+  selectedAnswer: null,  // 玩家选择的答案
+  score: 0,
+  correctCount: 0,
+  totalAnswered: 0,
+  consecutiveCorrect: 0,
+  consecutiveWrong: 0,
+  isPlaying: false,
+  isReading: false,
+  canAnswer: false,
+  isAnswered: false,
+  gameOver: false
+};
+
+// ---- DOM 引用 ----
+const $ = id => document.getElementById(id);
+const qNum = $('questionNum');
+const levelDisplay = $('levelDisplay');
+const scoreDisplay = $('scoreDisplay');
+const progressDisplay = $('progressDisplay');
+const progressDots = $('progressDots');
+const statusIcon = $('statusIcon');
+const statusText = $('statusText');
+const statusSub = $('statusSub');
+const sequenceArea = $('sequenceArea');
+const seqRoundLabel = $('seqRoundLabel');
+const seqDigits = $('seqDigits');
+const questionText = $('questionText');
+const questionSub = $('questionSub');
+const numBtns = document.querySelectorAll('.num-btn');
+const replayFirstBtn = $('replayFirstBtn');
+const replaySecondBtn = $('replaySecondBtn');
+const confirmBtn = $('confirmBtn');
+const startBtn = $('startBtn');
+const feedbackBadge = $('feedbackBadge');
+const fbEmoji = $('fbEmoji');
+const fbText = $('fbText');
+const resultOverlay = $('resultOverlay');
+const resultEmoji = $('resultEmoji');
+const resultTitle = $('resultTitle');
+const finalCorrect = $('finalCorrect');
+const finalTotal = $('finalTotal');
+const finalRate = $('finalRate');
+const finalScore = $('finalScore');
+const adaptNotice = $('adaptNotice');
+const subEasy = $('subEasy');
+const subMedium = $('subMedium');
+const subHard = $('subHard');
+const questionArea = $('questionArea');
+
+// ---- 工具函数 ----
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// ---- 初始化 ----
+function init() {
+  progressDots.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    dot.id = 'dot-' + i;
+    progressDots.appendChild(dot);
+  }
+  selectLevel('intermediate');
+  setNumpadEnabled(false);
+  loadProgress();
+}
+
+// ---- 选择难度 ----
+function selectLevel(level) {
+  if (state.isPlaying || state.isReading) return;
+  state.level = level;
+  document.querySelectorAll('.level-btn[data-level]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === level);
+  });
+  state.subLevel = 0;
+  updateSubLevelDisplay();
+  updateNumpadForRange();
+
+  // 显示开始按钮，隐藏其他
+  startBtn.style.display = 'block';
+  replayFirstBtn.style.display = 'none';
+  replaySecondBtn.style.display = 'none';
+  confirmBtn.style.display = 'none';
+
+  statusIcon.textContent = '🔍';
+  statusText.textContent = '准备就绪';
+  const cfg = LEVEL_CONFIG[level];
+  statusSub.textContent = cfg.label + ' · ' + cfg.subLevels[0].label + ' · 点击开始';
+
+  // 清空展示区
+  seqRoundLabel.style.display = 'none';
+  seqDigits.innerHTML = '<span class="seq-placeholder">👂 等待开始...</span>';
+  sequenceArea.className = 'sequence-area';
+  questionText.textContent = '准备好了吗？';
+  questionSub.textContent = '点击「开始挑战」进入训练';
+
+  state.isPlaying = false;
+  state.questions = [];
+  state.questionIndex = 0;
+  state.score = 0;
+  qNum.textContent = '-';
+  scoreDisplay.textContent = '0';
+  progressDisplay.textContent = '0/10';
+  setNumpadEnabled(false);
+}
+
+// ---- 更新子难度显示 ----
+function updateSubLevelDisplay() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return;
+  const subs = config.subLevels;
+  subEasy.textContent = subs[0].label;
+  subMedium.textContent = subs[1] ? subs[1].label : '';
+  subHard.textContent = subs[2] ? subs[2].label : '';
+  [subEasy, subMedium, subHard].forEach((el, i) => {
+    if (!el) return;
+    el.className = 'sub-level-badge';
+    if (i < subs.length) {
+      if (i === state.subLevel) {
+        el.classList.add('active');
+      }
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+  const arrows = document.querySelectorAll('.sub-level-arrow');
+  arrows.forEach((arrow, idx) => {
+    arrow.style.display = idx < subs.length - 1 ? 'inline' : 'none';
+  });
+  levelDisplay.textContent = config.label + ' · ' + subs[state.subLevel].label;
+}
+
+function selectSubLevel(key) {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return;
+  if (state.isPlaying || state.isReading) return;
+  const idx = config.subLevels.findIndex(s => s.key === key);
+  if (idx === -1 || idx === state.subLevel) return;
+  state.subLevel = idx;
+  updateSubLevelDisplay();
+  updateNumpadForRange();
+
+  // 重置为就绪状态，等待右侧「开始挑战」按钮触发
+  state.isPlaying = false;
+  state.questions = [];
+  state.questionIndex = 0;
+  state.score = 0;
+  qNum.textContent = '-';
+  scoreDisplay.textContent = '0';
+  progressDisplay.textContent = '0/10';
+
+  const cfg = LEVEL_CONFIG[state.level];
+  statusIcon.textContent = '🔍';
+  statusText.textContent = '准备就绪';
+  statusSub.textContent = cfg.label + ' · ' + cfg.subLevels[state.subLevel].label + ' · 点击开始';
+
+  sequenceArea.className = 'sequence-area';
+  seqRoundLabel.style.display = 'none';
+  seqDigits.innerHTML = '<span class="seq-placeholder">👂 等待开始...</span>';
+  questionText.textContent = '准备好了吗？';
+  questionSub.textContent = '点击「开始挑战」进入训练';
+
+  startBtn.style.display = 'block';
+  replayFirstBtn.style.display = 'none';
+  replaySecondBtn.style.display = 'none';
+  confirmBtn.style.display = 'none';
+
+  setNumpadEnabled(false);
+}
+
+// ---- 生成10道题 ----
+function generateQuestions(levelKey, subLevelIdx) {
+  const config = LEVEL_CONFIG[levelKey];
+  const subConfig = config.subLevels[subLevelIdx];
+  const digitCount = subConfig.digitCount;
+  const minDigit = subConfig.digitRange[0];
+  const maxDigit = subConfig.digitRange[1];
+  const questions = [];
+
+  for (let q = 0; q < 10; q++) {
+    // 生成完整数字串 - 确保相邻数字不重复让听觉辨别更清晰
+    const fullSeq = [];
+    for (let i = 0; i < digitCount; i++) {
+      let d;
+      do {
+        d = randInt(minDigit, maxDigit);
+      } while (i > 0 && d === fullSeq[i - 1]);
+      fullSeq.push(d);
+    }
+
+    // 选择一个位置移除（不选第一个和最后一个，让对比更有挑战性）
+    // 如果digitCount<=3，可以从中间选
+    let removeIdx;
+    if (digitCount <= 3) {
+      removeIdx = randInt(0, digitCount - 1);
+    } else {
+      // 从第1个到倒数第2个之间选
+      removeIdx = randInt(1, digitCount - 2);
+    }
+    const missingDigit = fullSeq[removeIdx];
+    const partialSeq = fullSeq.filter((_, idx) => idx !== removeIdx);
+
+    questions.push({
+      fullSequence: fullSeq,
+      partialSequence: partialSeq,
+      missingDigit: missingDigit,
+      missingIndex: removeIdx
+    });
+  }
+
+  return questions;
+}
+
+// ---- 开始新游戏 ----
+function startNewGame() {
+  if (window.stopAllAudio) window.stopAllAudio();
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+
+  const questions = generateQuestions(state.level, state.subLevel);
+  if (questions.length < 10) {
+    statusIcon.textContent = '⚠️';
+    statusText.textContent = '题库生成失败，请重试';
+    return;
+  }
+
+  state.questions = questions;
+  state.questionIndex = 0;
+  state.score = 0;
+  state.correctCount = 0;
+  state.totalAnswered = 0;
+  state.consecutiveCorrect = 0;
+  state.consecutiveWrong = 0;
+  state.isPlaying = true;
+  state.gameOver = false;
+
+  // 隐藏开始按钮，显示操作按钮
+  startBtn.style.display = 'none';
+  replayFirstBtn.style.display = 'inline-block';
+  replaySecondBtn.style.display = 'inline-block';
+  confirmBtn.style.display = 'inline-block';
+  replayFirstBtn.disabled = true;
+  replaySecondBtn.disabled = true;
+  confirmBtn.disabled = true;
+
+  updateInfoBar();
+  resetProgressDots();
+
+  // 开始第一题
+  setTimeout(() => startQuestion(), 500);
+}
+
+// ---- 开始单题 ----
+function startQuestion() {
+  if (!state.isPlaying || state.questionIndex >= 10) {
+    endGame();
+    return;
+  }
+
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+  const q = state.questions[state.questionIndex];
+
+  state.currentQuestion = q;
+  state.fullSequence = q.fullSequence;
+  state.partialSequence = q.partialSequence;
+  state.missingDigit = q.missingDigit;
+  state.missingIndex = q.missingIndex;
+  state.selectedAnswer = null;
+  state.canAnswer = false;
+  state.isAnswered = false;
+  state.isReading = false;
+
+  // 更新数字键盘范围
+  updateNumpadForRange();
+
+  // 清空反馈
+  feedbackBadge.style.display = 'none';
+
+  // 更新进度点
+  updateProgressDots();
+
+  // 更新信息
+  qNum.textContent = (state.questionIndex + 1);
+  progressDisplay.textContent = (state.questionIndex) + '/10';
+  updateInfoBar();
+
+  // 重置数字键盘 - 清除高亮
+  document.querySelectorAll('.num-btn').forEach(btn => {
+    btn.className = 'num-btn';
+  });
+
+  // 重置序列展示区
+  seqDigits.innerHTML = '<span class="seq-placeholder">👂 请仔细听第一遍...</span>';
+  seqRoundLabel.style.display = 'none';
+  sequenceArea.className = 'sequence-area listening';
+
+  // 问题区
+  questionText.textContent = '👂 仔细听两遍数字串';
+  questionSub.textContent = '找出漏掉的那个数字';
+
+  // 状态
+  statusIcon.textContent = '👂';
+  statusText.textContent = '请听第一遍';
+  statusSub.textContent = '记住每个数字...';
+
+  // 禁用按钮
+  setNumpadEnabled(false);
+  replayFirstBtn.disabled = true;
+  replaySecondBtn.disabled = true;
+  confirmBtn.disabled = true;
+
+  // 开始朗读第一遍
+  setTimeout(() => readFirstRound(), 600);
+}
+
+// ---- 朗读第一遍（完整数字串） ----
+function readFirstRound() {
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+  const digits = state.fullSequence;
+
+  statusIcon.textContent = '🔊';
+  statusText.textContent = '第一遍';
+  statusSub.textContent = '完整数字串，请仔细记住';
+
+  // 显示"第一遍"标签
+  seqRoundLabel.textContent = '🔊 第一遍';
+  seqRoundLabel.className = 'seq-round-label first';
+  seqRoundLabel.style.display = 'inline';
+
+  sequenceArea.className = 'sequence-area first-round';
+
+  // 纯听模式 — 不创建数字元素
+  seqDigits.innerHTML = '<span class="seq-placeholder" style="font-size:20px;font-weight:600;color:#4E342E;">🔊 请仔细听...</span>';
+
+  state.isReading = true;
+
+  // 逐位朗读数字
+  let idx = 0;
+  function readNextDigit() {
+    if (idx >= digits.length) {
+      // 全部读完，短暂停顿后开始第二遍
+      state.isReading = false;
+      setTimeout(() => {
+        statusIcon.textContent = '⏸️';
+        statusText.textContent = '稍作停顿...';
+        statusSub.textContent = '准备听第二遍';
+        sequenceArea.className = 'sequence-area';
+        seqRoundLabel.style.display = 'none';
+        seqDigits.innerHTML = '<span class="seq-placeholder">⏸️ 停顿一下...</span>';
+
+        setTimeout(() => readSecondRound(), 1200);
+      }, 400);
+      return;
+    }
+
+    statusSub.textContent = '第 ' + (idx + 1) + ' / ' + digits.length + ' 个数字';
+
+    speakText(String(digits[idx]), subConfig.speechRate, function() {
+      idx++;
+      setTimeout(readNextDigit, 300);
+    });
+  }
+
+  readNextDigit();
+}
+
+// ---- 朗读第二遍（缺少一个数字） ----
+function readSecondRound() {
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+  const digits = state.partialSequence;
+
+  statusIcon.textContent = '🔊';
+  statusText.textContent = '第二遍';
+  statusSub.textContent = '这次少了一个数字，仔细听！';
+
+  // 显示"第二遍"标签
+  seqRoundLabel.textContent = '🔊 第二遍';
+  seqRoundLabel.className = 'seq-round-label second';
+  seqRoundLabel.style.display = 'inline';
+
+  sequenceArea.className = 'sequence-area second-round';
+
+  // 纯听模式 — 不创建数字元素
+  seqDigits.innerHTML = '<span class="seq-placeholder" style="font-size:20px;font-weight:600;color:#E65100;">🔊 请仔细听...</span>';
+
+  state.isReading = true;
+
+  let idx = 0;
+  function readNextDigit() {
+    if (idx >= digits.length) {
+      // 全部读完
+      state.isReading = false;
+      setTimeout(() => {
+        // 读完第二遍，进入答题阶段（展示两组对比）
+        enterAnswerPhase();
+      }, 500);
+      return;
+    }
+
+    statusSub.textContent = '第 ' + (idx + 1) + ' / ' + digits.length + ' 个数字';
+
+    speakText(String(digits[idx]), subConfig.speechRate, function() {
+      idx++;
+      setTimeout(readNextDigit, 300);
+    });
+  }
+
+  readNextDigit();
+}
+
+// ---- 进入答题阶段 ----
+function enterAnswerPhase() {
+  state.canAnswer = true;
+  state.isReading = false;
+
+  statusIcon.textContent = '🔍';
+  statusText.textContent = '漏掉了哪个数字？';
+  statusSub.textContent = '对比两组数字，找出漏掉的那个';
+
+  sequenceArea.className = 'sequence-area answer-ready';
+  seqRoundLabel.textContent = '❓ 找漏洞';
+  seqRoundLabel.className = 'seq-round-label answer';
+  seqRoundLabel.style.display = 'inline';
+
+  // 不显示数字序列，等点击确定后显示
+  seqDigits.innerHTML = '<div style="font-size:16px;font-weight:700;color:#4E342E;padding:12px 0;">🔍 选一个数字，然后点确定</div>';
+
+  questionText.textContent = '🤔 漏掉了哪个数字？';
+  questionSub.textContent = '从下面选择答案';
+
+  // 启用数字键盘
+  setNumpadEnabled(true);
+  replayFirstBtn.disabled = false;
+  replaySecondBtn.disabled = false;
+  confirmBtn.disabled = true; // 等选了数字再启用
+}
+
+// ---- 按下数字键 ----
+function pressNum(num) {
+  if (!state.canAnswer || state.isAnswered || state.isReading) return;
+
+  state.selectedAnswer = num;
+
+  // 高亮选中的数字键
+  document.querySelectorAll('.num-btn').forEach(btn => {
+    btn.classList.remove('selected');
+    if (parseInt(btn.dataset.num) === num) {
+      btn.classList.add('selected');
+    }
+  });
+
+  questionText.textContent = '🤔 漏掉的是：' + num + ' 吗？';
+  questionSub.textContent = '点击「确定答案」提交';
+
+  // 启用确认按钮
+  confirmBtn.disabled = false;
+}
+
+// ---- 确认答案 ----
+function confirmAnswer() {
+  if (!state.canAnswer || state.isAnswered || state.selectedAnswer === null) return;
+
+  state.isAnswered = true;
+  state.canAnswer = false;
+  state.totalAnswered++;
+
+  setNumpadEnabled(false);
+  replayFirstBtn.disabled = true;
+  replaySecondBtn.disabled = true;
+  confirmBtn.disabled = true;
+
+  const isCorrect = (state.selectedAnswer === state.missingDigit);
+
+  // 标记数字键盘
+  document.querySelectorAll('.num-btn').forEach(btn => {
+    const num = parseInt(btn.dataset.num);
+    btn.classList.remove('selected');
+    if (num === state.missingDigit) {
+      btn.classList.add('correct-answer');
+    } else if (num === state.selectedAnswer && !isCorrect) {
+      btn.classList.add('wrong-answer');
+    }
+  });
+
+  // 显示对比 - 完整序列 vs 缺漏序列
+  renderComparison();
+
+  if (isCorrect) {
+    // 正确！
+    state.score += 10;
+    state.correctCount++;
+    state.consecutiveCorrect++;
+    state.consecutiveWrong = 0;
+
+    const dot = $('dot-' + state.questionIndex);
+    if (dot) dot.className = 'progress-dot correct';
+
+    showFeedbackBadge('⭐', '🎉 找对了！漏掉的是 ' + state.missingDigit, true);
+    createStarBurst();
+
+    statusIcon.textContent = '🎉';
+    statusText.textContent = '找对了！漏掉的是 ' + state.missingDigit;
+    statusSub.textContent = '太棒了！';
+
+    questionText.textContent = '✅ 正确！漏掉的是 ' + state.missingDigit;
+    questionSub.textContent = '你真是厉害的小侦探！';
+
+    scoreDisplay.textContent = state.score;
+
+    // 自适应
+    checkAdaptation();
+
+    state.questionIndex++;
+    setTimeout(() => startQuestion(), 1800);
+  } else {
+    // 错误
+    state.consecutiveCorrect = 0;
+    state.consecutiveWrong++;
+
+    const dot = $('dot-' + state.questionIndex);
+    if (dot) dot.className = 'progress-dot wrong';
+
+    showFeedbackBadge('💪', '😊 再仔细想想~ 漏掉的是 ' + state.missingDigit, false);
+
+    statusIcon.textContent = '💡';
+    statusText.textContent = '漏掉的是 ' + state.missingDigit + ' 哦';
+    statusSub.textContent = '下次一定能听出来！';
+
+    questionText.textContent = '漏掉的是 ' + state.missingDigit;
+    questionSub.textContent = '加油，再来一次！';
+
+    // 自适应
+    checkAdaptation();
+
+    state.questionIndex++;
+    setTimeout(() => startQuestion(), 2500);
+  }
+}
+
+// ---- 显示缺失对比（紧凑行内排版） ----
+function renderComparison() {
+  // 完整序列：数字用 · 间隔
+  const fullStr = state.fullSequence.join(' · ');
+
+  // 缺漏序列：缺失位置插入 ❓
+  let parts = [];
+  let pIdx = 0;
+  for (let i = 0; i < state.fullSequence.length; i++) {
+    if (i === state.missingIndex) {
+      parts.push('<span class="cmp-missing">❓</span>');
+    } else {
+      parts.push(state.partialSequence[pIdx]);
+      pIdx++;
+    }
+  }
+  const partialStr = parts.join(' · ');
+
+  seqDigits.innerHTML =
+    '<div class="cmp-wrap">' +
+      '<div class="cmp-row"><span class="cmp-label">完整</span><span class="cmp-seq">' + fullStr + '</span></div>' +
+      '<div class="cmp-row"><span class="cmp-label">缺漏</span><span class="cmp-seq">' + partialStr + '</span></div>' +
+      '<div class="cmp-result">→ 漏掉的是 <span class="cmp-answer">' + state.missingDigit + '</span></div>' +
+    '</div>';
+}
+
+// ---- 语音朗读 ----
+function speakText(text, rate, callback) {
+  window.playAudio(text, callback, rate);
+}
+function replayFirst() {
+  if (state.isReading || state.isAnswered) return;
+  readFirstRound();
+}
+
+// ---- 重放第二遍 ----
+function replaySecond() {
+  if (state.isReading || state.isAnswered) return;
+  readSecondRound();
+}
+
+// ---- 设置数字键盘启用状态 ----
+function setNumpadEnabled(enabled) {
+  document.querySelectorAll('.num-btn').forEach(btn => {
+    btn.disabled = !enabled;
+  });
+}
+
+// ---- 根据当前难度范围显示/隐藏0键 ----
+function updateNumpadForRange() {
+  // 0键固定显示，所有难度可见
+}
+
+// ---- 更新信息栏 ----
+function updateInfoBar() {
+  const config = LEVEL_CONFIG[state.level];
+  const subConfig = config.subLevels[state.subLevel];
+  levelDisplay.textContent = subConfig.label || (config.label + ' · ' + subConfig.label);
+  scoreDisplay.textContent = state.score;
+}
+
+// ---- 重置进度点 ----
+function resetProgressDots() {
+  for (let i = 0; i < 10; i++) {
+    const dot = $('dot-' + i);
+    if (dot) dot.className = 'progress-dot';
+  }
+}
+
+// ---- 更新进度点 ----
+function updateProgressDots() {
+  for (let i = 0; i < 10; i++) {
+    const dot = $('dot-' + i);
+    if (!dot) continue;
+    if (i < state.questionIndex) {
+      // 保持之前的正确/错误颜色
+    } else if (i === state.questionIndex) {
+      dot.className = 'progress-dot active';
+    } else {
+      dot.className = 'progress-dot';
+    }
+  }
+}
+
+// ---- 自适应难度调整 ----
+function checkAdaptation() {
+  const config = LEVEL_CONFIG[state.level];
+  const maxSubIdx = config.subLevels.length - 1;
+
+  if (state.consecutiveCorrect >= 5) {
+    // 连续正确5题，尝试升档
+    if (state.subLevel < maxSubIdx) {
+      state.subLevel++;
+      state.consecutiveCorrect = 0;
+      state.consecutiveWrong = 0;
+      updateSubLevelDisplay();
+      showAdaptNotice('up', '🎉 太棒了！难度提升至 ' + config.subLevels[state.subLevel].label);
+      // 重新生成题目
+      state.questions = generateQuestions(state.level, state.subLevel);
+      state.questionIndex = 0;
+      resetProgressDots();
+      return;
+    } else {
+      showAdaptNotice('up', '🏆 你已经达到最高难度！');
+    }
+  }
+
+  if (state.consecutiveWrong >= 3) {
+    // 连续错误3题，降档
+    if (state.subLevel > 0) {
+      state.subLevel--;
+      state.consecutiveCorrect = 0;
+      state.consecutiveWrong = 0;
+      updateSubLevelDisplay();
+      showAdaptNotice('down', '💪 没关系，难度降低至 ' + config.subLevels[state.subLevel].label);
+      // 重新生成题目
+      state.questions = generateQuestions(state.level, state.subLevel);
+      state.questionIndex = 0;
+      resetProgressDots();
+      return;
+    } else {
+      showAdaptNotice('down', '💪 别着急，慢慢来！');
+    }
+  }
+}
+
+// ---- 显示自适应提示 ----
+function showAdaptNotice(type, msg) {
+  adaptNotice.textContent = msg;
+  adaptNotice.className = 'adapt-notice ' + type;
+  adaptNotice.style.display = 'block';
+  setTimeout(() => {
+    adaptNotice.style.display = 'none';
+  }, 3000);
+}
+
+// ---- 显示反馈徽章 ----
+function showFeedbackBadge(emoji, text, isCorrect) {
+  fbEmoji.textContent = emoji;
+  fbText.textContent = text;
+  fbText.className = 'fb-text ' + (isCorrect ? 'correct-text' : 'wrong-text');
+  feedbackBadge.className = 'feedback-badge';
+  feedbackBadge.style.display = 'block';
+
+  // 自动隐藏
+  setTimeout(() => {
+    feedbackBadge.classList.add('hide');
+    setTimeout(() => {
+      feedbackBadge.style.display = 'none';
+      feedbackBadge.className = 'feedback-badge';
+    }, 300);
+  }, 1800);
+}
+
+// ---- 星星爆发效果 ----
+function createStarBurst() {
+  const emojis = ['⭐', '🌟', '✨', '💫', '🎉', '🎊'];
+  for (let i = 0; i < 8; i++) {
+    const star = document.createElement('div');
+    star.className = 'star-particle';
+    star.textContent = emojis[i % emojis.length];
+    star.style.left = (30 + Math.random() * 40) + '%';
+    star.style.top = (30 + Math.random() * 30) + '%';
+    const angle = Math.random() * 360;
+    const dist = 80 + Math.random() * 120;
+    star.style.setProperty('--tx', Math.cos(angle * Math.PI / 180) * dist + 'px');
+    star.style.setProperty('--ty', Math.sin(angle * Math.PI / 180) * dist + 'px');
+    document.body.appendChild(star);
+    setTimeout(() => star.remove(), 900);
+  }
+}
+
+// ---- 结束游戏 ----
+function endGame() {
+  state.isPlaying = false;
+  state.gameOver = true;
+
+  // 隐藏操作按钮
+  startBtn.style.display = 'block';
+  startBtn.textContent = '🔄 再来一局';
+  replayFirstBtn.style.display = 'none';
+  replaySecondBtn.style.display = 'none';
+  confirmBtn.style.display = 'none';
+
+  // 显示结算
+  const rate = state.totalAnswered > 0 ? Math.round(state.correctCount / state.totalAnswered * 100) : 0;
+
+  finalCorrect.textContent = state.correctCount;
+  finalTotal.textContent = state.totalAnswered;
+  finalRate.textContent = rate + '%';
+  finalScore.textContent = state.score;
+
+  let emoji, title;
+  if (rate >= 90) {
+    emoji = '🏆';
+    title = '超级大侦探！';
+  } else if (rate >= 70) {
+    emoji = '🎉';
+    title = '真厉害！';
+  } else if (rate >= 50) {
+    emoji = '👍';
+    title = '继续加油！';
+  } else {
+    emoji = '💪';
+    title = '别灰心，再试试！';
+  }
+  resultEmoji.textContent = emoji;
+  resultTitle.textContent = title;
+
+  // 保存成绩
+  saveProgress(rate);
+
+  resultOverlay.classList.add('show');
+  startBtn.textContent = '🔄 再来一局';
+}
+
+// ---- 关闭结算 ----
+function closeResult() {
+  resultOverlay.classList.remove('show');
+  selectLevel(state.level);
+}
+
+// ---- localStorage 数据记录 ----
+function saveProgress(rate) {
+  try {
+    const config = LEVEL_CONFIG[state.level];
+    const subConfig = config.subLevels[state.subLevel];
+    const data = JSON.parse(localStorage.getItem('g5_progress') || '{}');
+    const key = state.level + '-' + subConfig.key;
+    if (!data[key]) data[key] = { total: 0, correct: 0, bestRate: 0, games: 0 };
+    data[key].total += state.totalAnswered;
+    data[key].correct += state.correctCount;
+    data[key].games++;
+    if (rate > data[key].bestRate) data[key].bestRate = rate;
+    localStorage.setItem('g5_progress', JSON.stringify(data));
+  } catch (e) {}
+}
+
+function loadProgress() {
+  try {
+    const data = JSON.parse(localStorage.getItem('g5_progress') || '{}');
+    // 显示总游戏次数
+    let totalGames = 0;
+    Object.keys(data).forEach(k => { totalGames += data[k].games; });
+    if (totalGames > 0) {
+      statusSub.textContent = '已完成 ' + totalGames + ' 局训练 · 点击开始挑战';
+    }
+  } catch (e) {}
+}
+
+// ---- 页面加载 ----
+document.addEventListener('DOMContentLoaded', init);
+/* lucide 未使用，去掉引用 */
+</script>
+</body>
+</html>
