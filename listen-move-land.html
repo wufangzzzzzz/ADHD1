@@ -315,7 +315,7 @@ body{
     <div class="panel-title" style="margin-top:4px;">玩法说明</div>
     <div class="rules-card" id="rules-card">
       <strong>模式一：颜色指令官</strong><br>
-      听颜色词，点击对应颜色按钮。<br>
+      听颜色词,点击对应颜色按钮。<br>
       初级：播报间隔 4.5s | 中级：3.5s | 高级：2.5s<br><br>
       <strong>模式二：动物指令串</strong><br>
       播报结束后按顺序点击动物。<br>
@@ -340,7 +340,7 @@ body{
   </div>
 </div>
 
-<script src="/public/audio-helper.js"></script>
+<script src="public/audio-helper.js"></script>
 <script>
 // ===== 配置 =====
 const MODES = [
@@ -536,26 +536,25 @@ async function runTrial(){
   document.getElementById('progress-fill').style.width=((state.qIdx)/state.questions.length*100)+'%';
   // 清除按钮状态
   document.querySelectorAll('.action-btn').forEach(b=>{b.classList.remove('correct','wrong');});
-  // 显示"正在听指令..."，不用耳朵图标
+  // 显示"正在听指令...",不用耳朵图标
   document.getElementById('cmd-display').innerHTML='<span class="listening-text">🔊 正在听指令...</span>';
 	if(q.type==='single'){
 		state.chainTargets=[q.target.id];
 		state.chainStep=0;
 		await speakWord(q.target.word);
-		// 播完后不显示答案，清空等待点击
+		// 播完后不显示答案,清空等待点击
 		document.getElementById('cmd-display').innerHTML='';
 		}else{
-			// 指令串：逐词顺序播放，播完前不可点击
+			// 指令串:逐词顺序播放,播完前不可点击
 			state.chainStep=0;
 			for(let i=0;i<q.chain.length;i++){
 				await speakWord(q.chain[i].word);
 				if(i<q.chain.length-1) await sleep(300);
 			}
-			// 播完后才设置目标，允许点击
+			// 播完后才设置目标,允许点击
 			state.chainTargets=q.chain.map(c=>c.id);
 			document.getElementById('cmd-display').innerHTML='';
 		}
-  }
 }
 
 function handleClick(id){
@@ -644,10 +643,10 @@ function showRules(){
   overlay.innerHTML=`
     <div class="rules-dialog">
       <h2>🎵 听动乐园 · 玩法</h2>
-      <p><strong>模式一：颜色指令官</strong>（5-7岁）<br>听颜色词，点击对应颜色按钮。从单色指令到双色排序指令。</p>
-      <p><strong>模式二：动物指令串</strong>（6-8岁）<br>播报结束后按顺序点击动物图标。初级2步 · 中级4步 · 高级6步。</p>
-      <p><strong>难度说明</strong><br>模式一：初级 4.5s · 中级 3.5s · 高级 2.5s<br>模式二：初级 2步 · 中级 4步 · 高级 6步</p>
-      <p style="color:rgba(45,43,85,0.5);font-size:12px;">所有指令通过语音播放，请确保设备音量开启。</p>
+      <p><strong>模式一:颜色指令官</strong>（5-7岁）<br>听颜色词,点击对应颜色按钮。从单色指令到双色排序指令。</p>
+      <p><strong>模式二:动物指令串</strong>（6-8岁）<br>播报结束后按顺序点击动物图标。初级2步 · 中级4步 · 高级6步。</p>
+      <p><strong>难度说明</strong><br>模式一:初级 4.5s · 中级 3.5s · 高级 2.5s<br>模式二:初级 2步 · 中级 4步 · 高级 6步</p>
+      <p style="color:rgba(45,43,85,0.5);font-size:12px;">所有指令通过语音播放,请确保设备音量开启。</p>
       <button class="btn" onclick="document.getElementById('rules-overlay').remove();localStorage.setItem('lm_visited','1');">我知道了</button>
     </div>
   `;

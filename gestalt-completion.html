@@ -699,7 +699,7 @@ function preloadChildImages() {
   for (var i = 1; i <= total; i++) {
     var img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = '/public/images/gestalt/child/img-' + String(i).padStart(2, '0') + '.jpg';
+    img.src = 'public/images/gestalt/child/img-' + String(i).padStart(2, '0') + '.jpg';
     img.onload = function() {
       loaded++;
       if (loaded >= total) { CHILD_IMAGES_LOADED = true; }

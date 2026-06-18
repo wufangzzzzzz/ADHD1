@@ -507,7 +507,7 @@ function showPhase(name){
 // ===== 加载故事 =====
 async function loadStories(){
   try{
-    const r = await fetch('/public/story-db.json?'+Date.now());
+    const r = await fetch('public/story-db.json?'+Date.now());
     if(!r.ok) throw new Error('HTTP '+r.status);
     state.stories = await r.json();
     renderLevels();
@@ -597,7 +597,7 @@ function startStory(story){
 
 // ===== 音频 =====
 async function loadAudio(week){
-  const url = '/public/audio/story_'+String(week).padStart(2,'0')+'.mp3';
+  const url = 'public/audio/story_'+String(week).padStart(2,'0')+'.mp3';
   try{
     const r = await fetch(url);
     if(!r.ok) throw new Error('HTTP '+r.status);

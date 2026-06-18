@@ -375,12 +375,14 @@ sub-level选择 → 故事卡片网格 → 音频播放(暂停/进度条) → �
    ```bash
    echo $COZE_PROJECT_DOMAIN_DEFAULT
    ```
-   下载链接格式：`https://{域名}/{文件名}`
+   下载链接格式：`https://{实际域名}/{文件名}`
 
 ### 注意事项
 - ❌ 不要使用 `localhost:5000` 链接（用户无法访问）
 - ❌ 不要使用 `code.coze.cn/api/sandbox/...` 链接（会报token check failed）
+- ❌ **严禁**使用 `${COZE_PROJECT_DOMAIN_DEFAULT}` 这种模板变量占位符作为下载链接（这是 AI 幻觉，用户无法下载）
 - ✅ 使用项目公网域名直接访问public目录下的文件
+- ✅ 提供下载链接前，**必须**先用 `echo $COZE_PROJECT_DOMAIN_DEFAULT` 获取实际域名，再用实际域名拼接完整链接
 
 ## 技术栈
 - 纯HTML/CSS/JavaScript

@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>专注力训练游戏中心</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* 标题区 */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      color: white;
+      font-size: clamp(1.8rem, 6vw, 2.5rem);
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: rgba(255,255,255,0.9);
+      font-size: clamp(0.9rem, 3vw, 1.1rem);
+    }
+
+    /* Tab导航栏 */
+    .tab-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      background: rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 5px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .tab-btn {
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex: 1;
+      min-width: 100px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.9);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: white;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.35);
+    }
+
+    /* 游戏卡片 */
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 340px);
+justify-content: center;
+      gap: 18px;
+      margin-bottom: 30px;
+    }
+
+    .game-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .game-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+
+    .game-card:active {
+      transform: translateY(-4px);
+    }
+
+    .card-image {
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-image.game1 {
+      background: linear-gradient(135deg, #87CEEB 0%, #E0F7FF 100%);
+    }
+
+    .card-image.game2 {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    }
+
+    .card-image.game3 {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+
+    .card-image.game4 {
+      background: linear-gradient(135deg, #2d5a87 0%, #1e3a5f 100%);
+    }
+
+    .card-image.game5 {
+      background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%);
+    }
+
+    .card-image.game6 {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-image.game7 {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .card-icon {
+      font-size: 60px;
+      line-height: 1;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* 云朵装饰 - 游戏卡片1 */
+    .card-image.game1::before,
+    .card-image.game1::after {
+      content: '';
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+
+    .card-image.game1::before {
+      width: 80px;
+      height: 30px;
+      top: 20px;
+      left: 20px;
+      box-shadow: 
+        25px -8px 0 8px white,
+        45px 0 0 5px white;
+    }
+
+    .card-image.game1::after {
+      width: 60px;
+      height: 25px;
+      bottom: 30px;
+      right: 30px;
+      box-shadow: 
+        20px -6px 0 6px white,
+        35px 0 0 4px white;
+    }
+
+    /* 连线装饰 - 游戏卡片1 */
+    .line-demo {
+      position: absolute;
+      width: 120px;
+      height: 60px;
+    }
+
+    .line-demo svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 曲线装饰 - 游戏卡片2 */
+    .curve-demo {
+      position: absolute;
+      width: 140px;
+      height: 80px;
+    }
+
+    .curve-demo svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .card-content {
+      padding: 25px;
+    }
+
+    .card-title {
+      font-size: clamp(1.1rem, 4vw, 1.4rem);
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 12px;
+    }
+
+    .card-desc {
+      font-size: clamp(0.85rem, 3vw, 0.95rem);
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    .card-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .feature-tag {
+      background: #f0f4ff;
+      color: #667eea;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .card-footer {
+      padding: 15px 25px;
+      background: #f8f9fa;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .play-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 25px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .play-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .difficulty {
+      color: #888;
+      font-size: 0.85rem;
+    }
+
+    /* 占位卡片（开发中） */
+    .game-card.placeholder {
+      opacity: 0.7;
+      cursor: default;
+    }
+
+    .game-card.placeholder:hover {
+      transform: none;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+
+    .game-card.placeholder .card-image {
+      background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%);
+    }
+
+    .game-card.placeholder .card-title {
+      color: #999;
+    }
+
+    .game-card.placeholder .card-desc {
+      color: #aaa;
+    }
+
+    .dev-badge {
+      background: #ff9800;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    /* 隐藏的游戏卡片 */
+    .game-card.hidden {
+      display: none;
+    }
+
+    /* 底部说明 */
+    .footer {
+      text-align: center;
+      color: rgba(255,255,255,0.8);
+      font-size: 0.9rem;
+      padding: 20px;
+    }
+
+    .footer p {
+      margin-bottom: 8px;
+    }
+
+    /* 响应式 */
+    @media (max-width: 900px) {
+      .game-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+
+      .game-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .card-image {
+        height: 130px;
+      }
+
+      .card-icon {
+        font-size: 50px;
+      }
+
+      .card-content {
+        padding: 20px;
+      }
+
+      .card-footer {
+        padding: 12px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 标题区 -->
+    <div class="header">
+      <h1>🎮 专注力训练游戏中心</h1>
+      <p style="color: rgba(255,255,255,0.7); font-size: 0.8rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+      <p>多维度专业训练游戏，助力注意力提升</p>
+    </div>
+
+    <!-- Tab导航栏 -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">全部</button>
+      <button class="tab-btn" data-tab="visual" onclick="switchTab('visual')">视觉训练</button>
+      <button class="tab-btn" data-tab="audio" onclick="switchTab('audio')">听觉训练</button>
+      <button class="tab-btn" data-tab="behavior" onclick="switchTab('behavior')">行为训练</button>
+    </div>
+
+    <!-- 游戏选择卡片 -->
+    <div class="game-grid">
+      <!-- 游戏1：彩色连线 -->
+      <div class="game-card" data-category="visual" onclick="location.href='color-match.html'">
+        <div class="card-image game1">
+          <span class="card-icon">🌈</span>
+          <!-- 连线装饰 -->
+          <div class="line-demo">
+            <svg viewBox="0 0 120 60">
+              <circle cx="20" cy="20" r="8" fill="#ef4444"/>
+              <circle cx="100" cy="20" r="8" fill="#ef4444"/>
+              <path d="M28 20 Q60 20 92 20" stroke="#ef4444" stroke-width="3" fill="none" stroke-linecap="round"/>
+              
+              <circle cx="20" cy="45" r="8" fill="#22c55e"/>
+              <circle cx="100" cy="45" r="8" fill="#22c55e"/>
+              <path d="M28 45 Q60 45 92 45" stroke="#22c55e" stroke-width="3" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">读写障碍注意力训练 - 彩色连线</h2>
+          <p class="card-desc">用相同颜色的笔连接两个相同颜色的点进行消除，锻炼注意力和颜色识别能力。</p>
+          <div class="card-features">
+            <span class="feature-tag">配对消除</span>
+            <span class="feature-tag">10关卡</span>
+            <span class="feature-tag">全设备适配</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：循序渐进</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏2：视觉追踪 -->
+      <div class="game-card" data-category="visual" onclick="location.href='visual-tracking.html'">
+        <div class="card-image game2">
+          <span class="card-icon">👁️</span>
+          <!-- 曲线装饰 -->
+          <div class="curve-demo">
+            <svg viewBox="0 0 140 80">
+              <circle cx="15" cy="20" r="6" fill="#333"/>
+              <text x="15" y="24" text-anchor="middle" fill="white" font-size="8" font-weight="bold">1</text>
+              <circle cx="15" cy="60" r="6" fill="#333"/>
+              <text x="15" y="64" text-anchor="middle" fill="white" font-size="8" font-weight="bold">2</text>
+              
+              <circle cx="125" cy="25" r="6" fill="#ef4444"/>
+              <circle cx="125" cy="55" r="6" fill="#22c55e"/>
+              
+              <path d="M21 20 C50 50 90 30 119 25" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M21 60 C50 30 90 50 119 55" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">视觉追踪专注力训练</h2>
+          <p class="card-desc">追踪交叉弯曲的连线，找到数字与颜色的对应关系，考验视觉专注力！仅用眼睛追踪，不能用手指辅助。<br><br><strong>简单：</strong>4个控制点，弯曲幅度小<br><strong>困难：</strong>7-9个控制点，弯曲幅度大</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e8e8e8;color:#333;">视觉分辨</span>
+            <span class="feature-tag" style="background:#d4e5f7;color:#1e3a5f;">视觉广度</span>
+            <span class="feature-tag" style="background:#f5f0dc;color:#8b7355;">视觉稳定性</span>
+            <span class="feature-tag" style="background:#dce8e0;color:#2d5a3f;">注意力灵敏性</span>
+            <span class="feature-tag" style="background:#f5dce0;color:#8b3a4a;">视觉追踪</span>
+            <span class="feature-tag" style="background:#f5e0d8;color:#8b4a3a;">视觉集中性</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：简单 / 困难</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏3：蛇形连线 -->
+      <div class="game-card" data-category="visual" onclick="location.href='snake-connection.html'">
+        <div class="card-image game3">
+          <!-- 蛇形连线装饰 - 数字+曲折线 -->
+          <div class="curve-demo">
+            <svg viewBox="0 0 140 80">
+              <!-- 第一行数字和连线 -->
+              <circle cx="20" cy="18" r="10" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+              <text x="20" y="22" text-anchor="middle" fill="#333" font-size="11" font-weight="bold">1</text>
+              
+              <path d="M30 18 L45 18" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+              
+              <circle cx="55" cy="18" r="10" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+              <text x="55" y="22" text-anchor="middle" fill="#333" font-size="11" font-weight="bold">2</text>
+              
+              <path d="M65 18 L80 18" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+              
+              <circle cx="90" cy="18" r="10" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+              <text x="90" y="22" text-anchor="middle" fill="#333" font-size="11" font-weight="bold">3</text>
+              
+              <path d="M100 18 L115 18" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+              
+              <circle cx="125" cy="18" r="10" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+              <text x="125" y="22" text-anchor="middle" fill="#333" font-size="11" font-weight="bold">4</text>
+              
+              <!-- 向下转折 -->
+              <path d="M125 28 L125 35 L90 35 L90 42" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" fill="none"/>
+              
+              <!-- 第二行数字 -->
+              <circle cx="90" cy="52" r="10" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+              <text x="90" y="56" text-anchor="middle" fill="#333" font-size="11" font-weight="bold">5</text>
+              
+              <path d="M80 52 L65 52" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+              
+              <circle cx="55" cy="52" r="10" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+              <text x="55" y="56" text-anchor="middle" fill="#333" font-size="11" font-weight="bold">6</text>
+              
+              <!-- 障碍三角形 -->
+              <polygon points="20,55 15,65 25,65" fill="#ff8c00"/>
+              <polygon points="120,55 115,65 125,65" fill="#ff8c00"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">蛇形连线益智游戏</h2>
+          <p class="card-desc">按照蛇形顺序连接所有黑点，遇到三角形障碍要跳过！训练视觉搜索和序列跟踪能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">障碍规避</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">序列跟踪</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">视觉搜索</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">空间规划</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：简单 / 困难</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏4：符号迷宫 -->
+      <div class="game-card" data-category="visual" onclick="location.href='symbol-maze.html'">
+        <div class="card-image game4">
+          <!-- 符号装饰 - 10x10格子迷宫预览 -->
+          <div class="curve-demo">
+            <svg viewBox="0 0 140 80">
+              <!-- 5x4格子预览 -->
+              <!-- 列标签 a-e -->
+              <text x="27" y="12" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">a</text>
+              <text x="49" y="12" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">b</text>
+              <text x="71" y="12" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">c</text>
+              <text x="93" y="12" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">d</text>
+              <text x="115" y="12" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">e</text>
+              
+              <!-- 行标签 1-4 -->
+              <text x="12" y="28" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">1</text>
+              <text x="12" y="48" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">2</text>
+              <text x="12" y="68" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="7">3</text>
+              
+              <!-- 第一行 -->
+              <rect x="18" y="16" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="27" y="27" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="bold">+</text>
+              
+              <rect x="40" y="16" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="49" y="27" text-anchor="middle" fill="#f97316" font-size="10" font-weight="bold">−</text>
+              
+              <rect x="62" y="16" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="71" y="27" text-anchor="middle" fill="#eab308" font-size="8" font-weight="bold">×</text>
+              
+              <rect x="84" y="16" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="93" y="27" text-anchor="middle" fill="#ec4899" font-size="8" font-weight="bold">÷</text>
+              
+              <rect x="106" y="16" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="115" y="27" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="bold">+</text>
+              
+              <!-- 第二行 -->
+              <rect x="18" y="36" width="18" height="16" fill="#4CAF50" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="27" y="47" text-anchor="middle" fill="white" font-size="10" font-weight="bold">−</text>
+              
+              <rect x="40" y="36" width="18" height="16" fill="#4CAF50" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="49" y="47" text-anchor="middle" fill="white" font-size="8" font-weight="bold">×</text>
+              
+              <rect x="62" y="36" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="71" y="47" text-anchor="middle" fill="#ec4899" font-size="8" font-weight="bold">÷</text>
+              
+              <rect x="84" y="36" width="18" height="16" fill="#4CAF50" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="93" y="47" text-anchor="middle" fill="white" font-size="10" font-weight="bold">+</text>
+              
+              <rect x="106" y="36" width="18" height="16" fill="#4CAF50" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="115" y="47" text-anchor="middle" fill="white" font-size="10" font-weight="bold">−</text>
+              
+              <!-- 第三行 -->
+              <rect x="18" y="56" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="27" y="67" text-anchor="middle" fill="#eab308" font-size="8" font-weight="bold">×</text>
+              
+              <rect x="40" y="56" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="49" y="67" text-anchor="middle" fill="#ec4899" font-size="8" font-weight="bold">÷</text>
+              
+              <rect x="62" y="56" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="71" y="67" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="bold">+</text>
+              
+              <rect x="84" y="56" width="18" height="16" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="93" y="67" text-anchor="middle" fill="#f97316" font-size="10" font-weight="bold">−</text>
+              
+              <rect x="106" y="56" width="18" height="16" fill="#4CAF50" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+              <text x="115" y="67" text-anchor="middle" fill="white" font-size="8" font-weight="bold">÷</text>
+              
+              <!-- 路径连线 -->
+              <path d="M27 24 L27 44 L49 44 L93 44 L115 44 L115 64" stroke="#2E7D32" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              
+              <!-- 入口标记 -->
+              <circle cx="5" cy="24" r="3" fill="#4CAF50"/>
+              
+              <!-- 出口标记 -->
+              <polygon points="128,64 134,60 134,68" fill="#FF9800"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">符号迷宫</h2>
+          <p class="card-desc">10×10格子迷宫，从入口(a1)开始，按照 +→−→×→÷ 的顺序连线到右侧绿色箭头出口。只有唯一正确路线！</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#dbeafe;color:#1d4ed8;">符号识别</span>
+            <span class="feature-tag" style="background:#fef3c7;color:#b45309;">路径规划</span>
+            <span class="feature-tag" style="background:#dcfce7;color:#15803d;">顺序记忆</span>
+            <span class="feature-tag" style="background:#fce7f3;color:#9d174d;">逻辑思维</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：5个关卡</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏5：数字闪光 -->
+      <div class="game-card" data-category="visual" onclick="location.href='flash-sequence.html'">
+        <div class="card-image" style="background: linear-gradient(135deg,#FFF3E0,#FFECB3); padding: 20px;">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:8px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">1</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">2</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFF8E1;border-radius:8px;border:2px solid #FFD54F;box-shadow:0 0 12px rgba(255,218,0,0.5);">3</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">4</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">5</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">6</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">7</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFF8E1;border-radius:8px;border:2px solid #FFD54F;box-shadow:0 0 12px rgba(255,218,0,0.5);">8</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">9</div>
+            <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;background:#FFFBFA;border-radius:8px;border:2px solid #FFE0B2;">0</div>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">数字闪光</h2>
+          <p class="card-desc">10个数字按序排成两行，随机抽6个数字依次闪烁。记住闪烁顺序，倒计时后按顺序点击还原！</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#dbeafe;color:#1d4ed8;">视觉记忆</span>
+            <span class="feature-tag" style="background:#fef3c7;color:#b45309;">顺序还原</span>
+            <span class="feature-tag" style="background:#dcfce7;color:#15803d;">工作记忆</span>
+            <span class="feature-tag" style="background:#fce7f3;color:#9d174d;">专注力</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：简单 / 中等 / 困难 / 混合</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏6：顺序连线 -->
+      <div class="game-card" data-category="visual" onclick="location.href='sequence-connection.html'">
+        <div class="card-image game5">
+          <!-- 顺序连线装饰 - 9个图形的序列预览 -->
+          <div class="curve-demo">
+            <svg viewBox="0 0 140 80">
+              <!-- 第一行3个图形 -->
+              <circle cx="25" cy="25" r="8" fill="#FF0000"/>
+              <text x="25" y="29" text-anchor="middle" fill="white" font-size="6" font-weight="bold">1</text>
+
+              <polygon points="70,17 77,29 63,29" fill="#000000"/>
+
+              <rect x="100" y="19" width="12" height="12" fill="none" stroke="#87CEEB" stroke-width="2"/>
+              <line x1="100" y1="19" x2="112" y2="31" stroke="#87CEEB" stroke-width="2"/>
+              <line x1="112" y1="19" x2="100" y2="31" stroke="#87CEEB" stroke-width="2"/>
+              <text x="106" y="29" text-anchor="middle" fill="white" font-size="6" font-weight="bold">3</text>
+
+              <!-- 箭头 -->
+              <path d="M38 25 L55 25" stroke="white" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+              <path d="M85 25 L95 25" stroke="white" stroke-width="1.5" fill="none"/>
+
+              <!-- 第二行3个图形 -->
+              <polygon points="25,55 32,47 39,55" fill="#4CAF50"/>
+
+              <polygon points="70,47 76,54 70,61 64,54" fill="#9C27B0"/>
+
+              <polygon points="100,45 107,54 100,63" fill="#FF4500"/>
+
+              <!-- 箭头 -->
+              <path d="M106 38 L106 40" stroke="white" stroke-width="1.5" fill="none"/>
+              <path d="M44 55 L58 55" stroke="white" stroke-width="1.5" fill="none"/>
+              <path d="M85 55 L95 55" stroke="white" stroke-width="1.5" fill="none"/>
+
+              <!-- 第三行3个图形 -->
+              <polygon points="25,75 32,65 39,75" fill="#FFD700"/>
+
+              <polygon points="63,68 70,68 75,75 70,81 65,75" fill="#1976D2"/>
+
+              <polygon points="95,65 102,65 106,71 106,79 102,85 95,85 91,79 91,71" fill="#FFB6C1"/>
+              <text x="99" y="78" text-anchor="middle" fill="white" font-size="5" font-weight="bold">8</text>
+
+              <!-- 箭头 -->
+              <path d="M106 65 L106 60" stroke="white" stroke-width="1.5" fill="none"/>
+              <path d="M44 75 L58 75" stroke="white" stroke-width="1.5" fill="none"/>
+              <path d="M85 75 L90 75" stroke="white" stroke-width="1.5" fill="none"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">顺序连线</h2>
+          <p class="card-desc">按住鼠标/手指，按照上方显示的顺序，依次连接下方随机分布的图形。锻炼视觉搜索、序列记忆和手眼协调能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#ffedcc;color:#e67e22;">顺序记忆</span>
+            <span class="feature-tag" style="background:#d5f5e3;color:#27ae60;">视觉搜索</span>
+            <span class="feature-tag" style="background:#dde8f0;color:#2980b9;">手眼协调</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：9个图形</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏6：舒尔特方格 -->
+      <div class="game-card" data-category="visual" onclick="location.href='schulte-grid.html'">
+        <div class="card-image game6">
+          <!-- 舒尔特方格装饰 - 数字网格预览 -->
+          <div class="curve-demo">
+            <svg viewBox="0 0 140 80">
+              <!-- 5×5网格预览 -->
+              <g transform="translate(20, 10)">
+                <!-- 第一行 -->
+                <rect x="0" y="0" width="18" height="14" fill="white" rx="2"/>
+                <text x="9" y="10" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">3</text>
+
+                <rect x="20" y="0" width="18" height="14" fill="white" rx="2"/>
+                <text x="29" y="10" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">12</text>
+
+                <rect x="40" y="0" width="18" height="14" fill="#4CAF50" rx="2"/>
+                <text x="49" y="10" text-anchor="middle" fill="white" font-size="10" font-weight="bold">1</text>
+
+                <rect x="60" y="0" width="18" height="14" fill="white" rx="2"/>
+                <text x="69" y="10" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">8</text>
+
+                <rect x="80" y="0" width="18" height="14" fill="white" rx="2"/>
+                <text x="89" y="10" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">15</text>
+
+                <!-- 第二行 -->
+                <rect x="0" y="16" width="18" height="14" fill="white" rx="2"/>
+                <text x="9" y="26" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">7</text>
+
+                <rect x="20" y="16" width="18" height="14" fill="#4CAF50" rx="2"/>
+                <text x="29" y="26" text-anchor="middle" fill="white" font-size="10" font-weight="bold">2</text>
+
+                <rect x="40" y="16" width="18" height="14" fill="white" rx="2"/>
+                <text x="49" y="26" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">11</text>
+
+                <rect x="60" y="16" width="18" height="14" fill="white" rx="2"/>
+                <text x="69" y="26" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">4</text>
+
+                <rect x="80" y="16" width="18" height="14" fill="white" rx="2"/>
+                <text x="89" y="26" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">9</text>
+
+                <!-- 第三行 -->
+                <rect x="0" y="32" width="18" height="14" fill="white" rx="2"/>
+                <text x="9" y="42" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">14</text>
+
+                <rect x="20" y="32" width="18" height="14" fill="white" rx="2"/>
+                <text x="29" y="42" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">6</text>
+
+                <rect x="40" y="32" width="18" height="14" fill="#4CAF50" rx="2"/>
+                <text x="49" y="42" text-anchor="middle" fill="white" font-size="10" font-weight="bold">3</text>
+
+                <rect x="60" y="32" width="18" height="14" fill="white" rx="2"/>
+                <text x="69" y="42" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">10</text>
+
+                <rect x="80" y="32" width="18" height="14" fill="white" rx="2"/>
+                <text x="89" y="42" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">5</text>
+
+                <!-- 第四行 -->
+                <rect x="0" y="48" width="18" height="14" fill="white" rx="2"/>
+                <text x="9" y="58" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">13</text>
+
+                <rect x="20" y="48" width="18" height="14" fill="white" rx="2"/>
+                <text x="29" y="58" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">18</text>
+
+                <rect x="40" y="48" width="18" height="14" fill="white" rx="2"/>
+                <text x="49" y="58" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">16</text>
+
+                <rect x="60" y="48" width="18" height="14" fill="#4CAF50" rx="2"/>
+                <text x="69" y="58" text-anchor="middle" fill="white" font-size="10" font-weight="bold">4</text>
+
+                <rect x="80" y="48" width="18" height="14" fill="white" rx="2"/>
+                <text x="89" y="58" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">17</text>
+
+                <!-- 第五行 -->
+                <rect x="0" y="64" width="18" height="14" fill="white" rx="2"/>
+                <text x="9" y="74" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">20</text>
+
+                <rect x="20" y="64" width="18" height="14" fill="white" rx="2"/>
+                <text x="29" y="74" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">22</text>
+
+                <rect x="40" y="64" width="18" height="14" fill="white" rx="2"/>
+                <text x="49" y="74" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">19</text>
+
+                <rect x="60" y="64" width="18" height="14" fill="white" rx="2"/>
+                <text x="69" y="74" text-anchor="middle" fill="#667eea" font-size="10" font-weight="bold">21</text>
+
+                <rect x="80" y="64" width="18" height="14" fill="#4CAF50" rx="2"/>
+                <text x="89" y="74" text-anchor="middle" fill="white" font-size="10" font-weight="bold">5</text>
+              </g>
+
+              <!-- 右侧大数字显示 -->
+              <circle cx="117" cy="47" r="22" fill="white" opacity="0.95"/>
+              <text x="117" y="52" text-anchor="middle" fill="#667eea" font-size="18" font-weight="bold">6</text>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">舒尔特方格</h2>
+          <p class="card-desc">按顺序依次点击数字1到N，速度越快注意力越好！经典专注力训练方法，全球飞行员、航天员必备训练工具。5个难度级别，从入门到专家。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e0e7ff;color:#4338ca;">专注力提升</span>
+            <span class="feature-tag" style="background:#fce7f3;color:#9d174d;">视觉追踪</span>
+            <span class="feature-tag" style="background:#dcfce7;color:#15803d;">反应速度</span>
+            <span class="feature-tag" style="background:#fef3c7;color:#b45309;">5个难度</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：入门/初级/中级/高级/专家</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏8：色彩归纳 -->
+      <div class="game-card" data-category="visual" onclick="location.href='color-sort.html'">
+        <div class="card-image game7" style="background: linear-gradient(135deg, #ffb6c1 0%, #dda0dd 100%);">
+          <svg viewBox="0 0 120 52" width="120" height="52">
+            <!-- 左侧彩色大等边三角形 -->
+            <g>
+              <!-- 第1行1个等边三角(边长20) -->
+              <polygon points="30,0 15,17 45,17" fill="#00BCD4" stroke="#333" stroke-width="0.5"/>
+              <!-- 第2行2个等边三角 -->
+              <polygon points="15,17 0,34 30,34" fill="#FFEB3B" stroke="#333" stroke-width="0.5"/>
+              <polygon points="45,17 30,34 60,34" fill="#FFEB3B" stroke="#333" stroke-width="0.5"/>
+              <!-- 第3行3个等边三角 -->
+              <polygon points="0,34 -15,51 15,51" fill="#F44336" stroke="#333" stroke-width="0.5"/>
+              <polygon points="30,34 15,51 45,51" fill="#F44336" stroke="#333" stroke-width="0.5"/>
+              <polygon points="60,34 45,51 75,51" fill="#F44336" stroke="#333" stroke-width="0.5"/>
+            </g>
+            <!-- 右侧白色大等边三角形 -->
+            <g transform="translate(60, 0)">
+              <!-- 第1行1个等边三角 -->
+              <polygon points="30,0 15,17 45,17" fill="#f5f5f5" stroke="#999" stroke-width="0.5"/>
+              <!-- 第2行2个等边三角 -->
+              <polygon points="15,17 0,34 30,34" fill="#f5f5f5" stroke="#999" stroke-width="0.5"/>
+              <polygon points="45,17 30,34 60,34" fill="#f5f5f5" stroke="#999" stroke-width="0.5"/>
+              <!-- 第3行3个等边三角 -->
+              <polygon points="0,34 -15,51 15,51" fill="#f5f5f5" stroke="#999" stroke-width="0.5"/>
+              <polygon points="30,34 15,51 45,51" fill="#f5f5f5" stroke="#999" stroke-width="0.5"/>
+              <polygon points="60,34 45,51 75,51" fill="#f5f5f5" stroke="#999" stroke-width="0.5"/>
+            </g>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">色彩管理</h2>
+          <p class="card-desc">观察左侧示例图形的颜色分布，选择顶部颜色后点击右侧空白图形填充。训练色彩识别和分类归纳能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">色彩识别</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">分类归纳</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">观察力</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">记忆力</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：逐渐增加</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏9：数字专注力 -->
+      <div class="game-card" data-category="visual" onclick="location.href='number-focus.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
+          <svg viewBox="0 0 100 100" width="100" height="100">
+            <g>
+              <rect x="5" y="5" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="37" y="5" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="69" y="5" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="5" y="37" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="37" y="37" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="69" y="37" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="5" y="69" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="37" y="69" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+              <rect x="69" y="69" width="25" height="25" rx="5" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1"/>
+            </g>
+            <text x="17" y="24" fill="white" font-size="14" font-weight="bold" text-anchor="middle">7</text>
+            <text x="50" y="24" fill="#4FC3F7" font-size="14" font-weight="bold" text-anchor="middle">3</text>
+            <text x="82" y="24" fill="white" font-size="14" font-weight="bold" text-anchor="middle">9</text>
+            <text x="17" y="56" fill="#4FC3F7" font-size="14" font-weight="bold" text-anchor="middle">1</text>
+            <text x="50" y="56" fill="white" font-size="14" font-weight="bold" text-anchor="middle">5</text>
+            <text x="82" y="56" fill="#4FC3F7" font-size="14" font-weight="bold" text-anchor="middle">2</text>
+            <text x="17" y="88" fill="white" font-size="14" font-weight="bold" text-anchor="middle">8</text>
+            <text x="50" y="88" fill="#4FC3F7" font-size="14" font-weight="bold" text-anchor="middle">4</text>
+            <text x="82" y="88" fill="white" font-size="14" font-weight="bold" text-anchor="middle">6</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">数字专注力</h2>
+          <p class="card-desc">3x3数字方阵，展现5秒后消失，记住数字位置并填写。训练短时记忆和专注力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">专注力</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">记忆力</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">观察力</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：逐渐增加</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏10：划消训练 -->
+      <div class="game-card" data-category="visual" onclick="location.href='cancellation-train.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+          <svg viewBox="0 0 140 80" width="140" height="80">
+            <!-- 12x14网格预览 -->
+            <g transform="translate(10, 5)">
+              <!-- 前3行预览 -->
+              <g>
+                <rect x="0" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="9" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="18" y="0" width="8" height="5" fill="#38ef7d" rx="1"/>
+                <rect x="27" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="36" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="45" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="54" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="63" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="72" y="0" width="8" height="5" fill="#38ef7d" rx="1"/>
+                <rect x="81" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="90" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="99" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="108" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="117" y="0" width="8" height="5" fill="white" rx="1"/>
+              </g>
+              <g transform="translate(0, 6)">
+                <rect x="0" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="9" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="18" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="27" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="36" y="0" width="8" height="5" fill="#38ef7d" rx="1"/>
+                <rect x="45" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="54" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="63" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="72" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="81" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="90" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="99" y="0" width="8" height="5" fill="#38ef7d" rx="1"/>
+                <rect x="108" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="117" y="0" width="8" height="5" fill="white" rx="1"/>
+              </g>
+              <g transform="translate(0, 12)">
+                <rect x="0" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="9" y="0" width="8" height="5" fill="#38ef7d" rx="1"/>
+                <rect x="18" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="27" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="36" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="45" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="54" y="0" width="8" height="5" fill="#38ef7d" rx="1"/>
+                <rect x="63" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="72" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="81" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="90" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="99" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="108" y="0" width="8" height="5" fill="white" rx="1"/>
+                <rect x="117" y="0" width="8" height="5" fill="white" rx="1"/>
+              </g>
+            </g>
+            <!-- 目标数字显示 -->
+            <rect x="50" y="45" width="40" height="30" fill="white" rx="5"/>
+            <text x="70" y="66" text-anchor="middle" fill="#11998e" font-size="20" font-weight="bold">3</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">划消训练</h2>
+          <p class="card-desc">12行×14列数字网格，快速找出并点击所有指定数字。训练视觉扫描和快速反应能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">视觉扫描</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">反应速度</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">计时挑战</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：数字/颜色/图形/文字</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 游戏7：图形复刻 -->
+      <div class="game-card" data-category="visual" onclick="location.href='pattern-trace.html'">
+        <div class="card-image game7">
+          <!-- 图形复刻装饰 -->
+          <div class="curve-demo">
+            <svg viewBox="0 0 140 80">
+              <!-- 上3中4下3点阵 + 连线 -->
+              <g transform="translate(46, 22)">
+                <!-- 上排3点 -->
+                <circle cx="8" cy="0" r="5" fill="white"/>
+                <circle cx="24" cy="0" r="5" fill="white"/>
+                <circle cx="40" cy="0" r="5" fill="white"/>
+                
+                <!-- 中排4点 -->
+                <circle cx="0" cy="18" r="5" fill="white"/>
+                <circle cx="16" cy="18" r="5" fill="white"/>
+                <circle cx="32" cy="18" r="5" fill="white"/>
+                <circle cx="48" cy="18" r="5" fill="white"/>
+                
+                <!-- 下排3点 -->
+                <circle cx="8" cy="36" r="5" fill="white"/>
+                <circle cx="24" cy="36" r="5" fill="white"/>
+                <circle cx="40" cy="36" r="5" fill="white"/>
+                
+                <!-- 连线 - 一条线链接8个点 -->
+                <polyline points="0,18 8,0 24,0 32,18 40,0 48,18 40,36 24,36 16,18" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">图形复刻</h2>
+          <p class="card-desc">观察左侧的参考图形，按照线条走向在右侧的空缺点阵上复刻出相同的图案。训练观察力、手眼协调和精细操作能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">观察力</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">手眼协调</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">精细操作</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">空间认知</span>
+            <span class="feature-tag" style="background:#f3e5f5;color:#7b1fa2;">专注力</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：15个关卡</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+
+
+      <!-- 新增游戏12：视觉预测 -->
+      <div class="game-card" data-category="visual" onclick="location.href='visual-predict.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+          <svg viewBox="0 0 140 80" width="140" height="80">
+            <!-- 三个旋转的图案 -->
+            <g transform="translate(15, 20)">
+              <text x="0" y="20" font-size="24">🎃</text>
+            </g>
+            <text x="45" y="45" font-size="16" fill="white">→</text>
+            <g transform="translate(55, 20)">
+              <text x="0" y="20" font-size="24">🎃</text>
+            </g>
+            <text x="85" y="45" font-size="16" fill="white">→</text>
+            <g transform="translate(95, 20)">
+              <text x="0" y="20" font-size="24">?</text>
+            </g>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">视觉预测</h2>
+          <p class="card-desc">观察图案的变化规律，预测下一个应该出现的内容。训练逻辑推理和空间想象能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">规律识别</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">逻辑推理</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">空间想象</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：简单/中等/困难</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 新增游戏13：记忆翻牌 -->
+      <div class="game-card" data-category="visual" onclick="location.href='memory-card.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+          <svg viewBox="0 0 140 80" width="140" height="80">
+            <!-- 4个卡牌示意 -->
+            <g transform="translate(15, 15)">
+              <rect x="0" y="0" width="25" height="35" rx="4" fill="white" opacity="0.9"/>
+              <text x="12.5" y="23" font-size="18" text-anchor="middle">🍎</text>
+              
+              <rect x="30" y="0" width="25" height="35" rx="4" fill="white" opacity="0.9"/>
+              <text x="42.5" y="23" font-size="18" text-anchor="middle">🍎</text>
+              
+              <rect x="60" y="0" width="25" height="35" rx="4" fill="white" opacity="0.9" transform="rotate(10, 72.5, 17.5)"/>
+              
+              <rect x="0" y="40" width="25" height="35" rx="4" fill="white" opacity="0.9"/>
+              <text x="12.5" y="63" font-size="18" text-anchor="middle">🍊</text>
+              
+              <rect x="30" y="40" width="25" height="35" rx="4" fill="white" opacity="0.9"/>
+              <text x="42.5" y="63" font-size="18" text-anchor="middle">⭐</text>
+              
+              <rect x="60" y="40" width="25" height="35" rx="4" fill="white" opacity="0.9"/>
+              <text x="72.5" y="63" font-size="18" text-anchor="middle">🍊</text>
+            </g>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">记忆翻牌</h2>
+          <p class="card-desc">翻开卡牌找到相同的配对，训练视觉记忆和短时记忆能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">视觉记忆</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">短时记忆</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">4-8对</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：简单/中等/困难</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 新增游戏：图形完形匹配 -->
+      <div class="game-card" data-category="visual" onclick="location.href='gestalt-completion.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #8A2BE2 0%, #AB47BC 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <rect x="15" y="15" width="40" height="50" rx="6" fill="none" stroke="white" stroke-width="2" stroke-dasharray="6,4" opacity="0.7"/>
+            <rect x="65" y="15" width="40" height="50" rx="6" fill="white" opacity="0.3"/>
+            <text x="85" y="45" text-anchor="middle" fill="white" font-size="20">?</text>
+            <text x="35" y="75" text-anchor="middle" fill="white" font-size="8" opacity="0.6">碎片</text>
+            <text x="85" y="75" text-anchor="middle" fill="white" font-size="8" opacity="0.6">完整?</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">图形完形匹配</h2>
+          <p class="card-desc">观察完整图片，从碎片中找出缺失部分并正确拼合。训练视觉完形与图形匹配能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#f3e5f5;color:#7b1fa2;">视觉完形</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">碎片拼图</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 新增游戏：空间记忆矩阵 -->
+      <div class="game-card" data-category="visual" onclick="location.href='corsi-matrix.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #4361EE 0%, #7209B7 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <rect x="15" y="10" width="26" height="26" rx="4" fill="white" opacity="0.3"/>
+            <rect x="47" y="10" width="26" height="26" rx="4" fill="white" opacity="0.3"/>
+            <rect x="79" y="10" width="26" height="26" rx="4" fill="white" opacity="0.3"/>
+            <rect x="15" y="42" width="26" height="26" rx="4" fill="white" opacity="0.3"/>
+            <rect x="47" y="42" width="26" height="26" rx="4" fill="white" opacity="0.5"/>
+            <rect x="79" y="42" width="26" height="26" rx="4" fill="white" opacity="0.3"/>
+            <text x="60" y="25" text-anchor="middle" fill="white" font-size="9" opacity="0.6">3×3</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">空间记忆矩阵</h2>
+          <p class="card-desc">Corsi范式：9个方块依次点亮，按相同顺序复现。训练视觉空间工作记忆。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e8eaf6;color:#283593;">空间记忆</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">Corsi范式</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 新增游戏：视觉N-back -->
+      <div class="game-card" data-category="visual" onclick="location.href='visual-nback.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #FF5E0E 0%, #FF9800 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <rect x="15" y="10" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="47" y="10" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="79" y="10" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="15" y="42" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="47" y="42" width="26" height="26" rx="4" fill="white" opacity="0.8"/>
+            <rect x="79" y="42" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <text x="60" y="72" text-anchor="middle" fill="white" font-size="9" opacity="0.6">N=2</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">视觉N-back</h2>
+          <p class="card-desc">3×3网格方块闪现，判断当前位置是否与N步前相同。自适应N级，训练工作记忆更新。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">工作记忆</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">自适应</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 新增游戏：多目标追踪 -->
+      <div class="game-card" data-category="visual" onclick="location.href='mot-tracker.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #00BFFF 0%, #40E0D0 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="30" cy="30" r="8" fill="white" opacity="0.8"/>
+            <circle cx="60" cy="20" r="8" fill="white" opacity="0.3"/>
+            <circle cx="90" cy="35" r="8" fill="white" opacity="0.3"/>
+            <circle cx="25" cy="55" r="8" fill="white" opacity="0.3"/>
+            <circle cx="65" cy="55" r="8" fill="white" opacity="0.8"/>
+            <circle cx="95" cy="60" r="8" fill="white" opacity="0.3"/>
+            <text x="60" y="75" text-anchor="middle" fill="white" font-size="8" opacity="0.5">追踪目标球</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">多目标追踪</h2>
+          <p class="card-desc">MOT范式：N个球中标记K个目标，追踪运动后识别。训练注意力分配与周边视觉。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e0f7fa;color:#006064;">注意力分配</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">MOT范式</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：复读机训练 -->
+      <div class="game-card" data-category="audio" onclick="location.href='audio-repeat.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #00BFFF 0%, #1E90FF 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="60" cy="40" r="18" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+            <text x="60" y="36" text-anchor="middle" fill="white" font-size="14" font-weight="bold">🎙️</text>
+            <text x="60" y="56" text-anchor="middle" fill="white" font-size="9" opacity="0.7">复读</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">复读机训练</h2>
+          <p class="card-desc">听词语或短句后立即复述。训练听觉短时记忆与语音输出能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">听觉记忆</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">语音输出</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：听动乐园 -->
+      <div class="game-card" data-category="audio" onclick="location.href='listen-move-land.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #FF69B4 0%, #FFDA00 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <text x="30" y="35" font-size="18">🐱</text>
+            <text x="55" y="35" font-size="18">🐶</text>
+            <text x="80" y="35" font-size="18">🐰</text>
+            <text x="60" y="65" text-anchor="middle" fill="white" font-size="10" font-weight="bold">听指令做动作</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">听动乐园</h2>
+          <p class="card-desc">听颜色词点击对应按钮、听动物指令串按序点击。听动协调训练，适合5-8岁。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">听动协调</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">颜色识别</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：长时听觉监控 -->
+      <div class="game-card" data-category="audio" onclick="location.href='audio-vigilance.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #1E90FF 0%, #00BFFF 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <line x1="15" y1="40" x2="105" y2="40" stroke="white" stroke-width="1" opacity="0.3"/>
+            <rect x="30" y="30" width="4" height="20" rx="2" fill="white" opacity="0.4"/>
+            <rect x="45" y="25" width="4" height="30" rx="2" fill="white" opacity="0.4"/>
+            <rect x="60" y="20" width="4" height="40" rx="2" fill="white" opacity="0.6"/>
+            <rect x="75" y="28" width="4" height="24" rx="2" fill="white" opacity="0.4"/>
+            <rect x="90" y="32" width="4" height="16" rx="2" fill="white" opacity="0.4"/>
+            <text x="60" y="65" text-anchor="middle" fill="white" font-size="8" opacity="0.5">5-8分钟持续监听</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">长时听觉监控</h2>
+          <p class="card-desc">持续听词5-8分钟，听到目标词点击屏幕。低频率目标词，训练持续听觉注意。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">持续注意</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">听觉监控</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏1：数字回音壁 -->
+      <div class="game-card" data-category="audio" onclick="location.href='G2-echo.html'">
+        <div class="card-image game1">
+          <span class="card-icon">🔊</span>
+          <div class="line-demo">
+            <svg viewBox="0 0 120 60" style="width:100%;height:100%">
+              <text x="60" y="38" text-anchor="middle" font-size="16" fill="white" opacity="0.6">3→7 倒序→7 3</text>
+            </svg>
+          </div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">数字回音壁</h2>
+          <p class="card-desc">听数字序列，按倒序点击复现。训练听觉工作记忆与听觉转换力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">听觉工作记忆</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">听觉转换力</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">正听反说</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：听词行动 -->
+      <div class="game-card" data-category="audio" onclick="location.href='G1-listen-act.html'">
+        <div class="card-image game5">
+          <span class="card-icon">👂</span>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">听词行动</h2>
+          <p class="card-desc">听词语判断所属类别，训练听觉分类与语义理解能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">听觉分类</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">语义理解</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">词汇认知</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：声波搜索 -->
+      <div class="game-card" data-category="audio" onclick="location.href='G3-sonic-search.html'">
+        <div class="card-image game7">
+          <span class="card-icon">🔊</span>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">声波搜索</h2>
+          <p class="card-desc">听目标词在语流中出现的次数，训练听觉警觉与专注力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">听觉警觉</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">专注力</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">计数提取</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：指令解码器 -->
+      <div class="game-card" data-category="audio" onclick="location.href='G4-code-decoder.html'">
+        <div class="card-image game6">
+          <span class="card-icon">🧩</span>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">指令解码器</h2>
+          <p class="card-desc">听编码指令并解码执行，训练听觉译码与执行功能。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#f3e5f5;color:#7b1fa2;">听觉译码</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">执行功能</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">规则映射</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：数字大侦探 -->
+      <div class="game-card" data-category="audio" onclick="location.href='G5-number-detective.html'">
+        <div class="card-image game2">
+          <span class="card-icon">🔍</span>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">数字大侦探</h2>
+          <p class="card-desc">对比两遍数字串找出漏掉的数字，训练听觉辨别与工作记忆。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">听觉辨别</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">工作记忆</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">找漏洞</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：逻辑排序站 -->
+      <div class="game-card" data-category="audio" onclick="location.href='G6-logic-sort.html'">
+        <div class="card-image game3">
+          <span class="card-icon">📋</span>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">逻辑排序站</h2>
+          <p class="card-desc">听打乱顺序的短句重新排列，训练听觉逻辑与顺序理解。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#f3e5f5;color:#7b1fa2;">听觉逻辑</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">顺序理解</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">排序推理</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 听觉训练游戏：故事小侦探 -->
+      <div class="game-card" data-category="audio" onclick="location.href='G7-story-detective.html'">
+        <div class="card-image game4">
+          <span class="card-icon">📖</span>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">故事小侦探</h2>
+          <p class="card-desc">听故事回答选择题，训练听觉理解与推理判断能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">听觉理解</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">推理判断</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">故事记忆</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 行为训练游戏1：红灯绿灯 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B1-redgreen.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #FF5E0E 0%, #FF9800 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="60" cy="40" r="22" fill="none" stroke="white" stroke-width="2.5" opacity="0.5"/>
+            <circle cx="48" cy="40" r="12" fill="#4CAF50" opacity="0.9"/>
+            <circle cx="72" cy="40" r="12" fill="#F44336" opacity="0.9"/>
+            <text x="48" y="44" text-anchor="middle" fill="white" font-size="10" font-weight="bold">GO</text>
+            <text x="72" y="44" text-anchor="middle" fill="white" font-size="10" font-weight="bold">NO</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">红灯绿灯</h2>
+          <p class="card-desc">绿点快速点击，红点抑制不点。经典Go/No-Go反应抑制训练，ADHD核心干预范式。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">反应抑制</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">冲动控制</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">全年龄</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 行为训练游戏2：西蒙说 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B2-reverse.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #4361EE 0%, #7209B7 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <text x="60" y="32" text-anchor="middle" fill="white" font-size="13" font-weight="bold">西蒙说</text>
+            <rect x="30" y="42" width="25" height="22" rx="6" fill="white" opacity="0.9"/>
+            <rect x="65" y="42" width="25" height="22" rx="6" fill="white" opacity="0.5"/>
+            <text x="42" y="57" text-anchor="middle" fill="#4361EE" font-size="11" font-weight="bold">✓</text>
+            <text x="77" y="57" text-anchor="middle" fill="#999" font-size="11">✗</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">西蒙说</h2>
+          <p class="card-desc">听到"西蒙说"才按键，否则抑制。训练模式用数字①②③④作答，练习模式只听不做。Simon Says经典范式，训练冲动控制+听觉加工。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">冲动控制</span>
+            <span class="feature-tag" style="background:#f3e5f5;color:#7b1fa2;">听觉加工</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">6-12岁+成人</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 行为训练游戏3：规则跳跳 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B3-ruleswitch.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #00BFFF 0%, #1E90FF 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <text x="60" y="28" text-anchor="middle" fill="white" font-size="11" opacity="0.8">奇数→左 | 偶数→右</text>
+            <text x="60" y="55" text-anchor="middle" fill="white" font-size="28" font-weight="bold">42</text>
+            <line x1="40" y1="62" x2="80" y2="62" stroke="white" stroke-width="2" opacity="0.4"/>
+            <text x="60" y="74" text-anchor="middle" fill="#FFD700" font-size="9" font-weight="bold">规则切换！</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">规则跳跳</h2>
+          <p class="card-desc">奇偶/大小分类规则突然反转，快速切换思维。训练认知灵活性和任务切换能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">认知灵活</span>
+            <span class="feature-tag" style="background:#e0f7fa;color:#00695c;">任务切换</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">8-12岁+成人</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 行为训练游戏4：冲突色 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B4-stroop.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #E91E63 0%, #9C27B0 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <text x="60" y="36" text-anchor="middle" font-size="28" font-weight="bold" fill="#4CAF50">红</text>
+            <rect x="15" y="50" width="18" height="18" rx="4" fill="#F44336"/>
+            <rect x="37" y="50" width="18" height="18" rx="4" fill="#2196F3"/>
+            <rect x="59" y="50" width="18" height="18" rx="4" fill="#4CAF50"/>
+            <rect x="81" y="50" width="18" height="18" rx="4" fill="#FFC107"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">冲突色</h2>
+          <p class="card-desc">按颜色反应忽略字义，克服自动化阅读干扰。Stroop黄金标准，抑制控制核心训练。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">Stroop抑制</span>
+            <span class="feature-tag" style="background:#f3e5f5;color:#7b1fa2;">抗干扰</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">8-12岁+成人</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 行为训练游戏5：灯语任务 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B5-light-task.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #4CAF50 0%, #F44336 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="30" cy="30" r="10" fill="#4CAF50" opacity="0.9"/>
+            <circle cx="90" cy="30" r="10" fill="#F44336" opacity="0.9"/>
+            <rect x="18" y="48" width="24" height="24" rx="5" fill="#E91E63"/>
+            <polygon points="78,48 90,72 66,72" fill="#2196F3"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">灯语任务</h2>
+          <p class="card-desc">绿灯找颜色、红灯找形状，规则随时切换。训练认知灵活性与任务切换能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">认知灵活性</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">任务切换</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">6-12岁+成人</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：1-5级（2-6选项）</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 行为训练游戏6：双手协调 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B6-bilateral-coord.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #FF5E0E 0%, #FF69B4 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="20" cy="20" r="7" fill="#FFDA00"/>
+            <circle cx="20" cy="60" r="7" fill="#00BFFF"/>
+            <circle cx="100" cy="25" r="7" fill="#FFDA00"/>
+            <circle cx="100" cy="55" r="7" fill="#00BFFF"/>
+            <line x1="27" y1="20" x2="93" y2="25" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-dasharray="4,3"/>
+            <line x1="27" y1="60" x2="93" y2="55" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="60" y="45" text-anchor="middle" fill="white" font-size="14" font-weight="bold">同时</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">双手协调</h2>
+          <p class="card-desc">左右手同时点击对应颜色的形状。训练双手协调、视觉搜索与反应抑制能力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">双手协调</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">视觉搜索</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">反应抑制</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：4级（⭐⚪🔺⬡）</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 视觉训练：Dual N-back -->
+      <div class="game-card" data-category="visual" onclick="location.href='dual-nback.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #FF5E0E 0%, #7209B7 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <rect x="15" y="10" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="47" y="10" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="79" y="10" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="15" y="42" width="26" height="26" rx="4" fill="white" opacity="0.5"/>
+            <rect x="47" y="42" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <rect x="79" y="42" width="26" height="26" rx="4" fill="white" opacity="0.2"/>
+            <text x="60" y="72" text-anchor="middle" fill="white" font-size="8" opacity="0.5">视觉+听觉</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">Dual N-back</h2>
+          <p class="card-desc">同时追踪视觉位置+听觉字母，分别判断N步前匹配。训练视听双通道工作记忆。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">视觉记忆</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">N-back</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：初级/中级/高级</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+
+
+    </div>
+
+    <!-- 训练类别说明 -->
+    <div style="background: rgba(255,255,255,0.15); border-radius: 20px; padding: 25px; margin-bottom: 25px; backdrop-filter: blur(10px);">
+      <h2 style="color: white; font-size: 1.2rem; margin-bottom: 20px; text-align: center;">📚 训练类别说明</h2>
+
+      <!-- 视知觉 -->
+      <h3 style="color: #4FC3F7; font-size: 1rem; margin-bottom: 12px;">👁️ 视知觉训练</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #4FC3F7; font-weight: bold; margin-bottom: 5px;">🔍 视觉分辨</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">区分相似字符、形状、颜色</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">划消训练、色彩归纳</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #FF9800; font-weight: bold; margin-bottom: 5px;">👁️ 视觉追踪</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">眼球平滑移动追踪</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">彩色连线、多目标追踪、视觉追踪、蛇形连线</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #E91E63; font-weight: bold; margin-bottom: 5px;">🎯 视觉广度</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">快速扫视、扩大视野</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">舒尔特方格、顺序连线</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 5px;">↔️ 视觉空间</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">方向感、空间位置关系</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">空间记忆矩阵、视觉预测、符号迷宫</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #9C27B0; font-weight: bold; margin-bottom: 5px;">🧩 图形完形</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">碎片拼合、整体感知</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">图形完形匹配、图形描摹</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #FFD700; font-weight: bold; margin-bottom: 5px;">🧠 视觉记忆</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">短时记忆视觉信息</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">数字闪光、视觉N-back、Dual N-back、数字专注力、记忆翻牌</div>
+        </div>
+      </div>
+
+      <!-- 听知觉 -->
+      <h3 style="color: #FF9800; font-size: 1rem; margin-bottom: 12px;">👂 听知觉训练</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #4FC3F7; font-weight: bold; margin-bottom: 5px;">🎧 听觉分辨</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">辨别不同词语、声音类别</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">听词行动、声波搜索</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #FF9800; font-weight: bold; margin-bottom: 5px;">🔢 听觉记忆</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">记住并复现听觉序列</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">数字回音壁、复读机训练、数字大侦探</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #E91E63; font-weight: bold; margin-bottom: 5px;">📖 听觉理解</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">听懂内容并提取信息</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">故事小侦探、听动乐园、指令解码器</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 5px;">⏱️ 听觉专注</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">长时间持续听觉监控</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">长时听觉监控、逻辑排序站</div>
+        </div>
+      </div>
+
+      <!-- 行为训练 -->
+      <h3 style="color: #E91E63; font-size: 1rem; margin-bottom: 12px;">🧠 行为训练</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #4FC3F7; font-weight: bold; margin-bottom: 5px;">🛑 反应抑制</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">控制冲动、延迟反应</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">红灯绿灯、西蒙说</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #FF9800; font-weight: bold; margin-bottom: 5px;">🔄 认知灵活</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">任务切换、规则变换</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">规则跳跳、灯语任务</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #E91E63; font-weight: bold; margin-bottom: 5px;">⚡ 冲动控制</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">抑制优势反应</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">冲突色</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 5px;">🤝 协调能力</div>
+          <div style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">双手协同、跨脑半球</div>
+          <div style="color: rgba(255,255,255,0.55); font-size: 0.72rem; margin-top: 4px;">双手协调</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部说明 -->
+    <div class="footer">
+      <p>💡 建议：每次训练10-15分钟，效果更佳</p>
+      <p>适合人群：儿童注意力训练、读写障碍辅助训练、全年龄段适用</p>
+    </div>
+  </div>
+
+  <script>
+    // Tab切换功能
+    function switchTab(tabName) {
+      // 更新Tab按钮状态
+      var tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach(function(tab) {
+        if (tab.dataset.tab === tabName) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      // 过滤游戏卡片
+      var cards = document.querySelectorAll('.game-card');
+      cards.forEach(function(card) {
+        var category = card.dataset.category;
+        if (tabName === 'all') {
+          card.classList.remove('hidden');
+        } else if (category === tabName) {
+          card.classList.remove('hidden');
+        } else if (category === 'placeholder-' + tabName) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    // 防下载
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) e.preventDefault();
+    });
+  </script>
+</body>
+</html>
