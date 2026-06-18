@@ -384,6 +384,37 @@ sub-level选择 → 故事卡片网格 → 音频播放(暂停/进度条) → �
 - ✅ 使用项目公网域名直接访问public目录下的文件
 - ✅ 提供下载链接前，**必须**先用 `echo $COZE_PROJECT_DOMAIN_DEFAULT` 获取实际域名，再用实际域名拼接完整链接
 
+## 规则24：静态资源必须用相对路径 + 数据文件内嵌（CRITICAL）
+**事故**：audio-helper.js 通过 XHR 加载 `audio_map.json`，用户下载部署后用 file:// 打开，浏览器安全策略拦截 XHR → 映射表为空 → 所有词降级为浏览器 TTS，预录音频从未被调用。同时所有路径使用绝对路径（`/public/...`），部署到子目录时全部 404。
+
+**根因**：XHR/fetch 在 file:// 协议下被浏览器拦截；绝对路径依赖服务器根目录。
+
+**解决**：
+1. 所有静态资源引用（`<script src>`、`<img src>`、`<audio src>`、CSS `url()`、JS `fetch()`、`new Audio()`）**必须使用相对路径**，禁止以 `/` 开头
+2. JSON 数据文件（如 `audio_map.json`、`story-db.json`）**必须内嵌到 JS 文件中**，禁止通过 fetch/XHR 运行时加载
+3. 内嵌方式：将 JSON 数据直接写为 JS 变量（如 `var AUDIO_MAP = {...};`），删掉所有异步加载逻辑
+
+**铁律**：
+1. 任何新增的静态资源引用，路径一律相对路径，禁止 `/public/...` 绝对路径
+2. 任何 JSON 配置文件，必须内嵌到 JS 中，禁止 fetch 加载
+3. 打包下载前必须验证：`tar -tzf xxx.tar.gz | grep` 确认所有资源路径为相对路径
+4. 此规则适用于所有游戏文件，无例外
+
+### 规则25：speakFallback 必须传 gen 参数 — 禁止遗漏（CRITICAL）
+**事故**：听动乐园动物指令串模式只播放第一个词就停止。`speakWord()` → `window.playAudio()` → `_playAudio()` → `playAudioFile()` 三层调用链中，`playAudioFile` 内部已用 `effectiveGen = _audioGen`（_stopAudio 之后捕获），但 `_playAudio` 调用 `speakFallback(text, callback, rate)` **没传 gen**，导致 `speakFallback` 中 `gen === _audioGen` 检查失败（gen 为 undefined），`onend` 回调永不触发，Promise 不 resolve，`await speakWord()` 循环卡死在第一个词。
+
+**根因**：`speakFallback` 签名是 `function speakFallback(text, callback, rate, gen)`，但多处调用只传了 3 个参数。
+
+**解决**：
+1. `_playAudio` 中 `speakFallback(text, callback, rate)` → `speakFallback(text, callback, rate, _audioGen)`
+2. `_playAudioSequence` 中 `speakFallback(text, ..., rate)` → `speakFallback(text, ..., rate, _audioGen)`
+3. `playAudioFile` 中 `onerror` 和 `p.catch` 的 `speakFallback` 调用同样补传 `_audioGen`
+
+**铁律**：
+1. 所有 `speakFallback` 调用**必须**传 4 个参数，第 4 个参数为 `_audioGen`
+2. 任何新增音频播放路径，必须检查 `speakFallback` 的 gen 参数是否传入
+3. `playAudioFile` 的 `effectiveGen` 必须在 `_stopAudio()` **之后**捕获，禁止使用外部传入的 gen
+
 ## 技术栈
 - 纯HTML/CSS/JavaScript
 - 无外部依赖，单文件运行

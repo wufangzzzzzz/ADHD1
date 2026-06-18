@@ -483,20 +483,33 @@
     speechSynthesis.onvoiceschanged = selectBestVoice;
   }
 
+  // ===== 内部停止函数 =====
+  // 规则25：_stopAudio 是唯一停止+递增 _audioGen 的入口。
+  // 所有 playAudioFile / _playAudioSequence 必须在 _stopAudio() 之后
+  // 从 _audioGen 重新捕获 gen，禁止使用外部传入的旧 gen 值。
+  function _stopAudio() {
+    _stopFlag = true;
+    if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    _audioGen++;
+    _stopFlag = false;
+  }
+
   // ===== 播放单个音频文件 =====
   function playAudioFile(filename, text, callback, rate, gen) {
-    if (_stopFlag) { if (callback) setTimeout(callback, 50); return; }
+    _stopAudio();
+    var effectiveGen = _audioGen;  // _stopAudio() 之后捕获，确保与 onended 检查一致
     var audio = new Audio();
     audio.src = AUDIO_DIR + filename;
     audio.volume = 1.0;
     if (rate && rate !== 1.0) audio.playbackRate = rate;
     _currentAudio = audio;
 
-    audio.onended = function() { if (callback && !_stopFlag && gen === _audioGen) setTimeout(callback, 50); };
-    audio.onerror = function() { if (gen !== _audioGen) return; speakFallback(text, callback, rate); };
+    audio.onended = function() { if (callback && !_stopFlag && effectiveGen === _audioGen) setTimeout(callback, 50); };
+    audio.onerror = function() { if (effectiveGen !== _audioGen) return; speakFallback(text, callback, rate, _audioGen); };
 
     var p = audio.play();
-    if (p && p.catch) p.catch(function() { speakFallback(text, callback, rate); });
+    if (p && p.catch) p.catch(function() { speakFallback(text, callback, rate, _audioGen); });
   }
 
   // ===== SpeechSynthesis 降级 =====
@@ -540,19 +553,20 @@
       text = DIGIT_MAP[text];
     }
     if (AUDIO_MAP[text]) {
-      playAudioFile(AUDIO_MAP[text], text, callback, rate, gen);
+      playAudioFile(AUDIO_MAP[text], text, callback, rate);
       return;
     }
     var tokens = _tokenize(text);
     if (tokens.length > 0 && !(tokens.length === 1 && tokens[0] === text)) {
-      _playAudioSequence(tokens, 0, callback, rate, 30, gen);
+      _playAudioSequence(tokens, 0, callback, rate, 30);
     } else {
-      speakFallback(text, callback, rate, gen);
+      speakFallback(text, callback, rate, _audioGen);
     }
   }
 
-  function _playAudioSequence(texts, index, callback, rate, pauseMs, gen) {
-    if (_stopFlag || gen !== _audioGen) { if (callback) setTimeout(callback, 50); return; }
+  function _playAudioSequence(texts, index, callback, rate, pauseMs) {
+    var seqGen = _audioGen;
+    if (_stopFlag || seqGen !== _audioGen) { if (callback) setTimeout(callback, 50); return; }
     var pause = (pauseMs !== undefined) ? pauseMs : 30;
     if (index >= texts.length) { if (callback) setTimeout(callback, 50); return; }
 
@@ -563,16 +577,16 @@
     if (AUDIO_MAP[text]) {
       playAudioFile(AUDIO_MAP[text], text, function() {
         setTimeout(function() {
-          _playAudioSequence(texts, index + 1, callback, rate, pauseMs, gen);
+          _playAudioSequence(texts, index + 1, callback, rate, pauseMs);
         }, pause);
-      }, rate, gen);
+      }, rate);
       return;
     }
     speakFallback(text, function() {
       setTimeout(function() {
-        _playAudioSequence(texts, index + 1, callback, rate, pauseMs, gen);
+        _playAudioSequence(texts, index + 1, callback, rate, pauseMs);
       }, pause);
-    }, rate, gen);
+    }, rate, _audioGen);
   }
 
   // ===== 智能分词 =====
