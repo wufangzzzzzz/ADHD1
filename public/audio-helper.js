@@ -282,6 +282,11 @@
     "猫": "a391.mp3",
     "猫咪": "a452.mp3",
     "猴子": "a049.mp3",
+    "三轮": "a460.mp3",
+    "公交": "a461.mp3",
+    "出租": "a462.mp3",
+    "摩托": "a463.mp3",
+    "猴": "a464.mp3",
     "玫瑰": "a107.mp3",
     "理发师": "a293.mp3",
     "生菜": "a099.mp3",
@@ -464,6 +469,23 @@
     "龟": "a060.mp3"
   };
 
+  // ===== 音频预加载缓存（部署后网络延迟优化）=====
+  var _audioPreloadCache = {};
+  window.preloadAudio = function(word) {
+    if (!AUDIO_MAP[word]) return Promise.resolve();
+    var url = AUDIO_DIR + AUDIO_MAP[word];
+    if (_audioPreloadCache[url]) return Promise.resolve();
+    return fetch(url).then(function(r) {
+      if (!r.ok) throw new Error('preload fail ' + url);
+      return r.blob();
+    }).then(function(blob) {
+      _audioPreloadCache[url] = URL.createObjectURL(blob);
+    }).catch(function() { /* 静默失败，playAudioFile 会走重试 */ });
+  };
+  window.preloadAudioList = function(words) {
+    return Promise.all((words || []).map(window.preloadAudio));
+  };
+
   // ===== SpeechSynthesis 语音选择 =====
   function selectBestVoice() {
     if (selectedVoice || !window.speechSynthesis) return;
@@ -500,7 +522,13 @@
     _stopAudio();
     var effectiveGen = _audioGen;  // _stopAudio() 之后捕获，确保与 onended 检查一致
     var audio = new Audio();
-    audio.src = AUDIO_DIR + filename;
+    // 优先使用预加载缓存（blob URL 无网络延迟）
+    var cacheUrl = AUDIO_DIR + filename;
+    if (_audioPreloadCache[cacheUrl]) {
+      audio.src = _audioPreloadCache[cacheUrl];
+    } else {
+      audio.src = cacheUrl;
+    }
     audio.volume = 1.0;
     if (rate && rate !== 1.0) audio.playbackRate = rate;
     _currentAudio = audio;
@@ -509,7 +537,27 @@
     audio.onerror = function() { if (effectiveGen !== _audioGen) return; speakFallback(text, callback, rate, _audioGen); };
 
     var p = audio.play();
-    if (p && p.catch) p.catch(function() { speakFallback(text, callback, rate, _audioGen); });
+    if (p && p.catch) p.catch(function() {
+      // 重试播放（解决网络延迟 / 浏览器 autoplay 拒绝）
+      setTimeout(function() {
+        var p2 = audio.play();
+        if (p2 && p2.catch) p2.catch(function() {
+          setTimeout(function() {
+            var p3 = audio.play();
+            if (p3 && p3.catch) p3.catch(function() {
+              setTimeout(function() {
+                var p4 = audio.play();
+                if (p4 && p4.catch) p4.catch(function() {
+                  // 4次重试都失败，才降级到 TTS
+                  if (effectiveGen !== _audioGen) return;
+                  speakFallback(text, callback, rate, _audioGen);
+                });
+              }, 300);
+            });
+          }, 200);
+        });
+      }, 200);
+    });
   }
 
   // ===== SpeechSynthesis 降级 =====
@@ -537,7 +585,7 @@
 
     var utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
-    utterance.rate = rate || 0.85;
+    utterance.rate = rate || 1.0;
     utterance.volume = 1.0;
     if (selectedVoice) utterance.voice = selectedVoice;
 

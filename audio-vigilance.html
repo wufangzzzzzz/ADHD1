@@ -434,6 +434,14 @@ async function startGame(){
   btnStart.textContent = '游戏中';
   btnStart.style.cssText = 'background:#32CD32 !important;color:#fff !important;margin-top:8px;width:100%;';
 
+  // 预载所有词音频，避免首次播放时因网络加载延迟被 stopAllAudio 停掉
+  statusText.textContent = '准备中...';
+  if(window.preloadAudioList){
+    await window.preloadAudioList(WORD_POOL);
+    if(state.running) await sleep(300);
+  }
+  if(!state.running) return;
+
   for(let r = 0; r < cfg.rounds; r++){
     if(!state.running) break;
     state.currentRound = r;

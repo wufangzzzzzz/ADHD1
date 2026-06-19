@@ -108,6 +108,7 @@ body{
   color:#2D2B55;
   font-size:18px;font-weight:800;
 }
+.countdown-display{font-size:32px;font-weight:800;color:#FF5E0E;display:block;margin-top:8px;margin-bottom:4px;text-align:center;}
 .back-btn{
   background:rgba(45,43,85,0.06);
   border:none;color:#2D2B55;
@@ -316,7 +317,7 @@ body{
     <div class="rules-card" id="rules-card">
       <strong>模式一：颜色指令官</strong><br>
       听颜色词,点击对应颜色按钮。<br>
-      初级：播报间隔 4.5s | 中级：3.5s | 高级：2.5s<br><br>
+      初级：播报间隔 5s | 中级：4s | 高级：3s<br><br>
       <strong>模式二：动物指令串</strong><br>
       播报结束后按顺序点击动物。<br>
       初级：指令串 2 步 | 中级：4 步 | 高级：6 步
@@ -325,6 +326,7 @@ body{
   <div class="right-panel" id="game-area">
     <div class="game-header">
       <span class="game-title">🎵 听动乐园</span>
+      <span class="countdown-display" id="countdown-display"></span>
       <button class="back-btn" onclick="location.href='index.html'">← 返回大厅</button>
     </div>
     <div class="cmd-display" id="cmd-display"></div>
@@ -386,6 +388,9 @@ let state={
   answered:false,
   chainStep:0,
   chainTargets:[],
+  timeoutId:null,
+	countdownInterval:null,
+	countdownRemain:0,
 };
 
 // ===== 音频 =====
@@ -545,12 +550,39 @@ async function runTrial(){
 		await speakWord(q.target.word);
 		// 播完后不显示答案,清空等待点击
 		document.getElementById('cmd-display').innerHTML='';
+		// 加超时：不点自动跳过（防卡死，显示倒计时）
+		if(state.timeoutId) clearTimeout(state.timeoutId);
+		if(state.countdownInterval) clearInterval(state.countdownInterval);
+		var maxWait=MODES[state.mode].cmdInterval[state.diff]||6000;
+		state.countdownRemain=Math.ceil(maxWait/1000);
+		document.getElementById('countdown-display').textContent='⏱ '+state.countdownRemain+'s';
+		state.countdownInterval=setInterval(function(){
+			state.countdownRemain--;
+			if(state.countdownRemain<=0||!state.running||state.answered){
+				clearInterval(state.countdownInterval);
+				state.countdownInterval=null;
+				if(state.running&&!state.answered) document.getElementById('countdown-display').textContent='⌛';
+				else document.getElementById('countdown-display').textContent='';
+				return;
+			}
+			document.getElementById('countdown-display').textContent='⏱ '+state.countdownRemain+'s';
+		},1000);
+		state.timeoutId=setTimeout(function(){
+			if(!state.running||state.answered) return;
+			if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null;}
+			document.getElementById('countdown-display').textContent='';
+			document.getElementById('cmd-display').innerHTML='<span style="color:#FF9800;font-size:22px;">⏰ 时间到</span>';
+			state.answered=true;
+			setTimeout(function(){state.qIdx++;runTrial();},1000);
+		},maxWait);
 		}else{
 			// 指令串:逐词顺序播放,播完前不可点击
 			state.chainStep=0;
+			// 词间间隔按难度调整：easy 500ms, medium 400ms, hard 300ms
+			var chainPause = ({easy:500,medium:400,hard:300})[state.level]||300;
 			for(let i=0;i<q.chain.length;i++){
 				await speakWord(q.chain[i].word);
-				if(i<q.chain.length-1) await sleep(300);
+				if(i<q.chain.length-1) await sleep(chainPause);
 			}
 			// 播完后才设置目标,允许点击
 			state.chainTargets=q.chain.map(c=>c.id);
@@ -560,6 +592,9 @@ async function runTrial(){
 
 function handleClick(id){
   if(!state.running||state.answered) return;
+  if(state.timeoutId){clearTimeout(state.timeoutId);state.timeoutId=null;}
+  if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null;}
+  document.getElementById('countdown-display').textContent='';
   const expected=state.chainTargets[state.chainStep];
   const btn=document.querySelector(`.action-btn[data-id="${id}"]`);
   if(id===expected){
@@ -604,6 +639,9 @@ function spawnStars(el){
 
 function endGame(){
   state.running=false;
+  if(state.timeoutId){clearTimeout(state.timeoutId);state.timeoutId=null;}
+  if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null;}
+  document.getElementById('countdown-display').textContent='';
   document.getElementById('start-btn').disabled=false;
   document.getElementById('cmd-display').innerHTML='';
   document.getElementById('progress-fill').style.width='100%';
@@ -646,7 +684,7 @@ function showRules(){
       <h2>🎵 听动乐园 · 玩法</h2>
       <p><strong>模式一:颜色指令官</strong>（5-7岁）<br>听颜色词,点击对应颜色按钮。从单色指令到双色排序指令。</p>
       <p><strong>模式二:动物指令串</strong>（6-8岁）<br>播报结束后按顺序点击动物图标。初级2步 · 中级4步 · 高级6步。</p>
-      <p><strong>难度说明</strong><br>模式一:初级 4.5s · 中级 3.5s · 高级 2.5s<br>模式二:初级 2步 · 中级 4步 · 高级 6步</p>
+      <p><strong>难度说明</strong><br>模式一:初级 5s · 中级 4s · 高级 3s<br>模式二:初级 2步 · 中级 4步 · 高级 6步</p>
       <p style="color:rgba(45,43,85,0.5);font-size:12px;">所有指令通过语音播放,请确保设备音量开启。</p>
       <button class="btn" onclick="document.getElementById('rules-overlay').remove();localStorage.setItem('lm_visited','1');">我知道了</button>
     </div>
