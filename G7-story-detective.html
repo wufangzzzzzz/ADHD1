@@ -377,9 +377,20 @@
 .rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
 .rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
 .rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+/* 音频预加载遮罩 */
+.loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:16px;}
+.loading-overlay .load-title{color:#fff;font-size:18px;font-weight:700;}
+.loading-overlay .load-bar-wrap{width:280px;height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;}
+.loading-overlay .load-bar-fill{height:100%;background:linear-gradient(90deg,#AB47BC,#8A2BE2);border-radius:4px;transition:width 0.15s ease;width:0%;}
+.loading-overlay .load-text{color:rgba(255,255,255,0.5);font-size:13px;}
 </style>
 </head>
 <body>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="load-title">加载故事音频...</div>
+    <div class="load-bar-wrap"><div class="load-bar-fill" id="loadBarFill"></div></div>
+    <div class="load-text" id="loadText">0 / 30</div>
+  </div>
 
 <div class="container">
   <!-- 信息栏 -->
@@ -851,6 +862,42 @@ function closeRules(){
     localStorage.setItem('g7_visited','1');
     document.getElementById('rulesOverlay').style.display='none';
 }
-document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
+// ---- 音频预加载 ----
+function preloadAllAudio() {
+  var total = 30;
+  var loaded = 0;
+  var loadBar = document.getElementById('loadBarFill');
+  var loadText = document.getElementById('loadText');
+  loadText.textContent = '0 / ' + total;
+
+  function loadOne(idx) {
+    if (idx > total) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      loadStories();
+      return;
+    }
+    var url = 'public/audio/story_' + String(idx).padStart(2, '0') + '.mp3';
+    fetch(url).then(function(r) {
+      if (!r.ok) throw new Error('fail');
+      return r.blob();
+    }).then(function() {
+      loaded++;
+      loadBar.style.width = Math.round(loaded / total * 100) + '%';
+      loadText.textContent = loaded + ' / ' + total;
+      loadOne(idx + 1);
+    }).catch(function() {
+      loaded++;
+      loadBar.style.width = Math.round(loaded / total * 100) + '%';
+      loadText.textContent = loaded + ' / ' + total;
+      loadOne(idx + 1);
+    });
+  }
+  loadOne(1);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  preloadAllAudio();
+  showRulesPopup();
+});
 
 </script>

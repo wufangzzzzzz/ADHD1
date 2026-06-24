@@ -229,9 +229,22 @@ body{
 .rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
 .rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
 .rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+
+.back-btn{
+  position:absolute;top:10px;left:10px;z-index:100;
+  background:rgba(0,0,0,0.06);
+  border:1px solid rgba(0,0,0,0.1);
+  color:rgba(0,0,0,0.55);
+  padding:6px 14px;border-radius:8px;
+  font-size:13px;cursor:pointer;
+  transition:all 0.2s;
+  text-decoration:none;
+}
+.back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
 </style>
 </head>
 <body>
+  <button class="back-btn" onclick="location.href='index.html'">← 返回大厅</button>
 <div class="container">
   <!-- 左手面板 -->
   <div class="side-panel" id="leftPanel">

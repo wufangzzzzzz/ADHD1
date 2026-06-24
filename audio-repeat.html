@@ -808,7 +808,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     <!-- 玩法说明 -->
     <div class="game-rules" id="gameRules">
       <div class="rules-title">📋 玩法说明</div>
-      <div>• 听系统朗读的数字或词语<br>• 按原样复述出来<br>• 训练听觉记忆和口语表达能力</div>
+      <div>• 听系统朗读的数字或词语<br>• 按听到顺序点击数字<br>• 训练听觉记忆和逻辑记忆</div>
     </div>
 
     <!-- 统计 -->
@@ -952,7 +952,15 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
   // 使用语音合成朗读一段内容（优先使用预生成音频）
   function speakText(text, callback) {
     var cfg = diffConfig[difficulty];
-    window.playAudio(text, callback, cfg ? cfg.rate : 0.85);
+    var called = false;
+    function safeCb() {
+      if (!called) { called = true; if (callback) callback(); }
+    }
+    window.playAudio(text, safeCb, cfg ? cfg.rate : 0.85);
+    // 安全兜底：3秒后如果音频回调未触发，强制执行，防止播放链中断
+    setTimeout(function() {
+      if (!called) { called = true; if (callback) callback(); }
+    }, 3000);
   }
 
   // ---------- 音效系统 ----------
@@ -1045,16 +1053,36 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
 
   // ---------- 核心游戏流程 ----------
 
-  // 开始新回合
+  // 开始新回合（无论当前状态，直接重置并开始新一局）
   function startRound() {
-    if (isPlaying || isInputPhase) return;
+    // 停止所有正在播放的音频
+    if (window.stopAllAudio) window.stopAllAudio();
+
+    // 恢复可能被 gameOver 隐藏的元素
+    document.querySelector('.num-pad').style.display = 'grid';
+    document.getElementById('btnReplay').style.display = '';
+    document.getElementById('resultOverlay').style.display = 'none';
+
+    // 重置所有状态
+    isPlaying = false;
+    isInputPhase = false;
+    gameOver = false;
+    level = 0;
+    score = 0;
+    streak = 0;
+    correctCount = 0;
+    maxStreak = 0;
+    roundResults = [];
+    roundHadError = false;
+    userInput = [];
+    currentNumIndex = 0;
+    updateStats();
+    renderProgress();
 
     btnStart.disabled = true;
     btnReplay.disabled = true;
     setButtonsEnabled(false);
     setStatus('listening', '👂 仔细听...', '数字序列正在播放中');
-    userInput = [];
-    currentNumIndex = 0;
 
     // 生成序列
     currentSequence = generateSequence();
@@ -1065,6 +1093,38 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     isPlaying = true;
 
     // 按顺序播放
+    playQueueRecursive(playQueue, 0, function() {
+      isPlaying = false;
+      isInputPhase = true;
+      btnReplay.disabled = false;
+      setButtonsEnabled(true);
+      setStatus('recalling', '🖱️ 到你了！', '按顺序点击数字复现');
+    });
+  }
+
+  // 进入下一轮（不重置进度/分数/星星）
+  function nextRound() {
+    if (window.stopAllAudio) window.stopAllAudio();
+
+    // 只重置本轮状态，保留 level/score/roundResults/streak/correctCount/maxStreak
+    isPlaying = false;
+    isInputPhase = false;
+    gameOver = false;
+    roundHadError = false;
+    userInput = [];
+    currentNumIndex = 0;
+
+    btnStart.disabled = true;
+    btnReplay.disabled = true;
+    setButtonsEnabled(false);
+    setStatus('listening', '👂 仔细听...', '数字序列正在播放中');
+
+    currentSequence = generateSequence();
+    var playQueue = buildPlaySequence(currentSequence);
+
+    renderProgress();
+    isPlaying = true;
+
     playQueueRecursive(playQueue, 0, function() {
       isPlaying = false;
       isInputPhase = true;
@@ -1280,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     // 自动进入下一题
     var delay = streak >= 5 ? 1000 : 1500;
     setTimeout(function() {
-      startRound();
+      nextRound();
     }, delay);
   }
 
@@ -1377,6 +1437,8 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     interferenceOn = !interferenceOn;
     toggle.classList.toggle('active', interferenceOn);
     resetGame();
+    // 自动开始新一局
+    setTimeout(function() { startRound(); }, 300);
   }
 
   // 重置游戏
@@ -1386,6 +1448,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     currentSequence = [];
     userInput = [];
     currentNumIndex = 0;
+    level = 0;
     btnStart.disabled = false;
     btnReplay.disabled = true;
     setButtonsEnabled(false);
@@ -1397,6 +1460,10 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     maxStreak = 0;
     gameOver = false;
     updateStats();
+    // 恢复被 showGameResult 隐藏的元素
+    document.querySelector('.num-pad').style.display = 'grid';
+    document.getElementById('btnReplay').style.display = '';
+    document.getElementById('resultOverlay').style.display = 'none';
     // 清除所有按钮高亮
     var btns = document.querySelectorAll('.key-btn');
     for (var i = 0; i < btns.length; i++) {
@@ -1418,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     isInputPhase = false;
 
     // 隐藏游戏按钮区域
-    document.querySelector('.num-grid').style.display = 'none';
+    document.querySelector('.num-pad').style.display = 'none';
     document.getElementById('btnReplay').style.display = 'none';
 
     setStatus('success', '🏆 训练完成！', '看看你的成绩吧！');
@@ -1426,46 +1493,25 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     var accuracy = Math.round((correctCount / totalRounds) * 100);
     var grade = accuracy >= 90 ? '🌟 卓越' : (accuracy >= 70 ? '👍 不错' : '💪 继续加油');
 
+    // 更新预定义HTML元素，不摧毁DOM
+    document.getElementById('rTotal').textContent = totalRounds;
+    document.getElementById('rCorrect').textContent = correctCount;
+    document.getElementById('rMaxStreak').textContent = maxStreak;
+    document.getElementById('rScore').textContent = score;
+    document.getElementById('rAccuracy').textContent = accuracy + '%';
+    document.getElementById('resultEmoji').textContent = accuracy >= 90 ? '🏆' : (accuracy >= 70 ? '🎉' : '💪');
+    document.getElementById('resultTitle').textContent = '训练完成！';
+    document.getElementById('resultStars').textContent = accuracy >= 90 ? '⭐⭐⭐' : (accuracy >= 70 ? '⭐⭐' : '⭐');
+    document.getElementById('resultDesc').textContent = grade;
+
     // 显示结果覆盖层
-    var overlay = document.getElementById('resultOverlay');
-    overlay.innerHTML = ''; // 清空
-    overlay.style.display = 'flex';
-    overlay.innerHTML =
-      '<div class="result-card">' +
-        '<div class="result-icon">🏆</div>' +
-        '<h2 class="result-title">训练完成！</h2>' +
-        '<div class="result-grade">' + grade + '</div>' +
-        '<div class="result-stats">' +
-          '<div class="result-stat">' +
-            '<span class="stat-label">完成题数</span>' +
-            '<span class="stat-value">' + totalRounds + '</span>' +
-          '</div>' +
-          '<div class="result-stat">' +
-            '<span class="stat-label">正确</span>' +
-            '<span class="stat-value" style="color:#4ade80">' + correctCount + '</span>' +
-          '</div>' +
-          '<div class="result-stat">' +
-            '<span class="stat-label">正确率</span>' +
-            '<span class="stat-value" style="color:#fbbf24">' + accuracy + '%</span>' +
-          '</div>' +
-          '<div class="result-stat">' +
-            '<span class="stat-label">最高连对</span>' +
-            '<span class="stat-value" style="color:#f472b6">' + maxStreak + '</span>' +
-          '</div>' +
-          '<div class="result-stat">' +
-            '<span class="stat-label">总分</span>' +
-            '<span class="stat-value" style="color:#a78bfa">' + score + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<button class="result-btn" onclick="restartGame()">🔄 再来一轮</button>' +
-        '<button class="result-btn secondary" onclick="backToMenu()">🏠 返回主页</button>' +
-      '</div>';
+    document.getElementById('resultOverlay').style.display = 'flex';
   }
 
   // 重新开始
   function restartGame() {
     if (window.stopAllAudio) window.stopAllAudio();
-    document.querySelector('.num-grid').style.display = 'grid';
+    document.querySelector('.num-pad').style.display = 'grid';
     document.getElementById('btnReplay').style.display = '';
 
     var overlay = document.getElementById('resultOverlay');

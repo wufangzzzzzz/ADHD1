@@ -6,17 +6,17 @@
   <title>指令解码器 - 听知觉训练</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-    html, body { touch-action: manipulation; overscroll-behavior: none; width: 100%; height: 100%; }
+    html { touch-action: manipulation; overscroll-behavior: none; width: 100%; height: 100%; overflow: hidden; }
     body {
+      touch-action: manipulation; overscroll-behavior: none; width: 100%; height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
       background: linear-gradient(160deg, #e8f5e9 0%, #c8e6c9 30%, #dcedc8 60%, #f1f8e9 100%);
-      height: 100dvh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
       color: #1B5E20;
       position: relative;
-      overflow: hidden;
     }
 
     /* 矩阵网格装饰 */
@@ -58,6 +58,9 @@
       display: flex;
       flex-direction: column;
       flex: 1;
+      min-height: 0;
+      max-height: 100vh;
+      overflow: hidden;
       position: relative;
       z-index: 1;
       padding: 10px;
@@ -147,6 +150,47 @@
       border-color: #f44336;
       box-shadow: 0 0 8px rgba(244,67,54,0.3);
     }
+    /* 答题灯 */
+    .answer-lights-bar {
+      display: flex;
+      justify-content: center;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.03);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      height: 54px;
+      overflow: hidden;
+    }
+    .answer-lights {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      align-items: center;
+      padding: 4px 0;
+    }
+    .answer-light {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(128, 128, 128, 0.08);
+      border: 2px solid rgba(128, 128, 128, 0.15);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .answer-light.animate-correct {
+      background: #4CAF50 !important;
+      border-color: #66BB6A !important;
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.9), 0 0 50px rgba(76, 175, 80, 0.4);
+      transform: scale(1.15);
+    }
+    .answer-light.animate-wrong {
+      background: #f44336 !important;
+      border-color: #ef5350 !important;
+      box-shadow: 0 0 20px rgba(244, 67, 54, 0.9), 0 0 50px rgba(244, 67, 54, 0.4);
+      transform: scale(1.15);
+    }
+
 
     /* 难度选择 - 主级别 */
     .level-select {
@@ -221,51 +265,51 @@
     .game-rules {
       background: rgba(255,152,0,0.06);
       border-radius: 12px;
-      padding: 12px 14px;
-      margin: 8px 0;
-      font-size: clamp(14px, 3vw, 18px);
-      line-height: 1.7;
+      padding: 10px 12px;
+      margin: 6px 0;
+      font-size: clamp(12px, 2.2vw, 15px);
+      line-height: 1.6;
       border: 1px solid rgba(255,152,0,0.12);
     }
     .game-rules .rules-title {
-      font-size: clamp(15px, 3.2vw, 20px);
+      font-size: clamp(13px, 2.5vw, 16px);
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .difficulty-hint {
       background: rgba(255,152,0,0.06);
       border-radius: 12px;
-      padding: 10px 12px;
-      margin: 8px 0;
-      font-size: clamp(13px, 2.8vw, 17px);
-      line-height: 1.6;
+      padding: 8px 10px;
+      margin: 6px 0;
+      font-size: clamp(11px, 2vw, 14px);
+      line-height: 1.5;
       border: 1px solid rgba(255,152,0,0.12);
     }
     .difficulty-hint .hint-title {
-      font-size: clamp(14px, 3vw, 18px);
+      font-size: clamp(12px, 2.3vw, 15px);
       font-weight: 700;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .difficulty-hint .hint-body {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 4px;
+      gap: 3px;
     }
     .difficulty-hint .hint-col {
       background: rgba(255,255,255,0.5);
       border-radius: 8px;
-      padding: 6px 8px;
-      font-size: clamp(12px, 2.5vw, 16px);
-      line-height: 1.7;
+      padding: 4px 6px;
+      font-size: clamp(10px, 1.8vw, 13px);
+      line-height: 1.6;
     }
     .difficulty-hint .hint-col strong {
       color: #2E7D32;
     }
     .difficulty-hint .hint-note {
       text-align: center;
-      margin-top: 4px;
-      font-size: 11px;
+      margin-top: 3px;
+      font-size: 10px;
       color: rgba(46,125,50,0.7);
     }
 
@@ -323,6 +367,8 @@
       padding: 12px;
       margin-bottom: 8px;
       border: 2px solid rgba(76, 175, 80, 0.4);
+      height: 60px;
+      overflow: hidden;
     }
     .mapping-title {
       font-size: 12px;
@@ -715,8 +761,8 @@ body {
   .ripple-container { display: none !important; }
   
   .land-left {
-    width: 320px;
-    flex: none;
+    width: 280px;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -725,16 +771,20 @@ body {
     border-right: 1px solid rgba(0,0,0,0.06);
   }
   .land-right {
-    width: 480px;
+    width: 580px;
     flex: none;
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
     padding: 12px 16px;
-    overflow-y: auto;
+    overflow: hidden;
     justify-content: flex-start;
   }
+  .land-right .word-display-area { flex-shrink: 0; }
+  .land-right #answerLights { flex-shrink: 0; }
+  .land-right .numpad { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .land-right .bottom-actions { flex-shrink: 0; }
   
   .land-left .title-area { padding: 4px 6px; margin-bottom: 4px; }
   .land-left .title-area h1 { font-size: 18px; }
@@ -780,6 +830,24 @@ body {
 .rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
 .rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
 .rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+
+.back-btn{
+  position:absolute;top:10px;left:10px;z-index:100;
+  background:rgba(0,0,0,0.06);
+  border:1px solid rgba(0,0,0,0.1);
+  color:rgba(0,0,0,0.55);
+  padding:6px 14px;border-radius:8px;
+  font-size:13px;cursor:pointer;
+  transition:all 0.2s;
+  text-decoration:none;
+}
+.back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
+/* 音频预加载遮罩 */
+.loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:16px;}
+.loading-overlay .load-title{color:#fff;font-size:18px;font-weight:700;}
+.loading-overlay .load-bar-wrap{width:280px;height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;}
+.loading-overlay .load-bar-fill{height:100%;background:linear-gradient(90deg,#00C853,#00E5EE);border-radius:4px;transition:width 0.15s ease;width:0%;}
+.loading-overlay .load-text{color:rgba(255,255,255,0.5);font-size:13px;}
 </style>
 <script src="public/audio-helper.js"></script>
 <script>
@@ -796,6 +864,12 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
 </script>
 </head>
 <body>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="load-title">加载音频资源...</div>
+    <div class="load-bar-wrap"><div class="load-bar-fill" id="loadBarFill"></div></div>
+    <div class="load-text" id="loadText">0 / 0</div>
+  </div>
+  <button class="back-btn" onclick="location.href='index.html'">← 返回大厅</button>
 <div class="container">
   <div class="land-left">
   <!-- 标题 -->
@@ -806,10 +880,6 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
 
   <!-- 信息栏 -->
   <div class="info-bar">
-    <div class="info-item">
-      <div class="info-label">题号</div>
-      <div class="info-value round" id="questionNum">-</div>
-    </div>
     <div class="info-item">
       <div class="info-label">难度</div>
       <div class="info-value level" id="levelDisplay">中级·简单</div>
@@ -853,7 +923,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
   </div>
 
   <!-- 映射规则区 -->
-  <div class="mapping-area" id="mappingArea" style="display:none;">
+  <div class="mapping-area" id="mappingArea" style="visibility:hidden;">
     <div class="mapping-title">📋 映射规则</div>
     <div class="mapping-rules" id="mappingRules"></div>
   </div>
@@ -861,7 +931,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
   <!-- 玩法说明 -->
   <div class="game-rules" id="gameRules">
     <div class="rules-title">📋 玩法说明</div>
-    <div>• 先听映射规则（如1=水果）<br>• 再听数字序列 → 按规则解码<br>• 每个数字对应一个类别，逐一破解</div>
+    <div>• 先听映射规则（如1=水果）<br>• 再看数字序列 → 按规则解码<br>• 每个数字对应一个类别，逐一破解</div>
   </div>
 
   <!-- 难度说明 -->
@@ -877,15 +947,15 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
 </div>
 
   <div class="land-right">
+  <!-- 答题灯 -->
+  <div class="input-sequence" id="answerLights" style="gap:8px;flex-wrap:nowrap;align-items:center;justify-content:center;padding:12px 16px;min-height:56px;overflow:visible;position:relative;z-index:5;background:rgba(255,255,255,0.5);"></div>
+
   <!-- 词语朗读区 -->
   <div class="word-display-area" id="wordDisplayArea">
     <div class="current-word" id="currentWord" style="display:none;"></div>
     <span class="word-placeholder" id="wordPlaceholder">👂 等待开始...</span>
     <div class="word-index-hint" id="wordIndexHint" style="display:none;"></div>
   </div>
-
-  <!-- 输入序列显示区 -->
-  <div class="input-sequence" id="inputSequence"></div>
 
   <!-- 数字键盘 -->
   <div class="numpad" id="numpad">
@@ -904,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
   <div class="bottom-actions">
     <button class="action-btn btn-replay" id="replayBtn" onclick="replayAudio()" disabled>🔊 再听一遍</button>
     <button class="action-btn btn-delete" id="deleteBtn" onclick="deleteLast()" disabled>⌫ 删除</button>
-    <button class="action-btn btn-submit" id="submitBtn" onclick="submitAnswer()" disabled>✅ 提交</button>
+    <button class="action-btn btn-submit" id="submitBtn" onclick="submitAnswer()" disabled style="display:none">✅ 提交</button>
     <button class="action-btn btn-start" id="startBtn" onclick="startNewGame()">🚀 开始挑战</button>
   </div>
 </div>
@@ -1081,7 +1151,6 @@ let state = {
 
 // ---- DOM 引用 ----
 const $ = id => document.getElementById(id);
-const qNum = $('questionNum');
 const levelDisplay = $('levelDisplay');
 const scoreDisplay = $('scoreDisplay');
 const progressDisplay = $('progressDisplay');
@@ -1094,7 +1163,6 @@ const wordDisplayArea = $('wordDisplayArea');
 const currentWord = $('currentWord');
 const wordPlaceholder = $('wordPlaceholder');
 const wordIndexHint = $('wordIndexHint');
-const inputSequence = $('inputSequence');
 const numBtns = document.querySelectorAll('.num-btn');
 const replayBtn = $('replayBtn');
 const deleteBtn = $('deleteBtn');
@@ -1114,6 +1182,24 @@ const adaptNotice = $('adaptNotice');
 const subEasy = $('subEasy');
 const subMedium = $('subMedium');
 const subHard = $('subHard');
+
+// ---- 按键音效 ----
+let audioCtx = null;
+function playKeyClick() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.08);
+  } catch(e) {}
+}
 
 // ---- 工具函数 ----
 function shuffle(arr) {
@@ -1165,9 +1251,8 @@ function selectLevel(level) {
   statusSub.textContent = cfg.label + ' · ' + cfg.subLevels[0].label + ' · 点击开始';
 
   // 清空映射、输入区
-  mappingArea.style.display = 'none';
+  mappingArea.style.visibility = 'hidden';
   mappingRules.innerHTML = '';
-  inputSequence.innerHTML = '';
   currentWord.style.display = 'none';
   wordPlaceholder.style.display = 'inline';
   wordPlaceholder.textContent = '👂 准备开始...';
@@ -1177,7 +1262,6 @@ function selectLevel(level) {
   state.questions = [];
   state.questionIndex = 0;
   state.score = 0;
-  qNum.textContent = '-';
   scoreDisplay.textContent = '0';
   progressDisplay.textContent = '0/10';
   setNumpadEnabled(false);
@@ -1203,12 +1287,10 @@ function selectSubLevel(key) {
   state.questions = [];
   state.questionIndex = 0;
   state.score = 0;
-  qNum.textContent = '-';
   scoreDisplay.textContent = '0';
   progressDisplay.textContent = '0/10';
-  mappingArea.style.display = 'none';
+  mappingArea.style.visibility = 'hidden';
   mappingRules.innerHTML = '';
-  inputSequence.innerHTML = '';
   currentWord.style.display = 'none';
   wordPlaceholder.style.display = 'inline';
   wordPlaceholder.textContent = '👂 准备开始...';
@@ -1328,13 +1410,12 @@ function startNewGame() {
   startBtn.style.display = 'none';
   replayBtn.style.display = 'inline-block';
   deleteBtn.style.display = 'inline-block';
-  submitBtn.style.display = 'inline-block';
   replayBtn.disabled = true;
   deleteBtn.disabled = true;
-  submitBtn.disabled = true;
 
   updateInfoBar();
   resetProgressDots();
+  resetAnswerLights();
 
   // 开始第一题
   setTimeout(() => startQuestion(), 500);
@@ -1363,19 +1444,19 @@ function startQuestion() {
   // 清空反馈
   feedbackBadge.style.display = 'none';
 
+  // 初始化答题灯（根据词数量）
+  initAnswerLights(state.wordList.length);
+
   // 更新进度点
   updateProgressDots();
 
+
   // 更新信息
-  qNum.textContent = (state.questionIndex + 1);
   progressDisplay.textContent = (state.questionIndex) + '/10';
   updateInfoBar();
 
   // 显示映射规则
   renderMappings(subConfig.mappings);
-
-  // 渲染输入槽位
-  renderInputSlots(state.wordList.length);
 
   // 重置词语显示
   currentWord.style.display = 'none';
@@ -1457,7 +1538,7 @@ function readNextWord(index) {
 // ---- 渲染映射规则 ----
 function renderMappings(mappings) {
   mappingRules.innerHTML = '';
-  mappingArea.style.display = 'block';
+  mappingArea.style.visibility = 'visible';
   mappings.forEach((m, idx) => {
     const rule = document.createElement('div');
     rule.className = 'mapping-rule';
@@ -1470,33 +1551,39 @@ function renderMappings(mappings) {
 
 // ---- 渲染输入槽位 ----
 function renderInputSlots(count) {
-  inputSequence.innerHTML = '';
+  const container = $('slotContainer');
+  if (!container) return;
+  container.innerHTML = '';
   for (let i = 0; i < count; i++) {
     const slot = document.createElement('div');
     slot.className = 'input-slot';
     slot.id = 'slot-' + i;
     slot.dataset.index = i;
-    inputSequence.appendChild(slot);
+    container.appendChild(slot);
   }
 }
 
 // ---- 高亮当前槽位 ----
 function highlightCurrentSlot(index) {
-  document.querySelectorAll('.input-slot').forEach((slot, i) => {
+  // 高亮当前待输入的灯
+  const lights = document.querySelectorAll('#answerLights .answer-light');
+  lights.forEach((light, i) => {
     if (i === index) {
-      slot.style.borderColor = 'rgba(76,175,80,0.6)';
-      slot.style.background = 'rgba(76,175,80,0.12)';
-    } else if (slot.classList.contains('filled')) {
-      // already styled
+      light.style.background = 'rgba(76, 175, 80, 0.15)';
+      light.style.borderColor = 'rgba(76, 175, 80, 0.5)';
     } else {
-      slot.style.borderColor = 'rgba(76,175,80,0.2)';
-      slot.style.background = 'rgba(76, 175, 80, 0.12)';
+      // 未填充的灯恢复默认
+      if (!light.classList.contains('correct') && !light.classList.contains('wrong')) {
+        light.style.background = '';
+        light.style.borderColor = '';
+      }
     }
   });
 }
 
 // ---- 按下数字键 ----
 function pressNum(num) {
+  playKeyClick();
   if (state.isListening || state.isAnswered) return;
   if (state.currentWordIndex < 0) return;
 
@@ -1509,11 +1596,11 @@ function pressNum(num) {
 
   state.userSequence[idx] = String(num);
 
-  // 填充槽位
-  const slot = $('slot-' + idx);
-  if (slot) {
-    slot.textContent = num;
-    slot.className = 'input-slot filled';
+  // 立即判断对错，灯亮起！选对亮绿，选错亮红
+  if (state.correctSequence[idx] === String(num)) {
+    setAnswerLight(idx, 'correct');
+  } else {
+    setAnswerLight(idx, 'wrong');
   }
 
   // 自动推进到下一个词
@@ -1537,13 +1624,15 @@ function pressNum(num) {
 
     currentWord.style.display = 'none';
     wordPlaceholder.style.display = 'inline';
-    wordPlaceholder.textContent = '✅ 全部输入完毕，点击提交';
+    wordPlaceholder.textContent = '✅ 正在检查答案...';
     wordDisplayArea.className = 'word-display-area';
 
     statusText.textContent = '全部输入完毕';
-    statusSub.textContent = '点击「提交」检查结果';
+    statusSub.textContent = '正在自动提交...';
 
-    setNumpadEnabled(true);
+    setNumpadEnabled(false);
+    // 自动提交
+    setTimeout(() => submitAnswer(), 500);
     replayBtn.disabled = false;
     checkSubmitReady();
   }
@@ -1551,6 +1640,7 @@ function pressNum(num) {
 
 // ---- 删除最后一个输入 ----
 function deleteLast() {
+  playKeyClick();
   if (!state.canInput || state.isListening || state.isAnswered) return;
   if (state.userSequence.length === 0) return;
 
@@ -1565,10 +1655,12 @@ function deleteLast() {
   if (lastIdx < 0) return;
 
   state.userSequence[lastIdx] = undefined;
-  const slot = $('slot-' + lastIdx);
-  if (slot) {
-    slot.textContent = '';
-    slot.className = 'input-slot';
+
+  // 清除对应灯的脉冲状态
+  const light = $('light-' + lastIdx);
+  if (light) {
+    light.style.background = '';
+    light.style.borderColor = '';
   }
 
   // 回退当前词索引，让用户重新输入该词
@@ -1609,17 +1701,14 @@ function submitAnswer() {
   const correct = state.correctSequence;
   const user = state.userSequence;
 
-  // 逐位比较
+  // 一次性亮灯：对的亮绿，错的亮红
   let allCorrect = true;
   for (let i = 0; i < correct.length; i++) {
-    const slot = $('slot-' + i);
-    if (slot) {
-      if (user[i] === correct[i]) {
-        slot.className = 'input-slot correct-slot';
-      } else {
-        slot.className = 'input-slot wrong-slot';
-        allCorrect = false;
-      }
+    if (user[i] === correct[i]) {
+      setAnswerLight(i, 'correct');
+    } else {
+      setAnswerLight(i, 'wrong');
+      allCorrect = false;
     }
   }
 
@@ -1629,9 +1718,6 @@ function submitAnswer() {
     state.correctCount++;
     state.consecutiveCorrect++;
     state.consecutiveWrong = 0;
-
-    const dot = $('dot-' + state.questionIndex);
-    if (dot) dot.className = 'progress-dot correct';
 
     showFeedbackBadge('⭐', '🎉 全部正确！', true);
     createStarBurst();
@@ -1652,9 +1738,6 @@ function submitAnswer() {
     // 有错误
     state.consecutiveCorrect = 0;
     state.consecutiveWrong++;
-
-    const dot = $('dot-' + state.questionIndex);
-    if (dot) dot.className = 'progress-dot wrong';
 
     showFeedbackBadge('😊', '再检查一下~', false);
 
@@ -1887,6 +1970,36 @@ function updateProgressDots() {
   }
 }
 
+// ---- 答题灯 ----
+function initAnswerLights(count) {
+  const container = $('answerLights');
+  if (!container) return;
+  container.style.visibility = 'visible';
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const light = document.createElement('div');
+    light.className = 'answer-light';
+    light.id = 'light-' + i;
+    container.appendChild(light);
+  }
+}
+
+function resetAnswerLights() {
+  const container = $('answerLights');
+  if (container) {
+    container.innerHTML = '';
+    container.style.visibility = 'hidden';
+  }
+}
+
+function setAnswerLight(index, status) {
+  const light = $('light-' + index);
+  if (!light) return;
+  light.className = 'answer-light animate-' + status;
+}
+
+
+
 // ---- 结束游戏 ----
 function endGame() {
   state.isPlaying = false;
@@ -1977,6 +2090,60 @@ function loadProgress() {
   }
 }
 
+// ---- 音频预加载 ----
+function preloadAllAudio() {
+  var allWords = [];
+  // 收集 MAPPING_DATA 中所有词汇
+  var cats = Object.keys(MAPPING_DATA);
+  for (var i = 0; i < cats.length; i++) {
+    var w = MAPPING_DATA[cats[i]].words;
+    for (var j = 0; j < w.length; j++) allWords.push(w[j]);
+  }
+  // 分类名
+  for (var k = 0; k < cats.length; k++) allWords.push(cats[k]);
+  // 固定短语
+  allWords.push('请听','回答正确','回答错误','太棒了','继续加油','准备好了吗','再听一次','提交答案','初级','中级','高级','简单','中等','困难');
+  // 去重
+  var seen = {};
+  var unique = [];
+  for (var n = 0; n < allWords.length; n++) {
+    if (!seen[allWords[n]]) { seen[allWords[n]] = true; unique.push(allWords[n]); }
+  }
+  var total = unique.length;
+  var loaded = 0;
+  var loadBar = document.getElementById('loadBarFill');
+  var loadText = document.getElementById('loadText');
+  loadText.textContent = '0 / ' + total;
+
+  function loadOne(idx) {
+    if (idx >= total) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      init();
+      return;
+    }
+    var word = unique[idx];
+    if (window.preloadAudio) {
+      window.preloadAudio(word).then(function() {
+        loaded++;
+        loadBar.style.width = Math.round(loaded / total * 100) + '%';
+        loadText.textContent = loaded + ' / ' + total;
+        loadOne(idx + 1);
+      }).catch(function() {
+        loaded++;
+        loadBar.style.width = Math.round(loaded / total * 100) + '%';
+        loadText.textContent = loaded + ' / ' + total;
+        loadOne(idx + 1);
+      });
+    } else {
+      loaded++;
+      loadBar.style.width = Math.round(loaded / total * 100) + '%';
+      loadText.textContent = loaded + ' / ' + total;
+      loadOne(idx + 1);
+    }
+  }
+  loadOne(0);
+}
+
 // ---- 页面加载完成后初始化 ----
 document.addEventListener('DOMContentLoaded', function() {
   // 生成矩阵二进制数字装饰
@@ -1992,7 +2159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     el.style.fontSize = (10 + Math.random() * 8) + 'px';
     document.body.appendChild(el);
   }
-  init();
+  preloadAllAudio();
 });
 </script>
 

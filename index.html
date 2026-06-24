@@ -284,6 +284,14 @@ justify-content: center;
       font-size: 0.85rem;
     }
 
+    .title-hint {
+      color: #FF073A;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-left: 6px;
+      white-space: nowrap;
+    }
+
     /* 占位卡片（开发中） */
     .game-card.placeholder {
       opacity: 0.7;
@@ -603,7 +611,7 @@ justify-content: center;
         <div class="card-content">
           <h2 class="card-title">符号迷宫</h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
-          <p class="card-desc">10×10格子迷宫，从入口(a1)开始，按照 +→−→×→÷ 的顺序连线到右侧绿色箭头出口。只有唯一正确路线！</p>
+          <p class="card-desc">10×10格子迷宫，从入口(a1)开始，按照 +→−→×→÷ 的顺序走到右侧出口。只有唯一正确路线！</p>
           <div class="card-features">
             <span class="feature-tag" style="background:#dbeafe;color:#1d4ed8;">符号识别</span>
             <span class="feature-tag" style="background:#fef3c7;color:#b45309;">路径规划</span>
@@ -1237,7 +1245,7 @@ justify-content: center;
           </svg>
         </div>
         <div class="card-content">
-          <h2 class="card-title">复读机训练</h2>
+          <h2 class="card-title">复读机训练<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">听词语或短句后立即复述。训练听觉短时记忆与语音输出能力。</p>
           <div class="card-features">
@@ -1262,7 +1270,7 @@ justify-content: center;
           </svg>
         </div>
         <div class="card-content">
-          <h2 class="card-title">听动乐园</h2>
+          <h2 class="card-title">听动乐园<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">听颜色词点击对应按钮、听动物指令串按序点击。听动协调训练，适合5-8岁。</p>
           <div class="card-features">
@@ -1290,7 +1298,7 @@ justify-content: center;
           </svg>
         </div>
         <div class="card-content">
-          <h2 class="card-title">长时听觉监控</h2>
+          <h2 class="card-title">长时听觉监控<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">持续听词5-8分钟，听到目标词点击屏幕。低频率目标词，训练持续听觉注意。</p>
           <div class="card-features">
@@ -1315,7 +1323,7 @@ justify-content: center;
           </div>
         </div>
         <div class="card-content">
-          <h2 class="card-title">数字回音壁</h2>
+          <h2 class="card-title">数字回音壁<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">听数字序列，按倒序点击复现。训练听觉工作记忆与听觉转换力。</p>
           <div class="card-features">
@@ -1336,7 +1344,7 @@ justify-content: center;
           <span class="card-icon">👂</span>
         </div>
         <div class="card-content">
-          <h2 class="card-title">听词行动</h2>
+          <h2 class="card-title">听词行动<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">听词语判断所属类别，训练听觉分类与语义理解能力。</p>
           <div class="card-features">
@@ -1357,7 +1365,7 @@ justify-content: center;
           <span class="card-icon">🔊</span>
         </div>
         <div class="card-content">
-          <h2 class="card-title">声波搜索</h2>
+          <h2 class="card-title">声波搜索<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">听目标词在语流中出现的次数，训练听觉警觉与专注力。</p>
           <div class="card-features">
@@ -1378,7 +1386,7 @@ justify-content: center;
           <span class="card-icon">🧩</span>
         </div>
         <div class="card-content">
-          <h2 class="card-title">指令解码器</h2>
+          <h2 class="card-title">指令解码器<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">听编码指令并解码执行，训练听觉译码与执行功能。</p>
           <div class="card-features">
@@ -1399,7 +1407,7 @@ justify-content: center;
           <span class="card-icon">🔍</span>
         </div>
         <div class="card-content">
-          <h2 class="card-title">数字大侦探</h2>
+          <h2 class="card-title">数字大侦探<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">对比两遍数字串找出漏掉的数字，训练听觉辨别与工作记忆。</p>
           <div class="card-features">
@@ -1420,7 +1428,7 @@ justify-content: center;
           <span class="card-icon">📋</span>
         </div>
         <div class="card-content">
-          <h2 class="card-title">逻辑排序站</h2>
+          <h2 class="card-title">逻辑排序站<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
           <p class="card-desc">听打乱顺序的短句重新排列，训练听觉逻辑与顺序理解。</p>
           <div class="card-features">
@@ -1441,9 +1449,9 @@ justify-content: center;
           <span class="card-icon">📖</span>
         </div>
         <div class="card-content">
-          <h2 class="card-title">故事小侦探</h2>
+          <h2 class="card-title">故事小侦探<span class="title-hint">请使用横屏模式</span></h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
-          <p class="card-desc">听故事回答选择题，训练听觉理解与推理判断能力。</p>
+          <p class="card-desc">孩子听故事，父母讲问题孩子回答。训练听觉理解与推理判断能力。</p>
           <div class="card-features">
             <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">听觉理解</span>
             <span class="feature-tag" style="background:#fce4ec;color:#c2185b;">推理判断</span>

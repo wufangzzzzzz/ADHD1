@@ -829,6 +829,25 @@
 .rules-dialog .rd-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;margin-bottom:16px;}
 .rules-dialog button{padding:12px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF5E0E,#FF9800);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,94,14,0.3);}
 .rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+
+.back-btn{
+  position:absolute;top:10px;left:10px;z-index:100;
+  background:rgba(0,0,0,0.06);
+  border:1px solid rgba(0,0,0,0.1);
+  color:rgba(0,0,0,0.55);
+  padding:6px 14px;border-radius:8px;
+  font-size:13px;cursor:pointer;
+  transition:all 0.2s;
+  text-decoration:none;
+}
+.back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
+/* 加载遮罩 */
+#audio-loading-overlay{position:fixed;inset:0;z-index:9999;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.3s;}
+#audio-loading-overlay.hidden{opacity:0;pointer-events:none;}
+.load-title{color:#f0f0f0;font-size:clamp(18px,3vw,24px);font-weight:700;margin-bottom:24px;font-family:'Microsoft YaHei','PingFang SC',sans-serif;}
+.load-bar-wrap{width:min(80vw,320px);height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;}
+.load-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,#FF5E0E,#FFDA00);border-radius:4px;transition:width 0.15s;}
+.load-percent{color:#aaa;font-size:14px;margin-top:12px;font-family:'JetBrains Mono',monospace;}
 </style>
   <script src="public/audio-helper.js"></script>
 <script>
@@ -845,6 +864,8 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
 </script>
 </head>
 <body>
+<div id="audio-loading-overlay"><div class="load-title">加载音频资源...</div><div class="load-bar-wrap"><div class="load-bar-fill" id="load-bar-fill"></div></div><div class="load-percent" id="load-percent">0%</div></div>
+  <button class="back-btn" onclick="location.href='index.html'">← 返回大厅</button>
 <div class="sonic-pulse">
     <div class="pulse-ring"></div>
     <div class="pulse-ring"></div>
@@ -2268,10 +2289,30 @@ function loadProgress() {
   // 预留：可从 localStorage 恢复历史进度
 }
 
-// ---- 初始化 ----
-// 页面加载时调用
-document.addEventListener('DOMContentLoaded', function() {
+// ---- 音频预加载 ----
+async function preloadAllAudio() {
+  const allWords = new Set([...COUNT_WORDS, ...EXTRACT_WORDS, '回答正确', '回答错误', '太棒了', '继续加油', '请听题', '准备好了吗', '计数模式', '提取模式', '再听一次', '提交答案']);
+  const words = [...allWords];
+  const total = words.length;
+  let loaded = 0;
+  const bar = document.getElementById('load-bar-fill');
+  const pct = document.getElementById('load-percent');
+  
+  for (let i = 0; i < words.length; i++) {
+    try { await window.preloadAudio(words[i]); } catch(e) {}
+    loaded++;
+    const progress = Math.round(loaded / total * 100);
+    bar.style.width = progress + '%';
+    pct.textContent = progress + '%';
+  }
+  
+  document.getElementById('audio-loading-overlay').style.display = 'none';
   init();
+}
+
+// ---- 初始化 ----
+document.addEventListener('DOMContentLoaded', function() {
+  preloadAllAudio();
 });
 </script>
 

@@ -353,9 +353,22 @@
       color: #4CAF50;
     }
     
-  </style>
+  
+.back-btn{
+  position:absolute;top:10px;left:10px;z-index:100;
+  background:rgba(0,0,0,0.06);
+  border:1px solid rgba(0,0,0,0.1);
+  color:rgba(0,0,0,0.55);
+  padding:6px 14px;border-radius:8px;
+  font-size:13px;cursor:pointer;
+  transition:all 0.2s;
+  text-decoration:none;
+}
+.back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
+</style>
 </head>
 <body>
+  <button class="back-btn" onclick="location.href='index.html'">← 返回大厅</button>
   <div class="header">
     <h1>划消训练</h1>
     <p class="subtitle">获取更多内容请关注公众号：读写障碍-ADHD之家</p>

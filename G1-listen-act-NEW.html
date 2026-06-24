@@ -623,10 +623,23 @@
 }
 
 
+
+.back-btn{
+  position:absolute;top:10px;left:10px;z-index:100;
+  background:rgba(0,0,0,0.06);
+  border:1px solid rgba(0,0,0,0.1);
+  color:rgba(0,0,0,0.55);
+  padding:6px 14px;border-radius:8px;
+  font-size:13px;cursor:pointer;
+  transition:all 0.2s;
+  text-decoration:none;
+}
+.back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
 </style>
   <script src="public/audio-helper.js?v=4"></script>
 </head>
 <body>
+  <button class="back-btn" onclick="location.href='index.html'">← 返回大厅</button>
 <div class="container">
   <div class="land-left">
   <!-- 标题 -->
