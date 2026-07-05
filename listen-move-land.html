@@ -578,14 +578,16 @@ async function runTrial(){
 		}else{
 			// 指令串:逐词顺序播放,播完前不可点击
 			state.chainStep=0;
+			state.answered=true;
 			// 词间间隔按难度调整：easy 500ms, medium 400ms, hard 300ms
-			var chainPause = ({easy:500,medium:400,hard:300})[state.level]||300;
+			var chainPause = ({easy:500,medium:400,hard:300})[state.diff]||300;
 			for(let i=0;i<q.chain.length;i++){
 				await speakWord(q.chain[i].word);
 				if(i<q.chain.length-1) await sleep(chainPause);
 			}
 			// 播完后才设置目标,允许点击
 			state.chainTargets=q.chain.map(c=>c.id);
+			state.answered=false;
 			document.getElementById('cmd-display').innerHTML='';
 		}
 }
@@ -696,7 +698,11 @@ function showRules(){
 buildModeBtns();
 buildDiffBtns();
 buildBtnsGrid();
-document.addEventListener('DOMContentLoaded',()=>{showRules();});
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',showRules);
+}else{
+  showRules();
+}
 </script>
 </body>
 </html>

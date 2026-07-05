@@ -2222,6 +2222,21 @@ function endGame() {
   const cd = document.getElementById('countdownContainer');
   if (cd) cd.style.display = 'none';
   questionArea.className = 'question-area';
+
+  // 显示结算弹窗
+  let emoji = '💪';
+  let title = '继续加油！';
+  if (rate >= 90) { emoji = '🏆'; title = '太厉害了！'; }
+  else if (rate >= 70) { emoji = '🎉'; title = '做得不错！'; }
+  else if (rate >= 50) { emoji = '👍'; title = '有进步！'; }
+
+  resultEmoji.textContent = emoji;
+  resultTitle.textContent = title;
+  finalCorrect.textContent = correct;
+  finalTotal.textContent = total;
+  finalRate.textContent = rate + '%';
+  finalScore.textContent = state.score;
+  resultOverlay.className = 'overlay show';
 }
 
 // ---- 关闭结算 ----

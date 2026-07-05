@@ -719,6 +719,7 @@
     ];
     
     var audioCtx = null;
+    var countdownInterval = null;
     
     function initAudio() {
       if (!audioCtx) {
@@ -963,12 +964,14 @@
           timerEl.textContent = count;
         } else {
           clearInterval(countdown);
+          countdownInterval = null;
           timerEl.classList.remove('show');
           hideItems();
           canInput = true;
           document.getElementById('status').textContent = '点击格子选择内容';
         }
       }, 1000);
+      countdownInterval = countdown;
     }
     
     // 打开选择器
@@ -1196,7 +1199,9 @@
     function showWrongAndNext() {
       playSound('wrong');
       var dots = document.querySelectorAll('.round-dot');
-      dots[currentRound].classList.add('wrong');
+      if (currentRound < dots.length) {
+        dots[currentRound].classList.add('wrong');
+      }
       
       document.getElementById('gameOverOverlay').classList.add('show');
       
@@ -1241,6 +1246,8 @@
       items = [];
       userInputs = [];
       currentRound = 0;
+      
+      if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
       
       document.getElementById('winOverlay').classList.remove('show');
       document.getElementById('gameOverOverlay').classList.remove('show');

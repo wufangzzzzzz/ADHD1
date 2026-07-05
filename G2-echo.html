@@ -1093,7 +1093,13 @@ function selectLevel(level) {
   // 重置子等级
   state.subLevel = 0;
   updateSubLevelDisplay();
-  updateInfoBar();
+  state.questionIndex = 0;
+  state.score = 0;
+  state.correctCount = 0;
+  state.totalAnswered = 0;
+  qNum.textContent = '-';
+  scoreDisplay.textContent = '0';
+  progressDisplay.textContent = '0/10';
   resetProgressDots();
   setInputEnabled(false);
   replayBtn.disabled = true;
@@ -1605,7 +1611,13 @@ function selectSubLevel(index) {
   state.gameOver = false;
   state.subLevel = index;
   updateSubLevelDisplay();
-  updateInfoBar();
+  state.questionIndex = 0;
+  state.score = 0;
+  state.correctCount = 0;
+  state.totalAnswered = 0;
+  qNum.textContent = '-';
+  scoreDisplay.textContent = '0';
+  progressDisplay.textContent = '0/10';
   resetProgressDots();
   setInputEnabled(false);
   replayBtn.disabled = true;
@@ -1667,7 +1679,7 @@ document.addEventListener('keydown', e => {
 <div class="rules-overlay" id="rulesOverlay">
 <div class="rules-dialog">
 <h2>🎮 数字回音壁</h2>
-<p>听一串数字，然后<b>倒序</b>输入你听到的数字。</p><p>例如听到"1-2-3"，你应该输入"3-2-1"。</p><p>共12题，答对越多越好！</p>
+<p>听一串数字，然后<b>倒序</b>输入你听到的数字。</p><p>例如听到"1-2-3"，你应该输入"3-2-1"。</p><p>共10题，答对越多越好！</p>
 <p class="rd-note">每次进入游戏都会显示，点击下方按钮开始</p>
 <button onclick="closeRules()">我知道了，开始游戏！</button>
 </div>

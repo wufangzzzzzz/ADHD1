@@ -912,6 +912,7 @@ function init() {
 function selectSubLevel(subLevel) {
   if (state.isPlaying || state.isListening) {
     if (window.stopAllAudio) window.stopAllAudio();
+    if (state.timerId) clearInterval(state.timerId);
     state.isPlaying = false;
     state.isListening = false;
     state.subLevel = subLevel === 'easy' ? 0 : subLevel === 'medium' ? 1 : 2;
@@ -932,6 +933,7 @@ function selectSubLevel(subLevel) {
 function selectLevel(level) {
   if (state.isPlaying || state.isListening) {
     if (window.stopAllAudio) window.stopAllAudio();
+    if (state.timerId) clearInterval(state.timerId);
     state.level = level;
     state.subLevel = 0;
     updateSubLevelDisplay();
@@ -1173,6 +1175,7 @@ function renderCategories(categories) {
       var btn = document.createElement('button');
       btn.className = 'category-btn';
       btn.textContent = cat;
+      btn.dataset.category = cat;
       // Map category names to image class names
       var catImgMap = {
         '水果': 'fruits',

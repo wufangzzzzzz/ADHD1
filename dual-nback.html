@@ -221,32 +221,27 @@ body{
   color:rgba(255,255,255,0.8);
 }
 
-.rules-overlay{
-  position:fixed;top:0;left:0;width:100%;height:100%;
-  background:rgba(0,0,0,0.5);
-  display:flex;align-items:center;justify-content:center;
-  z-index:100;
+.rules-inline{
+  margin-top:8px;
+  padding:10px;
+  background:rgba(255,255,255,0.04);
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.06);
 }
-.rules-dialog{
-  background:#fff;
-  border-radius:20px;
-  padding:24px;
-  max-width:400px;
-  width:90%;
-  box-shadow:0 8px 40px rgba(0,0,0,0.2);
+.rules-inline .rules-title{
+  font-size:12px;font-weight:700;
+  color:rgba(255,255,255,0.9);
+  margin-bottom:6px;
 }
-.rules-dialog h2{
-  font-size:20px;font-weight:800;
-  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-  margin-bottom:12px;
+.rules-inline .rules-item{
+  font-size:11px;
+  color:rgba(255,255,255,0.65);
+  line-height:1.7;
+  margin-bottom:4px;
 }
-.rules-dialog p{
-  font-size:14px;color:#2D2B55;line-height:1.7;
-  margin-bottom:8px;
+.rules-inline .rules-item b{
+  color:rgba(255,255,255,0.85);
 }
-.rules-dialog .btn{margin-top:12px;width:100%;}
 
 .back-btn{
   position:absolute;top:10px;left:10px;z-index:100;
@@ -276,7 +271,13 @@ body{
       </div>
     </div>
     <button class="btn btn-primary" id="btnStart" onclick="startGame()" style="margin-top:8px;width:100%;">开始训练</button>
-    <button class="btn btn-secondary" onclick="showRules()" style="margin-top:4px;width:100%;">玩法说明</button>
+    <div class="rules-inline">
+      <div class="rules-title">玩法说明</div>
+      <div class="rules-item"><b>训练目标：</b>视听双通道工作记忆。同时追踪方块位置和字母，分别判断是否与N步前匹配。</div>
+      <div class="rules-item"><b>操作方式：</b>观察方块位置+听字母→点击格子=位置匹配→点击字母=字母匹配→键盘A/L也可→可同时操作。</div>
+      <div class="rules-item"><b>自适应N级：</b>综合正确率≥80%则N+1；正确率<50%累计3次则N-1。</div>
+      <div class="rules-item"><b>难度：</b>初级1-back/3s；中级2-back/2.5s；高级2-back/2s。</div>
+    </div>
   </div>
 
   <div class="right-panel" id="rightPanel">
@@ -311,19 +312,8 @@ body{
       <div class="result-row"><span>视觉正确率</span><span class="rv" id="rVis">-</span></div>
       <div class="result-row"><span>听觉正确率</span><span class="rv" id="rAud">-</span></div>
       <div class="result-row"><span>综合得分</span><span class="rv" id="rScore">-</span></div>
-      <button class="btn btn-primary" onclick="startGame()" style="margin-top:8px;">再玩一次</button>
+      <button class="btn btn-primary" onclick="resetToIdle()" style="margin-top:8px;">再玩一次</button>
     </div>
-  </div>
-</div>
-
-<div class="rules-overlay" id="rulesOverlay" style="display:none;">
-  <div class="rules-dialog">
-    <h2>玩法说明</h2>
-    <p><b>训练目标：</b>视听双通道工作记忆。同时追踪方块位置和字母，分别判断是否与N步前匹配。</p>
-    <p><b>操作方式：</b>观察方块位置+听字母→点击格子=位置匹配→点击字母=字母匹配→键盘A/L也可→可同时操作。</p>
-    <p><b>自适应N级：</b>综合正确率≥80%则N+1；正确率<50%累计3次则N-1。</p>
-    <p><b>难度：</b>初级1-back/3s；中级2-back/2.5s；高级2-back/2s。</p>
-    <button class="btn btn-primary" onclick="hideRules()">知道了</button>
   </div>
 </div>
 
@@ -365,6 +355,76 @@ const statusText = document.getElementById('statusText');
 const resultCard = document.getElementById('resultCard');
 const btnStart = document.getElementById('btnStart');
 
+// ========== 音频系统 ==========
+let audioCtx = null;
+function initAudio(){
+  if(!audioCtx){
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e){ audioCtx = null; }
+  }
+  if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); }
+}
+
+// 亮灯提示音 — 短促电子音 600Hz 80ms
+function playBlipSound(){
+  if(!audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 600;
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.08);
+}
+
+// 字母语音朗读
+function speakLetter(letter){
+  if('speechSynthesis' in window){
+    try {
+      speechSynthesis.cancel();
+      var utter = new SpeechSynthesisUtterance(letter);
+      utter.lang = 'en-US';
+      utter.rate = 1.0;
+      utter.pitch = 1.0;
+      utter.volume = 0.8;
+      speechSynthesis.speak(utter);
+    } catch(e){}
+  }
+}
+
+// 答题正确音效 — 清脆"叮" 800Hz 100ms
+function playCorrectSound(){
+  if(!audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 800;
+  gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
+// 答题错误音效 — 低沉"嘟" 200Hz 150ms
+function playWrongSound(){
+  if(!audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.value = 200;
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.15);
+}
+
 document.querySelector('.left-panel').addEventListener('click',e=>{
   if(!e.target.classList.contains('diff-btn')) return;
   document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
@@ -373,8 +433,23 @@ document.querySelector('.left-panel').addEventListener('click',e=>{
   if(state.running) stopGame();
 });
 
+function resetToIdle(){
+  if(state.running) stopGame();
+  resultCard.classList.remove('show');
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.getElementById('nLevel').textContent = 'N = -';
+  document.getElementById('blockNum').textContent = '0/0';
+  document.getElementById('trialNum').textContent = '0/0';
+  document.getElementById('visAcc').textContent = '-';
+  document.getElementById('audAcc').textContent = '-';
+  btnStart.textContent = '开始训练';
+  btnStart.style.background = '';
+  statusText.textContent = '选择难度后点击开始';
+}
+
 function startGame(){
   if(state.running) return;
+  initAudio();
   const cfg = DIFFICULTY[state.level];
   state.n = cfg.startN;
   state.blockIdx = 0;
@@ -427,7 +502,7 @@ async function runBlock(){
     } else {
       do {
         pos = Math.floor(Math.random() * 9);
-      } while(posShouldMatch && pos === state.posHistory[state.posHistory.length - state.n]);
+      } while(pos === state.posHistory[state.posHistory.length - state.n]);
       state.posMatch = false;
     }
 
@@ -440,7 +515,7 @@ async function runBlock(){
     } else {
       do {
         letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
-      } while(letterShouldMatch && letter === state.letterHistory[state.letterHistory.length - state.n]);
+      } while(letter === state.letterHistory[state.letterHistory.length - state.n]);
       state.letterMatch = false;
     }
 
@@ -510,6 +585,12 @@ async function runBlock(){
 function highlightCell(pos){
   grid.querySelectorAll('.cell').forEach(c=>c.classList.remove('lit'));
   grid.children[pos].classList.add('lit');
+  // 亮灯提示音
+  playBlipSound();
+  // 字母语音朗读（补全听觉通道）
+  if(state.currentLetter){
+    speakLetter(state.currentLetter);
+  }
 }
 function stopGame(){
   state.running = false;
@@ -519,6 +600,7 @@ function stopGame(){
   statusText.textContent = '请点击开始训练';
   btnStart.textContent = '开始训练';
   btnStart.style.background = '';
+  if('speechSynthesis' in window) speechSynthesis.cancel();
 }
 function clearCells(){
   grid.querySelectorAll('.cell').forEach(c=>c.classList.remove('lit'));
@@ -535,9 +617,11 @@ function onPosMatch(){
     state.blockPosCorrect++;
     document.getElementById('dotPos').classList.add('green');
     setTimeout(()=>document.getElementById('dotPos').classList.remove('green'),300);
+    playCorrectSound();
   } else {
     document.getElementById('dotPos').classList.add('red');
     setTimeout(()=>document.getElementById('dotPos').classList.remove('red'),300);
+    playWrongSound();
   }
   updateUI();
 }
@@ -553,9 +637,11 @@ function onLetterMatch(){
     state.blockAudCorrect++;
     document.getElementById('dotLetter').classList.add('green');
     setTimeout(()=>document.getElementById('dotLetter').classList.remove('green'),300);
+    playCorrectSound();
   } else {
     document.getElementById('dotLetter').classList.add('red');
     setTimeout(()=>document.getElementById('dotLetter').classList.remove('red'),300);
+    playWrongSound();
   }
   updateUI();
 }
@@ -577,6 +663,7 @@ function endGame(){
   letterDisplay.textContent = '';
   btnStart.textContent = '开始训练';
   btnStart.style.background = '';
+  if('speechSynthesis' in window) speechSynthesis.cancel();
   const avgN = state.blockResults.length > 0
     ? Math.round(state.blockResults.reduce((s,r)=>s+r.n,0) / state.blockResults.length * 10) / 10
     : state.n;
@@ -611,20 +698,6 @@ function updateUI(){
 }
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-
-function showRules(){
-  document.getElementById('rulesOverlay').style.display = 'flex';
-}
-function hideRules(){
-  document.getElementById('rulesOverlay').style.display = 'none';
-}
-
-document.addEventListener('DOMContentLoaded',()=>{
-  if(!localStorage.getItem('dual_nback_rules_shown')){
-    showRules();
-    localStorage.setItem('dual_nback_rules_shown','1');
-  }
-});
 </script>
 </body>
 </html>

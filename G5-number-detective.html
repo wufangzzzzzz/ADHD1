@@ -1524,9 +1524,9 @@ function confirmAnswer() {
     scoreDisplay.textContent = state.score;
 
     // 自适应
+    state.questionIndex++;
     checkAdaptation();
 
-    state.questionIndex++;
     setTimeout(() => startQuestion(), 1800);
   } else {
     // 错误
@@ -1546,9 +1546,9 @@ function confirmAnswer() {
     questionSub.textContent = '加油，再来一次！';
 
     // 自适应
+    state.questionIndex++;
     checkAdaptation();
 
-    state.questionIndex++;
     setTimeout(() => startQuestion(), 2500);
   }
 }
@@ -1610,7 +1610,7 @@ function updateNumpadForRange() {
 function updateInfoBar() {
   const config = LEVEL_CONFIG[state.level];
   const subConfig = config.subLevels[state.subLevel];
-  levelDisplay.textContent = subConfig.label || (config.label + ' · ' + subConfig.label);
+  levelDisplay.textContent = config.label + ' · ' + subConfig.label;
   scoreDisplay.textContent = state.score;
 }
 

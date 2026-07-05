@@ -134,45 +134,7 @@
       color: #FFD700;
     }
     
-    .target-display {
-      background: rgba(255,255,255,0.15);
-      padding: 10px 20px;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    
-    .target-label {
-      font-size: 12px;
-      color: rgba(255,255,255,0.8);
-      margin-bottom: 5px;
-    }
-    
-    .target-content {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 15px;
-    }
-    
-    .target-number {
-      font-size: 36px;
-      font-weight: bold;
-      color: #4FC3F7;
-    }
-    
-    .target-arrow {
-      font-size: 24px;
-      color: rgba(255,255,255,0.6);
-    }
-    
-    .target-mirror {
-      font-size: 36px;
-      font-weight: bold;
-      color: #FF9800;
-      transform: scaleX(-1);
-      display: inline-block;
-    }
+    .target-display { display: none; }
     
     .game-area {
       background: white;
@@ -187,9 +149,35 @@
       box-sizing: border-box;
     }
     
+    .orient-btn {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .orient-btn.active {
+      border-color: #FF9800;
+      background: rgba(255,152,0,0.3);
+      color: white;
+    }
+
+    .target-item {
+      min-width: 60px;
+    }
+
+    .target-number-inline {
+      font-size: 22px !important;
+      color: #f44336 !important;
+    }
+
     .grid {
       display: grid;
-      grid-template-columns: repeat(20, 1fr);
       gap: 4px;
       margin: 0 auto;
       max-width: 100%;
@@ -307,50 +295,103 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       display: none;
       z-index: 2000;
       align-items: center;
       justify-content: center;
     }
-    
+
     .win-overlay.show {
       display: flex;
       animation: fadeIn 0.3s;
     }
-    
+
     .win-content {
       text-align: center;
       animation: winBounce 0.8s ease-out;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 30px 40px;
+      max-width: 360px;
+      width: 90%;
     }
-    
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    
+
     @keyframes winBounce {
       0% { transform: scale(0); opacity: 0; }
-      50% { transform: scale(1.2); }
-      70% { transform: scale(0.9); }
+      50% { transform: scale(1.1); }
+      70% { transform: scale(0.95); }
       100% { transform: scale(1); opacity: 1; }
     }
-    
+
     .win-emoji {
-      font-size: 60px;
+      font-size: 56px;
+      margin-bottom: 10px;
+    }
+
+    .win-grade {
+      font-size: 28px;
+      font-weight: 900;
       margin-bottom: 15px;
     }
-    
+
     .win-time {
-      font-size: 36px;
+      font-size: 32px;
       font-weight: bold;
       color: #FFD700;
       margin-bottom: 10px;
     }
-    
-    .win-text {
+
+    .win-stats {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .win-stat-item {
+      text-align: center;
+    }
+
+    .win-stat-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .win-stat-value {
       font-size: 18px;
+      font-weight: bold;
+    }
+
+    .win-index {
+      font-size: 14px;
+      color: #4FC3F7;
+      margin-bottom: 15px;
+    }
+
+    .win-text {
+      font-size: 16px;
       color: #4CAF50;
+      margin-bottom: 20px;
+    }
+
+    .win-btn {
+      padding: 10px 30px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      color: white;
+      transition: all 0.3s;
     }
     
   
@@ -390,9 +431,15 @@
       <option value="草字头">草字头</option>
       <option value="三点水">三点水</option>
     </select>
+    <button class="orient-btn active" id="orientH" onclick="setOrientation('horizontal')">横版</button>
+    <button class="orient-btn" id="orientV" onclick="setOrientation('vertical')">竖版</button>
   </div>
-  
+
   <div class="info-bar">
+    <div class="info-item target-item">
+      <div class="info-label">找出</div>
+      <div class="info-value target-number-inline" id="targetNumber">-</div>
+    </div>
     <div class="info-item">
       <div class="info-label">用时</div>
       <div class="info-value" id="timer">0.0s</div>
@@ -404,15 +451,6 @@
     <div class="info-item">
       <div class="info-label">正确率</div>
       <div class="info-value" id="accuracy">100%</div>
-    </div>
-  </div>
-  
-  <div class="target-display">
-    <div class="target-label" id="targetLabel">请找出所有</div>
-    <div class="target-content">
-      <span class="target-number" id="targetNumber">-</span>
-      <span class="target-arrow">→</span>
-      <span class="target-mirror" id="targetMirror">-</span>
     </div>
   </div>
   
@@ -428,9 +466,26 @@
   
   <div class="win-overlay" id="winOverlay">
     <div class="win-content">
-      <div class="win-emoji">🎉</div>
+      <div class="win-emoji" id="winEmoji">🎉</div>
+      <div class="win-grade" id="winGrade">优秀</div>
       <div class="win-time" id="winTime">0.0秒</div>
-      <div class="win-text">全部找到！</div>
+      <div class="win-stats">
+        <div class="win-stat-item">
+          <div class="win-stat-label">正确率</div>
+          <div class="win-stat-value" id="winAccuracy" style="color:#4CAF50;">100%</div>
+        </div>
+        <div class="win-stat-item">
+          <div class="win-stat-label">找到</div>
+          <div class="win-stat-value" id="winFound" style="color:#FFD700;">0/0</div>
+        </div>
+        <div class="win-stat-item">
+          <div class="win-stat-label">误点</div>
+          <div class="win-stat-value" id="winWrong" style="color:#f44336;">0</div>
+        </div>
+      </div>
+      <div class="win-index" id="winIndex">注意力指数：0.0</div>
+      <div class="win-text" id="winText">全部找到！</div>
+      <button class="win-btn" onclick="closeWin()">再来一次</button>
     </div>
   </div>
   
@@ -448,6 +503,7 @@
     
     var ROWS = 12;
     var COLS = 20;
+    var orientation = 'horizontal';
     var mode = 'number';
     var grid = [];
     var targetValue = '';
@@ -533,6 +589,22 @@
       } catch (e) {}
     }
     
+    function setOrientation(o) {
+      orientation = o;
+      if (o === 'horizontal') {
+        ROWS = 12;
+        COLS = 20;
+      } else {
+        ROWS = 20;
+        COLS = 18;
+      }
+      document.getElementById('orientH').classList.toggle('active', o === 'horizontal');
+      document.getElementById('orientV').classList.toggle('active', o === 'vertical');
+      document.getElementById('grid').style.gridTemplateColumns = 'repeat(' + COLS + ', 1fr)';
+      resetGame();
+      initGrid();
+    }
+
     function setMode(m) {
       mode = m;
       document.getElementById('modeNumber').classList.toggle('active', m === 'number');
@@ -543,16 +615,12 @@
       var templateSelect = document.getElementById('wordTemplateSelect');
       templateSelect.style.display = m === 'word' ? 'inline-block' : 'none';
       
-      // 更新目标显示标签
-      document.getElementById('targetMirror').style.display = 'none';
-      document.querySelector('.target-arrow').style.display = 'none';
-      
       if (m === 'number') {
-        document.getElementById('targetLabel').textContent = '请找出所有';
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
       } else if (m === 'letter') {
-        document.getElementById('targetLabel').textContent = '请找出字母';
+        document.getElementById('status').textContent = '快速找出所有镜像字母 ' + targetValue + '！';
       } else if (m === 'word') {
-        document.getElementById('targetLabel').textContent = '请找出文字';
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
       }
       
       resetGame();
@@ -629,15 +697,8 @@
     }
     
     function selectTarget() {
-      // 显示目标
-      if (mode === 'number') {
-        document.getElementById('targetNumber').textContent = targetValue;
-      } else if (mode === 'letter') {
-        document.getElementById('targetNumber').textContent = targetValue;
-      } else if (mode === 'word') {
-        document.getElementById('targetNumber').textContent = targetValue;
-      }
-      
+      // 显示目标（在info-bar的targetNumber中）
+      document.getElementById('targetNumber').textContent = targetValue;
       document.getElementById('found').textContent = '0/' + targetCells.length;
     }
     
@@ -679,6 +740,7 @@
     }
     
     function startGame() {
+      clearInterval(timerInterval);
       gameStarted = true;
       gameEnded = false;
       foundCount = 0;
@@ -707,16 +769,48 @@
     function endGame() {
       gameEnded = true;
       clearInterval(timerInterval);
-      
+
       var elapsed = (Date.now() - startTime) / 1000;
+      var total = foundCount + wrongCount;
+      var accuracy = total === 0 ? 100 : Math.round((foundCount / total) * 100);
+
+      // 注意力指数 = (总格数 / 用时) × ((正确数 - 错误数) / 应找数)
+      var totalCells = ROWS * COLS;
+      var netCorrect = foundCount - wrongCount;
+      if (netCorrect < 0) netCorrect = 0;
+      var index = (totalCells / elapsed) * (netCorrect / targetCells.length);
+
+      // 判定级别
+      var grade, emoji, color;
+      if (index >= 6.0) {
+        grade = '卓越'; emoji = '🏆'; color = '#FFD700';
+      } else if (index >= 4.0) {
+        grade = '优秀'; emoji = '⭐'; color = '#FF9800';
+      } else if (index >= 2.5) {
+        grade = '良好'; emoji = '👍'; color = '#4CAF50';
+      } else if (index >= 1.5) {
+        grade = '合格'; emoji = '✅'; color = '#4FC3F7';
+      } else {
+        grade = '需提升'; emoji = '💪'; color = '#9C27B0';
+      }
+
+      document.getElementById('winEmoji').textContent = emoji;
+      var gradeEl = document.getElementById('winGrade');
+      gradeEl.textContent = grade;
+      gradeEl.style.color = color;
       document.getElementById('winTime').textContent = elapsed.toFixed(1) + '秒';
+      document.getElementById('winAccuracy').textContent = accuracy + '%';
+      document.getElementById('winFound').textContent = foundCount + '/' + targetCells.length;
+      document.getElementById('winWrong').textContent = wrongCount;
+      document.getElementById('winIndex').textContent = '注意力指数：' + index.toFixed(1);
       document.getElementById('winOverlay').classList.add('show');
-      
+
       playSound('win');
-      
-      setTimeout(function() {
-        document.getElementById('winOverlay').classList.remove('show');
-      }, 3000);
+    }
+
+    function closeWin() {
+      document.getElementById('winOverlay').classList.remove('show');
+      startGame();
     }
     
     function resetGame() {
@@ -734,7 +828,6 @@
       document.getElementById('found').textContent = '0/0';
       document.getElementById('accuracy').textContent = '100%';
       document.getElementById('targetNumber').textContent = '-';
-      document.getElementById('targetMirror').textContent = '-';
       document.getElementById('status').textContent = '点击开始按钮开始训练';
       document.getElementById('winOverlay').classList.remove('show');
       
@@ -749,6 +842,7 @@
     function initGrid() {
       var container = document.getElementById('grid');
       container.innerHTML = '';
+      container.style.gridTemplateColumns = 'repeat(' + COLS + ', 1fr)';
       grid = [];
       
       // 确定目标值
@@ -799,9 +893,6 @@
     // 页面加载完成后初始化
     window.addEventListener('load', function() {
       initGrid();
-      // 默认隐藏字母镜像
-      document.getElementById('targetMirror').style.display = 'none';
-      document.querySelector('.target-arrow').style.display = 'none';
     });
   </script>
 </body>

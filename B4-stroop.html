@@ -129,7 +129,7 @@ body{
 .modal-card .btn-home{background:rgba(232,213,245,0.06);color:rgba(232,213,245,0.6);border:1px solid rgba(232,213,245,0.15);}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 /* 规则弹窗 */
-.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:100;}
 .rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
 .rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
 .rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
@@ -302,6 +302,18 @@ function generateTrials(){
   return trials;
 }
 
+function resetToIdle(){
+  state.running=false;
+  document.getElementById('start-btn').disabled=false;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.getElementById('stroop-word').textContent='';
+  document.getElementById('color-options').innerHTML='';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('trial-info').textContent='';
+  const modal=document.querySelector('.modal-overlay');
+  if(modal) modal.remove();
+}
+
 function startGame(){
   if(state.running)return;initAudio();
   state.trials=generateTrials();state.currentTrial=0;state.score=0;state.results=[];state.running=true;
@@ -395,7 +407,7 @@ function endGame(){
   if(a>=85)grade='优秀（抑制达人）';else if(a>=70)grade='良好';else if(a>=50)grade='需努力';else grade='继续加油';
   const old=document.querySelector('.modal-overlay');if(old)old.remove();
   const overlay=document.createElement('div');overlay.className='modal-overlay show';
-  overlay.innerHTML='<div class="modal-card"><div class="result-title">训练完成！</div><div class="result-subtitle">'+grade+'</div><div class="result-grid"><div class="result-item"><div class="val">'+acc+'%</div><div class="lbl">总正确率</div></div><div class="result-item"><div class="val">'+conflictAcc+'%</div><div class="lbl">冲突正确率</div></div><div class="result-item"><div class="val">'+interference+'%</div><div class="lbl">干扰效应</div></div><div class="result-item"><div class="val">'+avgRT+'ms</div><div class="lbl">平均反应时</div></div></div><div class="result-btns"><button class="btn-retry" onclick="this.closest(\'.modal-overlay\').remove();startGame();">再来一次</button><button class="btn-home" onclick="location.href=\'index.html\'">返回大厅</button></div></div>';
+  overlay.innerHTML='<div class="modal-card"><div class="result-title">训练完成！</div><div class="result-subtitle">'+grade+'</div><div class="result-grid"><div class="result-item"><div class="val">'+acc+'%</div><div class="lbl">总正确率</div></div><div class="result-item"><div class="val">'+conflictAcc+'%</div><div class="lbl">冲突正确率</div></div><div class="result-item"><div class="val">'+interference+'%</div><div class="lbl">干扰效应</div></div><div class="result-item"><div class="val">'+avgRT+'ms</div><div class="lbl">平均反应时</div></div></div><div class="result-btns"><button class="btn-retry" onclick="this.closest(\'.modal-overlay\').remove();resetToIdle();">再来一次</button><button class="btn-home" onclick="location.href=\'index.html\'">返回大厅</button></div></div>';
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   document.body.appendChild(overlay);
   try{const data=JSON.parse(localStorage.getItem('b4_stroop')||'{}');data[state.level+'-'+state.subLevel]={acc,conflictAcc,interference,avgRT,date:new Date().toISOString()};localStorage.setItem('b4_stroop',JSON.stringify(data));}catch(e){}

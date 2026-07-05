@@ -808,6 +808,19 @@ function nextTrial(){
   setTimeout(()=>runTrial(),300);
 }
 
+function resetToIdle(){
+  state.running=false;
+  document.getElementById('start-btn').disabled=false;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.getElementById('stimulus-content').innerHTML='';
+  document.getElementById('hint-bar').style.opacity='0.3';
+  document.getElementById('score').textContent='0';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('trial-info').textContent='';
+  const card=document.querySelector('.result-card');
+  if(card) card.remove();
+}
+
 function endGame(){
   state.running=false;
   document.getElementById('start-btn').disabled=false;
@@ -849,7 +862,7 @@ function endGame(){
     </div>
     <div class="result-grade">${grade}</div>
     <div class="result-btns">
-      <button class="btn-retry" onclick="this.closest('.result-card').remove();startGame();">再来一次</button>
+      <button class="btn-retry" onclick="this.closest('.result-card').remove();resetToIdle();">再来一次</button>
       <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
     </div>
   `;

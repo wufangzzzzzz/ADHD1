@@ -246,18 +246,50 @@
         color: #fff;
       }
 
+      /* 工具栏行 */
+      .difficulty-row {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 0;
+      }
+
+      .layout-row {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 0;
+      }
+
+      .effects-row {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 0;
+      }
+
+      .row-label {
+        font-size: 10px;
+        color: #999;
+        margin-right: 4px;
+        flex-shrink: 0;
+        min-width: 28px;
+      }
+
       .mode-group {
         display: flex;
         gap: 2px;
         flex-shrink: 0;
-        margin-left: 4px;
       }
 
       .mode-btn {
         padding: 3px 6px;
-        border: 1px solid #e91e63;
+        border: 1px solid #00897B;
         background: #fff;
-        color: #e91e63;
+        color: #00897B;
         border-radius: 6px;
         font-family: inherit;
         font-size: 12px;
@@ -268,14 +300,73 @@
 
       .mode-btn:hover,
       .mode-btn:active {
-        background: #e91e63;
+        background: #00897B;
         color: #fff;
       }
 
       .mode-btn.active {
-        background: #e91e63;
+        background: #00897B;
         color: #fff;
       }
+
+      /* 叠加效果按钮 */
+      .effect-btn {
+        padding: 3px 6px;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+        background: #fff;
+      }
+
+      /* 换字 — 蓝色 */
+      .effect-btn.font {
+        border: 1px solid #2196F3;
+        color: #2196F3;
+      }
+      .effect-btn.font:hover,
+      .effect-btn.font.active {
+        background: #2196F3;
+        color: #fff;
+      }
+
+      /* 虚无 — 紫色 */
+      .effect-btn.void {
+        border: 1px solid #9C27B0;
+        color: #9C27B0;
+      }
+      .effect-btn.void:hover,
+      .effect-btn.void.active {
+        background: #9C27B0;
+        color: #fff;
+      }
+
+      /* 毁灭 — 粉色（方形默认） */
+      .effect-btn.destroy {
+        border: 1px solid #E91E63;
+        color: #E91E63;
+      }
+      .effect-btn.destroy:hover,
+      .effect-btn.destroy.active {
+        background: #E91E63;
+        color: #fff;
+      }
+
+      /* 毁灭子状态色 */
+      .effect-btn.destroy.state1 { border-color: #FF5722; color: #FF5722; }
+      .effect-btn.destroy.state1:hover,
+      .effect-btn.destroy.state1.active { background: #FF5722; color: #fff; }
+      .effect-btn.destroy.state2 { border-color: #9C27B0; color: #9C27B0; }
+      .effect-btn.destroy.state2:hover,
+      .effect-btn.destroy.state2.active { background: #9C27B0; color: #fff; }
+      .effect-btn.destroy.state3 { border-color: #00BCD4; color: #00BCD4; }
+      .effect-btn.destroy.state3:hover,
+      .effect-btn.destroy.state3.active { background: #00BCD4; color: #fff; }
+      .effect-btn.destroy.state4 { border-color: #FFD700; color: #FFD700; }
+      .effect-btn.destroy.state4:hover,
+      .effect-btn.destroy.state4.active { background: #FFD700; color: #333; }
 
       /* 混乱模式摆动动画 */
       @keyframes swing {
@@ -292,6 +383,37 @@
 
       .grid-cell .number-text.chaos-mode {
         animation: swing 2s ease-in-out infinite;
+      }
+
+      /* 变体模式SVG文字混乱摆动 */
+      .variant-text.chaos-mode {
+        animation: variantSwing 2s ease-in-out infinite;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      @keyframes variantSwing {
+        0% { transform: rotate(var(--start-angle, 0deg)); }
+        50% { transform: rotate(var(--end-angle, 0deg)); }
+        100% { transform: rotate(var(--start-angle, 0deg)); }
+      }
+
+      /* 马赛克模式SVG文字混乱摆动 */
+      .mosaic-text.chaos-mode {
+        animation: swing 2s ease-in-out infinite;
+      }
+
+      /* 马赛克选对/选错动画 */
+      @keyframes mosaicPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+        100% { transform: scale(1); }
+      }
+      @keyframes mosaicShake {
+        0% { transform: translate(0, 0); }
+        25% { transform: translate(-3px, 2px); }
+        50% { transform: translate(3px, -2px); }
+        75% { transform: translate(-2px, -1px); }
+        100% { transform: translate(0, 0); }
       }
 
       /* 游戏区域 */
@@ -315,6 +437,13 @@
         border-radius: 8px;
         box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         margin-top: -15px;
+      }
+      .circular-container,
+      .variant-container,
+      .mosaic-container {
+        display: none;
+        justify-content: center;
+        align-items: center;
       }
 
       /* 虚无模式 - 边框放射颜色动画 */
@@ -424,49 +553,20 @@
       }
       .sector-text.void-text { fill: #ffffff !important; stroke: #ffffff !important; }
 
-      /* 毁灭模式1 - 背景颜色变换效果 */
+      /* 毁灭模式1 - hue-rotate 色相平滑流转，JS内联随机时长避免列同步 */
       .grid-cell.destroy-mode-1 {
-        animation: destroyBg1 3s ease-in-out infinite;
-      }
-      .grid-cell.destroy-mode-1:nth-child(2n) {
-        animation: destroyBg2 4s ease-in-out infinite;
-      }
-      .grid-cell.destroy-mode-1:nth-child(3n) {
-        animation: destroyBg3 5s ease-in-out infinite;
-      }
-      .grid-cell.destroy-mode-1:nth-child(4n) {
-        animation: destroyBg1 3.5s ease-in-out infinite reverse;
-      }
-      .grid-cell.destroy-mode-1:nth-child(5n) {
-        animation: destroyBg2 4.5s ease-in-out infinite;
-      }
-      .grid-cell.destroy-mode-1:nth-child(7n) {
-        animation: destroyBg3 5.5s ease-in-out infinite reverse;
+        background: linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb);
+        animation: destroyHue 8s linear infinite;
       }
       .grid-cell.destroy-mode-1 .number-text {
-        color: #fff !important;
-        text-shadow: 0 0 8px rgba(255,255,255,0.8), 0 0 15px rgba(255,255,255,0.5);
+        color: #333 !important;
+        text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff;
       }
 
-      /* 毁灭模式1动画 - 背景颜色循环变换 */
-      @keyframes destroyBg1 {
-        0% { background: linear-gradient(135deg, #ff0000, #ff7700, #ffff00); }
-        33% { background: linear-gradient(135deg, #00ff00, #00ffff, #0000ff); }
-        66% { background: linear-gradient(135deg, #ff00ff, #ff1493, #da70d6); }
-        100% { background: linear-gradient(135deg, #ff0000, #ff7700, #ffff00); }
-      }
-      @keyframes destroyBg2 {
-        0% { background: linear-gradient(225deg, #ff1493, #da70d6, #9370db, #7b68ee); }
-        25% { background: linear-gradient(225deg, #7b68ee, #00ced1, #20b2aa, #00fa9a); }
-        50% { background: linear-gradient(225deg, #00fa9a, #7fffd4, #40e0d0, #00bfff); }
-        75% { background: linear-gradient(225deg, #00bfff, #1e90ff, #6495ed, #9370db); }
-        100% { background: linear-gradient(225deg, #9370db, #ba55d3, #ff69b4, #ff1493); }
-      }
-      @keyframes destroyBg3 {
-        0% { background: linear-gradient(45deg, #ff0000, #ff1493, #da70d6); }
-        33% { background: linear-gradient(45deg, #da70d6, #7b68ee, #00ced1); }
-        66% { background: linear-gradient(45deg, #00ced1, #00bfff, #1e90ff); }
-        100% { background: linear-gradient(45deg, #1e90ff, #ff6347, #ff0000); }
+      /* 毁灭模式1动画 - 色相平滑旋转 */
+      @keyframes destroyHue {
+        0% { filter: hue-rotate(0deg); }
+        100% { filter: hue-rotate(360deg); }
       }
 
       /* 毁灭模式2 - 中心爆发式炫光效果 */
@@ -510,7 +610,7 @@
           #ffa500 345deg,
           #ffffff 360deg
         );
-        animation: destroyRotate 2s linear infinite;
+        animation: destroyRotate 4s linear infinite;
         filter: blur(2px);
         z-index: 0;
       }
@@ -530,43 +630,43 @@
           rgba(255, 215, 0, 0.5) 40%,
           transparent 70%
         );
-        animation: destroyPulse 1.5s ease-in-out infinite;
+        animation: destroyPulse 3s ease-in-out infinite;
         z-index: 1;
       }
       .grid-cell.destroy-mode-2:nth-child(2n)::before {
-        animation: destroyRotate 2.5s linear infinite reverse;
+        animation: destroyRotate 5s linear infinite reverse;
         filter: blur(3px);
       }
       .grid-cell.destroy-mode-2:nth-child(3n)::before {
-        animation: destroyRotate 1.8s linear infinite;
+        animation: destroyRotate 3.6s linear infinite;
         filter: blur(1.5px);
       }
       .grid-cell.destroy-mode-2:nth-child(4n)::before {
-        animation: destroyRotate 3s linear infinite reverse;
+        animation: destroyRotate 6s linear infinite reverse;
         filter: blur(2.5px);
       }
       .grid-cell.destroy-mode-2:nth-child(5n)::before {
-        animation: destroyRotate 2.2s linear infinite;
+        animation: destroyRotate 4.4s linear infinite;
         filter: blur(2px);
       }
       .grid-cell.destroy-mode-2:nth-child(7n)::before {
-        animation: destroyRotate 1.5s linear infinite reverse;
+        animation: destroyRotate 3s linear infinite reverse;
         filter: blur(1px);
       }
       .grid-cell.destroy-mode-2:nth-child(2n)::after {
-        animation: destroyPulse 2s ease-in-out infinite;
+        animation: destroyPulse 4s ease-in-out infinite;
       }
       .grid-cell.destroy-mode-2:nth-child(3n)::after {
-        animation: destroyPulse 1.2s ease-in-out infinite reverse;
+        animation: destroyPulse 2.4s ease-in-out infinite reverse;
       }
       .grid-cell.destroy-mode-2:nth-child(4n)::after {
-        animation: destroyPulse 1.8s ease-in-out infinite;
+        animation: destroyPulse 3.6s ease-in-out infinite;
       }
       .grid-cell.destroy-mode-2:nth-child(5n)::after {
-        animation: destroyPulse 2.5s ease-in-out infinite reverse;
+        animation: destroyPulse 5s ease-in-out infinite reverse;
       }
       .grid-cell.destroy-mode-2:nth-child(7n)::after {
-        animation: destroyPulse 1s ease-in-out infinite;
+        animation: destroyPulse 2s ease-in-out infinite;
       }
       .grid-cell.destroy-mode-2 {
         box-shadow: 
@@ -576,11 +676,8 @@
         animation: destroyGlow 3s ease-in-out infinite;
       }
       .grid-cell.destroy-mode-2 .number-text {
-        color: #fff !important;
-        text-shadow: 
-          0 0 8px rgba(255, 255, 255, 0.8),
-          0 0 15px rgba(255, 215, 0, 0.6),
-          0 0 25px rgba(255, 105, 180, 0.4);
+        color: #333 !important;
+        text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff;
         z-index: 2;
         position: relative;
       }
@@ -614,6 +711,51 @@
         color: rgba(0,0,0,0.8) !important;
         font-weight: 300 !important;
         text-shadow: none !important;
+      }
+
+      /* 毁灭4：交错棋盘格 */
+      .grid-container.destroy-mode-4 {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 3px !important;
+        background: transparent !important;
+        padding: 4px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+      }
+      .grid-container.destroy-mode-4 .destroy4-row {
+        display: flex;
+        gap: 0;
+        width: fit-content;
+      }
+      .grid-cell.destroy-mode-4 {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+      .grid-cell.destroy-mode-4.checker-white {
+        background: #FFFFFF !important;
+      }
+      .grid-cell.destroy-mode-4.checker-white .number-text {
+        color: #000000 !important;
+      }
+      .grid-cell.destroy-mode-4.checker-black {
+        background: #000000 !important;
+      }
+      .grid-cell.destroy-mode-4.checker-black .number-text {
+        color: #FFFFFF !important;
+      }
+      /* 毁灭4 correct/wrong 状态覆盖棋盘格 */
+      .grid-cell.destroy-mode-4.correct {
+        background: #4CAF50 !important;
+      }
+      .grid-cell.destroy-mode-4.correct .number-text {
+        color: #ffffff !important;
+      }
+      .grid-cell.destroy-mode-4.wrong {
+        background: #FF6B6B !important;
+      }
+      .grid-cell.destroy-mode-4.wrong .number-text {
+        color: #ffffff !important;
       }
       /* 菱形交点 overlay */
       .destroy-diamond-overlay {
@@ -711,7 +853,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 70px !important;
+        font-size: 36px;
         font-weight: bold;
         color: var(--number-color, #333);
         cursor: pointer;
@@ -1114,6 +1256,46 @@
         margin: 0 auto;
         border-radius: 12px;
         background: #FFFFFF;
+      }
+
+      /* 变体模式容器 */
+      .variant-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .variant-container svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .mosaic-container {
+        display: none;
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+      .mosaic-container svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .variant-block {
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+      }
+
+      .variant-block.correct {
+        opacity: 0.25;
+        pointer-events: none;
+      }
+
+      .variant-block .variant-text {
+        pointer-events: none;
+        user-select: none;
+      }
         box-shadow: 0 4px 24px rgba(0,0,0,0.08);
         max-width: min(90vw, 600px);
         max-height: min(90vw, 600px);
@@ -1479,28 +1661,36 @@
         <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
         <p>按顺序点击数字</p>
       </div>
-      <div class="info-row">
+      <div class="difficulty-row">
+        <span class="row-label">难度</span>
         <div class="difficulty-group">
           <button class="difficulty-btn" data-size="3" onclick="game.setDifficulty(3)">入门</button>
           <button class="difficulty-btn active" data-size="4" onclick="game.setDifficulty(4)">初级</button>
           <button class="difficulty-btn" data-size="5" onclick="game.setDifficulty(5)">中级</button>
           <button class="difficulty-btn" data-size="6" onclick="game.setDifficulty(6)">高级</button>
           <button class="difficulty-btn" data-size="7" onclick="game.setDifficulty(7)">专家</button>
+          <button class="difficulty-btn" data-size="10" onclick="game.setDifficulty(10)">极限</button>
         </div>
+      </div>
+      <div class="layout-row">
+        <span class="row-label">布局</span>
         <div class="mode-group">
           <button class="mode-btn active" data-mode="normal" onclick="game.setMode('normal')">普通</button>
-          <button class="mode-btn" data-mode="offset" onclick="game.setMode('offset')">偏移</button>
-          <button class="mode-btn" data-mode="chaos" onclick="game.setMode('chaos')">混乱</button>
           <button class="mode-btn" data-mode="circular" id="circular-mode-btn" onclick="game.setMode('circular')">圆形（静）</button>
           <button class="mode-btn" data-mode="bounce" id="bounce-mode-btn" onclick="game.toggleBounceMode()">混沌（动/转）</button>
+          <button class="mode-btn" data-mode="variant" id="variant-mode-btn" onclick="game.setMode('variant')">变体</button>
+          <button class="mode-btn" data-mode="mosaic" id="mosaic-mode-btn" onclick="game.toggleMosaicMode()">马赛克</button>
           <button class="mode-btn speed-toggle" id="speed-toggle-btn" onclick="game.toggleSpeed()" style="display:none;">转速:0.1</button>
         </div>
+      </div>
+      <div class="effects-row">
+        <span class="row-label">效果</span>
         <div class="mode-group">
-          <button class="mode-btn font-toggle" data-font="false" onclick="game.toggleFontMode()" style="background: #2196F3; border-color: #2196F3;">换字</button>
-        </div>
-        <div class="mode-group">
-          <button class="mode-btn void-toggle" data-void="false" onclick="game.toggleVoidMode()" style="background: #9C27B0; border-color: #9C27B0;">虚无</button>
-          <button class="mode-btn destroy-toggle" data-destroy="false" onclick="game.toggleDestroyMode()" style="background: #E91E63; border-color: #E91E63;">毁灭</button>
+          <button class="mode-btn" data-mode="offset" onclick="game.setMode('offset')">偏移</button>
+          <button class="mode-btn" data-mode="chaos" onclick="game.setMode('chaos')">混乱</button>
+          <button class="effect-btn font font-toggle" data-font="false" onclick="game.toggleFontMode()">换字</button>
+          <button class="effect-btn void void-toggle" data-void="false" onclick="game.toggleVoidMode()">虚无</button>
+          <button class="effect-btn destroy destroy-toggle" data-destroy="false" onclick="game.toggleDestroyMode()">毁灭</button>
         </div>
       </div>
     </div>
@@ -1517,6 +1707,10 @@
         <svg id="circular-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
       <canvas id="bounce-canvas" width="600" height="600" style="display:none;"></canvas>
+      <div class="variant-container" id="variant-container" style="display:none;">
+        <svg id="variant-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="mosaic-container" id="mosaic-container" style="display:none;"></div>
     </div>
 
     <div class="controls">
@@ -1591,7 +1785,7 @@
         this.numberColor = '#333333';
         this.currentMode = 'normal';
         this.fontMode = false;
-        this.voidMode = false;
+        this.voidMode = 0; // 0=关, 1=虚无(静态随机色), 2=虚无2(渐变随机色)
         this.circularDestroy = 0; // 圆形毁灭模式: 0=关, 1=黑白交替, 2=12色循环
         this.destroy2RafId = null; // 毁灭2 RAF 动画 ID（已废弃，保留兼容）
         this.destroy2IntervalId = null; // 毁灭2 setInterval 动画 ID
@@ -1599,8 +1793,11 @@
         this.destroyMode = 0; // 0=关闭, 1=背景变换, 2=炫光效果
         this.previousMode = 'normal'; // 保存退出圆形后回到的方格模式
         this.isCircularMode = false; // 是否在圆形模式
+        this.isRotateMode = false;    // 旋转模式（待实现）
+        this.isBounceMode = false;    // 弹跳模式（待实现）
+        this.isVariantMode = false;   // 变体模式（2D平面三叉星布局）
+        this.variantNumbers = [];     // 变体模式数字数组
         this.circularRotating = 0; // 0=静, 1=动1(交替), 2=动2(变速) // 圆形模式旋转状态
-        this.previousMode = 'normal'; // 退出圆形时回到的方格模式
         // 20种字体
         this.fonts = [
           'Georgia, serif',
@@ -1685,18 +1882,16 @@
           if (this._bounceAnimId) { cancelAnimationFrame(this._bounceAnimId); this._bounceAnimId = null; }
           this._rotateInit();
           this._rotateStart();
-        } else if (this.isRotateMode) {
-          if (this._rotateAnimId) { cancelAnimationFrame(this._rotateAnimId); this._rotateAnimId = null; }
-          this._rotateInit();
-          this._rotateAnimate();
-        } else if (this.isRotateMode) {
-          if (this._rotateAnimId) { cancelAnimationFrame(this._rotateAnimId); this._rotateAnimId = null; }
-          this._rotateInit();
-          this._rotateAnimate();
         } else if (this.isBounceMode) {
           if (this._bounceAnimId) { cancelAnimationFrame(this._bounceAnimId); this._bounceAnimId = null; }
           this._bounceInit();
           this._bounceRender();
+        } else if (this.isVariantMode) {
+          this.currentNumber = 1;
+          this.renderVariantGrid();
+          this.updateUI();
+          document.getElementById('start-btn').style.display = 'block';
+          document.getElementById('restart-btn').style.display = 'none';
         } else {
           this.reset();
         }
@@ -1751,8 +1946,42 @@
           if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
           if (this.isCircularMode) this.exitCircularMode();
           if (this.isRotateMode) this.exitRotateMode();
+          if (this.isVariantMode) this.exitVariantMode();
           if (this.isBounceMode) return;
           this.enterBounceMode();
+          return;
+        }
+
+        // 变体模式
+        if (mode === 'variant') {
+          if (this.isVariantMode) {
+            if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+            // 恢复到普通变体（清除偏移/混乱）
+            this.currentMode = 'variant';
+            var vbtns = document.querySelectorAll('.mode-btn');
+            for (var vbi = 0; vbi < vbtns.length; vbi++) {
+              vbtns[vbi].classList.remove('active');
+              if (vbtns[vbi].dataset.mode === 'variant') {
+                vbtns[vbi].classList.add('active');
+              }
+            }
+            this.reset();
+            return;
+          }
+          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          if (this.isCircularMode) this.exitCircularMode();
+          if (this.isBounceMode) this.exitBounceMode();
+          if (this.isRotateMode) this.exitRotateMode();
+          if (this.destroyMode > 0) {
+            this.destroyMode = 0;
+            var dbtnV = document.querySelector('.destroy-toggle');
+            if (dbtnV) {
+              dbtnV.dataset.destroy = 'false';
+              dbtnV.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+              dbtnV.textContent = '毁灭';
+            }
+          }
+          this.enterVariantMode();
           return;
         }
 
@@ -1760,6 +1989,40 @@
         if (this.isPlaying) {
           this.stopTimer();
           this.isPlaying = false;
+        }
+
+        // 变体模式下切换偏移/混乱：不退出变体模式，直接重新渲染
+        if (this.isVariantMode && (mode === 'offset' || mode === 'chaos')) {
+          // 偏移/混乱下不生效虚无，关闭虚无状态
+          if (this.voidMode >= 1) {
+            this.voidMode = 0;
+            var vbtnOff = document.querySelector('.void-toggle');
+            if (vbtnOff) vbtnOff.classList.remove('active');
+          }
+          this.currentMode = mode;
+          var btns2v = document.querySelectorAll('.mode-btn');
+          for (var bi2v = 0; bi2v < btns2v.length; bi2v++) {
+            btns2v[bi2v].classList.remove('active');
+            if (btns2v[bi2v].dataset.mode === mode) {
+              btns2v[bi2v].classList.add('active');
+            }
+          }
+          this.reset();
+          return;
+        }
+
+        // 马赛克模式下切换偏移/混乱：不退出马赛克模式，直接重新渲染
+        if (this.isMosaicMode && (mode === 'offset' || mode === 'chaos')) {
+          this.currentMode = mode;
+          var btns2m = document.querySelectorAll('.mode-btn');
+          for (var bi2m = 0; bi2m < btns2m.length; bi2m++) {
+            btns2m[bi2m].classList.remove('active');
+            if (btns2m[bi2m].dataset.mode === mode) {
+              btns2m[bi2m].classList.add('active');
+            }
+          }
+          this.reset();
+          return;
         }
 
         // 从旋转模式切换到其他模式
@@ -1770,6 +2033,16 @@
         // 从跳动模式切换到其他模式
         if (this.isBounceMode) {
           this.exitBounceMode();
+        }
+
+        // 从马赛克模式切换到其他模式
+        if (this.isMosaicMode) {
+          this.exitMosaicMode();
+        }
+
+        // 从变体模式切换到其他模式
+        if (this.isVariantMode) {
+          this.exitVariantMode();
         }
 
         // 从圆形模式切换到其他方格模式
@@ -1793,6 +2066,7 @@
       SchulteGridGame.prototype.toggleBounceMode = function() {
         if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
         if (this.isCircularMode) this.exitCircularMode();
+        if (this.isVariantMode) this.exitVariantMode();
         if (this.isRotateMode) {
           // 当前转 → 切到动
           this.exitRotateMode();
@@ -1820,6 +2094,364 @@
         this.enterBounceMode();
       };
 
+      SchulteGridGame.prototype.toggleMosaicMode = function() {
+        // 三态切换：普通 → 马赛克（静） → 马赛克（动） → 普通
+        if (!this.isMosaicMode) {
+          // 当前普通 → 进入马赛克（静）
+          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          if (this.isCircularMode) this.exitCircularMode();
+          if (this.isBounceMode) this.exitBounceMode();
+          if (this.isRotateMode) this.exitRotateMode();
+          if (this.isVariantMode) this.exitVariantMode();
+          // 隐藏其他容器，显示 mosaic-container
+          document.getElementById('grid-container').style.display = 'none';
+          document.getElementById('circular-container').style.display = 'none';
+          document.getElementById('bounce-canvas').style.display = 'none';
+          document.getElementById('variant-container').style.display = 'none';
+          document.getElementById('mosaic-container').style.display = 'flex';
+          this.isMosaicMode = true;
+          this.mosaicDynamic = false;
+          this.currentMode = 'mosaic';
+          document.getElementById('mosaic-mode-btn').textContent = '马赛克';
+          document.getElementById('mosaic-mode-btn').classList.add('active');
+          this._mosaicInit();
+          this.renderMosaicGrid();
+          return;
+        }
+        if (!this.mosaicDynamic) {
+          // 当前静态 → 切换到动态
+          this.mosaicDynamic = true;
+          document.getElementById('mosaic-mode-btn').textContent = '马赛克（动）';
+          document.getElementById('mosaic-mode-btn').classList.add('active');
+          this._mosaicAnimateStart();
+          return;
+        }
+        // 当前动态 → 退出
+        this.exitMosaicMode();
+        this.reset();
+      };
+
+      SchulteGridGame.prototype._randomColor = function() {
+        var h = Math.floor(Math.random() * 360);
+        var s = 50 + Math.floor(Math.random() * 30); // 50-80%
+        var l = 45 + Math.floor(Math.random() * 20); // 45-65%
+        return 'hsl(' + h + ',' + s + '%,' + l + '%)';
+      };
+
+      SchulteGridGame.prototype._mosaicInit = function() {
+        var size = this.gridSize;
+        var cols = size, rows = size;
+        // 基于窗口计算游戏区域尺寸
+        var maxW = Math.min(window.innerWidth - 16, 560);
+        var maxH = Math.min(window.innerHeight * 0.75, 560);
+        var cw = Math.min(maxW, maxH);
+        var ch = cw;
+        if (cw < 200) { cw = 400; ch = 400; }
+        this._mosaicCW = cw;
+        this._mosaicCH = ch;
+        var cellW = cw / cols, cellH = ch / rows;
+        var offsetRange = Math.min(cellW, cellH) * 0.35; // 初始偏移 35%
+        var maxDistInit = Math.min(cellW, cellH) * 0.5;
+        var minDistInit = maxDistInit * 0.25;
+
+        // 初始化交叉点数组 [rows+1][cols+1]，每个点有 {x, y, ox, oy, vx, vy}
+        this._mosaicPoints = [];
+        for (var r = 0; r <= rows; r++) {
+          this._mosaicPoints[r] = [];
+          for (var c = 0; c <= cols; c++) {
+            var ox = c * cellW;
+            var oy = r * cellH;
+            var x = ox, y = oy;
+            var vx = 0, vy = 0;
+            if (r > 0 && r < rows && c > 0 && c < cols) {
+              // 内部点：在 [minDist, maxDist] 环内随机初始位置 + 速度
+              var angle = Math.random() * Math.PI * 2;
+              var radius = minDistInit + Math.random() * (maxDistInit - minDistInit);
+              x = ox + Math.cos(angle) * radius;
+              y = oy + Math.sin(angle) * radius;
+              vx = (Math.random() - 0.5) * 0.4;
+              vy = (Math.random() - 0.5) * 0.4;
+            }
+            this._mosaicPoints[r][c] = { x: x, y: y, ox: ox, oy: oy, vx: vx, vy: vy };
+          }
+        }
+        this._mosaicAnimId = null;
+      };
+
+      SchulteGridGame.prototype.exitMosaicMode = function() {
+        this.isMosaicMode = false;
+        this.mosaicDynamic = false;
+        if (this._mosaicAnimId) {
+          cancelAnimationFrame(this._mosaicAnimId);
+          this._mosaicAnimId = null;
+        }
+        document.getElementById('mosaic-mode-btn').textContent = '马赛克';
+        document.getElementById('mosaic-mode-btn').classList.remove('active');
+        document.getElementById('mosaic-container').style.display = 'none';
+      };
+
+      SchulteGridGame.prototype.renderMosaicGrid = function() {
+        var size = this.gridSize;
+        var container = document.getElementById('mosaic-container');
+        container.innerHTML = '';
+
+        // 基于窗口计算游戏区域尺寸，取正方形
+        var maxW = Math.min(window.innerWidth - 16, 560);
+        var maxH = Math.min(window.innerHeight * 0.75, 560);
+        var cw = Math.min(maxW, maxH);
+        var ch = cw;
+        if (cw < 200) { cw = 400; ch = 400; }
+        this._mosaicCW = cw;
+        this._mosaicCH = ch;
+
+        // 创建SVG
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', cw);
+        svg.setAttribute('height', ch);
+        svg.setAttribute('viewBox', '0 0 ' + cw + ' ' + ch);
+        svg.style.maxWidth = '100%';
+        svg.id = 'mosaic-svg';
+        container.appendChild(svg);
+
+        this.generateNumbers();
+        var numbers = this.numbers;
+        var cellColors = this.generateCellColors(size, size);
+        var pts = this._mosaicPoints; // [rows+1][cols+1]
+        var idx = 0;
+        var isOffset = this.currentMode === 'offset';
+        var isChaos = this.currentMode === 'chaos';
+
+        this._mosaicCells = []; // 存储每个格子的多边形和文字，用于点击判定
+
+        for (var r = 0; r < size; r++) {
+          for (var c = 0; c < size; c++) {
+            // 4个角点：左上、右上、右下、左下
+            var p1 = pts[r][c], p2 = pts[r][c+1], p3 = pts[r+1][c+1], p4 = pts[r+1][c];
+            var pointsStr = p1.x.toFixed(1)+','+p1.y.toFixed(1)+' '+
+                           p2.x.toFixed(1)+','+p2.y.toFixed(1)+' '+
+                           p3.x.toFixed(1)+','+p3.y.toFixed(1)+' '+
+                           p4.x.toFixed(1)+','+p4.y.toFixed(1);
+
+            var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            poly.setAttribute('points', pointsStr);
+            var fillColor = cellColors[idx];
+            poly.setAttribute('fill', fillColor);
+            poly.setAttribute('opacity', '0.7');
+            poly.originalFill = fillColor;
+            poly.setAttribute('stroke', 'rgba(0,0,0,0.15)');
+            poly.setAttribute('stroke-width', '1');
+            poly.dataset.number = numbers[idx];
+            poly.classList.add('mosaic-cell');
+            svg.appendChild(poly);
+
+            // 文字（白色）
+            var cx = (p1.x + p2.x + p3.x + p4.x) / 4;
+            var cy = (p1.y + p2.y + p3.y + p4.y) / 4;
+            var txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            txt.setAttribute('x', cx);
+            txt.setAttribute('y', cy + 4);
+            txt.setAttribute('text-anchor', 'middle');
+            txt.setAttribute('fill', '#ffffff');
+            txt.setAttribute('stroke', 'none');
+            txt.setAttribute('font-size', Math.round(cw / size * 0.4));
+            txt.setAttribute('font-weight', 'bold');
+            if (this.fontMode) {
+              txt.setAttribute('font-family', this.getRandomFont());
+            } else {
+              txt.setAttribute('font-family', '"Microsoft YaHei", sans-serif');
+            }
+            txt.textContent = numbers[idx];
+            txt.classList.add('mosaic-text');
+
+            // offset模式：随机旋转
+            if (isOffset) {
+              var angle = Math.floor(Math.random() * 6) * 15; // 0,15,30,45,60,75
+              txt.setAttribute('transform', 'rotate(' + angle + ' ' + cx + ' ' + cy + ')');
+            }
+            // chaos模式：摆动动画
+            if (isChaos) {
+              txt.classList.add('chaos-mode');
+              txt.style.animation = 'swing 2s ease-in-out infinite';
+              txt.style.animationDelay = (Math.random() * 2) + 's';
+            }
+
+            svg.appendChild(txt);
+
+            this._mosaicCells.push({
+              poly: poly, txt: txt,
+              pts: [p1, p2, p3, p4],
+              number: numbers[idx],
+              cx: cx, cy: cy,
+              txtColor: cellColors[idx]
+            });
+
+            idx++;
+          }
+        }
+
+        // 点击SVG委托
+        var self = this;
+        svg.onclick = function(e) {
+          var pt = svg.createSVGPoint();
+          pt.x = e.clientX;
+          pt.y = e.clientY;
+          var svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+          self._mosaicHandleClick(svgPt.x, svgPt.y);
+        };
+
+        this.currentNumber = 1;
+        this.updateUI();
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('restart-btn').style.display = 'none';
+      };
+
+      // ===== 马赛克动画 =====
+      // 计算四边形面积（鞋带公式）
+      SchulteGridGame.prototype._mosaicCellArea = function(p1, p2, p3, p4) {
+        // p1~p4 按顺时针或逆时针顺序
+        return Math.abs(
+          (p1.x * p2.y + p2.x * p3.y + p3.x * p4.y + p4.x * p1.y) -
+          (p2.x * p1.y + p3.x * p2.y + p4.x * p3.y + p1.x * p4.y)
+        ) / 2;
+      };
+
+      SchulteGridGame.prototype._mosaicAnimateStart = function() {
+        var self = this;
+        var size = this.gridSize;
+        var cols = size, rows = size;
+        var cw = this._mosaicCW || 400;
+        var ch = this._mosaicCH || 400;
+        var cellW = cw / cols, cellH = ch / rows;
+        var pts = this._mosaicPoints;
+        var frameCount = 0;
+
+        var maxDist = Math.min(cellW, cellH) * 0.5; // 外层半径：半个格子宽
+        var minDist = maxDist * 0.25; // 内层半径：防止格子缩太小
+        var maxSpeed = 0.2; // 速度上限，降低至流畅可见
+
+        function animate() {
+          frameCount++;
+          // 更新每个内部点的位置（双层圆形约束）
+          for (var r = 1; r < rows; r++) {
+            for (var c = 1; c < cols; c++) {
+              var p = pts[r][c];
+
+              // 更新位置
+              p.x += p.vx;
+              p.y += p.vy;
+
+              // 双层圆形约束：点在 [minDist, maxDist] 环内
+              var dx = p.x - p.ox;
+              var dy = p.y - p.oy;
+              var dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist > maxDist) {
+                // 超外层：拉回边界，速度方向指向原点
+                p.x = p.ox + (dx / dist) * maxDist;
+                p.y = p.oy + (dy / dist) * maxDist;
+                var nx = -dx / (dist || 1);
+                var ny = -dy / (dist || 1);
+                var spd = 0.08 + Math.random() * 0.08;
+                p.vx = nx * spd + (Math.random() - 0.5) * 0.05;
+                p.vy = ny * spd + (Math.random() - 0.5) * 0.05;
+              } else if (dist < minDist) {
+                // 超内层：拉回内边界，速度方向远离原点
+                p.x = p.ox + (dx / dist) * (minDist + 1);
+                p.y = p.oy + (dy / dist) * (minDist + 1);
+                var nx2 = dx / (dist || 1);
+                var ny2 = dy / (dist || 1);
+                var spd2 = 0.08 + Math.random() * 0.08;
+                p.vx = nx2 * spd2 + (Math.random() - 0.5) * 0.05;
+                p.vy = ny2 * spd2 + (Math.random() - 0.5) * 0.05;
+              }
+
+              // 速度上限
+              var spd3 = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+              if (spd3 > maxSpeed) {
+                p.vx = (p.vx / spd3) * maxSpeed;
+                p.vy = (p.vy / spd3) * maxSpeed;
+              }
+            }
+          }
+
+          // 每帧微小扰动，保持活跃
+          for (var r2 = 1; r2 < rows; r2++) {
+            for (var c2 = 1; c2 < cols; c2++) {
+              var p2 = pts[r2][c2];
+              p2.vx += (Math.random() - 0.5) * 0.02;
+              p2.vy += (Math.random() - 0.5) * 0.02;
+            }
+          }
+
+          // 更新SVG格子形状 + 数字跟随中心点
+          var cells = self._mosaicCells;
+          for (var i = 0; i < cells.length; i++) {
+            var cell = cells[i];
+            var r0 = Math.floor(i / cols), c0 = i % cols;
+            var p1=pts[r0][c0], p2=pts[r0][c0+1], p3=pts[r0+1][c0+1], p4=pts[r0+1][c0];
+            var ps = p1.x.toFixed(1)+','+p1.y.toFixed(1)+' '+p2.x.toFixed(1)+','+p2.y.toFixed(1)+' '+p3.x.toFixed(1)+','+p3.y.toFixed(1)+' '+p4.x.toFixed(1)+','+p4.y.toFixed(1);
+            cell.poly.setAttribute('points', ps);
+            // 数字跟随格子中心点
+            var cx = (p1.x+p2.x+p3.x+p4.x)/4, cy = (p1.y+p2.y+p3.y+p4.y)/4;
+            cell.txt.setAttribute('x', cx);
+            cell.txt.setAttribute('y', cy+4);
+            // 虚空模式：每隔60帧随机换文字颜色
+            if (self.voidMode && frameCount % 60 === 0) {
+              cell.txt.setAttribute('fill', self._randomColor());
+            }
+          }
+
+          self._mosaicAnimId = requestAnimationFrame(animate);
+        }
+
+        self._mosaicAnimId = requestAnimationFrame(animate);
+      };
+
+      // 射线法：判断点(x,y)是否在多边形pts内
+      SchulteGridGame.prototype._mosaicPointInPoly = function(x, y, polyPts) {
+        var inside = false;
+        for (var i = 0, j = polyPts.length-1; i < polyPts.length; j = i++) {
+          var xi = polyPts[i].x, yi = polyPts[i].y;
+          var xj = polyPts[j].x, yj = polyPts[j].y;
+          if (((yi > y) !== (yj > y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+
+      SchulteGridGame.prototype._mosaicHandleClick = function(mx, my) {
+        if (!this.isPlaying) return;
+        for (var i = 0; i < this._mosaicCells.length; i++) {
+          var cell = this._mosaicCells[i];
+          if (this._mosaicPointInPoly(mx, my, cell.pts)) {
+            if (cell.number === this.currentNumber) {
+              // 正确 - 绿色 + 数字变50%灰
+              cell.poly.setAttribute('fill', '#4CAF50');
+              cell.txt.setAttribute('fill', '#808080');
+              this.currentNumber++;
+              this.playSound('correct');
+              this.updateUI();
+              if (this.currentNumber > this.gridSize * this.gridSize) {
+                this.completeGame();
+              }
+            } else {
+              // 错误 - 红色 + 抖动动画
+              cell.poly.setAttribute('fill', '#FF6B6B');
+              cell.poly.style.animation = 'mosaicShake 0.3s ease';
+              this.playSound('wrong');
+              (function(poly, orig1, origStroke1) {
+                setTimeout(function() {
+                  poly.setAttribute('fill', orig1 || '#555');
+                  poly.style.animation = '';
+                }, 350);
+              })(cell.poly, cell.poly.originalFill);
+            }
+            break;
+          }
+        }
+      };
+
       SchulteGridGame.prototype.toggleSpeed = function() {
         var speeds = [0.1, 0.2, 0.3, 0.4, 0.5];
         var cur = this._rotateSpeed || 0.1;
@@ -1838,7 +2470,7 @@
 
         this.fontMode = !this.fontMode;
 
-        var btn = document.querySelector('.font-toggle-btn');
+        var btn = document.querySelector('.font-toggle');
         if (btn) {
           if (this.fontMode) {
             btn.classList.add('active');
@@ -1852,29 +2484,56 @@
 
       SchulteGridGame.prototype.toggleVoidMode = function() {
         // 圆形模式允许游戏中切换虚无
-        if (!this.isCircularMode && this.isPlaying) {
+        if (!this.isCircularMode && !this.isVariantMode && this.isPlaying) {
+          return;
+        }
+        // 变体模式：仅在普通变体（currentMode==='variant'）下生效
+        if (this.isVariantMode && this.currentMode !== 'variant') {
           return;
         }
 
-        this.voidMode = !this.voidMode;
+        // 三态循环仅变体模式：0(关) → 1(虚无-静态随机色) → 2(虚无2-渐变随机色) → 0(关)
+        // 圆形模式保持二态：0(关) ↔ 1(虚无)
+        var oldVoidMode = this.voidMode;
+        if (this.isVariantMode) {
+          this.voidMode = (this.voidMode + 1) % 3;
+        } else {
+          this.voidMode = this.voidMode >= 1 ? 0 : 1;
+        }
+
+        // 从虚无2切走时，清除所有格子定时器
+        if (oldVoidMode === 2 && this.voidMode !== 2) {
+          var allPolys2 = document.querySelectorAll('#variant-svg .variant-top');
+          for (var pi2 = 0; pi2 < allPolys2.length; pi2++) {
+            allPolys2[pi2]._voidActive = false;
+            if (allPolys2[pi2]._voidTimer) {
+              clearTimeout(allPolys2[pi2]._voidTimer);
+              allPolys2[pi2]._voidTimer = null;
+            }
+          }
+        }
 
         // 虚无与毁灭互斥：开启虚无时关闭毁灭
-        if (this.voidMode && this.circularDestroy > 0) {
+        if (this.voidMode >= 1 && this.circularDestroy > 0) {
           this.circularDestroy = 0;
           var dbtn = document.querySelector('.destroy-toggle');
           if (dbtn) {
-            dbtn.classList.remove('active');
-            dbtn.style.background = '#E91E63';
-            dbtn.style.borderColor = '#E91E63';
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3');
+            dbtn.textContent = '毁灭';
           }
         }
 
         var btn = document.querySelector('.void-toggle');
         if (btn) {
-          if (this.voidMode) {
+          btn.classList.remove('active');
+          if (this.voidMode === 1) {
             btn.classList.add('active');
+            btn.textContent = '虚无';
+          } else if (this.voidMode === 2) {
+            btn.classList.add('active');
+            btn.textContent = '虚无2';
           } else {
-            btn.classList.remove('active');
+            btn.textContent = '虚无';
           }
         }
 
@@ -1908,19 +2567,26 @@
               this._applySpeedRotation(this._speedFlipCW);
             }
           }
+        } else if (this.isVariantMode) {
+          // 变体模式：重新渲染（应用随机颜色）
+          this.renderVariantGrid();
         } else {
           this.reset();
         }
       };
 
       SchulteGridGame.prototype.toggleDestroyMode = function() {
+        // 变体模式不支持毁灭效果
+        if (this.isVariantMode) {
+          return;
+        }
         // 圆形模式：三态切换 0(关) → 1(黑白) → 2(12色循环) → 0(关)
         if (this.isCircularMode) {
           this.circularDestroy = (this.circularDestroy + 1) % 3;
 
           // 毁灭与虚无互斥：开启毁灭时关闭虚无
-          if (this.circularDestroy > 0 && this.voidMode) {
-            this.voidMode = false;
+          if (this.circularDestroy > 0 && this.voidMode >= 1) {
+            this.voidMode = 0;
             var vbtn = document.querySelector('.void-toggle');
             if (vbtn) {
               vbtn.classList.remove('active');
@@ -1929,21 +2595,15 @@
 
           var btn = document.querySelector('.destroy-toggle');
           if (btn) {
+            btn.classList.remove('active', 'state1', 'state2', 'state3');
             if (this.circularDestroy === 1) {
-              btn.classList.add('active');
+              btn.classList.add('active', 'state3');
               btn.textContent = '毁灭1';
-              btn.style.background = '#00BCD4';
-              btn.style.borderColor = '#00BCD4';
             } else if (this.circularDestroy === 2) {
-              btn.classList.add('active');
+              btn.classList.add('active', 'state2');
               btn.textContent = '毁灭2';
-              btn.style.background = '#FF6F00';
-              btn.style.borderColor = '#FF6F00';
             } else {
-              btn.classList.remove('active');
               btn.textContent = '毁灭';
-              btn.style.background = '#E91E63';
-              btn.style.borderColor = '#E91E63';
             }
           }
           // 圆形模式：游戏中原地更新样式，否则重建 DOM
@@ -1973,31 +2633,37 @@
           return;
         }
 
-        // 方形模式：四态切换：0(关闭) -> 1(背景变换) -> 2(炫光效果) -> 3(错觉背景) -> 0(关闭)
-        this.destroyMode = (this.destroyMode + 1) % 4;
+        // 方形模式：五态切换：0(关闭) -> 1(背景变换) -> 2(炫光效果) -> 3(错觉背景) -> 4(交错棋盘) -> 0(关闭)
+        this.destroyMode = (this.destroyMode + 1) % 5;
 
         var btn = document.querySelector('.destroy-toggle');
         if (btn) {
-          // 更新按钮状态
           btn.dataset.destroy = this.destroyMode.toString();
+          btn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
           
-          // 根据状态更新按钮文字和颜色
           if (this.destroyMode === 0) {
             btn.textContent = '毁灭';
-            btn.style.background = '#E91E63';
-            btn.style.borderColor = '#E91E63';
           } else if (this.destroyMode === 1) {
+            btn.classList.add('active', 'state1');
             btn.textContent = '毁灭1';
-            btn.style.background = '#FF5722';
-            btn.style.borderColor = '#FF5722';
           } else if (this.destroyMode === 2) {
+            btn.classList.add('active', 'state2');
             btn.textContent = '毁灭2';
-            btn.style.background = '#9C27B0';
-            btn.style.borderColor = '#9C27B0';
           } else if (this.destroyMode === 3) {
+            btn.classList.add('active', 'state3');
             btn.textContent = '毁灭3';
-            btn.style.background = '#00BCD4';
-            btn.style.borderColor = '#00BCD4';
+          } else if (this.destroyMode === 4) {
+            btn.classList.add('active', 'state4');
+            btn.textContent = '毁灭4';
+            // 进入毁灭4：默认10×10
+            this.gridSize = 10;
+            var diffBtns = document.querySelectorAll('.difficulty-btn');
+            for (var d = 0; d < diffBtns.length; d++) {
+              diffBtns[d].classList.remove('active');
+              if (parseInt(diffBtns[d].dataset.size) === 10) {
+                diffBtns[d].classList.add('active');
+              }
+            }
           }
         }
 
@@ -2009,7 +2675,15 @@
         this.isPlaying = false;
         this.stopTimer();
 
+        // 先隐藏所有容器
+        document.getElementById('grid-container').style.display = 'none';
+        document.getElementById('circular-container').style.display = 'none';
+        document.getElementById('bounce-canvas').style.display = 'none';
+        document.getElementById('variant-container').style.display = 'none';
+        document.getElementById('mosaic-container').style.display = 'none';
+
         if (this.isCircularMode) {
+          document.getElementById('circular-container').style.display = 'flex';
           this.renderCircularGrid();
           if (this.circularRotating === 1) {
             var svg2 = document.getElementById('circular-svg');
@@ -2025,10 +2699,29 @@
             this._applySpeedRotation(this._speedFlipCW);
           }
         } else if (this.isBounceMode) {
+          document.getElementById('bounce-canvas').style.display = 'block';
           if (this._bounceAnimId) { cancelAnimationFrame(this._bounceAnimId); this._bounceAnimId = null; }
           this._bounceInit();
           this._bounceRender();
+        } else if (this.isVariantMode) {
+          document.getElementById('variant-container').style.display = 'flex';
+          this.renderVariantGrid();
+        } else if (this.isMosaicMode) {
+          document.getElementById('mosaic-container').style.display = 'flex';
+          var self = this;
+          requestAnimationFrame(function() {
+            self._mosaicInit();
+            self.renderMosaicGrid();
+            if (self.mosaicDynamic) {
+              self._mosaicAnimateStart();
+            }
+          });
+          this.updateUI();
+          document.getElementById('start-btn').style.display = 'block';
+          document.getElementById('restart-btn').style.display = 'none';
+          return;
         } else {
+          document.getElementById('grid-container').style.display = 'grid';
           this.generateNumbers();
           this.renderGrid();
         }
@@ -2064,6 +2757,43 @@
         this.reset();
       };
 
+      SchulteGridGame.prototype.MOSAIC_COLORS = [
+        '#E53935', '#FF5722', '#FF9800', '#FFC107',
+        '#FFEB3B', '#CDDC39', '#C3D825', '#009688',
+        '#2196F3', '#3F51B5', '#9C27B0', '#E91E63'
+      ];
+
+      // 生成行列颜色矩阵，保证相邻格（上下/左右）颜色不同
+      SchulteGridGame.prototype.generateCellColors = function(rows, cols) {
+        var palette = this.MOSAIC_COLORS;
+        var grid = [];
+        for (var r = 0; r < rows; r++) {
+          grid[r] = [];
+          for (var c = 0; c < cols; c++) {
+            var forbidden = {};
+            if (c > 0) forbidden[grid[r][c-1]] = true;
+            if (r > 0) forbidden[grid[r-1][c]] = true;
+            var available = [];
+            for (var i = 0; i < palette.length; i++) {
+              if (!forbidden[palette[i]]) available.push(palette[i]);
+            }
+            grid[r][c] = available[Math.floor(Math.random() * available.length)];
+          }
+        }
+        // 展平为一维数组
+        var flat = [];
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) {
+            flat.push(grid[r][c]);
+          }
+        }
+        return flat;
+      };
+
+      SchulteGridGame.prototype.getRandomFont = function() {
+        return this.fonts[Math.floor(Math.random() * this.fonts.length)];
+      };
+
       SchulteGridGame.prototype.generateNumbers = function() {
         var total = this.gridSize * this.gridSize;
         this.numbers = [];
@@ -2088,6 +2818,14 @@
         var container = document.getElementById('grid-container');
         var cellSize = this.calculateCellSize();
 
+        // 毁灭4模式：特殊渲染路径
+        if (this.destroyMode === 4) {
+          this._renderDestroy4Grid(container, cellSize);
+          return;
+        }
+
+        // 清理毁灭4的样式（切换回普通模式时）
+        container.classList.remove('destroy-mode-4');
         container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
         container.innerHTML = '';
 
@@ -2100,6 +2838,8 @@
           cell.dataset.number = this.numbers[i];
           cell.style.width = cellSize + 'px';
           cell.style.height = cellSize + 'px';
+          cell.style.fontSize = Math.floor(cellSize * 0.55) + 'px';
+          cell.style.lineHeight = cellSize + 'px';
           
           // 创建数字文字元素
           var numberSpan = document.createElement('span');
@@ -2145,13 +2885,17 @@
 
           // 毁灭模式：根据状态应用不同的效果
           if (this.destroyMode === 1) {
-            // 模式1：背景颜色变换
+            // 模式1：色相平滑旋转，每格随机时长 + 随机相位，避免列同步
             cell.classList.add('destroy-mode-1');
             numberSpan.style.color = '#ffffff';
+            // 随机动画时长 6~12s，随机负延迟打散相位
+            cell.style.animationDuration = (6 + Math.random() * 6).toFixed(1) + 's';
+            cell.style.animationDelay = (-Math.random() * 12).toFixed(1) + 's';
           } else if (this.destroyMode === 2) {
             // 模式2：中心爆发式炫光效果
             cell.classList.add('destroy-mode-2');
-            numberSpan.style.color = '#ffffff';
+            numberSpan.style.color = '#000000';
+            numberSpan.style.textShadow = '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff';
           } else if (this.destroyMode === 3) {
             // 模式3：浮雕错觉背景方格
             cell.classList.add('destroy-mode-3');
@@ -2177,6 +2921,109 @@
         } else {
           container.classList.remove('destroy-mode-3');
           this._removeDestroyOverlay(container);
+        }
+      };
+
+      // 毁灭4模式：交错棋盘格渲染
+      SchulteGridGame.prototype._renderDestroy4Grid = function(container, cellSize) {
+        container.innerHTML = '';
+        container.className = 'grid-container destroy-mode-4';
+        container.style.gridTemplateColumns = '';
+
+        var gap = 0;
+        var halfCell = Math.floor(cellSize / 2);
+        var totalWidth = this.gridSize * cellSize + halfCell;
+        // box-sizing: border-box + padding: 4px → 实际内容区 = width - 8px，需补上
+        container.style.width = (totalWidth + 8) + 'px';
+        var angles = [25, 30, 45, 75];
+        var colorPalette = ['#E53935', '#FF5722', '#FF9800', '#FFC107', '#FFEB3B', '#CDDC39', '#4CAF50', '#009688', '#2196F3', '#3F51B5', '#9C27B0', '#E91E63'];
+
+        // 装饰半格：纯展示，不参与交互
+        function createHalfDecor(rowIdx, isEvenRow) {
+          var d = document.createElement('div');
+          d.className = 'grid-cell destroy-mode-4 destroy4-decor';
+          d.style.width = halfCell + 'px';
+          d.style.height = cellSize + 'px';
+          d.style.pointerEvents = 'none';
+          // 装饰格颜色：与相邻完整格相反，延续棋盘格
+          var decColor = isEvenRow ? (rowIdx + 1) % 2 : (rowIdx + 10) % 2;
+          d.classList.add(decColor === 0 ? 'checker-white' : 'checker-black');
+          return d;
+        }
+
+        for (var r = 0; r < this.gridSize; r++) {
+          var row = document.createElement('div');
+          row.className = 'destroy4-row';
+          row.style.gap = gap + 'px';
+          row.style.marginLeft = '0';
+
+          var isEven = r % 2 === 0;
+
+          // 偶数行：左侧补装饰半格
+          if (isEven) {
+            row.appendChild(createHalfDecor(r, true));
+          }
+
+          for (var c = 0; c < this.gridSize; c++) {
+            var idx = r * this.gridSize + c;
+            var cell = document.createElement('div');
+            cell.className = 'grid-cell destroy-mode-4';
+            cell.dataset.number = this.numbers[idx];
+            cell.style.width = cellSize + 'px';
+            cell.style.height = cellSize + 'px';
+            cell.style.fontSize = Math.floor(cellSize * 0.55) + 'px';
+            cell.style.lineHeight = cellSize + 'px';
+
+            // 棋盘格配色：(r+c)%2===0 → 白底黑字，否则黑底白字
+            var isWhite = (r + c) % 2 === 0;
+            cell.classList.add(isWhite ? 'checker-white' : 'checker-black');
+
+            // 创建数字 span
+            var numberSpan = document.createElement('span');
+            numberSpan.className = 'number-text';
+            numberSpan.textContent = this.numbers[idx];
+
+            // 偏移/混乱效果叠加
+            if (this.currentMode === 'offset' || this.currentMode === 'chaos') {
+              var angle = angles[Math.floor(Math.random() * angles.length)];
+              var direction = Math.random() > 0.5 ? 1 : -1;
+              var finalAngle = angle * direction;
+              if (this.currentMode === 'offset') {
+                numberSpan.style.transform = 'rotate(' + finalAngle + 'deg)';
+              } else {
+                numberSpan.classList.add('chaos-mode');
+                numberSpan.style.setProperty('--start-angle', finalAngle + 'deg');
+                numberSpan.style.setProperty('--end-angle', (-finalAngle) + 'deg');
+              }
+            }
+
+            // 换字效果叠加
+            if (this.fontMode) {
+              numberSpan.style.fontFamily = this.fonts[Math.floor(Math.random() * this.fonts.length)];
+            }
+
+            // 虚无效果叠加
+            if (this.voidMode) {
+              cell.classList.add('void-mode');
+            }
+
+            cell.appendChild(numberSpan);
+
+            cell.onclick = (function(number) {
+              return function() {
+                game.handleClick(number, this);
+              };
+            })(this.numbers[idx]);
+
+            row.appendChild(cell);
+          }
+
+          // 奇数行：右侧补装饰半格
+          if (!isEven) {
+            row.appendChild(createHalfDecor(r, false));
+          }
+
+          container.appendChild(row);
         }
       };
 
@@ -2219,9 +3066,17 @@
 
       SchulteGridGame.prototype.calculateCellSize = function() {
         var containerWidth = Math.min(window.innerWidth - 20, 600);
-        var maxGridSize = 7;
+        var maxGridSize = 10;
         var padding = 4;
         var gap = 3;
+        
+        // 毁灭4模式：列间距0，多出半个格装饰用（gridSize * cellSize + halfCell）
+        if (this.destroyMode === 4) {
+          gap = 0;
+          var availW = containerWidth - padding * 2;
+          var cs = Math.floor(availW / (this.gridSize + 0.5));
+          return Math.min(cs, 120);
+        }
         
         var availableWidth = containerWidth - padding * 2 - (this.gridSize - 1) * gap;
         var cellSize = Math.floor(availableWidth / this.gridSize);
@@ -2242,8 +3097,17 @@
       };
 
       SchulteGridGame.prototype.handleCorrectClick = function(element) {
-        // 虚无/毁灭模式+圆形模式：内联样式强制覆盖，绿色底+白字
-        if ((this.voidMode || this.circularDestroy > 0) && this.isCircularMode) {
+        // 变体模式：菱形变绿，数字变50%灰，并停止该格子的虚无2渐变
+        if (this.isVariantMode) {
+          var vTop = element.querySelector('.variant-top');
+          if (vTop) {
+            vTop.setAttribute('fill', '#4CAF50');
+            vTop._voidActive = false;
+            if (vTop._voidTimer) { clearTimeout(vTop._voidTimer); vTop._voidTimer = null; }
+          }
+          var vTxt = element.querySelector('text');
+          if (vTxt) vTxt.setAttribute('fill', '#808080');
+        } else if ((this.voidMode || this.circularDestroy > 0) && this.isCircularMode) {
           var vp = element.querySelector('.sector');
           var vt = element.querySelector('.sector-text');
           if (vp) {
@@ -2272,6 +3136,14 @@
           numberSpan.style.animation = 'none';
           numberSpan.classList.remove('chaos-mode');
         }
+        // 变体模式混乱：停止SVG文字摆动
+        if (this.isVariantMode && this.currentMode === 'chaos') {
+          var vTxt = element.querySelector('.variant-text');
+          if (vTxt) {
+            vTxt.style.animation = 'none';
+            vTxt.classList.remove('chaos-mode');
+          }
+        }
 
         this.playSound('correct');
 
@@ -2286,8 +3158,20 @@
       };
 
       SchulteGridGame.prototype.handleWrongClick = function(element) {
-        // 虚无/毁灭模式+圆形模式：内联样式强制覆盖，红色底+白字
-        if ((this.voidMode || this.circularDestroy > 0) && this.isCircularMode) {
+        // 变体模式：菱形闪红 + 抖动动画
+        if (this.isVariantMode) {
+          var vTopW = element.querySelector('.variant-top');
+          var origFill = vTopW ? vTopW.getAttribute('fill') : '';
+          if (vTopW) vTopW.setAttribute('fill', '#FF6B6B');
+          element.style.animation = 'mosaicShake 0.3s ease';
+          this.playSound('wrong');
+          var selfElW = element;
+          var topElW = vTopW;
+          setTimeout(function() {
+            if (topElW) topElW.setAttribute('fill', origFill);
+            if (selfElW) selfElW.style.animation = '';
+          }, 400);
+        } else if ((this.voidMode || this.circularDestroy > 0) && this.isCircularMode) {
           var vp = element.querySelector('.sector');
           var vt = element.querySelector('.sector-text');
           // ★ 先保存原始内联样式，再设置红色（否则保存的就是红色）
@@ -2349,6 +3233,8 @@
         var difficultyStr;
         if (this.isCircularMode) {
           difficultyStr = '圆形模式 (30个数字)';
+        } else if (this.isVariantMode) {
+          difficultyStr = '变体模式 (' + total + '个数字)';
         } else {
           difficultyStr = '难度: ' + this.gridSize + '×' + this.gridSize + ' (' + total + '个数字)';
         }
@@ -2518,6 +3404,7 @@
           return total;
         }
         if (this.isBounceMode) return this._bounceGetTotal();
+        if (this.isVariantMode) return this.variantNumbers.length;
         return this.gridSize * this.gridSize;
       };
 
@@ -2929,9 +3816,27 @@
       };
 
       SchulteGridGame.prototype.enterCircularMode = function() {
+        // 如果当前在马赛克模式，先退出
+        if (this.isMosaicMode) {
+          this.exitMosaicMode();
+        }
         // 如果当前在跳动模式，先退出
         if (this.isBounceMode) {
           this.exitBounceMode();
+        }
+        // 如果当前在变体模式，先退出
+        if (this.isVariantMode) {
+          this.exitVariantMode();
+        }
+        // 毁灭4模式切换到圆形时，重置毁灭状态，避免切回方形时DOM不匹配
+        if (this.destroyMode > 0) {
+          this.destroyMode = 0;
+          var dbtn = document.querySelector('.destroy-toggle');
+          if (dbtn) {
+            dbtn.dataset.destroy = 'false';
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.textContent = '毁灭';
+          }
         }
         this.isCircularMode = true;
         this.circularRotating = 0;
@@ -2999,6 +3904,7 @@
         // 显示方格容器，隐藏圆形容器
         document.getElementById('grid-container').style.display = '';
         document.getElementById('circular-container').style.display = 'none';
+        document.getElementById('variant-container').style.display = 'none';
 
         // 显示难度选择
         var diffGroup = document.querySelector('.difficulty-group');
@@ -3010,6 +3916,24 @@
 
       // ========== 跳动模式 ==========
       SchulteGridGame.prototype.enterBounceMode = function() {
+        // 如果当前在马赛克模式，先退出
+        if (this.isMosaicMode) {
+          this.exitMosaicMode();
+        }
+        // 毁灭4模式切换到混沌时，重置毁灭状态，避免切回方形时DOM不匹配
+        if (this.destroyMode > 0) {
+          this.destroyMode = 0;
+          var dbtn = document.querySelector('.destroy-toggle');
+          if (dbtn) {
+            dbtn.dataset.destroy = 'false';
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.textContent = '毁灭';
+          }
+        }
+        // 如果当前在变体模式，先退出
+        if (this.isVariantMode) {
+          this.exitVariantMode();
+        }
         this.isBounceMode = true;
         this.isCircularMode = false;
         this.previousMode = this.currentMode;
@@ -3048,6 +3972,535 @@
         document.getElementById('bounce-canvas').style.display = 'none';
         document.getElementById('grid-container').style.display = '';
         document.getElementById('circular-container').style.display = 'none';
+        document.getElementById('variant-container').style.display = 'none';
+      };
+
+      // ========== 变体模式（2D平面三叉星布局） ==========
+
+      SchulteGridGame.prototype._variantShadeColor = function(hex, percent) {
+        var rgb = this._hexToRgb(hex);
+        var r, g, b;
+        if (percent > 0) {
+          r = Math.round(rgb.r + (255 - rgb.r) * percent);
+          g = Math.round(rgb.g + (255 - rgb.g) * percent);
+          b = Math.round(rgb.b + (255 - rgb.b) * percent);
+        } else {
+          r = Math.round(rgb.r * (1 + percent));
+          g = Math.round(rgb.g * (1 + percent));
+          b = Math.round(rgb.b * (1 + percent));
+        }
+        r = Math.max(0, Math.min(255, r));
+        g = Math.max(0, Math.min(255, g));
+        b = Math.max(0, Math.min(255, b));
+        return _rgbToHex(r, g, b);
+      };
+
+      // 变体模式：9面三叉星平面布局
+      // 每个面是3×3九宫格，在2D平面上按三叉星形状排列
+      // A(中心/青) B(右/黄) C(左/粉) D(左上/绿) E(右上/紫)
+      // F(B右上/蓝) G(B右下/橙) H(C左上/红) I(C左下/青绿)
+      // 难度：入门/初级=3面×4=12, 中级=3面×9=27, 高级=5面×9=45, 专家=7面×9=63, 极限=9面×9=81
+      SchulteGridGame.prototype._variantFaceColors = {
+        A: '#00BCD4', B: '#FFC107', C: '#E91E63',
+        D: '#76FF03', E: '#D500F9', F: '#1565C0',
+        G: '#FF9800', H: '#F44336', I: '#009688'
+      };
+
+      // 每个面在2D网格中的原点坐标（左上角格子坐标）
+      // T字形三叉星（魔方顶面+左右两面展开）：
+      //   A 顶面在上，B 右面在下，C 左面在下，B 与 C 并排
+      //   D 在 A 左侧，E 在 A 右侧（顶面向上翻开的两侧壁）
+      //   F 在 B 右侧，G 在 B 下方（右臂延伸）
+      //   H 在 C 左侧，I 在 C 下方（左臂延伸）
+      // 难度：初级/入门=3面×4=12, 中级=3面×9=27, 高级=5面×9=45, 专家=7面×9=63, 极限=9面×9=81
+      SchulteGridGame.prototype._variantFaceOrigin = {
+        A: {x: 3, y: 0},     // 顶部中央（魔方顶面）
+        B: {x: 3, y: 3},     // A 正下方（魔方右面）
+        C: {x: 0, y: 3},     // B 左侧（魔方左面）
+        D: {x: 0, y: 0},     // A 左侧（顶面左壁）
+        E: {x: 6, y: 0},     // A 右侧（顶面右壁）
+        F: {x: 6, y: 3},     // B 右侧（右臂侧壁）
+        G: {x: 3, y: 6},     // B 下方（右臂下壁）
+        H: {x: -3, y: 3},    // C 左侧（左臂侧壁）
+        I: {x: 0, y: 6}      // C 下方（左臂下壁）
+      };
+
+      // 返回某面的9个格子（局部坐标 lx,ly 0~2）
+      SchulteGridGame.prototype._getFaceBlocks = function(name) {
+        var blocks = [], i, j;
+        for (i = 0; i < 3; i++) {
+          for (j = 0; j < 3; j++) {
+            blocks.push({ lx: i, ly: j, face: name });
+          }
+        }
+        return blocks;
+      };
+
+      // 初级模式每面保留的4个格子（局部坐标 lx,ly）
+      // A: 5,7,8,9 → center + bottom row (靠近三面交汇处)
+      // B: 11,12,14,15 → top-right 2×2 (靠近A面)
+      // C: 20,21,23,24 → top-right 2×2 (靠近A面)
+      SchulteGridGame.prototype._variantInnerCells = {
+        A: [[1,1],[2,1],[1,2],[2,2]],
+        B: [[1,0],[2,0],[1,1],[2,1]],
+        C: [[1,0],[2,0],[1,1],[2,1]]
+      };
+
+      SchulteGridGame.prototype.getVariantBlocks = function() {
+        var gs = this.gridSize;
+        var faceNames, inner;
+        if (gs <= 4) { faceNames = ['A','B','C']; inner = true; }
+        else if (gs === 5) { faceNames = ['A','B','C']; inner = false; }
+        else if (gs === 6) { faceNames = ['A','B','C','D','E']; inner = false; }
+        else if (gs === 7) { faceNames = ['A','B','C','D','E','F','G']; inner = false; }
+        else { faceNames = ['A','B','C','D','E','F','G','H','I']; inner = false; }
+
+        var allBlocks = [];
+        for (var fi = 0; fi < faceNames.length; fi++) {
+          var name = faceNames[fi];
+          var color = this._variantFaceColors[name];
+          var origin = this._variantFaceOrigin[name];
+          var blocks = this._getFaceBlocks(name);
+          for (var bi = 0; bi < blocks.length; bi++) {
+            var b = blocks[bi];
+            if (inner) {
+              // 初级模式：按用户指定的格子保留
+              var keep = this._variantInnerCells[name];
+              var found = false;
+              for (var ki = 0; ki < keep.length; ki++) {
+                if (keep[ki][0] === b.lx && keep[ki][1] === b.ly) { found = true; break; }
+              }
+              if (!found) continue;
+            }
+            allBlocks.push({
+              lx: b.lx, ly: b.ly,
+              gx: origin.x + b.lx, gy: origin.y + b.ly,
+              face: name, color: color
+            });
+          }
+        }
+        return allBlocks;
+      };
+
+      SchulteGridGame.prototype.enterVariantMode = function() {
+        // 如果当前在马赛克模式，先退出
+        if (this.isMosaicMode) {
+          this.exitMosaicMode();
+        }
+        // 毁灭模式重置
+        if (this.destroyMode > 0) {
+          this.destroyMode = 0;
+          var dbtn = document.querySelector('.destroy-toggle');
+          if (dbtn) {
+            dbtn.dataset.destroy = 'false';
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.textContent = '毁灭';
+          }
+        }
+        // 虚无模式重置（进入变体时清除，由用户在变体内手动开启）
+        if (this.voidMode >= 1) {
+          this.voidMode = 0;
+          var vbtn = document.querySelector('.void-toggle');
+          if (vbtn) vbtn.classList.remove('active');
+        }
+        this.isVariantMode = true;
+        this.isCircularMode = false;
+        this.isBounceMode = false;
+        this.previousMode = this.currentMode;
+        this.currentMode = 'variant';
+
+        // 使用 variant SVG 容器（等距投影）
+        document.getElementById('grid-container').style.display = 'none';
+        document.getElementById('circular-container').style.display = 'none';
+        document.getElementById('bounce-canvas').style.display = 'none';
+        var vc = document.getElementById('variant-container');
+        vc.style.display = 'flex';
+        vc.style.justifyContent = 'center';
+        vc.style.alignItems = 'center';
+        vc.style.width = 'min(92vw, 600px)';
+        vc.style.height = 'min(72vh, 550px)';
+        vc.style.overflow = 'hidden';
+        vc.style.margin = '16px auto';
+        vc.style.background = '#ffffff';
+        vc.style.borderRadius = '12px';
+        vc.style.border = '2px solid #e0e0e0';
+        vc.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)';
+        vc.style.padding = '12px';
+
+        // 隐藏转速按钮
+        var sb = document.getElementById('speed-toggle-btn');
+        if (sb) sb.style.display = 'none';
+
+        // 更新按钮状态
+        var btns = document.querySelectorAll('.mode-btn');
+        for (var i = 0; i < btns.length; i++) {
+          btns[i].classList.remove('active');
+        }
+        var vbtn = document.getElementById('variant-mode-btn');
+        if (vbtn) vbtn.classList.add('active');
+
+        // 重置游戏状态
+        this.currentNumber = 1;
+        this.isPlaying = false;
+        this.stopTimer();
+
+        // 渲染变体网格
+        this.renderVariantGrid();
+
+        // 更新UI
+        var total = this.variantNumbers.length;
+        document.getElementById('progress').textContent = '0/' + total;
+        document.getElementById('timer').textContent = '00:00';
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('restart-btn').style.display = 'none';
+      };
+
+      SchulteGridGame.prototype.exitVariantMode = function() {
+        this.isVariantMode = false;
+        var container = document.getElementById('grid-container');
+        container.style.display = '';
+        container.style.background = '';
+        container.style.border = '';
+        container.style.borderRadius = '';
+        container.style.padding = '';
+        container.style.width = '';
+        container.innerHTML = '';
+        document.getElementById('variant-container').style.display = 'none';
+        // 退出变体模式时清除虚无状态和各格子渐变定时器
+        if (this.voidMode >= 1) {
+          this.voidMode = 0;
+          var vbtn = document.querySelector('.void-toggle');
+          if (vbtn) { vbtn.classList.remove('active'); vbtn.textContent = '虚无'; }
+        }
+        // 清除所有格子的虚无2定时器
+        var allPolys = document.querySelectorAll('#variant-svg .variant-top');
+        for (var ai = 0; ai < allPolys.length; ai++) {
+          allPolys[ai]._voidActive = false;
+          if (allPolys[ai]._voidTimer) {
+            clearTimeout(allPolys[ai]._voidTimer);
+            allPolys[ai]._voidTimer = null;
+          }
+        }
+        // 不调用reset()，由调用方负责reset
+      };
+
+      SchulteGridGame.prototype.renderVariantGrid = function() {
+        var self = this;
+
+        // 清除残留的虚无2定时器（防止重置/切换时旧定时器继续触发）
+        var oldPolys = document.querySelectorAll('#variant-svg .variant-top');
+        for (var oi = 0; oi < oldPolys.length; oi++) {
+          oldPolys[oi]._voidActive = false;
+          if (oldPolys[oi]._voidTimer) {
+            clearTimeout(oldPolys[oi]._voidTimer);
+            oldPolys[oi]._voidTimer = null;
+          }
+        }
+
+        // 等距投影参数
+        var hw = 30, hh = 17, zh = 34;
+
+        // 投影函数：3D角点 → 2D屏幕坐标
+        function proj(x, y, z) {
+          return [Math.round((x - y) * hw * 10) / 10, Math.round(((x + y) * hh - z * zh) * 10) / 10];
+        }
+
+        var gs = this.gridSize;
+        var faceNames;
+        var inner = false;
+        if (gs <= 4) { faceNames = ['A','B','C']; inner = true; }
+        else if (gs === 5) { faceNames = ['A','B','C']; inner = false; }
+        else if (gs === 6) { faceNames = ['A','B','C','D','E']; inner = false; }
+        else if (gs === 7) { faceNames = ['A','B','C','D','E','F','G']; inner = false; }
+        else { faceNames = ['A','B','C','D','E','F','G','H','I']; inner = false; }
+
+        var faceColors = { A:'#00BCD4', B:'#FFC107', C:'#E91E63', D:'#76FF03', E:'#D500F9', F:'#1565C0', G:'#FF9800', H:'#F44336', I:'#009688' };
+
+        // 初级内层格子标记（lx,ly映射）
+        var innerMask = {
+          A: [[1,1],[2,1],[1,2],[2,2]],
+          B: [[1,2],[2,2],[1,1],[2,1]],
+          C: [[1,2],[2,2],[1,1],[2,1]]
+        };
+
+        // ====== 所有格子：用角点投影，确保共用边完全贴合 ======
+        var blocks = [];
+
+        // A面（顶面 z=3）：x=0..2, y=0..2, 每个格子的4角投影
+        for (var ax = 0; ax < 3; ax++) {
+          for (var ay = 0; ay < 3; ay++) {
+            if (inner && !innerMatch('A', ax, ay)) continue;
+            var c1 = proj(ax, ay, 3);
+            var c2 = proj(ax+1, ay, 3);
+            var c3 = proj(ax+1, ay+1, 3);
+            var c4 = proj(ax, ay+1, 3);
+            var ct = proj(ax+0.5, ay+0.5, 3);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'A', depth: ax+0.5+ay+0.5+3 });
+          }
+        }
+
+        // B面（右面 x=3）：y=0..2, z=0..2
+        for (var by = 0; by < 3; by++) {
+          for (var bz = 0; bz < 3; bz++) {
+            if (inner && !innerMatch('B', by, bz)) continue;
+            var c1 = proj(3, by, bz);
+            var c2 = proj(3, by+1, bz);
+            var c3 = proj(3, by+1, bz+1);
+            var c4 = proj(3, by, bz+1);
+            var ct = proj(3, by+0.5, bz+0.5);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'B', depth: 3+by+0.5+bz+0.5 });
+          }
+        }
+
+        // C面（左面 y=3）：x=0..2, z=0..2
+        for (var cx = 0; cx < 3; cx++) {
+          for (var cz = 0; cz < 3; cz++) {
+            if (inner && !innerMatch('C', cx, cz)) continue;
+            var c1 = proj(cx, 3, cz);
+            var c2 = proj(cx+1, 3, cz);
+            var c3 = proj(cx+1, 3, cz+1);
+            var c4 = proj(cx, 3, cz+1);
+            var ct = proj(cx+0.5, 3, cz+0.5);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'C', depth: cx+0.5+3+cz+0.5 });
+          }
+        }
+
+        // D面（A左壁 x=0, y=0..2, z=3..5）
+        for (var dy = 0; dy < 3; dy++) {
+          for (var dz = 3; dz < 6; dz++) {
+            var c1 = proj(0, dy, dz);
+            var c2 = proj(0, dy+1, dz);
+            var c3 = proj(0, dy+1, dz+1);
+            var c4 = proj(0, dy, dz+1);
+            var ct = proj(0, dy+0.5, dz+0.5);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'D', depth: 0+dy+0.5+dz+0.5 });
+          }
+        }
+
+        // E面（A右壁 y=0, x=0..2, z=3..5）
+        for (var ex = 0; ex < 3; ex++) {
+          for (var ez = 3; ez < 6; ez++) {
+            var c1 = proj(ex, 0, ez);
+            var c2 = proj(ex+1, 0, ez);
+            var c3 = proj(ex+1, 0, ez+1);
+            var c4 = proj(ex, 0, ez+1);
+            var ct = proj(ex+0.5, 0, ez+0.5);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'E', depth: ex+0.5+0+ez+0.5 });
+          }
+        }
+
+        // F面（B前壁右延 y=0, x=3..5, z=0..2，与E同角度）
+        for (var fx = 3; fx < 6; fx++) {
+          for (var fz = 0; fz < 3; fz++) {
+            var c1 = proj(fx, 0, fz);
+            var c2 = proj(fx+1, 0, fz);
+            var c3 = proj(fx+1, 0, fz+1);
+            var c4 = proj(fx, 0, fz+1);
+            var ct = proj(fx+0.5, 0, fz+0.5);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'F', depth: fx+0.5+0+fz+0.5 });
+          }
+        }
+
+        // G面（B底面右延 z=0, x=3..5, y=0..2，与A同角度）
+        for (var gx = 3; gx < 6; gx++) {
+          for (var gy = 0; gy < 3; gy++) {
+            var c1 = proj(gx, gy, 0);
+            var c2 = proj(gx+1, gy, 0);
+            var c3 = proj(gx+1, gy+1, 0);
+            var c4 = proj(gx, gy+1, 0);
+            var ct = proj(gx+0.5, gy+0.5, 0);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'G', depth: gx+0.5+gy+0.5+0 });
+          }
+        }
+
+        // H面（C左壁前延 x=0, y=3..5, z=0..2，F的垂直镜像）
+        for (var hy = 3; hy < 6; hy++) {
+          for (var hz = 0; hz < 3; hz++) {
+            var c1 = proj(0, hy, hz);
+            var c2 = proj(0, hy+1, hz);
+            var c3 = proj(0, hy+1, hz+1);
+            var c4 = proj(0, hy, hz+1);
+            var ct = proj(0, hy+0.5, hz+0.5);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'H', depth: 0+hy+0.5+hz+0.5 });
+          }
+        }
+
+        // I面（C底面前延 z=0, y=3..5, x=0..2，G的垂直镜像）
+        for (var iy = 3; iy < 6; iy++) {
+          for (var ix = 0; ix < 3; ix++) {
+            var c1 = proj(ix, iy, 0);
+            var c2 = proj(ix+1, iy, 0);
+            var c3 = proj(ix+1, iy+1, 0);
+            var c4 = proj(ix, iy+1, 0);
+            var ct = proj(ix+0.5, iy+0.5, 0);
+            blocks.push({ pts:[c1,c2,c3,c4], cx:ct[0], cy:ct[1], face:'I', depth: ix+0.5+iy+0.5+0 });
+          }
+        }
+
+        // 过滤面
+        var faceSet = {};
+        for (var fi = 0; fi < faceNames.length; fi++) faceSet[faceNames[fi]] = true;
+        blocks = blocks.filter(function(b) { return faceSet[b.face]; });
+
+        // 面之间不重叠（仅共享边），无需去重
+
+        // 生成打乱数字
+        var total = blocks.length;
+        this.variantNumbers = [];
+        for (var ni = 1; ni <= total; ni++) this.variantNumbers.push(ni);
+        for (var ni2 = this.variantNumbers.length - 1; ni2 > 0; ni2--) {
+          var nj = Math.floor(Math.random() * (ni2 + 1));
+          var nt = this.variantNumbers[ni2];
+          this.variantNumbers[ni2] = this.variantNumbers[nj];
+          this.variantNumbers[nj] = nt;
+        }
+        for (var bi2 = 0; bi2 < blocks.length; bi2++) blocks[bi2].number = this.variantNumbers[bi2];
+
+        // 排序：远→近（depth 越小越远，先画）
+        blocks.sort(function(a, b) { return a.depth - b.depth; });
+
+        // 计算 viewBox
+        var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (var bi3 = 0; bi3 < blocks.length; bi3++) {
+          var b3 = blocks[bi3];
+          for (var pi = 0; pi < 4; pi++) {
+            if (b3.pts[pi][0] < minX) minX = b3.pts[pi][0];
+            if (b3.pts[pi][0] > maxX) maxX = b3.pts[pi][0];
+            if (b3.pts[pi][1] < minY) minY = b3.pts[pi][1];
+            if (b3.pts[pi][1] > maxY) maxY = b3.pts[pi][1];
+          }
+        }
+        var pad = 10;
+        var vbX = minX - pad, vbY = minY - pad;
+        var vbW = maxX - minX + pad * 2, vbH = maxY - minY + pad * 2;
+
+        // SVG渲染
+        var svg = document.getElementById('variant-svg');
+        svg.setAttribute('viewBox', vbX + ' ' + vbY + ' ' + vbW + ' ' + vbH);
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.display = '';
+        svg.innerHTML = '';
+
+        for (var bi4 = 0; bi4 < blocks.length; bi4++) {
+          var b4 = blocks[bi4];
+          var ptsStr = b4.pts[0][0] + ',' + b4.pts[0][1] + ' ' +
+                       b4.pts[1][0] + ',' + b4.pts[1][1] + ' ' +
+                       b4.pts[2][0] + ',' + b4.pts[2][1] + ' ' +
+                       b4.pts[3][0] + ',' + b4.pts[3][1];
+
+          var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('class', 'variant-block');
+          g.setAttribute('data-number', b4.number);
+          g.style.cursor = 'pointer';
+
+          var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          poly.setAttribute('points', ptsStr);
+          // 虚无模式：每个格子随机颜色；否则按面颜色
+          if (self.voidMode >= 1 && self.currentMode === 'variant') {
+            var hue;
+            do {
+              hue = Math.floor(Math.random() * 360);
+            } while (hue >= 100 && hue <= 145);
+            var sat = 55 + Math.floor(Math.random() * 25);
+            var lit = 45 + Math.floor(Math.random() * 15);
+            poly.setAttribute('fill', 'hsl(' + hue + ',' + sat + '%,' + lit + '%)');
+            // 虚无2模式：CSS transition 实现渐变动画
+            if (self.voidMode === 2) {
+              poly.style.transition = 'fill 2s ease';
+            }
+          } else {
+            poly.setAttribute('fill', faceColors[b4.face]);
+          }
+          poly.setAttribute('stroke', '#1a1a2e');
+          poly.setAttribute('stroke-width', '0.5');
+          poly.setAttribute('class', 'variant-top');
+          g.appendChild(poly);
+
+          var txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          txt.setAttribute('x', b4.cx);
+          txt.setAttribute('y', b4.cy + 4);
+          txt.setAttribute('text-anchor', 'middle');
+          txt.setAttribute('fill', '#fff');
+          txt.setAttribute('font-size', '14');
+          txt.setAttribute('font-weight', 'bold');
+          txt.setAttribute('font-family', '"Microsoft YaHei", sans-serif');
+          txt.setAttribute('class', 'variant-text');
+          txt.textContent = b4.number;
+
+          // 偏移模式：静态旋转
+          if (self.currentMode === 'offset') {
+            var angles = [15, 30, 45, 60, 90, -15, -30, -45, -60, -90];
+            var ang = angles[Math.floor(Math.random() * angles.length)];
+            txt.setAttribute('transform', 'rotate(' + ang + ' ' + b4.cx + ' ' + b4.cy + ')');
+          }
+          // 混乱模式：动态摆动
+          else if (self.currentMode === 'chaos') {
+            txt.classList.add('chaos-mode');
+            var cAngles = [15, 30, 45, -15, -30, -45];
+            var cAng = cAngles[Math.floor(Math.random() * cAngles.length)];
+            txt.style.setProperty('--start-angle', cAng + 'deg');
+            txt.style.setProperty('--end-angle', (-cAng) + 'deg');
+          }
+
+          // 换字模式：随机字体
+          if (self.fontMode) {
+            var vFont = self.fonts[Math.floor(Math.random() * self.fonts.length)];
+            txt.setAttribute('font-family', vFont);
+          }
+
+          g.appendChild(txt);
+
+          // 虚无2模式：每个格子记录初始色相，供渐变使用
+          if (self.voidMode === 2 && self.currentMode === 'variant') {
+            var initHue = hue; // 当前已生成的 hue（已在上方跳过100~145）
+            poly.setAttribute('data-hue', initHue);
+            poly.style.transition = 'fill 1.5s ease';
+            // 每个格子独立定时器，3~5s 随机错开
+            (function(polyEl, svgEl) {
+              function scheduleNext() {
+                var delay = 3000 + Math.floor(Math.random() * 2000); // 3000~4999ms
+                polyEl._voidTimer = setTimeout(function() {
+                  if (!polyEl._voidActive) return;
+                  // 向随机方向漂移 60~180°
+                  var shift = 60 + Math.floor(Math.random() * 121);
+                  if (Math.random() < 0.5) shift = -shift;
+                  var newHue = parseInt(polyEl.getAttribute('data-hue')) + shift;
+                  newHue = ((newHue % 360) + 360) % 360;
+                  // 跳过 #4CAF50 附近 100~145
+                  if (newHue >= 100 && newHue <= 145) {
+                    newHue = newHue < 122 ? 95 : 150;
+                  }
+                  polyEl.setAttribute('data-hue', newHue);
+                  var s = 55 + Math.floor(Math.random() * 25);
+                  var l = 45 + Math.floor(Math.random() * 15);
+                  polyEl.setAttribute('fill', 'hsl(' + newHue + ',' + s + '%,' + l + '%)');
+                  scheduleNext(); // 递归调度
+                }, delay);
+              }
+              polyEl._voidActive = true;
+              scheduleNext();
+            })(poly, svg);
+          }
+
+          (function(num, elem) {
+            g.addEventListener('click', function() { self.handleClick(num, elem); });
+          })(b4.number, g);
+
+          svg.appendChild(g);
+        }
+
+        // helper: 检查是否在初级内层
+        function innerMatch(face, lx, ly) {
+          if (!inner) return true;
+          var m = innerMask[face];
+          if (!m) return true;
+          for (var mi = 0; mi < m.length; mi++) {
+            if (m[mi][0] === lx && m[mi][1] === ly) return true;
+          }
+          return false;
+        }
       };
 
       SchulteGridGame.prototype._bounceGetTotal = function() {
@@ -3064,15 +4517,28 @@
 
       SchulteGridGame.prototype._bounceGetColor = function(num, total) {
         var ratio = (num - 1) / total;
-        var palettes = [
-          ['#E53935','#FF5252','#FF7043','#D32F2F'],
-          ['#1E88E5','#42A5F5','#29B6F6','#1565C0'],
-          ['#F9A825','#FFB300','#FFCA28','#FF8F00'],
-          ['#8E24AA','#AB47BC','#CE93D8','#6A1B9A']
-        ];
-        var idx = Math.min(Math.floor(ratio * 4), 3);
+	        var palettes = [
+	          ['#C62828','#E53935','#EF5350','#FF5252','#FF7043','#FF8A80','#D32F2F','#B71C1C'],
+	          ['#E65100','#F57C00','#FB8C00','#FF9800','#FFA726','#FFB74D','#EF6C00','#BF360C'],
+	          ['#F9A825','#FDD835','#FFEE58','#FFEB3B','#FFF176','#FFCA28','#FFB300','#FF8F00'],
+	          ['#4E342E','#5D4037','#6D4C41','#795548','#8D6E63','#A1887F','#3E2723','#BCAAA4'],
+	          ['#00838F','#00ACC1','#00BCD4','#26C6DA','#4DD0E1','#0097A7','#006064','#00E5FF'],
+	          ['#1565C0','#1E88E5','#2196F3','#42A5F5','#64B5F6','#1976D2','#0D47A1','#2979FF'],
+	          ['#6A1B9A','#8E24AA','#9C27B0','#AB47BC','#CE93D8','#7B1FA2','#4A148C','#E040FB'],
+	          ['#AD1457','#D81B60','#E91E63','#EC407A','#F06292','#C2185B','#880E4F','#FF4081']
+	        ];
+        var idx = Math.min(Math.floor(ratio * 8), 7);
         var palette = palettes[idx];
         return palette[Math.floor(Math.random() * palette.length)];
+      };
+
+      SchulteGridGame.prototype._hexToRgb = function(hex) {
+        var h = hex.replace('#', '');
+        return {
+          r: parseInt(h.substring(0, 2), 16),
+          g: parseInt(h.substring(2, 4), 16),
+          b: parseInt(h.substring(4, 6), 16)
+        };
       };
 
       SchulteGridGame.prototype._bounceInit = function() {
@@ -3098,13 +4564,27 @@
             attempts++;
           } while (overlapping && attempts < 200);
 
+          var ratio2 = (i - 1) / total;
+          var pIdx = Math.min(Math.floor(ratio2 * 8), 7);
+          var palettes = [
+            ['#C62828','#E53935','#EF5350','#FF5252','#FF7043','#FF8A80','#D32F2F','#B71C1C'],
+            ['#E65100','#F57C00','#FB8C00','#FF9800','#FFA726','#FFB74D','#EF6C00','#BF360C'],
+            ['#F9A825','#FDD835','#FFEE58','#FFEB3B','#FFF176','#FFCA28','#FFB300','#FF8F00'],
+            ['#4E342E','#5D4037','#6D4C41','#795548','#8D6E63','#A1887F','#3E2723','#BCAAA4'],
+            ['#00838F','#00ACC1','#00BCD4','#26C6DA','#4DD0E1','#0097A7','#006064','#00E5FF'],
+            ['#1565C0','#1E88E5','#2196F3','#42A5F5','#64B5F6','#1976D2','#0D47A1','#2979FF'],
+            ['#6A1B9A','#8E24AA','#9C27B0','#AB47BC','#CE93D8','#7B1FA2','#4A148C','#E040FB'],
+            ['#AD1457','#D81B60','#E91E63','#EC407A','#F06292','#C2185B','#880E4F','#FF4081']
+          ];
+          var palette = palettes[pIdx];
           this._bounceBalls.push({
             num: i,
             x: x, y: y,
             r: r,
             vx: (Math.random() - 0.5) * 120,
             vy: (Math.random() - 0.5) * 120,
-            color: this._bounceGetColor(i, total),
+            color: palette[Math.floor(Math.random() * palette.length)],
+            palette: palette,
             clicked: false
           });
         }
@@ -3161,17 +4641,34 @@
 
         // 渲染
         ctx.clearRect(0, 0, W, H);
+        var destroyActive = self.destroyMode > 0;
         for (var i = 0; i < balls.length; i++) {
           var b = balls[i];
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-          ctx.fillStyle = b.clicked ? '#4CAF50' : b.color;
+          var drawColor;
+          if (b.clicked) {
+            drawColor = '#4CAF50';
+          } else if (destroyActive && b.palette) {
+            // 毁灭模式：颜色在调色板4色之间渐变循环
+            var t = (Date.now() * 0.001 + b.num * 0.7) % b.palette.length;
+            var idx = Math.floor(t);
+            var frac = t - idx;
+            var c1 = self._hexToRgb(b.palette[idx]);
+            var c2 = self._hexToRgb(b.palette[(idx + 1) % b.palette.length]);
+            var r = Math.round(c1.r + (c2.r - c1.r) * frac);
+            var g = Math.round(c1.g + (c2.g - c1.g) * frac);
+            var bl = Math.round(c1.b + (c2.b - c1.b) * frac);
+            drawColor = 'rgb(' + r + ',' + g + ',' + bl + ')';
+          } else {
+            drawColor = b.color;
+          }
+          ctx.fillStyle = drawColor;
           ctx.fill();
           ctx.fillStyle = '#FFFFFF';
           ctx.font = 'bold ' + Math.floor(b.r * 0.9) + 'px "JetBrains Mono", "Microsoft YaHei", sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(b.num, b.x, b.y);
           ctx.fillText(b.num, b.x, b.y);
         }
 
@@ -3446,7 +4943,7 @@
               b.clicked = true;
               this.currentNumber++;
               this.updateUI();
-              this.playSound('click');
+              this.playSound('correct');
               if (this.currentNumber > this._bounceGetTotal()) {
                 this.completeGame();
               }

@@ -306,7 +306,7 @@ body{
       <div class="result-row"><span>遗漏数</span><span class="rv" id="rMiss">-</span></div>
       <div class="result-row"><span>误报数</span><span class="rv" id="rFalse">-</span></div>
       <div class="result-row"><span>平均反应时</span><span class="rv" id="rRT">-</span></div>
-      <button class="btn btn-primary" onclick="startGame()" style="margin-top:8px;">再玩一次</button>
+      <button class="btn btn-primary" onclick="resetToIdle()" style="margin-top:8px;">再玩一次</button>
     </div>
   </div>
 </div>
@@ -422,6 +422,28 @@ function initProgressBar(){
 function updateProgressDot(idx){
   const dot = document.getElementById('pdot' + idx);
   if(dot) dot.classList.add('active');
+}
+
+function resetToIdle(){
+  if(state.running){
+    if(window.stopAllAudio) window.stopAllAudio();
+    state.running = false;
+    state.started = false;
+  }
+  resultCard.classList.remove('show');
+  progressBarWrap.classList.remove('show');
+  clickZone.querySelector('.zone-text').textContent = '听到目标词\n点击此处';
+  clickZone.classList.remove('flash-green','flash-red');
+  btnStart.textContent = '开始训练';
+  btnStart.style.cssText = 'margin-top:8px;width:100%;';
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  state.detectCount = 0;
+  state.missCount = 0;
+  state.falseCount = 0;
+  state.totalRT = 0;
+  state.rtCount = 0;
+  updateInfoUI();
+  statusText.textContent = '点击开始训练';
 }
 
 async function startGame(){

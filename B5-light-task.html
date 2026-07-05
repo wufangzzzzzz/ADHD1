@@ -216,7 +216,7 @@ body{
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 /* 规则弹窗 */
-.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:100;}
 .rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
 .rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
 .rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
@@ -303,7 +303,7 @@ body{
           <div class="result-item"><div class="val" id="r-switches">0</div><div class="lbl">规则切换</div></div>
         </div>
         <div class="result-btns">
-          <button class="btn-retry" onclick="startGame()">再来一次</button>
+          <button class="btn-retry" onclick="resetToIdle()">再来一次</button>
           <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
         </div>
       </div>
@@ -486,11 +486,13 @@ function nextTrial(){
     const cShape=altShapes[Math.floor(Math.random()*altShapes.length)];
     options.push({color:tColor,shape:cShape});
     usedShapes.add(cShape);
-    while(options.length<state.optCount){
+    let attempts=0;
+    while(options.length<state.optCount&&attempts<200){
+      attempts++;
       const c=COLORS[Math.floor(Math.random()*COLORS.length)];
       const s=SHAPES[Math.floor(Math.random()*SHAPES.length)];
-      if(!usedColors.has(c.hex)&&!usedShapes.has(s)){
-        usedColors.add(c.hex);usedShapes.add(s);
+      if(!usedColors.has(c.hex)){
+        usedColors.add(c.hex);
         options.push({color:c,shape:s});
       }
     }
@@ -576,6 +578,17 @@ function showSwitchToast(){
   toast.textContent=isColor?'切换为 绿灯·找颜色':'切换为 红灯·找形状';
   toast.className='switch-toast show '+(isColor?'to-color':'to-shape');
   setTimeout(()=>{toast.className='switch-toast';},800);
+}
+
+function resetToIdle(){
+  state.gameActive=false;
+  clearInterval(state.timerInterval);
+  document.getElementById('timer-fill').style.width='0%';
+  document.getElementById('timer-text').textContent='0:00';
+  document.getElementById('target-card').innerHTML='';
+  document.getElementById('options-row').innerHTML='';
+  document.getElementById('result-area').classList.remove('show');
+  document.getElementById('start-area').classList.remove('hidden');
 }
 
 function endGame(){

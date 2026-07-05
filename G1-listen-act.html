@@ -1235,6 +1235,7 @@ function renderCategories(categories) {
     var btn = document.createElement('button');
     btn.className = 'category-btn';
     btn.textContent = cat;
+    btn.dataset.category = cat;
       // Map category names to image class names
       var catImgMap = {
         '水果': 'fruits',

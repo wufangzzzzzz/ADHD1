@@ -578,6 +578,9 @@
 .loading-overlay .load-bar-wrap{width:280px;height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;}
 .loading-overlay .load-bar-fill{height:100%;background:linear-gradient(90deg,#00BFFF,#1E90FF);border-radius:4px;transition:width 0.15s ease;width:0%;}
 .loading-overlay .load-text{color:rgba(255,255,255,0.5);font-size:13px;}
+.back-btn{background:rgba(0,0,0,0.05);border:none;color:rgba(0,0,0,0.5);padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.2s;}
+.back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
+.back-btn-fixed{position:fixed;top:10px;left:10px;z-index:150;background:rgba(255,255,255,0.9);box-shadow:0 2px 8px rgba(0,0,0,0.1);}
 </style>
   <script src="public/audio-helper.js"></script>
 <script>
@@ -594,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
 </script>
 </head>
 <body>
+  <button class="back-btn back-btn-fixed" onclick="location.href='index.html'">← 返回大厅</button>
   <div class="loading-overlay" id="loadingOverlay">
     <div class="load-title">加载音频资源...</div>
     <div class="load-bar-wrap"><div class="load-bar-fill" id="loadBarFill"></div></div>
@@ -701,6 +705,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     <div class="result-details" id="resultDetails"></div>
     <button class="result-btn" onclick="closeResult('replay')">🔄 再来一局</button>
     <button class="result-btn secondary" onclick="closeResult('menu')">🏠 返回菜单</button>
+    <button class="result-btn secondary" onclick="location.href='index.html'" style="background:rgba(102,126,234,0.1);color:#667eea;border:1px solid rgba(102,126,234,0.2);margin-top:8px;">← 返回大厅</button>
   </div>
 </div>
 
@@ -724,7 +729,7 @@ const QUESTION_POOL = [
   { id: 'season', category: '季节顺序', items: ['冬天','夏天','春天','秋天'], correct: ['春天','夏天','秋天','冬天'], itemCount: 4, difficulty: 'medium' },
   // ---- 困难·5项 (3题) ----
   { id: 'cook5', category: '逻辑排序', items: ['和面','吃饺子','煮熟','包饺子','剁馅'], correct: ['剁馅','和面','包饺子','煮熟','吃饺子'], itemCount: 5, difficulty: 'hard' },
-  { id: 'insect', category: '昆虫成长', items: ['蝴蝶','虫卵','结蛹','毛毛虫'], correct: ['虫卵','毛毛虫','结蛹','蝴蝶'], itemCount: 4, difficulty: 'hard' },
+  { id: 'insect', category: '昆虫成长', items: ['蝴蝶','虫卵','结蛹','毛毛虫','破茧'], correct: ['虫卵','毛毛虫','结蛹','破茧','蝴蝶'], itemCount: 5, difficulty: 'hard' },
   { id: 'plantFlow', category: '种植流程', items: ['施肥','播种','收获','松土','浇水'], correct: ['松土','播种','施肥','浇水','收获'], itemCount: 5, difficulty: 'hard' }
 ]
 

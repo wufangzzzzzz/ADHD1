@@ -667,6 +667,10 @@
           var canvasWidth = Math.min(maxWidth, 800);
           var canvasHeight = Math.min(maxHeight, 600);
 
+          // 记录旧尺寸用于按比例缩放
+          var oldWidth = this.canvas.width;
+          var oldHeight = this.canvas.height;
+
           this.canvas.width = canvasWidth;
           this.canvas.height = canvasHeight;
 
@@ -676,7 +680,33 @@
           this.canvasOffset = this.getCanvasOffset();
           this.scale = 1;
 
-          this.generateShapes();
+          // 按比例缩放现有图形坐标（保持 connectedShapes 引用有效）
+          if (oldWidth > 0 && oldHeight > 0 && this.shapes && this.shapes.length > 0) {
+            var scaleX = canvasWidth / oldWidth;
+            var scaleY = canvasHeight / oldHeight;
+
+            for (var i = 0; i < this.shapes.length; i++) {
+              this.shapes[i].x *= scaleX;
+              this.shapes[i].y *= scaleY;
+              if (this.shapes[i].size) {
+                this.shapes[i].size *= Math.min(scaleX, scaleY);
+              }
+            }
+
+            // 缩放拖拽位置
+            if (this.startPos) {
+              this.startPos.x *= scaleX;
+              this.startPos.y *= scaleY;
+            }
+            if (this.currentPos && (this.currentPos.x !== 0 || this.currentPos.y !== 0)) {
+              this.currentPos.x *= scaleX;
+              this.currentPos.y *= scaleY;
+            }
+          } else {
+            // 首次初始化，直接生成
+            this.generateShapes();
+          }
+
           this.draw();
         };
 

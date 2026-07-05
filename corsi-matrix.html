@@ -662,8 +662,24 @@ function startGame(){
   setTimeout(()=>showSequence(),800);
 }
 
+function resetToIdle(){
+  state.gameStarted = false;
+  state.gameOver = true;
+  state.phase = 'idle';
+  gameGrid.querySelectorAll('.block').forEach(b=>{
+    b.classList.remove('lit','correct','wrong');
+    b.style.pointerEvents = 'auto';
+  });
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  resultCard.classList.remove('show');
+  hintText.textContent = '点击开始训练';
+  document.getElementById('rSpan').textContent = '-';
+  document.getElementById('rCorrect').textContent = '-';
+  document.getElementById('rScore').textContent = '-';
+}
+
 function restartGame(){
-  startGame();
+  resetToIdle();
 }
 
 function setBlocksEnabled(enabled){

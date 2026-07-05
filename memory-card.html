@@ -447,6 +447,7 @@
     
     function setLevel(level) {
       currentLevel = level;
+      document.getElementById('level').textContent = level;
       document.querySelectorAll('.level-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i + 1 === level);
       });

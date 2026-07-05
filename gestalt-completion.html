@@ -108,16 +108,22 @@ h1{
   width:100%;
   flex:1;
   min-height:0;
+  justify-content:center;
+  align-items:center;
 }
 .puzzle-panel,.options-panel{
-  flex:1;
   background:rgba(0,0,0,0.08);
   border-radius:16px;
   padding:12px;
   box-shadow:0 2px 12px rgba(45,43,85,0.05);
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
   min-height:0;
   overflow:hidden;
+  width:fit-content;
+  height:fit-content;
+  max-width:calc(50% - 8px);
+  max-height:100%;
+  margin:auto;
 }
 .panel-label{
   font-size:14px;font-weight:700;
@@ -145,10 +151,6 @@ h1{
 .puzzle-grid{
   display:grid;
   gap:3px;
-  width:100%;
-  aspect-ratio:1;
-  aspect-ratio:1;
-  max-height:100%;
 }
 .puzzle-piece{
   border-radius:6px;
@@ -197,9 +199,10 @@ h1{
   display:grid;
   gap:6px;
   width:100%;
-  aspect-ratio:1;
   max-height:100%;
   overflow:hidden;
+  align-content:center;
+  justify-content:center;
 }
 .option-piece{
   border-radius:8px;
@@ -334,9 +337,7 @@ h1{
 /* 响应式 */
 @media(max-width:700px){
   .game-area{flex-direction:column;gap:8px;}
-  .puzzle-panel,.options-panel{flex:1;min-height:0;}
-  .puzzle-grid{max-width:min(320px,100%);margin:0 auto;}
-  .options-grid{max-width:min(320px,100%);margin:0 auto;}
+  .puzzle-panel,.options-panel{max-width:100%;max-height:calc(50% - 4px);}
 }
 @media(orientation:landscape) and (max-height:500px){
   .container{padding:2px 6px;gap:2px;}
@@ -355,9 +356,7 @@ h1{
 }
 @media(min-width:768px) and (orientation:portrait){
   .game-area{flex-direction:column;gap:10px;}
-  .puzzle-panel,.options-panel{flex:1;min-height:0;}
-  .puzzle-grid{max-width:min(400px,100%);margin:0 auto;}
-  .options-grid{max-width:min(400px,100%);margin:0 auto;}
+  .puzzle-panel,.options-panel{max-width:100%;max-height:calc(50% - 5px);}
 }
 @media(prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important;}
@@ -989,6 +988,7 @@ function showQuestion() {
 // ===== 渲染拼图展示区 =====
 function renderPuzzle(q, targetId) {
   var grid = document.getElementById(targetId || 'puzzle-grid');
+  grid.setAttribute('data-opt-cols', q.cols);
   grid.style.gridTemplateColumns = 'repeat(' + q.cols + ', 1fr)';
   grid.style.gridTemplateRows = 'repeat(' + q.rows + ', 1fr)';
   grid.innerHTML = '';
@@ -1038,6 +1038,8 @@ function renderPuzzle(q, targetId) {
   } else {
     grid.style.backgroundImage = '';
   }
+
+  fitGrid(grid);
 }
 
 // ===== 渲染选项区 =====
@@ -1046,8 +1048,9 @@ function renderOptions(q, targetId) {
   var optsCount = q.options.length;
   var optCols = Math.ceil(Math.sqrt(optsCount));
   var optRows = Math.ceil(optsCount / optCols);
+  grid.setAttribute('data-opt-cols', optCols);
   grid.style.gridTemplateColumns = 'repeat(' + optCols + ', 1fr)';
-  grid.style.gridTemplateRows = 'repeat(' + optRows + ', 1fr)';
+  grid.style.gridTemplateRows = '';
   grid.innerHTML = '';
 
   for (var i = 0; i < q.options.length; i++) {
@@ -1061,11 +1064,50 @@ function renderOptions(q, targetId) {
     piece.style.backgroundPosition =
       (q.cols > 1 ? (opt.col / (q.cols - 1)) * 100 : 0) + '% ' +
       (q.rows > 1 ? (opt.row / (q.rows - 1)) * 100 : 0) + '%';
-    piece.style.aspectRatio = q.rows + ' / ' + q.cols;
     piece.onclick = (function(idx) {
       return function() { onOptionClick(idx); };
     })(i);
     grid.appendChild(piece);
+  }
+
+  // 计算等比正方形尺寸
+  fitGrid(grid);
+}
+
+// ===== 等比正方形自适应 =====
+function fitGrid(gridEl) {
+  if (!gridEl || !gridEl.children.length) return;
+  var cols = parseInt(gridEl.getAttribute('data-opt-cols'));
+  if (!cols) return;
+  var count = gridEl.children.length;
+  var rows = Math.ceil(count / cols);
+
+  var gameArea = document.querySelector('.game-area');
+  if (!gameArea) return;
+
+  var isVertical = getComputedStyle(gameArea).flexDirection === 'column';
+  var areaGap = 16;
+  var panelPadding = 24;
+
+  var labelEl = gridEl.parentElement.querySelector('.panel-label');
+  var labelH = labelEl ? (labelEl.offsetHeight + 6) : 0;
+
+  var availW, availH;
+  if (isVertical) {
+    availW = gameArea.clientWidth - panelPadding;
+    availH = (gameArea.clientHeight - areaGap) / 2 - panelPadding - labelH;
+  } else {
+    availW = (gameArea.clientWidth - areaGap) / 2 - panelPadding;
+    availH = gameArea.clientHeight - panelPadding - labelH;
+  }
+
+  var gridGap = parseInt(getComputedStyle(gridEl).gap) || 6;
+  var maxByW = (availW - (cols - 1) * gridGap) / cols;
+  var maxByH = (availH - (rows - 1) * gridGap) / rows;
+  var pieceSize = Math.floor(Math.min(maxByW, maxByH));
+  if (pieceSize > 10) {
+    gridEl.style.gridTemplateColumns = 'repeat(' + cols + ', ' + pieceSize + 'px)';
+    gridEl.style.gridTemplateRows = 'repeat(' + rows + ', ' + pieceSize + 'px)';
   }
 }
 
@@ -1296,6 +1338,10 @@ function endGame() {
 }
 
 // ===== 初始化 =====
+window.addEventListener('resize', function() {
+  fitGrid(document.getElementById('puzzle-grid'));
+  fitGrid(document.getElementById('options-grid'));
+});
 </script>
 </body>
 </html>

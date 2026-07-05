@@ -452,17 +452,7 @@
         return false;
       }
       
-      // 检查长度是否是4的倍数
-      if (path.length % 4 !== 0) {
-        // 尝试截断
-        while (path.length > 8 && path.length % 4 !== 0) {
-          path.pop();
-        }
-        if (path[path.length - 1].col !== 9) {
-          return false;
-        }
-      }
-      
+      // 检查长度是否是4的倍数且至少8步
       return path.length >= 8 && path.length % 4 === 0;
     }
     
@@ -507,11 +497,11 @@
         // 模式E: 螺旋内卷
         [
           { row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }, { row: 0, col: 3 },
-          { row: 0, col: 4 }, { row: 1, col: 4 }, { row: 2, col: 4 }, { row: 3, col: 4 },
-          { row: 3, col: 3 }, { row: 3, col: 2 }, { row: 3, col: 1 }, { row: 2, col: 1 },
-          { row: 1, col: 1 }, { row: 1, col: 2 }, { row: 1, col: 3 }, { row: 2, col: 3 },
-          { row: 2, col: 2 }, { row: 2, col: 3 }, { row: 2, col: 4 }, { row: 2, col: 5 },
-          { row: 2, col: 6 }, { row: 2, col: 7 }, { row: 2, col: 8 }, { row: 2, col: 9 }
+          { row: 0, col: 4 }, { row: 1, col: 4 }, { row: 2, col: 4 }, { row: 2, col: 3 },
+          { row: 2, col: 2 }, { row: 2, col: 1 }, { row: 3, col: 1 }, { row: 4, col: 1 },
+          { row: 4, col: 2 }, { row: 4, col: 3 }, { row: 4, col: 4 }, { row: 4, col: 5 },
+          { row: 4, col: 6 }, { row: 4, col: 7 }, { row: 4, col: 8 }, { row: 4, col: 9 },
+          { row: 5, col: 9 }, { row: 6, col: 9 }, { row: 7, col: 9 }, { row: 8, col: 9 }
         ],
         // 模式F: 斜向下行
         [
@@ -826,6 +816,17 @@
     function closeModal() {
       document.getElementById('modal').classList.remove('show');
     }
+
+    function resetUI() {
+      game.completed = false;
+      stopTimer();
+      document.getElementById('timer').textContent = '0';
+      document.getElementById('steps').textContent = '0';
+      document.getElementById('newGameBtn').disabled = false;
+      document.querySelectorAll('.symbol-type-btn').forEach(b=>b.disabled=false);
+      // 清空画布显示初始状态
+      draw();
+    }
     
     function newGame() {
       generateMaze();
@@ -856,7 +857,8 @@
       document.getElementById('newGameBtn').addEventListener('click', newGame);
       document.getElementById('modalBtn').addEventListener('click', function() {
         closeModal();
-        newGame();
+        // 回到待机状态，等待玩家点击"新游戏"
+        resetUI();
       });
       document.getElementById('modal').addEventListener('click', function(e) {
         if (e.target === document.getElementById('modal')) closeModal();

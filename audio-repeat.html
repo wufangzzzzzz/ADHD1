@@ -761,6 +761,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
   <div class="land-left">
     <!-- 游戏头 -->
     <div class="game-header">
+      <button class="back-btn" onclick="backToMenu()" style="background:rgba(0,0,0,0.06);border:none;color:rgba(0,0,0,0.45);padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;position:absolute;top:10px;left:10px;z-index:10;">← 返回大厅</button>
       <h1>🎧 复读机训练</h1>
       <div class="subtitle">听数字 · 记顺序 · 点击复现</div>
     </div>
@@ -862,6 +863,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     <div class="result-stars" id="resultStars">⭐⭐⭐</div>
     <div class="result-desc" id="resultDesc">表现不错，继续加油！</div>
     <button class="btn-result" onclick="restartGame()">🔄 再来一轮</button>
+    <button class="btn-result" onclick="backToMenu()" style="background:rgba(102,126,234,0.1);color:#667eea;border:1px solid rgba(102,126,234,0.2);margin-top:8px;">← 返回大厅</button>
   </div>
 </div>
 
@@ -956,7 +958,11 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     function safeCb() {
       if (!called) { called = true; if (callback) callback(); }
     }
-    window.playAudio(text, safeCb, cfg ? cfg.rate : 0.85);
+    if (typeof window.playAudio === 'function') {
+      window.playAudio(text, safeCb, cfg ? cfg.rate : 0.85);
+    } else {
+      safeCb();
+    }
     // 安全兜底：3秒后如果音频回调未触发，强制执行，防止播放链中断
     setTimeout(function() {
       if (!called) { called = true; if (callback) callback(); }
@@ -1161,7 +1167,7 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
       setStatus('listening', '👂 干扰音...', '跳过干扰音，只记数字！');
       // 播放短促的"咔嗒"音效（明显非人声）
       try {
-        var actx = new (window.AudioContext || window.webkitAudioContext)();
+        var actx = getAudioCtx();
         var now = actx.currentTime;
 
         // 短促的打击声
@@ -1264,7 +1270,6 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
       if (userInput.length === currentSequence.length) {
         // 全部正确！
         isInputPhase = false;
-        btnStart.disabled = false;
         btnReplay.disabled = true;
         setButtonsEnabled(false);
         onSuccess();
@@ -1508,19 +1513,20 @@ document.addEventListener('DOMContentLoaded', () => { showRulesPopup(); });
     document.getElementById('resultOverlay').style.display = 'flex';
   }
 
-  // 重新开始
-  function restartGame() {
+  // 回到待机状态
+  function resetToIdle() {
     if (window.stopAllAudio) window.stopAllAudio();
     document.querySelector('.num-pad').style.display = 'grid';
     document.getElementById('btnReplay').style.display = '';
-
     var overlay = document.getElementById('resultOverlay');
     overlay.style.display = 'none';
-
     resetGame();
+    // 不自动开始，等待玩家点击
+  }
 
-    // 自动开始
-    setTimeout(function() { startRound(); }, 500);
+  // 重新开始
+  function restartGame() {
+    resetToIdle();
   }
 
   // 返回主页

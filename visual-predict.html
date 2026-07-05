@@ -271,9 +271,9 @@
       <h1>接下来会发生什么</h1>
       <p>根据运动轨迹，从下方选项里圈出问号处的图案</p>
       <div class="mode-switch">
-        <button class="mode-btn active" onclick="switchMode('image')">图像版</button>
-        <button class="mode-btn" onclick="switchMode('number')">数字版</button>
-        <button class="mode-btn" onclick="switchMode('letter')">字母版</button>
+        <button class="mode-btn active" onclick="switchMode('image', event)">图像版</button>
+        <button class="mode-btn" onclick="switchMode('number', event)">数字版</button>
+        <button class="mode-btn" onclick="switchMode('letter', event)">字母版</button>
       </div>
       <div class="score-display">积分：<span id="score">0</span> 分</div>
     </div>
@@ -324,7 +324,7 @@
     let currentPattern = '';
 
     // 切换模式
-    function switchMode(mode) {
+    function switchMode(mode, event) {
       currentMode = mode;
       // 更新按钮状态
       document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -551,6 +551,7 @@
         document.getElementById('feedback').textContent = `恭喜通关！本轮获得 ${score} 分`;
         document.getElementById('feedback').className = 'feedback correct';
         document.getElementById('nextBtn').textContent = '重新开始';
+        document.getElementById('nextBtn').onclick = init;
         document.getElementById('nextBtn').style.display = 'block';
       } else {
         // 选对了自动进入下一关

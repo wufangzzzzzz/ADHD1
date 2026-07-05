@@ -370,7 +370,7 @@ body{
       <div class="result-row"><span>总正确匹配</span><span class="rv" id="rCorrect">-</span></div>
       <div class="result-row"><span>误报数</span><span class="rv" id="rFalse">-</span></div>
       <div class="result-row"><span>遗漏数</span><span class="rv" id="rMiss">-</span></div>
-      <button class="btn btn-primary" onclick="startGame()" style="margin-top:8px;">再玩一次</button>
+      <button class="btn btn-primary" onclick="resetToIdle()" style="margin-top:8px;">再玩一次</button>
     </div>
   </div>
 </div>
@@ -517,6 +517,17 @@ document.getElementById('colorBtns').addEventListener('click', e => {
 });
 
 // ========== 游戏逻辑 ==========
+function resetToIdle(){
+  if(state.running) stopGame();
+  resultCard.classList.remove('show');
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.getElementById('nLevel').textContent = 'N = -';
+  document.getElementById('blockNum').textContent = '0/0';
+  document.getElementById('trialNum').textContent = '0/0';
+  document.getElementById('accuracy').textContent = '-';
+  statusText.textContent = '选择难度后点击开始';
+}
+
 function startGame(){
   if(state.running) return;
   const nl = N_LEVELS[state.nLevel];

@@ -222,7 +222,7 @@ body{
   .shape-card,.btn,.pair-row{transition:none!important;animation:none!important;}
 }
 /* 规则弹窗 */
-.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;}
+.rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:100;}
 .rules-dialog{background:#1e1e3a;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;text-align:center;}
 .rules-dialog h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:16px;}
 .rules-dialog p{color:rgba(255,255,255,0.8);font-size:14px;line-height:1.6;text-align:left;margin-bottom:12px;}
@@ -265,7 +265,7 @@ body{
       <div class="result-card">
         <div class="result-time-big" id="resultTime">0.0s</div>
         <div class="result-time-lbl">总用时</div>
-        <button class="btn btn-restart" onclick="startGame()">再来一次</button>
+        <button class="btn btn-restart" onclick="resetToIdle()">再来一次</button>
       </div>
     </div>
   </div>
@@ -596,6 +596,16 @@ function updateTimer() {
   timerVal.textContent = String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
 }
 
+function resetToIdle(){
+  state.isPlaying = false;
+  clearInterval(state.timerId);
+  leftPanel.querySelectorAll('.shape-card').forEach(c=>c.remove());
+  rightPanel.querySelectorAll('.shape-card').forEach(c=>c.remove());
+  resultArea.classList.remove('show');
+  btnStart.style.display = 'block';
+  btnStart.textContent = '开始训练';
+}
+
 function endGame() {
   state.isPlaying = false;
   clearInterval(state.timerId);
@@ -609,7 +619,6 @@ function endGame() {
 
   resultArea.classList.add('show');
   btnStart.style.display = 'block';
-  btnStart.textContent = '再来一次';
 }
 
 // ===== 音效 =====

@@ -665,6 +665,17 @@ function nextTrial(){
   setTimeout(()=>runTrial(),400);
 }
 
+function resetToIdle(){
+  state.running=false;clearTimeout(state.timeoutId);
+  document.getElementById('start-btn').disabled=false;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.getElementById('instruction-display').innerHTML='<span class="prefix"></span><span id="cmd-text"></span>';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('trial-info').textContent='';
+  const modal=document.querySelector('.modal-overlay');
+  if(modal) modal.remove();
+}
+
 function endGame(){
   state.running=false;clearTimeout(state.timeoutId);
   document.getElementById('start-btn').disabled=false;
@@ -689,7 +700,7 @@ function endGame(){
   const oldModal=document.querySelector('.modal-overlay');if(oldModal)oldModal.remove();
   const overlay=document.createElement('div');overlay.className='modal-overlay show';
   overlay.innerHTML='<div class="modal-card"><div class="result-title">训练完成！</div><div class="result-grade">'+grade+'</div><div class="result-grid"><div class="result-item"><div class="val">'+goAcc+'%</div><div class="lbl">Go正确率</div></div><div class="result-item"><div class="val">'+nogoAcc+'%</div><div class="lbl">No-Go正确率</div></div><div class="result-item"><div class="val">'+impulseRate+'%</div><div class="lbl">冲动率</div></div><div class="result-item"><div class="val">'+avgRT+'ms</div><div class="lbl">平均反应时</div></div></div><div class="result-btns"><button class="btn-retry">再来一次</button><button class="btn-home">返回大厅</button></div></div>';
-  overlay.querySelector('.btn-retry').addEventListener('click',()=>{overlay.remove();startGame();});
+  overlay.querySelector('.btn-retry').addEventListener('click',()=>{overlay.remove();resetToIdle();});
   overlay.querySelector('.btn-home').addEventListener('click',()=>{location.href='index.html';});
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   document.body.appendChild(overlay);

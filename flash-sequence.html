@@ -233,13 +233,21 @@ body{
     <div class="sub">序列记忆训练</div>
   </div>
 
-  <!-- 模式栏 + 默读 -->
+  <!-- 模式栏 + 位数 + 默读 -->
   <div class="mode-bar" id="modeBar">
     <button class="mode-btn active" data-mode="simple">简单</button>
     <button class="mode-btn" data-mode="medium">中等</button>
     <button class="mode-btn" data-mode="hard">困难</button>
     <button class="mode-btn" data-mode="hell">💀地狱</button>
     <button class="mode-btn" data-mode="mix">混合</button>
+    <div class="digit-select-wrap">
+      <label for="digitSelect" style="font-size:clamp(12px,1.6vw,14px);font-weight:600;color:var(--text);">位数</label>
+      <select id="digitSelect" style="font-family:var(--font);font-size:clamp(13px,1.8vw,15px);font-weight:700;padding:4px 8px;border-radius:8px;border:2px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;">
+        <option value="4">4</option><option value="5">5</option><option value="6" selected>6</option>
+        <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+      </select>
+    </div>
     <div class="silent-wrap">
       <input type="checkbox" id="silentCheck">
       <label for="silentCheck" style="cursor:pointer;user-select:none;">🔇 默读</label>
@@ -254,27 +262,13 @@ body{
   </div>
 
   <!-- 星星进度条 -->
-  <div class="star-progress" id="starProgress">
-    <span class="star" data-si="0">★</span>
-    <span class="star" data-si="1">★</span>
-    <span class="star" data-si="2">★</span>
-    <span class="star" data-si="3">★</span>
-    <span class="star" data-si="4">★</span>
-    <span class="star" data-si="5">★</span>
-  </div>
+  <div class="star-progress" id="starProgress"></div>
 
   <!-- 数字网格 -->
   <div class="digit-grid" id="digitGrid"></div>
 
   <!-- 答案展示区 -->
-  <div class="answer-area" id="answerArea">
-    <div class="answer-slot" data-si="0">?</div>
-    <div class="answer-slot" data-si="1">?</div>
-    <div class="answer-slot" data-si="2">?</div>
-    <div class="answer-slot" data-si="3">?</div>
-    <div class="answer-slot" data-si="4">?</div>
-    <div class="answer-slot" data-si="5">?</div>
-  </div>
+  <div class="answer-area" id="answerArea"></div>
 
   <!-- 操作栏 -->
   <div class="action-bar">
@@ -299,7 +293,7 @@ const MODES = [
   {key:'hard',  label:'困难', speed:500,  icon:'🔥'},
   {key:'hell',  label:'地狱', speed:300,  icon:'💀'},
 ];
-const TOTAL = 6;
+let TOTAL = 6;
 const CD_SEC = 3;
 const MAX_ROUNDS = 6;
 
@@ -316,19 +310,25 @@ const state = {
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
-function getRoundMode(r){return state.mode === 4 ? r % 3 : state.mode;}
+function getRoundMode(r){return state.mode === 4 ? r % 4 : state.mode;}
 function getSpeed(){return MODES[getRoundMode(state.round)].speed;}
 
 /* ===== 按键音 ===== */
+let _audioCtx = null;
+function _getAudioCtx(){
+  if(!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
 function playBeep(digit){
   try{
     const SCALE = {1:261.63,2:293.66,3:329.63,4:349.23,5:392.00,6:440.00,7:493.88,8:523.25,9:587.33,0:659.25};
     const freq = SCALE[digit] || 440;
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = _getAudioCtx();
     const o = ctx.createOscillator(); const g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination);
     o.frequency.value = freq; o.type = 'sine';
-    g.gain.setValueAtTime(0.25, ctx.currentTime);
+    g.gain.setValueAtTime(0.4, ctx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.15);
     o.start(ctx.currentTime); o.stop(ctx.currentTime+0.15);
   }catch(e){}
@@ -339,6 +339,31 @@ function setStarProgress(n){
   document.querySelectorAll('.star-progress .star').forEach((s,i)=>{
     s.classList.toggle('active', i < n);
   });
+}
+
+/* ===== 动态重建UI ===== */
+function rebuildUI(n){
+  TOTAL = n;
+  // 重建 answer-slot
+  const aa = $('answerArea');
+  aa.innerHTML = '';
+  for(let i=0;i<n;i++){
+    const slot = document.createElement('div');
+    slot.className = 'answer-slot';
+    slot.id = 'slot' + i;
+    aa.appendChild(slot);
+  }
+  // 重建 star-progress
+  const sp = $('starProgress');
+  sp.innerHTML = '';
+  for(let i=0;i<MAX_ROUNDS;i++){
+    const star = document.createElement('span');
+    star.className = 'star';
+    star.textContent = '★';
+    sp.appendChild(star);
+  }
+  // 更新输入框宽度
+  aa.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
 }
 
 /* ===== 网格初始化（仅一次） ===== */
@@ -366,7 +391,17 @@ $('silentCheck').addEventListener('change', function(){
 });
 
 /* ===== 生成不重复序列 ===== */
-function genSeq(){const p=[...NUMS];shuffle(p);return p.slice(0,TOTAL);}
+function genSeq(){
+  if(TOTAL <= NUMS.length){
+    const p=[...NUMS];shuffle(p);return p.slice(0,TOTAL);
+  }
+  const seq=[];
+  while(seq.length < TOTAL){
+    const d = NUMS[Math.floor(Math.random()*NUMS.length)];
+    if(seq.length === 0 || seq[seq.length-1] !== d) seq.push(d);
+  }
+  return seq;
+}
 
 /* ===== 预倒计时 3...2...1... ===== */
 function startPreCountdown(){
@@ -511,6 +546,12 @@ function showFinalResult(){
 
 /* ===== 开始游戏 ===== */
 function startGame(){
+  // 从选择器同步位数
+  const sel = $('digitSelect');
+  if(sel){
+    const n = parseInt(sel.value);
+    if(n !== TOTAL) rebuildUI(n);
+  }
   clearTimeout(state.timer); clearInterval(state.cdTimer);
   state.timer=null; state.cdTimer=null;
   state.round=0; state.totalScore=0; state.roundResults=[];
@@ -530,7 +571,8 @@ function startGame(){
 }
 
 $('startBtn').addEventListener('click', () => {
-  if(state.phase === 'IDLE' || state.phase === 'RESULT') startGame();
+  if(state.phase === 'IDLE') startGame();
+  else if(state.phase === 'RESULT'){ resetToIdle(); startGame(); }
 });
 $('stopBtn').addEventListener('click', stopGame);
 
@@ -546,6 +588,11 @@ function stopGame(){
   setStarProgress(0);
   updatePhase('⏹ 已停止');
   updateStatus();
+}
+
+function resetToIdle(){
+  stopGame();
+  $('digitSelect').disabled = false;
 }
 
 /* ===== 更新显示 ===== */
