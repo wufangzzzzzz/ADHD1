@@ -321,7 +321,7 @@ body{
       </div>
     </div>
 
-    <button class="btn btn-primary" onclick="startGame()" style="width:100%;">开始训练</button>
+    <button class="btn btn-primary" id="startBtn" onclick="toggleGame()" style="width:100%;">开始训练</button>
 
     <!-- 当前配置差异说明 -->
     <div class="config-desc" id="configDesc">
@@ -338,7 +338,8 @@ body{
     <div class="rules-box">
       <div class="rules-title">玩法说明</div>
       <div class="rules-item"><b>目标：</b>3×3网格中方块随机闪现，判断当前位置是否与N步前相同。</div>
-      <div class="rules-item"><b>操作：</b>观察方块→判断匹配→点击<b>匹配按钮</b>。</div>
+      <div class="rules-item"><b>操作：</b>看到方块闪烁后，如果位置与N步前<b>相同</b>，点击「匹配」按钮；如果<b>不同</b>，<b>不要点击</b>，等待下一次。</div>
+      <div class="rules-item"><b>举例（1-back）：</b>第1步亮左上角→第2步亮右下角（≠上一步，不点）→第3步亮左上角（=第2步即上一步，点匹配✅）</div>
       <div class="rules-item"><b>自适应：</b>Block正确率≥80%则N+1升级；&lt;50%累计3次则N-1降级。</div>
       <div class="rules-item" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);"><b>N1（1-back）：</b>判断当前位置是否与<b>上一步</b>相同。适合初学者，锻炼短期位置记忆。</div>
       <div class="rules-item"><b>N2（2-back）：</b>判断当前位置是否与<b>前两步</b>相同。需要同时记住最近两个位置，中等难度。</div>
@@ -370,7 +371,7 @@ body{
       <div class="result-row"><span>总正确匹配</span><span class="rv" id="rCorrect">-</span></div>
       <div class="result-row"><span>误报数</span><span class="rv" id="rFalse">-</span></div>
       <div class="result-row"><span>遗漏数</span><span class="rv" id="rMiss">-</span></div>
-      <button class="btn btn-primary" onclick="resetToIdle()" style="margin-top:8px;">再玩一次</button>
+      <button class="btn btn-primary" onclick="startGame()" style="margin-top:8px;">再玩一次</button>
     </div>
   </div>
 </div>
@@ -472,6 +473,26 @@ function playFlashSound(){ playBeep(880, 0.08, 'sine', 0.12); }
 function playMatchCorrect(){ playBeep(1200, 0.15, 'sine', 0.18); setTimeout(()=>playBeep(1600, 0.12, 'sine', 0.15), 100); }
 function playMatchWrong(){ playBeep(200, 0.25, 'square', 0.18); }
 
+// ========== 开始/停止切换 ==========
+function toggleGame(){
+  if(state.running){
+    stopGame();
+  } else {
+    startGame();
+  }
+}
+
+function updateStartBtn(){
+  const btn = document.getElementById('startBtn');
+  if(state.running){
+    btn.textContent = '停止训练';
+    btn.style.background = 'linear-gradient(135deg,#FF6B6B,#FF073A)';
+  } else {
+    btn.textContent = '开始训练';
+    btn.style.background = 'linear-gradient(135deg,#FF5E0E,#FF9800)';
+  }
+}
+
 // ========== 停止当前游戏 ==========
 function stopGame(){
   if(!state.running) return;
@@ -484,6 +505,7 @@ function stopGame(){
   document.getElementById('blockNum').textContent = '0/0';
   document.getElementById('trialNum').textContent = '0/0';
   document.getElementById('accuracy').textContent = '-';
+  updateStartBtn();
 }
 
 // ========== N级切换 ==========
@@ -526,6 +548,7 @@ function resetToIdle(){
   document.getElementById('trialNum').textContent = '0/0';
   document.getElementById('accuracy').textContent = '-';
   statusText.textContent = '选择难度后点击开始';
+  updateStartBtn();
 }
 
 function startGame(){
@@ -548,6 +571,7 @@ function startGame(){
   state.responded = false;
   resultCard.classList.remove('show');
   updateUI();
+  updateStartBtn();
   statusText.textContent = '准备开始...';
 
   setTimeout(()=>runBlock(),1000);
@@ -560,12 +584,14 @@ async function runBlock(){
   state.trialIdx = 0;
   state.blockCorrect = 0;
   state.blockTotal = 0;
+  statusText.textContent = 'Block ' + state.blockIdx + ' · 第1/' + diff.trialsPerBlock + '轮';
   updateUI();
 
   for(let t = 0; t < diff.trialsPerBlock; t++){
     if(!state.running) return;
     state.trialIdx = t + 1;
     state.responded = false;
+    statusText.textContent = 'Block ' + state.blockIdx + ' · 第' + (t+1) + '/' + diff.trialsPerBlock + '轮';
     updateUI();
 
     // 生成位置
@@ -680,6 +706,7 @@ function endGame(){
   document.getElementById('rMiss').textContent = state.misses;
   resultCard.classList.add('show');
   statusText.textContent = '训练结束';
+  updateStartBtn();
   saveResult(avgN);
 }
 

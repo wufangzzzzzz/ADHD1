@@ -477,7 +477,194 @@ body{
   transition:all 0.2s;
   box-shadow:0 4px 16px rgba(255,94,14,0.3);
 }
-.rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+  .rules-dialog button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,94,14,0.4);}
+
+  /* ===== 响应式设计 ===== */
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column !important;
+      height: auto !important;
+      min-height: 100dvh !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      padding: 8px !important;
+      gap: 8px !important;
+    }
+    .left-panel {
+      width: 100% !important;
+      min-width: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .right-panel {
+      min-height: 60vh !important;
+      width: 100% !important;
+    }
+    .diff-btn {
+      padding: 8px 4px !important;
+      font-size: 11px !important;
+      min-height: 36px !important;
+    }
+    .mode-btn {
+      padding: 10px !important;
+      min-height: 40px !important;
+    }
+    .stimulus-wrapper {
+      width: 200px !important;
+      height: 200px !important;
+    }
+    .stimulus-area {
+      width: 170px !important;
+      height: 170px !important;
+    }
+    .flash-ring {
+      width: 200px !important;
+      height: 200px !important;
+    }
+    .stats-bar {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      right: auto !important;
+      flex-wrap: wrap !important;
+      margin-bottom: 12px !important;
+    }
+    .game-header {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      right: auto !important;
+      margin-bottom: 12px !important;
+    }
+    .game-footer {
+      position: relative !important;
+      bottom: auto !important;
+      left: auto !important;
+      right: auto !important;
+      margin-top: 16px !important;
+    }
+    .hint-bar {
+      margin-bottom: 16px !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .left-panel {
+      padding: 8px !important;
+    }
+    .panel-title {
+      font-size: 12px !important;
+    }
+    .diff-btn {
+      padding: 10px 4px !important;
+      font-size: 12px !important;
+      min-height: 44px !important;
+    }
+    .mode-btn {
+      padding: 12px !important;
+      min-height: 44px !important;
+    }
+    .stimulus-wrapper {
+      width: 160px !important;
+      height: 160px !important;
+    }
+    .stimulus-area {
+      width: 140px !important;
+      height: 140px !important;
+    }
+    .flash-ring {
+      width: 160px !important;
+      height: 160px !important;
+    }
+    .stimulus-shape {
+      width: 60px !important;
+      height: 60px !important;
+    }
+    .start-btn {
+      padding: 12px 32px !important;
+      font-size: 16px !important;
+      min-height: 44px !important;
+    }
+    .back-btn {
+      padding: 8px 16px !important;
+      font-size: 14px !important;
+    }
+    .game-title {
+      font-size: 16px !important;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .diff-btns {
+      flex-wrap: wrap !important;
+    }
+    .diff-btn {
+      flex: 0 0 calc(33.333% - 4px) !important;
+      min-width: 60px !important;
+    }
+    .stimulus-wrapper {
+      width: 140px !important;
+      height: 140px !important;
+    }
+    .stimulus-area {
+      width: 120px !important;
+      height: 120px !important;
+    }
+    .flash-ring {
+      width: 140px !important;
+      height: 140px !important;
+    }
+  }
+
+  @media (max-width: 926px) and (orientation: landscape) {
+    .container {
+      flex-direction: row !important;
+      height: 100dvh !important;
+      padding: 6px !important;
+      gap: 6px !important;
+    }
+    .left-panel {
+      width: 240px !important;
+      min-width: 240px !important;
+      overflow-y: auto !important;
+      max-height: 100dvh !important;
+    }
+    .right-panel {
+      min-height: auto !important;
+      width: auto !important;
+      flex: 1 !important;
+    }
+    .stimulus-wrapper {
+      width: 180px !important;
+      height: 180px !important;
+    }
+    .stimulus-area {
+      width: 150px !important;
+      height: 150px !important;
+    }
+    .flash-ring {
+      width: 180px !important;
+      height: 180px !important;
+    }
+    .game-header {
+      position: absolute !important;
+      top: 8px !important;
+      left: 12px !important;
+      right: 12px !important;
+    }
+    .stats-bar {
+      position: absolute !important;
+      top: 44px !important;
+      left: 12px !important;
+      right: 12px !important;
+    }
+    .game-footer {
+      position: absolute !important;
+      bottom: 12px !important;
+      left: 12px !important;
+      right: 12px !important;
+    }
+  }
 </style>
 </head>
 <body>

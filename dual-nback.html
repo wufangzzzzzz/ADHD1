@@ -270,11 +270,13 @@ body{
         <button class="diff-btn" data-level="hard">高级</button>
       </div>
     </div>
-    <button class="btn btn-primary" id="btnStart" onclick="startGame()" style="margin-top:8px;width:100%;">开始训练</button>
+    <button class="btn btn-primary" id="btnStart" onclick="toggleGame()" style="margin-top:8px;width:100%;">开始训练</button>
     <div class="rules-inline">
       <div class="rules-title">玩法说明</div>
-      <div class="rules-item"><b>训练目标：</b>视听双通道工作记忆。同时追踪方块位置和字母，分别判断是否与N步前匹配。</div>
-      <div class="rules-item"><b>操作方式：</b>观察方块位置+听字母→点击格子=位置匹配→点击字母=字母匹配→键盘A/L也可→可同时操作。</div>
+      <div class="rules-item"><b>训练目标：</b>同时训练视觉空间记忆和听觉语音记忆（双通道工作记忆）。</div>
+      <div class="rules-item"><b>怎么玩：</b>每隔几秒，3×3方格中随机亮起一个格子，同时朗读一个字母。你需要判断当前位置/字母是否与<b>N步前</b>相同。</div>
+      <div class="rules-item"><b>操作：</b>位置匹配→点击格子；字母匹配→点击字母。两个判断独立，可同时操作。不匹配时不要点击。</div>
+      <div class="rules-item"><b>举例（2-back）：</b>第1步亮左上角读"C"→第2步亮右下角读"Q"→第3步亮左上角=位置匹配！点击格子；读"Q"=字母匹配！点击字母。</div>
       <div class="rules-item"><b>自适应N级：</b>综合正确率≥80%则N+1；正确率<50%累计3次则N-1。</div>
       <div class="rules-item"><b>难度：</b>初级1-back/3s；中级2-back/2.5s；高级2-back/2s。</div>
     </div>
@@ -282,7 +284,7 @@ body{
 
   <div class="right-panel" id="rightPanel">
     <div class="game-title">Dual N-back</div>
-    <div class="n-level" id="nLevel">N = 2</div>
+    <div class="n-level" id="nLevel">N = 1</div>
     <div class="grid" id="grid">
       <div class="cell" onpointerdown="onPosMatch()"></div><div class="cell" onpointerdown="onPosMatch()"></div><div class="cell" onpointerdown="onPosMatch()"></div>
       <div class="cell" onpointerdown="onPosMatch()"></div><div class="cell" onpointerdown="onPosMatch()"></div><div class="cell" onpointerdown="onPosMatch()"></div>
@@ -290,15 +292,13 @@ body{
     </div>
     <div class="letter-display" id="letterDisplay" onpointerdown="onLetterMatch()"></div>
     <div class="key-hints">
-      <div class="key-hint"><span class="key-badge">A</span> 位置匹配</div>
-      <div class="key-hint"><span class="key-badge">L</span> 字母匹配</div>
-      <div class="key-hint" style="font-size:0.7rem;opacity:0.7">📱 点击格子=位置 点击字母=字母</div>
+      <div class="key-hint" style="font-size:0.75rem;opacity:0.8">📱 点击格子=位置匹配 点击字母=字母匹配</div>
     </div>
     <div class="status-row">
       <div class="status-dot" id="dotPos"></div>
       <div class="status-dot" id="dotLetter"></div>
     </div>
-    <div class="status-text" id="statusText">点击格子=位置匹配 | 点击字母=字母匹配 | 键盘 A/L 也可</div>
+    <div class="status-text" id="statusText">点击格子=位置匹配 | 点击字母=字母匹配</div>
     <div class="info-row">
       <div class="info-badge">Block <span class="val" id="blockNum">1/10</span></div>
       <div class="info-badge">试次 <span class="val" id="trialNum">0/20</span></div>
@@ -312,7 +312,7 @@ body{
       <div class="result-row"><span>视觉正确率</span><span class="rv" id="rVis">-</span></div>
       <div class="result-row"><span>听觉正确率</span><span class="rv" id="rAud">-</span></div>
       <div class="result-row"><span>综合得分</span><span class="rv" id="rScore">-</span></div>
-      <button class="btn btn-primary" onclick="resetToIdle()" style="margin-top:8px;">再玩一次</button>
+      <button class="btn btn-primary" onclick="startGame()" style="margin-top:8px;">再玩一次</button>
     </div>
   </div>
 </div>
@@ -328,7 +328,7 @@ const DIFFICULTY = {
 
 let state = {
   level:'easy',
-  n:2,
+  n:1,
   blockIdx:0,
   trialIdx:0,
   posHistory:[],
@@ -430,6 +430,7 @@ document.querySelector('.left-panel').addEventListener('click',e=>{
   document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
   e.target.classList.add('active');
   state.level = e.target.dataset.level;
+  document.getElementById('nLevel').textContent = 'N = ' + DIFFICULTY[state.level].startN;
   if(state.running) stopGame();
 });
 
@@ -447,6 +448,14 @@ function resetToIdle(){
   statusText.textContent = '选择难度后点击开始';
 }
 
+function toggleGame(){
+  if(state.running){
+    stopGame();
+  } else {
+    startGame();
+  }
+}
+
 function startGame(){
   if(state.running) return;
   initAudio();
@@ -457,8 +466,8 @@ function startGame(){
   state.posHistory = [];
   state.letterHistory = [];
   state.running = true;
-  btnStart.textContent = '训练中';
-  btnStart.style.background = '#32CD32';
+  btnStart.textContent = '停止训练';
+  btnStart.style.background = '#FF6B6B';
   state.posCorrect = 0;state.posTotal = 0;
   state.audCorrect = 0;state.audTotal = 0;
   state.blockPosCorrect = 0;state.blockPosTotal = 0;
@@ -473,7 +482,7 @@ function startGame(){
   state.letterResponded = false;
   resultCard.classList.remove('show');
   updateUI();
-  statusText.textContent = '准备开始...';
+  statusText.textContent = '即将开始...';
   setTimeout(()=>runBlock(),1000);
 }
 
@@ -485,6 +494,7 @@ async function runBlock(){
   state.blockPosCorrect = 0;state.blockPosTotal = 0;
   state.blockAudCorrect = 0;state.blockAudTotal = 0;
   updateUI();
+  statusText.textContent = 'Block ' + state.blockIdx + ' 进行中';
 
   for(let t = 0; t < cfg.trialsPerBlock; t++){
     if(!state.running) return;
@@ -492,6 +502,7 @@ async function runBlock(){
     state.posResponded = false;
     state.letterResponded = false;
     updateUI();
+    statusText.textContent = 'Block ' + state.blockIdx + ' · 第' + (t+1) + '/' + cfg.trialsPerBlock + '轮';
 
     // 生成位置
     let pos;
@@ -597,7 +608,7 @@ function stopGame(){
   clearCells();
   letterDisplay.textContent = '';
   resultCard.classList.remove('show');
-  statusText.textContent = '请点击开始训练';
+  statusText.textContent = '已停止，点击开始训练';
   btnStart.textContent = '开始训练';
   btnStart.style.background = '';
   if('speechSynthesis' in window) speechSynthesis.cancel();
@@ -646,22 +657,11 @@ function onLetterMatch(){
   updateUI();
 }
 
-document.addEventListener('keydown',e=>{
-  if(e.key === 'a' || e.key === 'A'){
-    e.preventDefault();
-    onPosMatch();
-  }
-  if(e.key === 'l' || e.key === 'L'){
-    e.preventDefault();
-    onLetterMatch();
-  }
-});
-
 function endGame(){
   state.running = false;
   clearCells();
   letterDisplay.textContent = '';
-  btnStart.textContent = '开始训练';
+  btnStart.textContent = '再玩一次';
   btnStart.style.background = '';
   if('speechSynthesis' in window) speechSynthesis.cancel();
   const avgN = state.blockResults.length > 0

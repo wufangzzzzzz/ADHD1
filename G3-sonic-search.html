@@ -2091,7 +2091,7 @@ function checkAdaptation() {
     config = EXTRACT_CONFIG[state.level] || EXTRACT_CONFIG.intermediate;
   }
   if (!config) return;
-  const maxSub = config.subLevels;
+  const maxSub = config.subLevels.length;
   if (!config || !maxSub) return;
   // 自适应升降档逻辑
   if (state.totalAnswered >= 3) {

@@ -167,6 +167,24 @@
       color: white;
     }
 
+    .colorful-btn {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .colorful-btn.active {
+      border-color: #E91E63;
+      background: linear-gradient(135deg, rgba(233,30,99,0.3), rgba(156,39,176,0.3));
+      color: white;
+    }
+
     .target-item {
       min-width: 60px;
     }
@@ -433,6 +451,7 @@
     </select>
     <button class="orient-btn active" id="orientH" onclick="setOrientation('horizontal')">横版</button>
     <button class="orient-btn" id="orientV" onclick="setOrientation('vertical')">竖版</button>
+    <button class="colorful-btn" id="colorfulBtn" onclick="toggleColorful()">彩色</button>
   </div>
 
   <div class="info-bar">
@@ -535,6 +554,36 @@
     // 当前选中的文字模板名称
     var currentWordTemplate = '宝盖头';
     var words = wordTemplates[currentWordTemplate];
+    
+    // 彩色模式
+    var colorfulMode = false;
+    var COLOR_PALETTE = ['#e53935', '#1976D2', '#2E7D32', '#F57C00', '#7B1FA2', '#5D4037', '#00838F', '#C2185B'];
+    
+    function generateColorPool(total) {
+      var palette = COLOR_PALETTE;
+      var baseCount = Math.floor(total / palette.length);
+      var extraCount = total % palette.length;
+      var pool = [];
+      for (var i = 0; i < palette.length; i++) {
+        var count = baseCount + (i < extraCount ? 1 : 0);
+        for (var k = 0; k < count; k++) {
+          pool.push(palette[i]);
+        }
+      }
+      // Fisher-Yates 打乱
+      for (var i = pool.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+      }
+      return pool;
+    }
+    
+    function toggleColorful() {
+      colorfulMode = !colorfulMode;
+      document.getElementById('colorfulBtn').classList.toggle('active', colorfulMode);
+      resetGame();
+      initGrid();
+    }
     
     var audioCtx = null;
     
@@ -641,7 +690,8 @@
       var container = document.getElementById('grid');
       container.innerHTML = '';
       
-      // 确定目标值（数字1-9或字母a-z或汉字）
+      // 彩色模式：预生成均匀颜色池
+      var colorPool = colorfulMode ? generateColorPool(ROWS * COLS) : null;
       var possibleValues;
       if (mode === 'number') {
         possibleValues = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -689,6 +739,16 @@
           cell.innerHTML = '<span class="letter">' + value + '</span>';
         } else if (mode === 'word') {
           cell.textContent = value;
+        }
+        
+        // 彩色模式：分配随机颜色
+        if (colorfulMode) {
+          if (mode === 'letter') {
+            var span = cell.querySelector('.letter');
+            if (span) span.style.color = colorPool[i];
+          } else {
+            cell.style.color = colorPool[i];
+          }
         }
         
         cell.onclick = function() { cellClick(this); };
@@ -845,6 +905,9 @@
       container.style.gridTemplateColumns = 'repeat(' + COLS + ', 1fr)';
       grid = [];
       
+      // 彩色模式：预生成均匀颜色池
+      var colorPool = colorfulMode ? generateColorPool(ROWS * COLS) : null;
+      
       // 确定目标值
       var possibleValues;
       if (mode === 'number') {
@@ -882,6 +945,16 @@
             cell.innerHTML = '<span class="letter">' + value + '</span>';
           } else if (mode === 'word') {
             cell.textContent = value;
+          }
+          
+          // 彩色模式：分配随机颜色
+          if (colorfulMode) {
+            if (mode === 'letter') {
+              var span = cell.querySelector('.letter');
+              if (span) span.style.color = colorPool[i];
+            } else {
+              cell.style.color = colorPool[i];
+            }
           }
           
           cell.onclick = function() { cellClick(this); };
