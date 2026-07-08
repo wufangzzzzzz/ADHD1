@@ -86,7 +86,7 @@
         border-radius: 8px;
         margin-bottom: 8px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-        z-index: 10;
+        z-index: 50;
         padding: 4px 8px;
       }
 
@@ -408,6 +408,93 @@
       }
       .numtype-dropdown .nt-item:hover { background: #E0F2F1; color: #00897B; }
       .numtype-dropdown .nt-item.selected { background: #00897B; color: #fff; }
+
+      /* 背景选择按钮 */
+      .effect-btn.bgtype {
+        border: 1px solid #607D8B;
+        color: #607D8B;
+      }
+      .effect-btn.bgtype:hover,
+      .effect-btn.bgtype.active {
+        background: #607D8B;
+        color: #fff;
+      }
+      /* 背景选择下拉菜单 */
+      .bgtype-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        min-width: 180px;
+        padding: 8px;
+      }
+      .bgtype-dropdown.show { display: block; }
+      .bgtype-dropdown .bg-section {
+        font-size: 10px;
+        color: #999;
+        margin: 4px 0 2px;
+        text-align: center;
+      }
+      .bgtype-dropdown .bg-swatch-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 4px;
+        padding: 4px 0;
+      }
+      .bgtype-dropdown .bg-swatch {
+        width: 100%;
+        height: 26px;
+        border-radius: 4px;
+        cursor: pointer;
+        border: 1px solid rgba(0,0,0,0.1);
+        transition: transform 0.1s;
+      }
+      .bgtype-dropdown .bg-swatch:hover {
+        transform: scale(1.15);
+        border-color: #607D8B;
+      }
+      .bgtype-dropdown .bg-swatch-custom {
+        position: relative;
+        background: conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .bgtype-dropdown .bg-swatch-custom input[type="color"] {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        border: none;
+        padding: 0;
+      }
+      .bgtype-dropdown .bg-pattern-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin-top: 2px;
+      }
+      .bgtype-dropdown .bg-item {
+        padding: 6px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #fff;
+        color: #555;
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .bgtype-dropdown .bg-item:hover { background: #ECEFF1; }
+      .bgtype-dropdown .bg-item.selected { background: #607D8B; color: #fff; border-color: #607D8B; }
 
       /* 混乱模式摆动动画 */
       @keyframes swing {
@@ -886,8 +973,8 @@
       .grid-container.destroy-mode-4 {
         display: flex !important;
         flex-direction: column !important;
-        gap: 3px !important;
-        background: transparent !important;
+        gap: 3px;
+        background: #848891 !important;
         padding: 4px !important;
         border-radius: 8px !important;
         box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
@@ -1413,8 +1500,8 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        width: min(90vw, 1092px);
-        height: min(90vw, 1092px);
+        width: min(90vmin, 500px);
+        height: min(90vmin, 500px);
         margin: 0 auto;
       }
 
@@ -1429,6 +1516,8 @@
         margin: 0 auto;
         border-radius: 12px;
         background: #FFFFFF;
+        max-width: 100%;
+        height: auto;
       }
 
       /* 变体模式容器 */
@@ -1807,16 +1896,16 @@
       /* 横屏模式圆形容器 */
       @media (orientation: landscape) {
         .circular-container {
-          width: min(75vh, 1008px);
-          height: min(75vh, 1008px);
+          width: min(75vh, 500px);
+          height: min(75vh, 500px);
         }
       }
 
       /* 平板竖屏圆形容器放大 */
       @media (min-width: 768px) and (orientation: portrait) {
         .circular-container {
-          width: min(90vw, 1330px);
-          height: min(90vw, 1330px);
+          width: min(90vmin, 500px);
+          height: min(90vmin, 500px);
         }
       }
     </style>
@@ -1872,6 +1961,40 @@
               <button class="nt-item selected" data-nt="natural" onclick="game.selectNumType('natural')">自然数</button>
               <button class="nt-item" data-nt="odd" onclick="game.selectNumType('odd')">奇数</button>
               <button class="nt-item" data-nt="even" onclick="game.selectNumType('even')">偶数</button>
+            </div>
+          </div>
+          <div class="numtype-wrapper" style="position:relative;">
+            <button class="effect-btn bgtype" id="bgtype-btn" onclick="event.stopPropagation(); game.toggleBgTypeDropdown()">背景</button>
+            <div class="bgtype-dropdown" id="bgtype-dropdown" onclick="event.stopPropagation()">
+              <div class="bg-section">纯色（点选色块）</div>
+              <div class="bg-swatch-grid">
+                <div class="bg-swatch" style="background:#ff4444" onclick="event.stopPropagation(); game.selectBgColor('#ff4444')"></div>
+                <div class="bg-swatch" style="background:#ff8800" onclick="event.stopPropagation(); game.selectBgColor('#ff8800')"></div>
+                <div class="bg-swatch" style="background:#ffcc00" onclick="event.stopPropagation(); game.selectBgColor('#ffcc00')"></div>
+                <div class="bg-swatch" style="background:#44dd44" onclick="event.stopPropagation(); game.selectBgColor('#44dd44')"></div>
+                <div class="bg-swatch" style="background:#00cccc" onclick="event.stopPropagation(); game.selectBgColor('#00cccc')"></div>
+                <div class="bg-swatch" style="background:#0099ff" onclick="event.stopPropagation(); game.selectBgColor('#0099ff')"></div>
+                <div class="bg-swatch" style="background:#5555ff" onclick="event.stopPropagation(); game.selectBgColor('#5555ff')"></div>
+                <div class="bg-swatch" style="background:#aa44ff" onclick="event.stopPropagation(); game.selectBgColor('#aa44ff')"></div>
+                <div class="bg-swatch" style="background:#ff44aa" onclick="event.stopPropagation(); game.selectBgColor('#ff44aa')"></div>
+                <div class="bg-swatch" style="background:#884400" onclick="event.stopPropagation(); game.selectBgColor('#884400')"></div>
+                <div class="bg-swatch" style="background:#888888" onclick="event.stopPropagation(); game.selectBgColor('#888888')"></div>
+                <div class="bg-swatch" style="background:#222222" onclick="event.stopPropagation(); game.selectBgColor('#222222')"></div>
+                <div class="bg-swatch" style="background:#ffffff" onclick="event.stopPropagation(); game.selectBgColor('#ffffff')"></div>
+                <div class="bg-swatch" style="background:#667eea" onclick="event.stopPropagation(); game.selectBgColor('#667eea')"></div>
+                <div class="bg-swatch" style="background:#f0e68c" onclick="event.stopPropagation(); game.selectBgColor('#f0e68c')"></div>
+                <div class="bg-swatch bg-swatch-custom" title="自定义颜色">
+                  <input type="color" id="bg-color-picker" value="#667eea" onchange="game.selectBgColor(this.value)">
+                </div>
+              </div>
+              <div class="bg-section">条纹</div>
+              <div class="bg-pattern-grid">
+                <button class="bg-item selected" data-bg="default" onclick="event.stopPropagation(); game.selectBgType('default')">默认</button>
+                <button class="bg-item" data-bg="stripe-diagonal" onclick="event.stopPropagation(); game.selectBgType('stripe-diagonal')">斜条纹</button>
+                <button class="bg-item" data-bg="stripe-horizontal" onclick="event.stopPropagation(); game.selectBgType('stripe-horizontal')">横条纹</button>
+                <button class="bg-item" data-bg="stripe-vertical" onclick="event.stopPropagation(); game.selectBgType('stripe-vertical')">竖条纹</button>
+                <button class="bg-item" data-bg="grid-pattern" onclick="event.stopPropagation(); game.selectBgType('grid-pattern')">网格纹</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1977,6 +2100,9 @@
         this.destroy2Locked = {}; // 毁灭2模式下已正确点击的扇区（key=index），setInterval 跳过
         this.destroyMode = 0; // 0=关闭, 1=背景变换, 2=炫光效果
         this.numberType = 'natural'; // 'natural'=自然数, 'odd'=奇数, 'even'=偶数
+        this.bgType = 'default'; // 背景类型: default/color/stripe-*/grid-pattern
+        this.bgColor = '#667eea'; // 用户选择的背景颜色
+        this._bgColorSelectedAt = 0; // 颜色选择时间戳（防抖用）
         this.previousMode = 'normal'; // 保存退出圆形后回到的方格模式
         this.isCircularMode = false; // 是否在圆形模式
         this.isRotateMode = false;    // 旋转模式（待实现）
@@ -2548,8 +2674,10 @@
           var btn = document.getElementById('vp-mode-btn');
           if (btn) btn.textContent = '视差（动）';
         } else {
-          this.exitVisualParallaxMode();
-          this.reset();
+          this.vpSubMode = 1;
+          this.renderVisualParallaxGrid();
+          var btn2 = document.getElementById('vp-mode-btn');
+          if (btn2) btn2.textContent = '视差（静）';
         }
       };
 
@@ -2659,7 +2787,7 @@
               aRowCount++;
               aColCounts[col]++;
             } else {
-              rotation = -((bRowCount + bColCounts[col]) * 30);
+              rotation = (bRowCount + bColCounts[col]) * 30;
               bRowCount++;
               bColCounts[col]++;
             }
@@ -2687,7 +2815,7 @@
               bottom.style.transform = 'rotate(' + rotation + 'deg)';
             } else {
               var delay = -(Math.abs(rotation) / 360) * 18;
-              bottom.style.animation = (isA ? 'vp-spin-cw' : 'vp-spin-ccw') + ' 18s linear infinite';
+              bottom.style.animation = 'vp-spin-cw 18s linear infinite';
               bottom.style.animationDelay = delay + 's';
             }
 
@@ -3668,6 +3796,73 @@
         this.reset();
       };
 
+      // ========== 背景选择 ==========
+      SchulteGridGame.prototype._darkenHex = function(hex, amount) {
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+        r = Math.max(0, Math.round(r * (1 - amount)));
+        g = Math.max(0, Math.round(g * (1 - amount)));
+        b = Math.max(0, Math.round(b * (1 - amount)));
+        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      };
+
+      SchulteGridGame.prototype.toggleBgTypeDropdown = function() {
+        var dropdown = document.getElementById('bgtype-dropdown');
+        if (dropdown) {
+          dropdown.classList.toggle('show');
+        }
+      };
+
+      SchulteGridGame.prototype.selectBgType = function(type) {
+        this.bgType = type;
+        var body = document.body;
+        var c1 = this.bgColor;
+        var c2 = this._darkenHex(c1, 0.4);
+        if (type === 'default') {
+          body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        } else if (type === 'stripe-diagonal') {
+          body.style.background = 'repeating-linear-gradient(45deg, ' + c1 + ' 0 20px, ' + c2 + ' 20px 40px)';
+        } else if (type === 'stripe-horizontal') {
+          body.style.background = 'repeating-linear-gradient(0deg, ' + c1 + ' 0 20px, ' + c2 + ' 20px 40px)';
+        } else if (type === 'stripe-vertical') {
+          body.style.background = 'repeating-linear-gradient(90deg, ' + c1 + ' 0 20px, ' + c2 + ' 20px 40px)';
+        } else if (type === 'grid-pattern') {
+          body.style.background = 'repeating-linear-gradient(0deg, ' + c1 + ' 0 2px, transparent 2px 20px), repeating-linear-gradient(90deg, ' + c1 + ' 0 2px, transparent 2px 20px), ' + c2;
+        }
+        var btn = document.getElementById('bgtype-btn');
+        if (btn) {
+          btn.classList.toggle('active', type !== 'default');
+          var label = type === 'default' ? '背景' : (type === 'stripe-diagonal' ? '背景:斜纹' : (type === 'stripe-horizontal' ? '背景:横纹' : (type === 'stripe-vertical' ? '背景:竖纹' : '背景:网格')));
+          btn.textContent = label;
+        }
+        var items = document.querySelectorAll('.bg-item');
+        for (var i = 0; i < items.length; i++) {
+          items[i].classList.toggle('selected', items[i].dataset.bg === type);
+        }
+        var dropdown = document.getElementById('bgtype-dropdown');
+        if (dropdown) { dropdown.classList.remove('show'); }
+      };
+
+      SchulteGridGame.prototype.selectBgColor = function(color) {
+        this.bgColor = color;
+        this.bgType = 'color';
+        this._bgColorSelectedAt = Date.now();
+        document.body.style.background = color;
+        // 释放颜色选择器焦点，防止原生对话框关闭后吞掉后续点击
+        var picker = document.getElementById('bg-color-picker');
+        if (picker) picker.blur();
+        var btn = document.getElementById('bgtype-btn');
+        if (btn) {
+          btn.textContent = '背景:自选';
+          btn.classList.add('active');
+        }
+        var items = document.querySelectorAll('.bg-item');
+        for (var i = 0; i < items.length; i++) {
+          items[i].classList.remove('selected');
+        }
+      };
+
       SchulteGridGame.prototype.reset = function() {
         this.currentNumber = this.getNumberStart();
         this.isPlaying = false;
@@ -3928,7 +4123,7 @@
           return;
         }
 
-        // 普通模式：清理散布模式留下的样式
+        // 普通模式：清理散布/毁灭4模式留下的样式
         container.style.display = '';
         container.style.position = '';
         container.style.overflow = '';
@@ -3938,6 +4133,7 @@
         container.style.padding = '';
         container.style.boxSizing = '';
         container.style.borderRadius = '';
+        container.style.gap = '';
 
         container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
         container.innerHTML = '';
@@ -4295,11 +4491,12 @@
         container.className = 'grid-container destroy-mode-4';
         container.style.gridTemplateColumns = '';
 
-        var gap = 0;
+        var gap = Math.max(1, Math.floor(cellSize / 10));
         var halfCell = Math.floor(cellSize * (this.gridSize >= 9 ? 0.35 : 0.5));
-        var totalWidth = this.gridSize * cellSize + halfCell;
+        var totalWidth = this.gridSize * cellSize + this.gridSize * gap + halfCell;
         // box-sizing: border-box + padding: 4px → 实际内容区 = width - 8px，需补上
         container.style.width = (totalWidth + 8) + 'px';
+        container.style.gap = gap + 'px';
         var angles = [25, 30, 45, 75];
         var colorPalette = ['#E53935', '#FF5722', '#FF9800', '#FFC107', '#FFEB3B', '#CDDC39', '#4CAF50', '#009688', '#2196F3', '#3F51B5', '#9C27B0', '#E91E63'];
 
@@ -4320,7 +4517,6 @@
           var row = document.createElement('div');
           row.className = 'destroy4-row';
           row.style.gap = gap + 'px';
-          row.style.marginLeft = '0';
 
           var isEven = r % 2 === 0;
 
@@ -4430,16 +4626,24 @@
       };
 
       SchulteGridGame.prototype.calculateCellSize = function() {
-        var containerWidth = Math.min(window.innerWidth - 20, 600);
+        var gameContainer = document.querySelector('.game-container');
+        var containerWidth;
+        if (gameContainer && gameContainer.clientWidth > 0) {
+          containerWidth = gameContainer.clientWidth;
+        } else {
+          containerWidth = Math.min(window.innerWidth - 20, 500);
+        }
         var maxGridSize = 10;
         var padding = 4;
         var gap = 3;
         
-        // 毁灭4模式：列间距0，多出半个格装饰用（gridSize * cellSize + halfCell）
+        // 毁灭4模式：列间距为cellSize/10，多出半个格装饰用
         if (this.destroyMode === 4) {
-          gap = 0;
           var availW = containerWidth - padding * 2;
-          var cs = Math.floor(availW / (this.gridSize + 0.5));
+          var halfRatio = this.gridSize >= 9 ? 0.35 : 0.5;
+          // total = halfCell + gridSize*cellSize + gridSize*(cellSize/10)
+          // total = cellSize * (halfRatio + gridSize * 1.1)
+          var cs = Math.floor(availW / (halfRatio + this.gridSize * 1.1));
           return Math.min(cs, 120);
         }
         
@@ -5431,29 +5635,6 @@
         }
         document.getElementById('bounce-mode-btn').classList.add('active');
 
-        // 设置 Canvas 大小为响应式
-        var c = document.getElementById('bounce-canvas');
-        var container = c.parentElement;
-        var maxSize = Math.min(container.clientWidth - 16, 500);
-        c.width = maxSize;
-        c.height = maxSize;
-
-        // 添加 resize 事件监听器
-        var self = this;
-        this._bounceResizeHandler = function() {
-          var c = document.getElementById('bounce-canvas');
-          var container = c.parentElement;
-          var maxSize = Math.min(container.clientWidth - 16, 500);
-          c.width = maxSize;
-          c.height = maxSize;
-          // 重新计算并绘制
-          if (self.isBounceMode && self.isPlaying) {
-            self._bounceInit();
-            self._bounceRender();
-          }
-        };
-        window.addEventListener('resize', this._bounceResizeHandler);
-
         this.currentNumber = this.getNumberStart();
         this.reset();
       };
@@ -5469,11 +5650,6 @@
 
       SchulteGridGame.prototype.exitBounceMode = function() {
         this.isBounceMode = false;
-        // 移除 resize 事件监听器
-        if (this._bounceResizeHandler) {
-          window.removeEventListener('resize', this._bounceResizeHandler);
-          this._bounceResizeHandler = null;
-        }
         if (this._bounceAnimId) { cancelAnimationFrame(this._bounceAnimId); this._bounceAnimId = null; }
         document.getElementById('bounce-canvas').style.display = 'none';
         document.getElementById('grid-container').style.display = '';
@@ -6496,12 +6672,20 @@
 
       var game = new SchulteGridGame();
 
-      // 点击外部关闭数字选择下拉菜单
+      // 点击外部关闭下拉菜单
       document.addEventListener('click', function(ev) {
-        var dropdown = document.getElementById('numtype-dropdown');
-        var wrapper = dropdown ? dropdown.parentNode : null;
-        if (dropdown && dropdown.classList.contains('show') && wrapper && !wrapper.contains(ev.target)) {
-          dropdown.classList.remove('show');
+        var ntDropdown = document.getElementById('numtype-dropdown');
+        var ntWrapper = ntDropdown ? ntDropdown.parentNode : null;
+        if (ntDropdown && ntDropdown.classList.contains('show') && ntWrapper && !ntWrapper.contains(ev.target)) {
+          ntDropdown.classList.remove('show');
+        }
+        var bgDropdown = document.getElementById('bgtype-dropdown');
+        var bgWrapper = bgDropdown ? bgDropdown.parentNode : null;
+        if (bgDropdown && bgDropdown.classList.contains('show') && bgWrapper && !bgWrapper.contains(ev.target)) {
+          // 颜色选择后300ms内不关闭下拉菜单，避免原生颜色对话框关闭时的合成点击事件误关
+          if (Date.now() - (game._bgColorSelectedAt || 0) > 300) {
+            bgDropdown.classList.remove('show');
+          }
         }
       });
 
