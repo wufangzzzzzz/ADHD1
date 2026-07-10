@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>听数猎手 - ADHD听觉注意力训练</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { width: 100%; max-width: 500px; padding: 12px; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* === Start Screen === */
+.start-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+.start-card h1 { text-align: center; font-size: 32px; color: #667eea; margin-bottom: 4px; }
+.start-card .subtitle { text-align: center; font-size: 13px; color: #999; margin-bottom: 20px; }
+
+.setting-group { margin-bottom: 16px; }
+.setting-label { font-size: 13px; font-weight: 600; color: #888; margin-bottom: 8px; }
+.option-row { display: flex; gap: 8px; }
+
+.option-btn {
+  flex: 1; padding: 10px 6px; border: 2px solid #e0e0e0; background: #fff;
+  border-radius: 10px; font-size: 14px; color: #666; cursor: pointer;
+  transition: all 0.2s; text-align: center;
+}
+.option-btn:active { transform: scale(0.96); }
+.option-btn.selected { border-color: #667eea; background: #667eea; color: #fff; }
+
+.volume-row { display: flex; align-items: center; gap: 10px; }
+.volume-row input[type="range"] {
+  flex: 1; height: 6px; -webkit-appearance: none; appearance: none;
+  background: #e0e0e0; border-radius: 3px; outline: none;
+}
+.volume-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 22px; height: 22px;
+  background: #667eea; border-radius: 50%; cursor: pointer;
+}
+.volume-row input[type="range"]::-moz-range-thumb {
+  width: 22px; height: 22px; background: #667eea; border-radius: 50%;
+  cursor: pointer; border: none;
+}
+.volume-value { font-size: 13px; color: #888; min-width: 36px; text-align: right; }
+
+.start-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff; border: none; border-radius: 12px;
+  font-size: 18px; font-weight: 600; cursor: pointer; margin-top: 8px;
+  transition: all 0.2s;
+}
+.start-btn:active { transform: scale(0.98); }
+
+.instructions {
+  margin-top: 16px; padding: 14px; background: #f5f5f5;
+  border-radius: 10px; font-size: 12px; color: #888; line-height: 1.9;
+}
+.instructions strong { color: #667eea; }
+
+.speech-warning {
+  display: none; margin-bottom: 12px; padding: 10px;
+  background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px;
+  font-size: 12px; color: #e65100; line-height: 1.5;
+}
+
+/* === Game Screen === */
+.game-card {
+  background: #fff; border-radius: 20px; padding: 20px 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  min-height: min(72vh, 600px);
+  display: flex; flex-direction: column;
+}
+
+.game-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.game-header .title { font-size: 18px; font-weight: 600; color: #667eea; }
+.game-header .current-score { font-size: 14px; font-weight: 600; color: #764ba2; }
+
+.quit-btn {
+  padding: 6px 14px; border: 1px solid #ddd; background: #fff;
+  border-radius: 8px; font-size: 13px; color: #999; cursor: pointer;
+}
+.quit-btn:active { background: #f5f5f5; }
+
+.progress-bar { display: flex; gap: 4px; margin-bottom: 20px; }
+.progress-cell {
+  flex: 1; height: 28px; border-radius: 6px; background: #e0e0e0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #999; font-weight: 600; transition: all 0.3s;
+}
+.progress-cell.current { background: #667eea; color: #fff; transform: scale(1.08); }
+.progress-cell.correct { background: #4CAF50; color: #fff; }
+.progress-cell.wrong { background: #f44336; color: #fff; }
+
+.status-area {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100px; margin-bottom: 16px; text-align: center;
+}
+.status-text { font-size: 20px; font-weight: 600; color: #333; }
+.status-sub { font-size: 14px; color: #999; margin-top: 6px; }
+.status-score { font-size: 16px; font-weight: 600; color: #4CAF50; margin-top: 4px; }
+.status-combo { font-size: 14px; color: #FF9800; margin-top: 2px; }
+
+.listening-icon {
+  display: flex; gap: 4px; align-items: center; justify-content: center;
+  height: 36px; margin-bottom: 8px;
+}
+.listening-icon span {
+  width: 5px; height: 8px; background: #667eea;
+  border-radius: 2px; animation: soundWave 1s ease-in-out infinite;
+}
+.listening-icon span:nth-child(2) { animation-delay: 0.15s; }
+.listening-icon span:nth-child(3) { animation-delay: 0.3s; }
+.listening-icon span:nth-child(4) { animation-delay: 0.45s; }
+@keyframes soundWave { 0%,100% { height: 8px; } 50% { height: 28px; } }
+
+.countdown-num {
+  font-size: 72px; font-weight: 700; color: #667eea;
+  animation: countdownPulse 1s ease-out;
+}
+@keyframes countdownPulse {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+.reading-progress {
+  width: 80%; max-width: 280px; height: 6px; background: #e0e0e0;
+  border-radius: 3px; margin-top: 12px; overflow: hidden;
+}
+.reading-progress .rp-fill {
+  height: 100%; background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 3px; transition: width 0.3s ease;
+}
+
+.answer-reveal {
+  font-size: 80px; font-weight: 700; color: #4CAF50;
+  animation: answerPop 0.4s ease-out;
+}
+@keyframes answerPop {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.option-card {
+  padding: 24px 16px; border: 2px solid #e0e0e0; background: #fff;
+  border-radius: 14px; font-size: 32px; font-weight: 700; color: #333;
+  text-align: center; cursor: pointer; transition: all 0.2s; user-select: none;
+  animation: optionAppear 0.3s ease-out backwards;
+}
+.option-card:nth-child(1) { animation-delay: 0s; }
+.option-card:nth-child(2) { animation-delay: 0.08s; }
+.option-card:nth-child(3) { animation-delay: 0.16s; }
+.option-card:nth-child(4) { animation-delay: 0.24s; }
+@keyframes optionAppear { 0% { opacity: 0; transform: translateY(12px); } 100% { opacity: 1; transform: translateY(0); } }
+
+.option-card:active { transform: scale(0.96); }
+.option-card.disabled { pointer-events: none; }
+.option-card.correct { background: #4CAF50; color: #fff; border-color: #4CAF50; }
+.option-card.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+.option-card.reveal { background: #4CAF50; color: #fff; border-color: #4CAF50; animation: revealPulse 0.5s ease; }
+@keyframes revealPulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+.controls { display: flex; justify-content: center; gap: 12px; }
+.control-btn {
+  padding: 10px 28px; border: 2px solid #667eea; background: #fff;
+  color: #667eea; border-radius: 10px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.control-btn:active { transform: scale(0.96); }
+.control-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+/* === Result Screen === */
+.result-card {
+  background: #fff; border-radius: 20px; padding: 28px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+.result-card h2 { text-align: center; font-size: 24px; color: #333; margin-bottom: 20px; }
+
+.score-display { text-align: center; margin-bottom: 24px; }
+.score-display .score { font-size: 64px; font-weight: 700; color: #667eea; line-height: 1; }
+.score-display .score-label { font-size: 14px; color: #999; margin-top: 4px; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.stat-item {
+  padding: 14px; background: #f5f5f5; border-radius: 12px; text-align: center;
+}
+.stat-item .stat-value { font-size: 24px; font-weight: 700; color: #333; }
+.stat-item .stat-label { font-size: 12px; color: #999; margin-top: 4px; line-height: 1.4; }
+.stat-item.warning { background: #fff3e0; }
+.stat-item.warning .stat-value { color: #f44336; }
+.stat-item.good { background: #e8f5e9; }
+.stat-item.good .stat-value { color: #4CAF50; }
+
+.result-progress { display: flex; gap: 4px; margin-bottom: 20px; }
+
+.result-buttons { display: flex; gap: 12px; }
+.result-buttons button {
+  flex: 1; padding: 12px; border: none; border-radius: 12px;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+}
+.btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+.btn-secondary { background: #e0e0e0; color: #666; }
+.btn-primary:active, .btn-secondary:active { transform: scale(0.98); }
+
+/* === Responsive === */
+@media (max-width: 380px) {
+  .option-card { font-size: 26px; padding: 18px 12px; }
+  .start-card h1 { font-size: 26px; }
+  .score-display .score { font-size: 52px; }
+  .countdown-num { font-size: 60px; }
+}
+@media (min-width: 768px) {
+  .app { max-width: 520px; padding: 20px; }
+  .option-card { font-size: 36px; padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== Start Screen ===== -->
+  <div id="start-screen" class="screen active">
+    <div class="start-card">
+      <h1>听数猎手</h1>
+      <p class="subtitle">ADHD听觉注意力训练</p>
+
+      <div class="speech-warning" id="speech-warning">
+        您的浏览器可能不支持语音合成功能，建议使用 Chrome 或 Safari 浏览器以获得最佳体验。
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">人群</div>
+        <div class="option-row">
+          <button class="option-btn selected" data-setting="population" data-value="children">儿童</button>
+          <button class="option-btn" data-setting="population" data-value="adult">成人</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">难度</div>
+        <div class="option-row" id="difficulty-row">
+          <button class="option-btn selected" data-setting="difficulty" data-value="single">个位数</button>
+          <button class="option-btn" data-setting="difficulty" data-value="tens">十位数</button>
+          <button class="option-btn" data-setting="difficulty" data-value="hundreds">百位数</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">模式</div>
+        <div class="option-row">
+          <button class="option-btn selected" data-setting="mode" data-value="interactive">互动模式</button>
+          <button class="option-btn" data-setting="mode" data-value="demonstration">朗读模式</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">语速</div>
+        <div class="option-row">
+          <button class="option-btn" data-setting="speed" data-value="slow">慢速</button>
+          <button class="option-btn selected" data-setting="speed" data-value="normal">正常</button>
+          <button class="option-btn" data-setting="speed" data-value="fast">快速</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">音量</div>
+        <div class="volume-row">
+          <input type="range" id="volume-slider" min="0" max="100" value="80">
+          <span class="volume-value" id="volume-value">80</span>
+        </div>
+      </div>
+
+      <button class="start-btn" id="start-btn">开始游戏</button>
+
+      <div class="instructions">
+        <strong>玩法说明</strong><br>
+        1. 仔细听语音读出的数字<br>
+        2. 互动模式：从4个选项中选出最大的数<br>
+        3. 朗读模式：听完后自动揭示正确答案<br>
+        4. 共10题，越快越准分数越高<br>
+        5. 可重听一次（速度奖励归零）<br>
+        6. 连续答对有额外连击奖励<br>
+        7. 数字数量会根据表现自动调整
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Game Screen ===== -->
+  <div id="game-screen" class="screen">
+    <div class="game-card">
+      <div class="game-header">
+        <span class="title">听数猎手</span>
+        <span class="current-score" id="current-score">分数: 0</span>
+        <button class="quit-btn" id="quit-btn">退出</button>
+      </div>
+
+      <div class="progress-bar" id="progress-bar"></div>
+
+      <div class="status-area" id="status-area">
+        <p class="status-text" id="status-text">准备开始...</p>
+        <p class="status-sub" id="status-sub"></p>
+      </div>
+
+      <div class="options-grid" id="options-grid" style="display:none;"></div>
+
+      <div class="controls" id="controls" style="display:none;">
+        <button class="control-btn" id="replay-btn">重听</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Result Screen ===== -->
+  <div id="result-screen" class="screen">
+    <div class="result-card">
+      <h2 id="result-title">训练完成</h2>
+
+      <div class="score-display" id="score-display">
+        <div class="score" id="total-score">0</div>
+        <div class="score-label">总分</div>
+      </div>
+
+      <div class="stats-grid" id="stats-grid"></div>
+
+      <div class="result-progress" id="result-progress"></div>
+
+      <div class="result-buttons">
+        <button class="btn-primary" id="restart-btn">再来一局</button>
+        <button class="btn-secondary" id="home-btn">返回首页</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  "use strict";
+
+  // ===== Game State =====
+  var Game = {
+    population: "children",
+    difficulty: "single",
+    mode: "interactive",
+    speed: "normal",
+    volume: 0.8,
+    currentQuestion: 0,
+    totalQuestions: 10,
+    numbers: [],
+    correctAnswer: 0,
+    options: [],
+    questionResults: [],
+    startCount: 4,
+    maxCount: 8,
+    currentCount: 4,
+    consecutiveCorrect: 0,
+    consecutiveWrong: 0,
+    totalScore: 0,
+    combo: 0,
+    maxCombo: 0,
+    optionShowTime: 0,
+    usedReplay: false,
+    audioCtx: null,
+    speechSupported: true,
+    state: "idle",
+    timers: [],
+    _speechGen: 0
+  };
+
+  // ===== Config =====
+  var DIFFICULTY_CONFIG = {
+    single:   { min: 1,    max: 9,    distractorRange: 2 },
+    tens:     { min: 10,   max: 99,   distractorRange: 6 },
+    hundreds: { min: 100,  max: 999,  distractorRange: 12 },
+    thousands:{ min: 1000, max: 9999, distractorRange: 25 }
+  };
+
+  var SPEED_CONFIG = {
+    slow:   { interval: 1000, rate: 0.9 },
+    normal: { interval: 700,  rate: 0.95 },
+    fast:   { interval: 400,  rate: 1.1 }
+  };
+
+  var POPULATION_CONFIG = {
+    children: { startCount: 4, maxCount: 8,  difficulties: ["single", "tens", "hundreds"] },
+    adult:    { startCount: 6, maxCount: 10, difficulties: ["tens", "hundreds", "thousands"] }
+  };
+
+  var DIFFICULTY_LABELS = {
+    single: "个位数", tens: "十位数", hundreds: "百位数", thousands: "千位数"
+  };
+
+  // ===== Chinese Number Converter =====
+  function numberToChinese(num) {
+    if (num === 0) return "零";
+    var digits = ["零","一","二","三","四","五","六","七","八","九"];
+    var units = ["","十","百","千"];
+    var s = String(num);
+    var result = "";
+    for (var i = 0; i < s.length; i++) {
+      var d = parseInt(s[i], 10);
+      var u = units[s.length - 1 - i];
+      if (d === 0) {
+        if (i < s.length - 1 && parseInt(s[i + 1], 10) !== 0) result += "零";
+      } else {
+        if (s.length === 2 && i === 0 && d === 1) {
+          result += u;
+        } else {
+          result += digits[d] + u;
+        }
+      }
+    }
+    return result;
+  }
+
+  // ===== Audio =====
+  function initAudio() {
+    try {
+      Game.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (Game.audioCtx.state === "suspended") Game.audioCtx.resume();
+    } catch(e) { console.warn("AudioContext not supported"); }
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      Game.speechSupported = false;
+      document.getElementById("speech-warning").style.display = "block";
+    }
+    // Load voices
+    if (window.speechSynthesis) {
+      speechSynthesis.getVoices();
+      speechSynthesis.onvoiceschanged = function() { speechSynthesis.getVoices(); };
+    }
+  }
+
+  function playTone(freq, duration, type) {
+    if (!Game.audioCtx) return;
+    var osc = Game.audioCtx.createOscillator();
+    var gain = Game.audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(Game.audioCtx.destination);
+    osc.frequency.value = freq;
+    osc.type = type || "sine";
+    gain.gain.setValueAtTime(Game.volume * 0.3, Game.audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, Game.audioCtx.currentTime + duration);
+    osc.start();
+    osc.stop(Game.audioCtx.currentTime + duration);
+  }
+
+  function playCorrectSound() {
+    playTone(880, 0.15, "sine");
+    setTimeout(function() { playTone(1320, 0.2, "sine"); }, 100);
+  }
+  function playWrongSound() { playTone(200, 0.4, "sawtooth"); }
+  function playBeep() { playTone(660, 0.1, "sine"); }
+
+  function getChineseVoice() {
+    if (!window.speechSynthesis) return null;
+    var voices = speechSynthesis.getVoices();
+    var zhVoices = [];
+    for (var i = 0; i < voices.length; i++) {
+      if (voices[i].lang && voices[i].lang.indexOf("zh") === 0) {
+        zhVoices.push(voices[i]);
+      }
+    }
+    if (zhVoices.length === 0) return null;
+
+    // Priority: neural/natural voices first, then standard
+    var preferences = [
+      "Xiaoxiao", "Yunxi", "Yunjian", "Xiaoyi",   // Microsoft Natural
+      "Google",                                     // Google neural
+      "Ting-Ting", "Mei-Jia",                       // macOS
+      "Huihui", "Yaoyao", "Hanhan", "Kangkang"      // Microsoft standard
+    ];
+    for (var p = 0; p < preferences.length; p++) {
+      for (var i = 0; i < zhVoices.length; i++) {
+        if (zhVoices[i].name && zhVoices[i].name.indexOf(preferences[p]) >= 0) {
+          return zhVoices[i];
+        }
+      }
+    }
+    // Prefer female voices (clearer for number reading)
+    for (var i = 0; i < zhVoices.length; i++) {
+      if (zhVoices[i].name && /female|Huihui|Yaoyao|Ting|Xiao/i.test(zhVoices[i].name)) {
+        return zhVoices[i];
+      }
+    }
+    return zhVoices[0];
+  }
+
+  function speak(text, onEnd) {
+    if (!Game.speechSupported) {
+      var t = setTimeout(function() { if (onEnd) onEnd(); }, 600);
+      Game.timers.push(t);
+      return;
+    }
+    Game._speechGen = (Game._speechGen || 0) + 1;
+    var myGen = Game._speechGen;
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-CN";
+    u.volume = Game.volume;
+    u.rate = SPEED_CONFIG[Game.speed].rate;
+    u.pitch = 1.05;
+    var voice = getChineseVoice();
+    if (voice) u.voice = voice;
+
+    var ended = false;
+    var fallbackTimer = null;
+    function endOnce() {
+      if (ended) return;
+      ended = true;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (myGen !== Game._speechGen) return;
+      if (onEnd) onEnd();
+    }
+    u.onend = endOnce;
+    u.onerror = endOnce;
+    var estimated = text.length * 250 + 1000;
+    fallbackTimer = setTimeout(function() {
+      if (myGen !== Game._speechGen) return;
+      endOnce();
+    }, estimated);
+    Game.timers.push(fallbackTimer);
+    speechSynthesis.speak(u);
+  }
+
+  function cancelSpeech() {
+    Game._speechGen = (Game._speechGen || 0) + 1;
+    if (Game.speechSupported) speechSynthesis.cancel();
+    clearAllTimers();
+  }
+  function clearAllTimers() {
+    Game.timers.forEach(function(t) { clearTimeout(t); });
+    Game.timers = [];
+  }
+
+  // ===== Number Generation =====
+  function generateNumbers(count, min, max) {
+    var numbers = [];
+    var used = {};
+    while (numbers.length < count) {
+      var n = Math.floor(Math.random() * (max - min + 1)) + min;
+      if (!used[n]) { used[n] = true; numbers.push(n); }
+    }
+    return numbers;
+  }
+
+  function generateDistractors(correct, config) {
+    var distractors = [];
+    var used = {};
+    used[correct] = true;
+    var range = config.distractorRange;
+    var attempts = 0;
+    while (distractors.length < 3 && attempts < 200) {
+      var offset = Math.floor(Math.random() * (range * 2 + 1)) - range;
+      if (offset === 0) { attempts++; continue; }
+      var d = correct + offset;
+      if (d >= config.min && d <= config.max && !used[d]) {
+        used[d] = true;
+        distractors.push(d);
+      }
+      attempts++;
+      if (attempts % 30 === 0) range++; // expand if struggling
+    }
+    while (distractors.length < 3) {
+      var d = Math.floor(Math.random() * (config.max - config.min + 1)) + config.min;
+      if (!used[d]) { used[d] = true; distractors.push(d); }
+    }
+    return distractors;
+  }
+
+  function shuffleArray(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = arr[i]; arr[i] = arr[j]; arr[j] = temp;
+    }
+    return arr;
+  }
+
+  // ===== UI Helpers =====
+  function showScreen(id) {
+    var screens = document.querySelectorAll(".screen");
+    for (var i = 0; i < screens.length; i++) screens[i].classList.remove("active");
+    document.getElementById(id).classList.add("active");
+  }
+
+  function resetStatusArea() {
+    var sa = document.getElementById("status-area");
+    sa.innerHTML =
+      '<p class="status-text" id="status-text"></p>' +
+      '<p class="status-sub" id="status-sub"></p>';
+  }
+
+  function setStatus(text, sub, score, combo) {
+    var sa = document.getElementById("status-area");
+    var html = "";
+    if (text) html += '<p class="status-text">' + text + "</p>";
+    if (sub) html += '<p class="status-sub">' + sub + "</p>";
+    if (score) html += '<p class="status-score">' + score + "</p>";
+    if (combo) html += '<p class="status-combo">' + combo + "</p>";
+    sa.innerHTML = html;
+  }
+
+  function showListeningAnimation(current, total) {
+    var sa = document.getElementById("status-area");
+    var pct = Math.round((current / total) * 100);
+    sa.innerHTML =
+      '<div class="listening-icon"><span></span><span></span><span></span><span></span></div>' +
+      '<p class="status-text">聆听中...</p>' +
+      '<p class="status-sub">(' + current + '/' + total + ')</p>' +
+      '<div class="reading-progress"><div class="rp-fill" style="width:' + pct + '%"></div></div>';
+  }
+
+  function showCountdown(num) {
+    var sa = document.getElementById("status-area");
+    sa.innerHTML = '<div class="countdown-num">' + num + "</div>";
+  }
+
+  function buildProgressBar() {
+    var bar = document.getElementById("progress-bar");
+    bar.innerHTML = "";
+    for (var i = 0; i < Game.totalQuestions; i++) {
+      var cell = document.createElement("div");
+      cell.className = "progress-cell";
+      cell.textContent = (i + 1);
+      cell.id = "progress-cell-" + i;
+      bar.appendChild(cell);
+    }
+  }
+
+  function updateProgressBar(index, result) {
+    var cell = document.getElementById("progress-cell-" + index);
+    if (!cell) return;
+    cell.classList.remove("current");
+    if (result === "correct") cell.classList.add("correct");
+    else if (result === "wrong") cell.classList.add("wrong");
+  }
+
+  function markCurrentQuestion(index) {
+    var cells = document.querySelectorAll(".progress-cell.current");
+    for (var i = 0; i < cells.length; i++) cells[i].classList.remove("current");
+    var cell = document.getElementById("progress-cell-" + index);
+    if (cell) cell.classList.add("current");
+  }
+
+  function updateScoreDisplay() {
+    document.getElementById("current-score").textContent = "分数: " + Game.totalScore;
+  }
+
+  function showOptions(options, interactive) {
+    var grid = document.getElementById("options-grid");
+    grid.innerHTML = "";
+    grid.style.display = "grid";
+    for (var i = 0; i < options.length; i++) {
+      (function(val) {
+        var card = document.createElement("div");
+        card.className = "option-card";
+        card.textContent = val;
+        card.dataset.value = val;
+        if (interactive) {
+          card.addEventListener("click", function() {
+            handleOptionClick(val, card);
+          });
+        } else {
+          card.classList.add("disabled");
+        }
+        grid.appendChild(card);
+      })(options[i]);
+    }
+  }
+
+  function hideOptions() {
+    var grid = document.getElementById("options-grid");
+    grid.style.display = "none";
+    grid.innerHTML = "";
+  }
+
+  function disableOptions() {
+    var cards = document.querySelectorAll(".option-card");
+    for (var i = 0; i < cards.length; i++) cards[i].classList.add("disabled");
+  }
+
+  function showReplayButton(show) {
+    var controls = document.getElementById("controls");
+    var btn = document.getElementById("replay-btn");
+    if (show && Game.mode === "interactive") {
+      controls.style.display = "flex";
+      btn.disabled = false;
+    } else {
+      controls.style.display = "none";
+    }
+  }
+
+  // ===== Game Flow =====
+  function startGame() {
+    cancelSpeech();
+    if (Game.audioCtx && Game.audioCtx.state === "suspended") Game.audioCtx.resume();
+
+    Game.currentQuestion = 0;
+    Game.totalScore = 0;
+    Game.combo = 0;
+    Game.maxCombo = 0;
+    Game.questionResults = [];
+    Game.consecutiveCorrect = 0;
+    Game.consecutiveWrong = 0;
+
+    var popConfig = POPULATION_CONFIG[Game.population];
+    Game.startCount = popConfig.startCount;
+    Game.maxCount = popConfig.maxCount;
+    Game.currentCount = popConfig.startCount;
+
+    buildProgressBar();
+    hideOptions();
+    showReplayButton(false);
+    updateScoreDisplay();
+    showScreen("game-screen");
+    resetStatusArea();
+    setStatus("准备开始...", "");
+
+    var t = setTimeout(startNextQuestion, 800);
+    Game.timers.push(t);
+  }
+
+  function startNextQuestion() {
+    cancelSpeech();
+
+    if (Game.currentQuestion >= Game.totalQuestions) {
+      finishGame();
+      return;
+    }
+
+    Game.state = "reading";
+    Game.usedReplay = false;
+
+    markCurrentQuestion(Game.currentQuestion);
+    hideOptions();
+    showReplayButton(false);
+    resetStatusArea();
+    setStatus("第 " + (Game.currentQuestion + 1) + " 题", "准备听数...");
+
+    // Generate numbers
+    var config = DIFFICULTY_CONFIG[Game.difficulty];
+    Game.numbers = generateNumbers(Game.currentCount, config.min, config.max);
+    Game.correctAnswer = Math.max.apply(null, Game.numbers);
+
+    // Generate options
+    var distractors = generateDistractors(Game.correctAnswer, config);
+    Game.options = shuffleArray([Game.correctAnswer].concat(distractors));
+
+    // Read instruction
+    speak("请挑出最大的数", function() {
+      var t = setTimeout(function() { readNumbersSequence(0); }, 400);
+      Game.timers.push(t);
+    });
+  }
+
+  function readNumbersSequence(index) {
+    if (index >= Game.numbers.length) {
+      onReadingComplete();
+      return;
+    }
+    showListeningAnimation(index + 1, Game.numbers.length);
+    var chineseNum = numberToChinese(Game.numbers[index]);
+    speak(chineseNum, function() {
+      var interval = SPEED_CONFIG[Game.speed].interval;
+      var t = setTimeout(function() { readNumbersSequence(index + 1); }, interval);
+      Game.timers.push(t);
+    });
+  }
+
+  function onReadingComplete() {
+    if (Game.mode === "interactive") {
+      Game.state = "waiting";
+      resetStatusArea();
+      setStatus("请选择最大的数", "");
+      showOptions(Game.options, true);
+      showReplayButton(true);
+      Game.optionShowTime = Date.now();
+    } else {
+      // 朗读模式: no options, direct countdown
+      Game.state = "countdown";
+      resetStatusArea();
+      setStatus("即将揭示答案", "");
+      var t = setTimeout(function() { startCountdown(3); }, 400);
+      Game.timers.push(t);
+    }
+  }
+
+  function startCountdown(seconds) {
+    if (seconds === 0) {
+      revealAnswer();
+      return;
+    }
+    showCountdown(seconds);
+    playBeep();
+    var t = setTimeout(function() { startCountdown(seconds - 1); }, 1000);
+    Game.timers.push(t);
+  }
+
+  function revealAnswer() {
+    Game.state = "reveal";
+    resetStatusArea();
+    playCorrectSound();
+
+    // 朗读模式: show answer as big text (no option cards)
+    var sa = document.getElementById("status-area");
+    sa.innerHTML = '<div class="answer-reveal">' + Game.correctAnswer + '</div>' +
+                   '<p class="status-text" style="margin-top:8px;">正确答案</p>';
+
+    speak("正确答案是 " + numberToChinese(Game.correctAnswer), function() {
+      var t = setTimeout(function() {
+        Game.questionResults.push({ correct: true, reactionTime: 0, usedReplay: false, revealed: true });
+        updateProgressBar(Game.currentQuestion, "correct");
+        Game.currentQuestion++;
+        startNextQuestion();
+      }, 800);
+      Game.timers.push(t);
+    });
+  }
+
+  function handleOptionClick(value, card) {
+    if (Game.state !== "waiting") return;
+    Game.state = "feedback";
+    var reactionTime = Date.now() - Game.optionShowTime;
+
+    disableOptions();
+    showReplayButton(false);
+
+    var isCorrect = (value === Game.correctAnswer);
+
+    if (isCorrect) {
+      card.classList.add("correct");
+      playCorrectSound();
+
+      // Score calculation
+      var speedBonus = 0;
+      if (!Game.usedReplay) {
+        if (reactionTime < 3000) speedBonus = 5;
+        else if (reactionTime < 6000) speedBonus = 3;
+        else speedBonus = 1;
+      }
+      Game.combo++;
+      var comboBonus = 0;
+      if (Game.combo >= 2) comboBonus = Math.min(Game.combo - 1, 5);
+      if (Game.combo > Game.maxCombo) Game.maxCombo = Game.combo;
+
+      var questionScore = 10 + speedBonus + comboBonus;
+      Game.totalScore += questionScore;
+
+      // Adaptive
+      Game.consecutiveCorrect++;
+      Game.consecutiveWrong = 0;
+      if (Game.consecutiveCorrect >= 2) {
+        Game.currentCount = Math.min(Game.currentCount + 1, Game.maxCount);
+        Game.consecutiveCorrect = 0;
+      }
+
+      var scoreText = "+" + questionScore + "分";
+      var comboText = Game.combo >= 2 ? "连击 x" + Game.combo + " (+" + comboBonus + ")" : "";
+      setStatus("回答正确！", "", scoreText, comboText);
+      updateScoreDisplay();
+    } else {
+      card.classList.add("wrong");
+      // Also highlight correct
+      var cards = document.querySelectorAll(".option-card");
+      for (var i = 0; i < cards.length; i++) {
+        if (parseInt(cards[i].dataset.value, 10) === Game.correctAnswer) {
+          cards[i].classList.add("correct");
+        }
+      }
+      playWrongSound();
+      Game.combo = 0;
+
+      // Adaptive
+      Game.consecutiveWrong++;
+      Game.consecutiveCorrect = 0;
+      if (Game.consecutiveWrong >= 2) {
+        Game.currentCount = Math.max(Game.currentCount - 1, Game.startCount);
+        Game.consecutiveWrong = 0;
+      }
+
+      setStatus("回答错误！", "正确答案：" + Game.correctAnswer);
+    }
+
+    Game.questionResults.push({
+      correct: isCorrect,
+      reactionTime: reactionTime,
+      usedReplay: Game.usedReplay,
+      revealed: false
+    });
+    updateProgressBar(Game.currentQuestion, isCorrect ? "correct" : "wrong");
+
+    var t = setTimeout(function() {
+      Game.currentQuestion++;
+      startNextQuestion();
+    }, 1200);
+    Game.timers.push(t);
+  }
+
+  function replayNumbers() {
+    if (Game.state !== "waiting") return;
+    Game.usedReplay = true;
+    Game.state = "reading";
+    hideOptions();
+    showReplayButton(false);
+    setStatus("重听中...", "");
+
+    speak("请挑出最大的数", function() {
+      var t = setTimeout(function() { replayNumbersSequence(0); }, 400);
+      Game.timers.push(t);
+    });
+  }
+
+  function replayNumbersSequence(index) {
+    if (index >= Game.numbers.length) {
+      // Show options again
+      Game.state = "waiting";
+      resetStatusArea();
+      setStatus("请选择最大的数", "（速度奖励已归零）");
+      showOptions(Game.options, true);
+      Game.optionShowTime = Date.now();
+      return;
+    }
+    showListeningAnimation(index + 1, Game.numbers.length);
+    var chineseNum = numberToChinese(Game.numbers[index]);
+    speak(chineseNum, function() {
+      var interval = SPEED_CONFIG[Game.speed].interval;
+      var t = setTimeout(function() { replayNumbersSequence(index + 1); }, interval);
+      Game.timers.push(t);
+    });
+  }
+
+  function finishGame() {
+    cancelSpeech();
+    Game.state = "finished";
+    if (Game.mode === "demonstration") {
+      showDemoResults();
+    } else {
+      showInteractiveResults();
+    }
+  }
+
+  function showInteractiveResults() {
+    showScreen("result-screen");
+    document.getElementById("result-title").textContent = "训练完成";
+    document.getElementById("score-display").style.display = "block";
+    document.getElementById("total-score").textContent = Game.totalScore;
+
+    // Stats
+    var correctCount = 0;
+    for (var i = 0; i < Game.questionResults.length; i++) {
+      if (Game.questionResults[i].correct) correctCount++;
+    }
+    var accuracy = Math.round(correctCount / Game.totalQuestions * 100);
+
+    var reactionTimes = [];
+    for (var i = 0; i < Game.questionResults.length; i++) {
+      if (Game.questionResults[i].reactionTime > 0) {
+        reactionTimes.push(Game.questionResults[i].reactionTime);
+      }
+    }
+    var avgRT = "0.0";
+    if (reactionTimes.length > 0) {
+      var sum = 0;
+      for (var i = 0; i < reactionTimes.length; i++) sum += reactionTimes[i];
+      avgRT = (sum / reactionTimes.length / 1000).toFixed(1);
+    }
+
+    // Attention decay
+    var half = Math.floor(Game.totalQuestions / 2);
+    var firstCorrect = 0, secondCorrect = 0;
+    for (var i = 0; i < half; i++) if (Game.questionResults[i].correct) firstCorrect++;
+    for (var i = half; i < Game.totalQuestions; i++) if (Game.questionResults[i].correct) secondCorrect++;
+    var firstAcc = Math.round(firstCorrect / half * 100);
+    var secondAcc = Math.round(secondCorrect / (Game.totalQuestions - half) * 100);
+    var decay = firstAcc - secondAcc;
+
+    // Build stats grid
+    var grid = document.getElementById("stats-grid");
+    grid.innerHTML = "";
+
+    var accClass = accuracy >= 70 ? " good" : (accuracy < 50 ? " warning" : "");
+    grid.innerHTML += '<div class="stat-item' + accClass + '">' +
+      '<div class="stat-value">' + accuracy + '%</div>' +
+      '<div class="stat-label">准确率 (' + correctCount + '/' + Game.totalQuestions + ')</div></div>';
+
+    grid.innerHTML += '<div class="stat-item">' +
+      '<div class="stat-value">' + avgRT + 's</div>' +
+      '<div class="stat-label">平均反应时间</div></div>';
+
+    var comboClass = Game.maxCombo >= 3 ? " good" : "";
+    grid.innerHTML += '<div class="stat-item' + comboClass + '">' +
+      '<div class="stat-value">' + Game.maxCombo + '</div>' +
+      '<div class="stat-label">最长连击</div></div>';
+
+    var decayClass = decay > 0 ? " warning" : (decay < 0 ? " good" : "");
+    var decayText = decay > 0 ? "下降" + decay + "%" : (decay < 0 ? "上升" + Math.abs(decay) + "%" : "持平");
+    grid.innerHTML += '<div class="stat-item' + decayClass + '">' +
+      '<div class="stat-value">' + decayText + '</div>' +
+      '<div class="stat-label">注意力变化<br>(前' + firstAcc + '% 后' + secondAcc + '%)</div></div>';
+
+    // Result progress bar
+    var rp = document.getElementById("result-progress");
+    rp.innerHTML = "";
+    for (var i = 0; i < Game.totalQuestions; i++) {
+      var cell = document.createElement("div");
+      cell.className = "progress-cell " + (Game.questionResults[i].correct ? "correct" : "wrong");
+      cell.textContent = (i + 1);
+      rp.appendChild(cell);
+    }
+  }
+
+  function showDemoResults() {
+    showScreen("result-screen");
+    document.getElementById("result-title").textContent = "朗读完成";
+    document.getElementById("score-display").style.display = "none";
+
+    var grid = document.getElementById("stats-grid");
+    grid.innerHTML = '<div class="stat-item good" style="grid-column:span 2;">' +
+      '<div class="stat-value">已完成</div>' +
+      '<div class="stat-label">共 ' + Game.totalQuestions + ' 组朗读</div></div>';
+
+    var rp = document.getElementById("result-progress");
+    rp.innerHTML = "";
+    for (var i = 0; i < Game.totalQuestions; i++) {
+      var cell = document.createElement("div");
+      cell.className = "progress-cell correct";
+      cell.textContent = (i + 1);
+      rp.appendChild(cell);
+    }
+  }
+
+  function quitGame() {
+    cancelSpeech();
+    Game.state = "idle";
+    showScreen("start-screen");
+  }
+
+  // ===== Event Handlers =====
+
+  // Setting buttons (initial)
+  var settingBtns = document.querySelectorAll(".option-btn");
+  for (var i = 0; i < settingBtns.length; i++) {
+    settingBtns[i].addEventListener("click", function() {
+      var setting = this.dataset.setting;
+      var value = this.dataset.value;
+      var siblings = this.parentNode.querySelectorAll(".option-btn");
+      for (var j = 0; j < siblings.length; j++) siblings[j].classList.remove("selected");
+      this.classList.add("selected");
+      Game[setting] = value;
+      if (setting === "population") updateDifficultyOptions();
+    });
+  }
+
+  function updateDifficultyOptions() {
+    var popConfig = POPULATION_CONFIG[Game.population];
+    var row = document.getElementById("difficulty-row");
+    row.innerHTML = "";
+    for (var i = 0; i < popConfig.difficulties.length; i++) {
+      (function(diff, isFirst) {
+        var btn = document.createElement("button");
+        btn.className = "option-btn" + (isFirst ? " selected" : "");
+        btn.dataset.setting = "difficulty";
+        btn.dataset.value = diff;
+        btn.textContent = DIFFICULTY_LABELS[diff];
+        btn.addEventListener("click", function() {
+          var siblings = this.parentNode.querySelectorAll(".option-btn");
+          for (var j = 0; j < siblings.length; j++) siblings[j].classList.remove("selected");
+          this.classList.add("selected");
+          Game.difficulty = diff;
+        });
+        row.appendChild(btn);
+      })(popConfig.difficulties[i], i === 0);
+    }
+    Game.difficulty = popConfig.difficulties[0];
+  }
+
+  // Volume slider
+  var volSlider = document.getElementById("volume-slider");
+  var volValue = document.getElementById("volume-value");
+  volSlider.addEventListener("input", function() {
+    Game.volume = this.value / 100;
+    volValue.textContent = this.value;
+  });
+
+  // Start button
+  document.getElementById("start-btn").addEventListener("click", function() {
+    initAudio();
+    startGame();
+  });
+
+  // Quit
+  document.getElementById("quit-btn").addEventListener("click", quitGame);
+
+  // Replay
+  document.getElementById("replay-btn").addEventListener("click", replayNumbers);
+
+  // Restart
+  document.getElementById("restart-btn").addEventListener("click", function() {
+    showScreen("start-screen");
+  });
+
+  // Home
+  document.getElementById("home-btn").addEventListener("click", function() {
+    showScreen("start-screen");
+  });
+
+})();
+</script>
+</body>
+</html>

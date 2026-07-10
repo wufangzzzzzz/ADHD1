@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>侧抑制训练 - Flanker 任务</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100dvh;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+  background:#0A1622;
+  color:#D6F7F0;
+  display:flex;align-items:center;justify-content:center;
+  height:100dvh;
+  user-select:none;-webkit-user-select:none;
+}
+.container{display:flex;gap:16px;width:min(98vw,1100px);height:min(96vh,680px);padding:12px;}
+/* ===== 左面板 ===== */
+.left-panel{
+  width:270px;min-width:270px;
+  background:rgba(29,233,182,0.04);
+  border-radius:16px;padding:14px 12px;
+  display:flex;flex-direction:column;gap:8px;
+  border:1px solid rgba(29,233,182,0.1);
+  overflow-y:auto;
+}
+.panel-title{color:#1DE9B6;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:rgba(214,247,240,0.45);font-size:11px;margin-bottom:3px;}
+.diff-btns{display:flex;gap:5px;}
+.diff-btn{
+  flex:1;padding:6px 0;border-radius:8px;
+  border:1px solid rgba(214,247,240,0.1);
+  background:rgba(214,247,240,0.03);
+  color:rgba(214,247,240,0.55);
+  font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.diff-btn:hover{background:rgba(29,233,182,0.08);}
+.diff-btn.active{background:linear-gradient(135deg,#1DE9B6,#00BCD4);border-color:transparent;color:#062a22;font-weight:800;}
+.age-switch{display:flex;gap:6px;}
+.age-btn{
+  flex:1;padding:7px 0;border-radius:8px;
+  border:1px solid rgba(214,247,240,0.1);
+  background:rgba(214,247,240,0.03);
+  color:rgba(214,247,240,0.55);
+  font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.age-btn.active{background:rgba(29,233,182,0.15);border-color:#1DE9B6;color:#1DE9B6;}
+.diff-btn:disabled,.age-btn:disabled{opacity:0.35;cursor:not-allowed;pointer-events:none;}
+.params-row{display:flex;gap:6px;flex-wrap:wrap;}
+.param-tag{background:rgba(214,247,240,0.04);padding:3px 8px;border-radius:6px;color:rgba(214,247,240,0.45);font-size:10px;font-family:'JetBrains Mono',monospace;}
+.guide-card{background:rgba(29,233,182,0.04);border-radius:10px;padding:10px;border:1px solid rgba(29,233,182,0.1);}
+.guide-title{color:#1DE9B6;font-size:11px;font-weight:700;margin-bottom:4px;}
+.guide-text{color:rgba(214,247,240,0.5);font-size:10px;line-height:1.6;}
+.guide-text b{color:rgba(214,247,240,0.8);}
+.stat-box{background:rgba(214,247,240,0.03);border-radius:8px;padding:8px 10px;}
+.stat-row{display:flex;justify-content:space-between;padding:2px 0;font-size:11px;}
+.stat-row .sl{color:rgba(214,247,240,0.45);}
+.stat-row .sv{color:#1DE9B6;font-family:'JetBrains Mono',monospace;font-weight:700;}
+/* ===== 右面板 ===== */
+.right-panel{
+  flex:1;background:rgba(29,233,182,0.03);border-radius:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;border:1px solid rgba(29,233,182,0.08);min-width:0;overflow:hidden;
+}
+.game-header{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:5;}
+.game-title{color:#D6F7F0;font-size:18px;font-weight:800;}
+.back-btn{background:rgba(214,247,240,0.06);border:none;color:rgba(214,247,240,0.5);padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.2s;}
+.back-btn:hover{background:rgba(214,247,240,0.12);}
+.game-area{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+/* 刺激 */
+.flanker-row{display:flex;gap:14px;align-items:center;justify-content:center;}
+.flanker-unit{
+  font-size:clamp(40px,9vmin,72px);
+  line-height:1;
+  display:inline-block;
+  transition:all 0.1s;
+  user-select:none;
+}
+.flanker-unit.neutral{color:#7A8794;text-shadow:none;}
+.flanker-unit.target{color:#1DE9B6;text-shadow:0 0 20px rgba(29,233,182,0.4);}
+.fixation{font-size:clamp(36px,7vmin,56px);color:rgba(214,247,240,0.5);font-weight:300;}
+.hint-bar{
+  position:absolute;bottom:96px;left:0;right:0;text-align:center;
+  color:rgba(214,247,240,0.4);font-size:13px;
+  transition:opacity 0.3s;
+}
+/* 闪烁环 */
+.flash-ring{position:absolute;inset:0;border-radius:16px;pointer-events:none;opacity:0;}
+.flash-ring.correct{opacity:1;box-shadow:inset 0 0 0 4px #4CAF50;animation:flashFade 0.35s ease-out;}
+.flash-ring.wrong{opacity:1;box-shadow:inset 0 0 0 4px #F44336;animation:flashFade 0.35s ease-out;}
+.flash-ring.miss{opacity:1;box-shadow:inset 0 0 0 4px #FF9800;animation:flashFade 0.35s ease-out;}
+@keyframes flashFade{0%{opacity:1;}100%{opacity:0;}}
+/* 底部 */
+.game-footer{position:absolute;bottom:16px;left:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:5;}
+.progress-bar{width:100%;height:6px;background:rgba(214,247,240,0.06);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#1DE9B6,#00BCD4);border-radius:3px;transition:width 0.3s;}
+.footer-row{display:flex;justify-content:space-between;align-items:center;}
+.score-display{color:#D6F7F0;font-size:14px;font-weight:700;}
+.trial-info{color:rgba(214,247,240,0.4);font-size:12px;font-family:'JetBrains Mono',monospace;}
+.start-btn{padding:9px 26px;border-radius:12px;border:none;background:linear-gradient(135deg,#1DE9B6,#00BCD4);color:#062a22;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(29,233,182,0.25);}
+.start-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(29,233,182,0.35);}
+.start-btn:active{transform:scale(0.96);}
+.start-btn.stop-mode{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;box-shadow:0 4px 16px rgba(229,57,53,0.3);}
+.start-btn.stop-mode:hover{box-shadow:0 6px 20px rgba(229,57,53,0.4);}
+/* 倒计时 */
+.countdown{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:80px;font-weight:800;color:#D6F7F0;
+  animation:cdPop 0.5s ease-out;z-index:6;
+}
+@keyframes cdPop{0%{transform:translate(-50%,-50%) scale(2);opacity:0;}100%{transform:translate(-50%,-50%) scale(1);opacity:1;}}
+/* 中心竖线与左右淡字 */
+.center-line{position:absolute;top:0;bottom:0;left:50%;width:1px;background:rgba(214,247,240,0.12);transform:translateX(-50%);pointer-events:none;z-index:1;}
+.side-hint{position:absolute;top:50%;transform:translateY(-50%);font-size:clamp(48px,14vmin,110px);font-weight:800;color:rgba(214,247,240,0.05);pointer-events:none;z-index:1;user-select:none;letter-spacing:0.1em;}
+.side-hint-left{left:6%;}
+.side-hint-right{right:6%;}
+#stimulus{position:relative;z-index:2;}
+/* 单题倒计时进度条 */
+.trial-timer-bar{position:absolute;top:0;left:0;right:0;height:4px;width:0%;background:linear-gradient(90deg,#FFB74D,#FF7043);opacity:0;z-index:3;pointer-events:none;border-radius:0 0 2px 2px;}
+/* 结果卡片 */
+.result-card{
+  position:absolute;inset:0;
+  background:rgba(10,22,34,0.96);
+  border-radius:16px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+  padding:20px 16px;
+  z-index:10;
+  overflow-y:auto;
+}
+.result-title{color:#1DE9B6;font-size:22px;font-weight:800;margin-top:6px;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:86%;max-width:420px;}
+.result-item{background:rgba(214,247,240,0.05);border-radius:10px;padding:10px;text-align:center;}
+.result-item .val{color:#1DE9B6;font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.result-item .lbl{color:rgba(214,247,240,0.5);font-size:11px;margin-top:3px;}
+.result-section{width:86%;max-width:420px;background:rgba(214,247,240,0.03);border-radius:10px;padding:12px 14px;}
+.section-title{color:#1DE9B6;font-size:13px;font-weight:700;margin-bottom:8px;}
+.cond-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(214,247,240,0.04);}
+.cond-row:last-child{border-bottom:none;}
+.cond-row .cl{color:rgba(214,247,240,0.55);}
+.cond-row .cv{color:#D6F7F0;font-family:'JetBrains Mono',monospace;font-weight:700;}
+.effect-val{font-size:16px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.effect-good{color:#4CAF50;}
+.effect-mild{color:#FF9800;}
+.effect-poor{color:#F44336;}
+.vigilance-decrement{margin-top:6px;font-size:11px;padding:4px 8px;border-radius:6px;}
+.vigilance-decrement.good{background:rgba(76,175,80,0.12);color:#81C784;}
+.vigilance-decrement.mild{background:rgba(255,152,0,0.12);color:#FFB74D;}
+.vigilance-decrement.poor{background:rgba(244,67,54,0.12);color:#E57373;}
+.result-grade{color:#4CAF50;font-size:16px;font-weight:700;}
+.result-eval{
+  width:86%;max-width:420px;
+  background:rgba(214,247,240,0.04);
+  border-radius:10px;
+  padding:10px 14px;
+  font-size:12px;
+  color:rgba(214,247,240,0.7);
+  line-height:1.8;
+  text-align:left;
+}
+.result-eval .eval-line{margin-bottom:3px;}
+.result-eval .eval-line:last-child{margin-bottom:0;}
+.result-btns{display:flex;gap:10px;margin-top:4px;margin-bottom:10px;}
+.result-btns button{padding:10px 24px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-retry{background:linear-gradient(135deg,#1DE9B6,#00BCD4);color:#062a22;}
+.btn-home{background:rgba(214,247,240,0.1);color:#D6F7F0;}
+.btn-retry:hover{transform:translateY(-1px);}
+.btn-home:hover{background:rgba(214,247,240,0.16);}
+/* 响应式 */
+@media(max-width:680px){
+  .container{flex-direction:column;height:auto;min-height:96vh;gap:10px;padding:10px;}
+  .left-panel{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;gap:8px;overflow-x:auto;}
+  .panel-title{width:100%;}
+  .age-switch{flex:1;min-width:120px;}
+  .diff-group{flex:1;min-width:90px;}
+  .guide-card,.stat-box{flex:1;min-width:140px;}
+  .params-row{width:100%;}
+  .right-panel{height:60vh;min-height:420px;}
+  .flanker-row{gap:8px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 左面板 -->
+  <div class="left-panel">
+    <div class="panel-title">Flanker 侧抑制训练</div>
+    <div class="age-switch">
+      <button class="age-btn active" data-mode="child" onclick="setMode('child')">儿童</button>
+      <button class="age-btn" data-mode="adult" onclick="setMode('adult')">成人</button>
+    </div>
+    <div class="panel-title" style="margin-top:2px;">难度选择</div>
+    <div class="diff-group">
+      <div class="diff-label">初级</div>
+      <div class="diff-btns" id="diff-easy"></div>
+    </div>
+    <div class="diff-group">
+      <div class="diff-label">中级</div>
+      <div class="diff-btns" id="diff-medium"></div>
+    </div>
+    <div class="diff-group">
+      <div class="diff-label">高级</div>
+      <div class="diff-btns" id="diff-hard"></div>
+    </div>
+    <div class="params-row" id="params-row"></div>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        <b>只看中间</b>那个的方向，两侧只是干扰。<br>
+        • 中间朝<b>左</b> → 点屏幕<b>左</b>半边<br>
+        • 中间朝<b>右</b> → 点屏幕<b>右</b>半边<br>
+        <span style="color:#FF5252;font-weight:700;">⚠ 中性条件（重要）：</span><br>
+        <span style="color:#FF5252;">当两侧出现<b>灰色无方向符号</b>（如 • ◇ ✷ 等）、但<b>中间仍是方向箭头</b>时，<b>依然按中间箭头方向点！</b>这些灰符号只是"无干扰基线对照"，既不是"不要点"，也不是反向干扰箭头。别被灰符号迷惑，也别因为中间有箭头就无视它们。</span><br>
+        不一致时（两侧反向箭头）最难，要忍住干扰！
+      </div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-row"><span class="sl">干扰比例</span><span class="sv" id="stat-incong">—</span></div>
+      <div class="stat-row"><span class="sl">连对</span><span class="sv" id="stat-streak">0</span></div>
+    </div>
+  </div>
+  <!-- 右面板 -->
+  <div class="right-panel">
+    <div class="game-header">
+      <div class="game-title">侧抑制训练</div>
+      <button class="back-btn" onclick="location.href='index.html'">返回</button>
+    </div>
+    <div class="game-area" id="game-area">
+      <div class="center-line"></div>
+      <div class="side-hint side-hint-left">左</div>
+      <div class="side-hint side-hint-right">右</div>
+      <div class="trial-timer-bar" id="trial-timer"></div>
+      <div class="hint-bar" id="hint-bar" style="opacity:0.3;">点击屏幕左 / 右半边，或按 ← → 键</div>
+      <div id="stimulus" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;"></div>
+      <div class="flash-ring" id="flash-ring"></div>
+    </div>
+    <div class="game-footer">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="footer-row">
+        <span class="score-display">得分：<span id="score">0</span></span>
+        <span class="trial-info" id="trial-info">0 / 0</span>
+        <button class="start-btn" id="start-btn" onclick="startGame()">开始训练</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 难度配置 =====
+// trials: 总题数, timeout: 超时ms
+// incongruent: 初始不一致比例, neutral: 中性(基线·两侧无方向符号)比例
+// 一致比例 = 1 - incongruent - neutral
+const DIFF_CONFIG = {
+  child: {
+    easy:   { label:'入门', trials:20, timeout:3000, incongruent:0.40, neutral:0.15, setSize:5 },
+    medium: { label:'进阶', trials:24, timeout:2500, incongruent:0.45, neutral:0.15, setSize:5 },
+    hard:   { label:'挑战', trials:30, timeout:2000, incongruent:0.50, neutral:0.15, setSize:5 },
+  },
+  adult: {
+    easy:   { label:'入门', trials:30, timeout:2000, incongruent:0.45, neutral:0.15, setSize:5 },
+    medium: { label:'进阶', trials:40, timeout:1600, incongruent:0.50, neutral:0.15, setSize:5 },
+    hard:   { label:'挑战', trials:50, timeout:1200, incongruent:0.55, neutral:0.15, setSize:5 },
+  }
+};
+
+// ===== 状态 =====
+let state = {
+  mode:'child',
+  level:'easy',
+  running:false,
+  total:0,
+  currentTrial:0,
+  currentTrialData:null,
+  score:0,
+  trialStartTime:0,
+  responded:false,
+  incongruentRatio:0.40,
+  streakRight:0,
+  streakWrong:0,
+  stimulusTimer:null,
+  windowTimer:null,
+  results:[],
+};
+
+// ===== 音频 =====
+let audioCtx = null;
+function initAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+}
+function playBeep(freq,dur,vol=0.15){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='sine';o.frequency.value=freq;
+  g.gain.setValueAtTime(vol,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+dur);
+}
+
+// ===== 难度按钮 =====
+function buildDiffBtns(){
+  ['easy','medium','hard'].forEach(lvl=>{
+    const container=document.getElementById('diff-'+lvl);
+    container.innerHTML='';
+    ['easy','medium','hard'].forEach(sub=>{
+      const cfg=DIFF_CONFIG[state.mode][sub];
+      const btn=document.createElement('button');
+      btn.className='diff-btn'+(state.level===sub?' active':'');
+      btn.textContent=cfg.label;
+      btn.onclick=()=>{state.level=sub;document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');updateParams();};
+      container.appendChild(btn);
+    });
+  });
+  updateParams();
+}
+function updateParams(){
+  const cfg=DIFF_CONFIG[state.mode][state.level];
+  document.getElementById('params-row').innerHTML=
+    `<span class="param-tag">${cfg.trials}题</span>`+
+    `<span class="param-tag">${cfg.timeout}ms</span>`+
+    `<span class="param-tag">不一致${Math.round(cfg.incongruent*100)}%</span>`+
+    `<span class="param-tag">中性${Math.round(cfg.neutral*100)}%</span>`+
+    `<span class="param-tag">一致${Math.round((1-cfg.incongruent-cfg.neutral)*100)}%</span>`;
+  state.incongruentRatio=cfg.incongruent;
+  document.getElementById('stat-incong').textContent=Math.round(state.incongruentRatio*100)+'%';
+}
+function setMode(mode){
+  state.mode=mode;
+  document.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.age-btn[data-mode="${mode}"]`)?.classList.add('active');
+  buildDiffBtns();
+}
+
+// ===== 图形库（图案丰富，方向绝对明确）=====
+// 每个元素为 [左符号,右符号]，渲染时严格按 dir 取对应符号，不依赖任何 emoji 默认朝向
+// 儿童：友好明确的符号族（手指、方块箭头、三角、细箭头）
+const CHILD_SHAPES=[['👈','👉'],['⬅','➡'],['◀','▶'],['←','→']];
+// 成人：多种指向符号族 [左,右]
+const ADULT_SHAPES=[['◀','▶'],['←','→'],['❮','❯'],['⟨','⟩'],['⇐','⇒'],['➤','➣'],['◂','▸']];
+// 中性：无方向符号（灰色显示，仅出现在两侧作为基线对照，中间永远有方向）
+const NEUTRAL_SHAPES=['•','◇','✷','※','○','△','▢'];
+
+// ===== 生成题目（动态，支持自适应）=====
+function genTrial(){
+  const cfg=DIFF_CONFIG[state.mode][state.level];
+  const isChild=state.mode==='child';
+  const r=Math.random();
+  let type;
+  if(r<cfg.neutral) type='neutral';
+  else if(r<cfg.neutral+state.incongruentRatio) type='incongruent';
+  else type='congruent';
+  const target=Math.random()<0.5?'left':'right';
+  const shape = isChild
+    ? CHILD_SHAPES[Math.floor(Math.random()*CHILD_SHAPES.length)]
+    : ADULT_SHAPES[Math.floor(Math.random()*ADULT_SHAPES.length)];
+  const neutral = NEUTRAL_SHAPES[Math.floor(Math.random()*NEUTRAL_SHAPES.length)];
+  return {type,target,shape,neutral};
+}
+
+// ===== 渲染刺激 =====
+function renderStimulus(trial){
+  const cfg=DIFF_CONFIG[state.mode][state.level];
+  const row=document.createElement('div');
+  row.className='flanker-row';
+  const mid=Math.floor(cfg.setSize/2);
+  for(let i=0;i<cfg.setSize;i++){
+    const unit=document.createElement('span');
+    unit.className='flanker-unit';
+    let dir;
+    if(i===mid){
+      dir=trial.target;            // 中间永远是方向箭头
+    }else if(trial.type==='neutral'){
+      dir=null;                    // 两侧为中性符号（无方向）
+    }else{
+      dir = trial.type==='congruent' ? trial.target : (trial.target==='left'?'right':'left');
+    }
+    if(dir===null){
+      unit.textContent=trial.neutral;
+      unit.classList.add('neutral');
+    }else{
+      unit.textContent = dir==='left'?trial.shape[0]:trial.shape[1];
+      if(i===mid) unit.classList.add('target');
+    }
+    row.appendChild(unit);
+  }
+  return row;
+}
+
+// ===== 自适应 =====
+function updateAdaptive(correct){
+  if(correct){
+    state.streakRight++;
+    state.streakWrong=0;
+    if(state.streakRight>=3){
+      state.streakRight=0;
+      state.incongruentRatio=Math.min(0.70,state.incongruentRatio+0.10);
+    }
+  }else{
+    state.streakWrong++;
+    state.streakRight=0;
+    if(state.streakWrong>=2){
+      state.streakWrong=0;
+      state.incongruentRatio=Math.max(0.30,state.incongruentRatio-0.10);
+    }
+  }
+  document.getElementById('stat-incong').textContent=Math.round(state.incongruentRatio*100)+'%';
+  document.getElementById('stat-streak').textContent=state.streakRight;
+}
+
+// ===== 游戏流程 =====
+function startGame(){
+  if(state.running){ stopGame(); return; }
+  initAudio();
+  const cfg=DIFF_CONFIG[state.mode][state.level];
+  state.total=cfg.trials;
+  state.currentTrial=0;
+  state.score=0;
+  state.results=[];
+  state.incongruentRatio=cfg.incongruent;
+  state.streakRight=0;
+  state.streakWrong=0;
+  state.running=true;
+  const btn=document.getElementById('start-btn');
+  btn.textContent='停止训练';
+  btn.classList.add('stop-mode');
+  document.querySelectorAll('.diff-btn,.age-btn').forEach(b=>b.disabled=true);
+  document.getElementById('score').textContent='0';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('trial-info').textContent=`0 / ${state.total}`;
+  document.getElementById('hint-bar').style.opacity='1';
+  stopTrialTimer();
+  document.getElementById('stat-incong').textContent=Math.round(state.incongruentRatio*100)+'%';
+  document.getElementById('stat-streak').textContent='0';
+  const old=document.querySelector('.result-card');
+  if(old) old.remove();
+  countdown(3,()=>runTrial());
+}
+
+function stopGame(){
+  clearTimeout(state.stimulusTimer);
+  clearTimeout(state.windowTimer);
+  stopTrialTimer();
+  endGame();
+}
+
+function countdown(n,cb){
+  const area=document.getElementById('game-area');
+  const el=document.createElement('div');
+  el.className='countdown';
+  el.textContent=n;
+  area.appendChild(el);
+  if(n>0){
+    playBeep(440,0.1,0.1);
+    setTimeout(()=>{el.remove();countdown(n-1,cb);},800);
+  }else{
+    playBeep(880,0.2,0.15);
+    el.remove();
+    cb();
+  }
+}
+
+function runTrial(){
+  if(!state.running) return;
+  clearTimeout(state.stimulusTimer);
+  clearTimeout(state.windowTimer);
+  if(state.currentTrial>=state.total){
+    endGame();
+    return;
+  }
+  state.currentTrialData=genTrial();
+  state.responded=false;
+  state.trialStartTime=0;
+  const stim=document.getElementById('stimulus');
+  stim.innerHTML='<div class="fixation">+</div>';
+  state.stimulusTimer=setTimeout(()=>{
+    stim.innerHTML='';
+    stim.appendChild(renderStimulus(state.currentTrialData));
+  state.trialStartTime=performance.now();
+  playBeep(500,0.04,0.06);
+  startTrialTimer(DIFF_CONFIG[state.mode][state.level].timeout);
+  state.windowTimer=setTimeout(()=>{
+    if(!state.responded){
+      stopTrialTimer();
+      flashBorder('miss');
+      playBeep(200,0.2,0.15);
+      recordTrial(state.currentTrialData.type,'timeout',0);
+      updateAdaptive(false);
+      nextTrial();
+    }
+  },DIFF_CONFIG[state.mode][state.level].timeout);
+},180);
+}
+
+function handleResponse(dir){
+  if(!state.running||state.responded||!state.trialStartTime) return;
+  state.responded=true;
+  clearTimeout(state.windowTimer);
+  stopTrialTimer();
+  const rt=performance.now()-state.trialStartTime;
+  const trial=state.currentTrialData;
+  const correct = dir===trial.target;
+  if(correct){
+    state.score+=10;
+    document.getElementById('score').textContent=state.score;
+    flashBorder('correct');
+    playBeep(800,0.1);
+    recordTrial(trial.type,'correct',rt);
+  }else{
+    state.score=Math.max(0,state.score-5);
+    document.getElementById('score').textContent=state.score;
+    flashBorder('wrong');
+    playBeep(300,0.15);
+    recordTrial(trial.type,'wrong',rt);
+  }
+  updateAdaptive(correct);
+  nextTrial();
+}
+
+function flashBorder(type){
+  const ring=document.getElementById('flash-ring');
+  ring.className='flash-ring '+type;
+  setTimeout(()=>{ring.className='flash-ring';},350);
+}
+function startTrialTimer(timeout){
+  const tb=document.getElementById('trial-timer');
+  tb.style.opacity='1';
+  tb.style.transition='none';
+  tb.style.width='100%';
+  void tb.offsetWidth;
+  tb.style.transition='width '+timeout+'ms linear';
+  tb.style.width='0%';
+}
+function stopTrialTimer(){
+  const tb=document.getElementById('trial-timer');
+  tb.style.transition='none';
+  tb.style.width='0%';
+  tb.style.opacity='0';
+}
+
+function recordTrial(type,result,rt){
+  state.results.push({type,result,rt});
+}
+
+function nextTrial(){
+  state.currentTrial++;
+  const total=state.total;
+  document.getElementById('progress-fill').style.width=(state.currentTrial/total*100)+'%';
+  document.getElementById('trial-info').textContent=`${state.currentTrial} / ${total}`;
+  setTimeout(()=>runTrial(),150);
+}
+
+function resetToIdle(){
+  state.running=false;
+  const btn=document.getElementById('start-btn');
+  btn.textContent='开始训练';
+  btn.classList.remove('stop-mode');
+  document.getElementById('stimulus').innerHTML='';
+  document.getElementById('hint-bar').style.opacity='0.3';
+  stopTrialTimer();
+  document.querySelectorAll('.diff-btn,.age-btn').forEach(b=>b.disabled=false);
+  document.getElementById('score').textContent='0';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('trial-info').textContent='';
+  const card=document.querySelector('.result-card');
+  if(card) card.remove();
+}
+
+// ===== 结束与评估 =====
+function endGame(){
+  state.running=false;
+  const btn=document.getElementById('start-btn');
+  btn.textContent='开始训练';
+  btn.classList.remove('stop-mode');
+  document.getElementById('stimulus').innerHTML='';
+  document.getElementById('hint-bar').style.opacity='0.3';
+  clearTimeout(state.stimulusTimer);
+  clearTimeout(state.windowTimer);
+  stopTrialTimer();
+  document.querySelectorAll('.diff-btn,.age-btn').forEach(b=>b.disabled=false);
+  if(audioCtx){
+    playBeep(523,0.15,0.12);
+    setTimeout(()=>playBeep(659,0.15,0.12),150);
+    setTimeout(()=>playBeep(784,0.3,0.12),300);
+  }
+  const results=state.results;
+  // 分条件统计
+  const types=['congruent','incongruent','neutral'];
+  const labels={congruent:'一致',incongruent:'不一致',neutral:'中性(基线)'};
+  const stats={};
+  types.forEach(t=>{
+    const rs=results.filter(r=>r.type===t);
+    const totalT=rs.length;
+    const correctT=rs.filter(r=>r.result==='correct').length;
+    const acc=totalT>0?(correctT/totalT*100):0;
+    const rts=rs.filter(r=>r.result==='correct'&&r.rt>0);
+    const avgRT=rts.length>0?Math.round(rts.reduce((s,r)=>s+r.rt,0)/rts.length):0;
+    stats[t]={total:totalT,acc,avgRT};
+  });
+  const overallAcc = results.length>0?Math.round(results.filter(r=>r.result==='correct').length/results.length*100):0;
+  const overallRT = (()=>{
+    const rts=results.filter(r=>r.result==='correct'&&r.rt>0);
+    return rts.length>0?Math.round(rts.reduce((s,r)=>s+r.rt,0)/rts.length):0;
+  })();
+  // 干扰效应 = 不一致RT - 中性RT（纯干扰量，去掉同向促进的影响）
+  const effect = stats.incongruent.avgRT - stats.neutral.avgRT;
+  let effClass='effect-good',effText='侧抑制控制优秀，几乎不受两侧干扰';
+  if(effect>250){effClass='effect-poor';effText='侧抑制较弱，易受两侧干扰';}
+  else if(effect>100){effClass='effect-mild';effText='侧抑制一般，有一定干扰影响';}
+  // 促进效应 = 一致RT - 中性RT（两侧同向时加快的量）
+  const facil = stats.congruent.avgRT - stats.neutral.avgRT;
+  // 衰减分析
+  let vigHTML='';
+  if(results.length>=10){
+    const halfIdx=Math.floor(results.length/2);
+    const firstHalf=results.slice(0,halfIdx);
+    const secondHalf=results.slice(halfIdx);
+    const firstAcc=Math.round(firstHalf.filter(r=>r.result==='correct').length/firstHalf.length*100);
+    const secondAcc=Math.round(secondHalf.filter(r=>r.result==='correct').length/secondHalf.length*100);
+    const firstRTs=firstHalf.filter(r=>r.result==='correct'&&r.rt>0);
+    const secondRTs=secondHalf.filter(r=>r.result==='correct'&&r.rt>0);
+    const firstRT=firstRTs.length>0?Math.round(firstRTs.reduce((s,r)=>s+r.rt,0)/firstRTs.length):0;
+    const secondRT=secondRTs.length>0?Math.round(secondRTs.reduce((s,r)=>s+r.rt,0)/secondRTs.length):0;
+    const decAcc=firstAcc-secondAcc;
+    let decClass='good',decText='注意力稳定，无明显衰减';
+    if(decAcc>10){decClass='poor';decText='后半段准确率明显下降，持续注意力需加强';}
+    else if(decAcc>4){decClass='mild';decText='后半段略有下降';}
+    vigHTML=`
+      <div class="result-section">
+        <div class="section-title">📊 注意力衰减分析</div>
+        <div class="cond-row"><span class="cl">前半段准确率</span><span class="cv">${firstAcc}%</span></div>
+        <div class="cond-row"><span class="cl">后半段准确率</span><span class="cv">${secondAcc}%</span></div>
+        <div class="cond-row"><span class="cl">前半段反应时</span><span class="cv">${firstRT}ms</span></div>
+        <div class="cond-row"><span class="cl">后半段反应时</span><span class="cv">${secondRT}ms</span></div>
+        <div class="vigilance-decrement ${decClass}">准确率变化：${decAcc>0?'-':''}${decAcc}% · ${decText}</div>
+      </div>
+    `;
+  }
+  // 评估文字
+  let evalLines=[];
+  if(effect<=100) evalLines.push({icon:'🎯',text:'侧抑制控制优秀，能很好排除两侧干扰。'});
+  else if(effect<=250) evalLines.push({icon:'🎯',text:'侧抑制能力一般，不一致条件下降明显，建议多练。'});
+  else evalLines.push({icon:'🎯',text:'侧抑制较弱，两侧干扰影响大，需加强抗干扰训练。'});
+  if(stats.neutral.total>0){
+    if(stats.neutral.acc>=90) evalLines.push({icon:'📏',text:'中性基线（两侧无方向符号）反应准确，注意力基础良好。'});
+    else evalLines.push({icon:'📏',text:'中性基线准确率偏低，基础注意力待提升。'});
+  }
+  if(overallRT>0){
+    if(overallRT<450) evalLines.push({icon:'⚡',text:'整体反应速度优秀。'});
+    else if(overallRT<700) evalLines.push({icon:'⚡',text:'整体反应速度良好。'});
+    else evalLines.push({icon:'⚡',text:'整体反应偏慢，可提升反应敏捷度。'});
+  }
+  const timeoutCount=results.filter(r=>r.result==='timeout').length;
+  if(timeoutCount>results.length*0.2) evalLines.push({icon:'⏱️',text:`漏报 ${timeoutCount} 次较多，注意集中或可降低难度。`});
+  // 条件统计 HTML
+  let condHTML='<div class="result-section"><div class="section-title">分条件表现</div>';
+  types.forEach(t=>{
+    condHTML+=`<div class="cond-row"><span class="cl">${labels[t]}</span><span class="cv">准确率 ${stats[t].acc.toFixed(0)}% · ${stats[t].avgRT}ms</span></div>`;
+  });
+  condHTML+=`<div class="cond-row" style="margin-top:6px;border-top:1px solid rgba(214,247,240,0.08);padding-top:6px;"><span class="cl">干扰效应(不一致−中性)</span><span class="cv ${effClass}">${effect>0?'+':''}${effect}ms</span></div>`;
+  condHTML+=`<div class="vigilance-decrement ${effClass==='effect-good'?'good':effClass==='effect-mild'?'mild':'poor'}" style="margin-top:6px;">${effText}</div>`;
+  const facClass = facil<0?'effect-good':(facil>80?'effect-poor':'effect-mild');
+  condHTML+=`<div class="cond-row" style="margin-top:4px;"><span class="cl">促进效应(一致−中性)</span><span class="cv ${facClass}">${facil>0?'+':''}${facil}ms</span></div>`;
+  condHTML+='</div>';
+  const area=document.getElementById('game-area');
+  const card=document.createElement('div');
+  card.className='result-card';
+  card.innerHTML=`
+    <div class="result-title">训练完成！</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val">${overallAcc}%</div><div class="lbl">整体准确率</div></div>
+      <div class="result-item"><div class="val">${overallRT}ms</div><div class="lbl">平均反应时</div></div>
+    </div>
+    ${condHTML}
+    ${vigHTML}
+    <div class="result-eval" style="background:rgba(29,233,182,0.06);border:1px solid rgba(29,233,182,0.15);">
+      <div style="color:#1DE9B6;font-weight:700;margin-bottom:6px;">📋 综合评估</div>
+      ${evalLines.map(l=>`<div class="eval-line">${l.icon} ${l.text}</div>`).join('')}
+    </div>
+    <div class="result-btns">
+      <button class="btn-retry" onclick="this.closest('.result-card').remove();resetToIdle();">再来一次</button>
+      <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
+    </div>
+  `;
+  area.appendChild(card);
+  try{
+    const data=JSON.parse(localStorage.getItem('b7_flanker')||'{}');
+    data[state.mode+'-'+state.level]={overallAcc,overallRT,effect,date:new Date().toISOString()};
+    localStorage.setItem('b7_flanker',JSON.stringify(data));
+  }catch(e){}
+}
+
+// ===== 事件 =====
+document.getElementById('stimulus').addEventListener('click',(e)=>{
+  if(!state.running||state.responded||!state.trialStartTime) return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  handleResponse(x<rect.width/2?'left':'right');
+});
+document.getElementById('stimulus').addEventListener('touchend',(e)=>{
+  e.preventDefault();
+  if(!state.running||state.responded||!state.trialStartTime) return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const touch=e.changedTouches[0];
+  const x=touch.clientX-rect.left;
+  handleResponse(x<rect.width/2?'left':'right');
+},{passive:false});
+document.addEventListener('keydown',(e)=>{
+  if(e.code==='ArrowLeft'){e.preventDefault();handleResponse('left');}
+  else if(e.code==='ArrowRight'){e.preventDefault();handleResponse('right');}
+});
+
+// ===== 初始化 =====
+buildDiffBtns();
+</script>
+</body>
+</html>

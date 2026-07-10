@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>伦敦塔 · 专注力训练</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#7E7BFF;--accent2:#5C6BC0;
+  --err:#EF5350;--ok:#66BB6A;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100dvh;overflow:hidden;}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:radial-gradient(1200px 800px at 70% -10%,#1a174080,transparent),#0a0e1a;color:#EDE7F6;display:flex;align-items:center;justify-content:center;height:100dvh;user-select:none;-webkit-user-select:none;}
+.container{display:flex;gap:16px;width:min(98vw,1100px);height:min(96vh,680px);padding:12px;}
+.left-panel{width:270px;min-width:270px;display:flex;flex-direction:column;gap:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px 12px;}
+.panel-title{color:var(--accent);font-size:14px;font-weight:800;letter-spacing:0.05em;margin-top:6px;}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:rgba(237,231,246,0.45);font-size:11px;margin-bottom:3px;}
+.diff-btns{display:flex;gap:5px;flex-wrap:wrap;}
+.diff-btn{flex:1;min-width:42px;padding:6px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(237,231,246,0.55);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;}
+.diff-btn:hover{background:rgba(126,123,255,0.08);}
+.diff-btn.active{background:linear-gradient(135deg,#7E7BFF,#5C6BC0);border-color:transparent;color:#0a0e1a;font-weight:800;}
+.guide-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 13px;margin-top:2px;}
+.guide-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:6px;}
+.guide-text{font-size:11.5px;line-height:1.85;color:rgba(237,231,246,0.62);}
+.guide-text b{color:#EDE7F6;}
+.guide-text .hint{color:#FFB74D;font-weight:700;}
+/* 右面板 */
+.right-panel{flex:1;min-width:0;position:relative;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.game-header{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:6;}
+.game-title{color:#EDE7F6;font-size:18px;font-weight:800;}
+.back-btn{background:rgba(237,231,246,0.06);border:none;color:rgba(237,231,246,0.5);padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s;}
+.back-btn:hover{background:rgba(237,231,246,0.12);}
+.game-area{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:46px 14px 14px;min-height:0;width:100%;overflow-y:auto;}
+.goal-zone{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.goal-label{font-size:11px;color:rgba(237,231,246,0.4);}
+.goal-towers{display:flex;gap:18px;align-items:flex-end;height:84px;padding:0 6px;}
+.goal-tower{width:40px;display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-start;gap:2px;}
+.goal-ball{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#0a0e1a;font-size:11px;font-weight:800;}
+.divider{width:80%;height:1px;background:rgba(237,231,246,0.08);margin:2px 0;}
+.towers{flex:1;display:flex;gap:24px;align-items:flex-end;justify-content:center;min-height:240px;padding:8px 0;}
+.tower{width:92px;min-height:240px;display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-start;gap:4px;background:rgba(126,123,255,0.04);border:2px solid rgba(255,255,255,0.1);border-bottom:none;border-radius:10px 10px 0 0;padding:8px 0 0;cursor:pointer;position:relative;transition:border-color .15s,box-shadow .15s;}
+.tower::after{content:'';position:absolute;bottom:-9px;left:-12px;right:-12px;height:9px;background:rgba(126,123,255,0.22);border-radius:5px;}
+.tower.selected{border-color:var(--accent);box-shadow:0 0 22px rgba(126,123,255,0.5);}
+.tower.invalid{animation:shake .3s;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+.ball{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#0a0e1a;font-size:18px;font-weight:800;flex-shrink:0;box-shadow:inset 0 -4px 8px rgba(0,0,0,0.25);}
+.hud{display:flex;gap:18px;font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(237,231,246,0.6);}
+.hud .hud-val{color:var(--accent);font-weight:800;font-size:16px;}
+.feedback{height:20px;font-size:13px;font-weight:700;color:rgba(237,231,246,0.55);min-height:20px;}
+.game-footer{margin-top:6px;display:flex;flex-direction:column;gap:8px;align-items:center;z-index:5;}
+.start-btn{padding:10px 26px;border-radius:12px;border:none;background:linear-gradient(135deg,#7E7BFF,#5C6BC0);color:#0a0e1a;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(126,123,255,0.25);}
+.start-btn:hover{transform:translateY(-1px);}
+.start-btn:active{transform:scale(.96);}
+.start-btn.stop-mode{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;box-shadow:0 4px 16px rgba(229,57,53,0.3);}
+/* 结果卡片 */
+.result-card{position:absolute;inset:0;background:rgba(10,14,26,0.97);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:20px 16px;z-index:10;overflow-y:auto;}
+.result-title{color:var(--accent);font-size:22px;font-weight:800;margin-top:4px;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:88%;max-width:440px;}
+.result-item{background:rgba(237,231,246,0.05);border-radius:10px;padding:10px;text-align:center;}
+.result-item .val{color:var(--accent);font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.result-item .lbl{color:rgba(237,231,246,0.5);font-size:11px;margin-top:3px;}
+.result-section{width:88%;max-width:440px;background:rgba(237,231,246,0.03);border-radius:10px;padding:12px 14px;}
+.section-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:8px;}
+.cond-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(237,231,246,0.04);}
+.cond-row:last-child{border-bottom:none;}
+.cond-row .cl{color:rgba(237,231,246,0.55);}
+.cond-row .cv{color:#EDE7F6;font-family:'JetBrains Mono',monospace;font-weight:700;}
+.result-eval{width:88%;max-width:440px;background:rgba(237,231,246,0.04);border-radius:10px;padding:10px 14px;font-size:12px;color:rgba(237,231,246,0.7);line-height:1.8;text-align:left;}
+.result-eval .eval-line{margin-bottom:3px;}
+.result-btns{display:flex;gap:10px;margin-top:4px;margin-bottom:10px;}
+.result-btns button{padding:10px 24px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-retry{background:linear-gradient(135deg,#7E7BFF,#5C6BC0);color:#0a0e1a;}
+.btn-home{background:rgba(237,231,246,0.1);color:#EDE7F6;}
+.btn-retry:hover{transform:translateY(-1px);}
+.btn-home:hover{background:rgba(237,231,246,0.16);}
+@media(max-width:680px){
+  html,body{height:auto;min-height:100dvh;overflow:visible;}
+  body{align-items:flex-start;overflow-y:auto;}
+  .container{flex-direction:column;height:auto;min-height:96vh;gap:10px;padding:10px;}
+  .left-panel{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;gap:8px;overflow-x:auto;}
+  .panel-title{width:100%;}
+  .diff-group{flex:1;min-width:120px;}
+  .guide-card{flex:1;min-width:200px;}
+  .right-panel{height:64vh;min-height:440px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 左面板 -->
+  <div class="left-panel">
+    <div class="panel-title">伦敦塔 · 计划训练</div>
+    <div class="panel-title" style="margin-top:2px;">难度选择</div>
+    <div class="diff-group"><div class="diff-label">入门</div><div class="diff-btns" id="diff-entry"></div></div>
+    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
+    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
+    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="diff-group"><div class="diff-label">专家</div><div class="diff-btns" id="diff-expert"></div></div>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        3 根柱子上有不同颜色的球，每根只能把<b>顶端的球</b>移到另一根柱——只能放到<b>空柱</b>，或顶端球比它<b>大</b>的柱上（<b>数字越小球越大</b>）。<br>
+        • 任务：用<b>最少步数</b>把球摆成上方<b>目标图示</b>的样子。<br>
+        • 点一根柱<b>选中</b>，再点另一根柱<b>移动</b>；点同一根柱取消。<br>
+        • <span class="hint">提示：</span>先在脑中预演完整路径，越接近参考步数，计划能力越强。
+      </div>
+    </div>
+  </div>
+  <!-- 右面板 -->
+  <div class="right-panel">
+    <div class="game-header">
+      <div class="game-title">伦敦塔</div>
+      <button class="back-btn" onclick="location.href='index.html'">返回</button>
+    </div>
+    <div class="game-area" id="game-area">
+      <div class="goal-zone">
+        <div class="goal-label">目标图示（把球摆成这样）</div>
+        <div class="goal-towers" id="goal-towers"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="towers" id="towers"></div>
+      <div class="hud">
+        <span>步数 <span class="hud-val" id="hud-steps">0</span></span>
+        <span>参考 <span class="hud-val" id="hud-ref">-</span></span>
+        <span>用时 <span class="hud-val" id="hud-time">0</span>s</span>
+      </div>
+      <div class="feedback" id="feedback">选好难度，点开始训练</div>
+      <div class="game-footer">
+        <button class="start-btn" id="start-btn" onclick="toggleGame()">开始训练</button>
+      </div>
+    </div>
+    <!-- 结果 -->
+    <div class="result-card" id="result-card" style="display:none;"></div>
+  </div>
+</div>
+<script>
+// ===== 配置 =====
+const BALL_COLORS=['#EF5350','#66BB6A','#42A5F5','#FFEE58','#AB47BC']; // 索引0=球1(最大)
+const LEVELS={
+  entry :{name:'入门',goal:[[1],[2],[3]],                 moves:2},
+  easy  :{name:'初级',goal:[[1,2],[3],[]],                 moves:3},
+  medium:{name:'中级',goal:[[1,2],[3,4],[]],               moves:5},
+  hard  :{name:'高级',goal:[[1,2,3],[4,5],[]],             moves:6},
+  expert:{name:'专家',goal:[[1],[2,3],[4,5]],              moves:8},
+};
+const DIFF_ORDER=['entry','easy','medium','hard','expert'];
+// ===== DOM =====
+const $=id=>document.getElementById(id);
+// ===== 音频 =====
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){audioCtx=null;}}
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+}
+function playBeep(freq,dur){
+  if(!audioCtx)return;
+  try{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.frequency.value=freq;o.type='sine';
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25,audioCtx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur+0.02);
+  }catch(e){}
+}
+// ===== 工具 =====
+function clone(s){return s.map(col=>col.slice());}
+function topOf(col){return col.length?col[col.length-1]:Infinity;}
+function canMove(state,from,to){
+  if(from===to)return false;
+  if(state[from].length===0)return false;
+  return topOf(state[to])>state[from][state[from].length-1];
+}
+function legalMoves(state){
+  const ms=[];
+  for(let f=0;f<3;f++)for(let t=0;t<3;t++){
+    if(canMove(state,f,t))ms.push({from:f,to:t});
+  }
+  return ms;
+}
+function applyMove(state,m){state[m.to].push(state[m.from].pop());}
+function isSame(a,b){
+  if(a.length!==b.length)return false;
+  for(let i=0;i<a.length;i++){
+    if(a[i].length!==b[i].length)return false;
+    for(let j=0;j<a[i].length;j++)if(a[i][j]!==b[i][j])return false;
+  }
+  return true;
+}
+// 从目标逆推 moves 步生成初始（保证可解，参考步数=moves）
+function genProblem(level){
+  const cfg=LEVELS[level];
+  const goal=clone(cfg.goal);
+  const cur=clone(goal);
+  let prev=null;
+  for(let i=0;i<cfg.moves;i++){
+    let ms=legalMoves(cur);
+    if(prev)ms=ms.filter(m=>!(m.from===prev.to&&m.to===prev.from));
+    if(ms.length===0)break;
+    const m=ms[Math.floor(Math.random()*ms.length)];
+    applyMove(cur,m);prev=m;
+  }
+  if(isSame(cur,goal)){
+    let ms=legalMoves(cur);
+    if(prev)ms=ms.filter(m=>!(m.from===prev.to&&m.to===prev.from));
+    if(ms.length)applyMove(cur,ms[0]);
+  }
+  return {start:cur,goal:goal,refSteps:cfg.moves};
+}
+const COLOR_OF=n=>BALL_COLORS[(n-1)%BALL_COLORS.length];
+// ===== session 统计 =====
+const sessionStats={};
+DIFF_ORDER.forEach(k=>sessionStats[k]={count:0,sumRatio:0,best:0});
+// ===== 状态 =====
+let state={
+  level:'entry',running:false,solved:false,
+  current:[[],[],[]],goal:[[],[],[]],refSteps:0,
+  steps:0,selected:null,timerStart:0,timers:[],
+};
+function at(delay,fn){const t=setTimeout(()=>{fn();},delay);state.timers.push(t);return t;}
+function clearTimers(){state.timers.forEach(t=>clearTimeout(t));state.timers=[];}
+// ===== 难度按钮 =====
+function buildDiffBtns(){
+  DIFF_ORDER.forEach(k=>{
+    const c=$('diff-'+k);c.innerHTML='';
+    const b=document.createElement('button');
+    b.className='diff-btn'+(state.level===k?' active':'');
+    b.textContent=LEVELS[k].name;
+    b.onclick=()=>{if(state.running)return;state.level=k;document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+    c.appendChild(b);
+  });
+}
+// ===== 渲染 =====
+function ballHTML(n,small){
+  const sz=small?'26px':'60px';
+  const fs=small?'11px':'18px';
+  return `<div class="ball" style="width:${sz};height:${sz};font-size:${fs};background:${COLOR_OF(n)}">${n}</div>`;
+}
+function renderGoal(){
+  const g=$('goal-towers');g.innerHTML='';
+  state.goal.forEach(col=>{
+    const t=document.createElement('div');
+    t.className='goal-tower';
+    col.forEach(n=>{const d=document.createElement('div');d.innerHTML=ballHTML(n,true);t.appendChild(d.firstChild);});
+    g.appendChild(t);
+  });
+}
+function renderTowers(){
+  const w=$('towers');w.innerHTML='';
+  state.current.forEach((col,i)=>{
+    const t=document.createElement('div');
+    t.className='tower'+(state.selected===i?' selected':'');
+    t.dataset.i=i;
+    t.onclick=()=>onTowerClick(i);
+    col.forEach(n=>{const d=document.createElement('div');d.innerHTML=ballHTML(n,false);t.appendChild(d.firstChild);});
+    w.appendChild(t);
+  });
+}
+function updateHud(){
+  $('hud-steps').textContent=state.steps;
+  $('hud-ref').textContent=state.refSteps;
+  const el=$('hud-time');
+  if(state.running&&state.timerStart){el.textContent=Math.floor((Date.now()-state.timerStart)/1000);}
+}
+// ===== 交互 =====
+function onTowerClick(i){
+  if(!state.running||state.solved)return;
+  if(state.selected===null){
+    if(state.current[i].length===0)return;
+    state.selected=i;renderTowers();
+  }else{
+    if(i===state.selected){state.selected=null;renderTowers();return;}
+    tryMove(state.selected,i);
+  }
+}
+function tryMove(f,t){
+  if(canMove(state.current,f,t)){
+    state.current[t].push(state.current[f].pop());
+    state.steps++;
+    if(!state.timerStart)state.timerStart=Date.now();
+    playBeep(660,0.12);
+    state.selected=null;
+    renderTowers();updateHud();
+    if(isSame(state.current,state.goal)){onSolve();}
+  }else{
+    const towerEl=document.querySelectorAll('.tower')[t];
+    if(towerEl){towerEl.classList.add('invalid');setTimeout(()=>towerEl.classList.remove('invalid'),300);}
+    $('feedback').textContent='不能把小球放到更小的球上';
+    state.selected=null;renderTowers();
+  }
+}
+function onSolve(){
+  state.solved=true;
+  clearTimers();
+  playBeep(990,0.25);
+  at(250,()=>stopGame());
+}
+// ===== 游戏流程 =====
+function toggleGame(){
+  if(state.running)stopGame();
+  else startGame();
+}
+function startGame(){
+  initAudio();
+  const p=genProblem(state.level);
+  state.current=clone(p.start);
+  state.goal=clone(p.goal);
+  state.refSteps=p.refSteps;
+  state.running=true;state.solved=false;state.steps=0;state.selected=null;state.timerStart=0;state.timers=[];
+  $('result-card').style.display='none';
+  $('start-btn').textContent='停止训练';
+  $('start-btn').classList.add('stop-mode');
+  $('feedback').textContent='把球摆成目标图示，步数越少越好';
+  renderGoal();renderTowers();updateHud();
+  state._tick=at(1000,function tick(){if(state.running&&state.timerStart){updateHud();state._tick=at(1000,tick);}});
+}
+function stopGame(){
+  state.running=false;state.solved=false;
+  clearTimers();
+  $('start-btn').textContent='开始训练';
+  $('start-btn').classList.remove('stop-mode');
+  state.selected=null;
+  showResult();
+}
+function showResult(){
+  const steps=state.steps,ref=state.refSteps;
+  const ratio=ref>0?Math.round(ref/steps*100):0;
+  const timeSec=state.timerStart?Math.floor((Date.now()-state.timerStart)/1000):0;
+  const st=sessionStats[state.level];
+  st.count++;st.sumRatio+=ratio;st.best=Math.max(st.best,ratio);
+  const avg=Math.round(st.sumRatio/st.count);
+  let grade,interpret;
+  if(ratio>=100){grade='优秀';interpret=`仅用 ${steps} 步达成目标（参考 ${ref} 步），计划极其高效，几乎每一步都恰到好处，执行功能很强。`;}
+  else if(ratio>=80){grade='良好';interpret=`用 ${steps} 步完成（参考 ${ref} 步），规划较优、略有余步，计划与执行能力良好。`;}
+  else if(ratio>=60){grade='合格';interpret=`用 ${steps} 步完成（参考 ${ref} 步），存在一定冗余移动，可先在脑中预演完整路径再动手。`;}
+  else{grade='需练习';interpret=`用了 ${steps} 步（参考 ${ref} 步），尝试偏多，建议降低难度循序渐进，训练前瞻计划能力。`;}
+  const html=`
+    <div class="result-title">训练结果</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val">${steps}</div><div class="lbl">实际步数</div></div>
+      <div class="result-item"><div class="val">${ref}</div><div class="lbl">参考步数</div></div>
+      <div class="result-item"><div class="val">${ratio}%</div><div class="lbl">计划效率</div></div>
+    </div>
+    <div class="result-section">
+      <div class="section-title">分难度统计 · ${LEVELS[state.level].name}</div>
+      <div class="cond-row"><span class="cl">本次计划效率</span><span class="cv">${ratio}%</span></div>
+      <div class="cond-row"><span class="cl">该难度历史最佳</span><span class="cv">${st.best}%</span></div>
+      <div class="cond-row"><span class="cl">该难度平均效率（${st.count} 局）</span><span class="cv">${avg}%</span></div>
+      <div class="cond-row"><span class="cl">本次用时</span><span class="cv">${timeSec}s</span></div>
+    </div>
+    <div class="result-section">
+      <div class="section-title">综合评估 · ${grade}</div>
+      <div class="result-eval">
+        <div class="eval-line">• ${interpret}</div>
+        <div class="eval-line">• 伦敦塔测的是<b>前瞻计划</b>与<b>执行功能</b>：高手会先在脑中走完最优路径再落子。</div>
+      </div>
+    </div>
+    <div class="result-btns">
+      <button class="btn-retry" onclick="startGame()">再练一次</button>
+      <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
+    </div>`;
+  $('result-card').innerHTML=html;
+  $('result-card').style.display='flex';
+  renderTowers();
+}
+// ===== 初始化 =====
+buildDiffBtns();
+</script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>威斯康星卡片分类 · 专注力训练</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#66BB6A;--accent2:#26A69A;
+  --err:#EF5350;--ok:#66BB6A;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100dvh;overflow:hidden;}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:radial-gradient(1200px 800px at 70% -10%,#16302780,transparent),#0a140f;color:#EDE7F6;display:flex;align-items:center;justify-content:center;height:100dvh;user-select:none;-webkit-user-select:none;}
+.container{display:flex;gap:16px;width:min(98vw,1100px);height:min(96vh,680px);padding:12px;}
+.left-panel{width:270px;min-width:270px;display:flex;flex-direction:column;gap:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px 12px;}
+.panel-title{color:var(--accent);font-size:14px;font-weight:800;letter-spacing:0.05em;margin-top:6px;}
+.age-switch{display:flex;gap:6px;}
+.age-btn{flex:1;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(237,231,246,0.6);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+.age-btn.active{background:linear-gradient(135deg,#66BB6A,#26A69A);color:#08130d;border-color:transparent;}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:rgba(237,231,246,0.45);font-size:11px;margin-bottom:3px;}
+.diff-btns{display:flex;gap:5px;}
+.diff-btn{flex:1;padding:6px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(237,231,246,0.55);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;}
+.diff-btn:hover{background:rgba(102,187,106,0.08);}
+.diff-btn.active{background:linear-gradient(135deg,#66BB6A,#26A69A);border-color:transparent;color:#08130d;font-weight:800;}
+.diff-btn:disabled,.age-btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
+.guide-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 13px;margin-top:2px;}
+.guide-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:6px;}
+.guide-text{font-size:11.5px;line-height:1.85;color:rgba(237,231,246,0.62);}
+.guide-text b{color:#EDE7F6;}
+.guide-text .hint{color:#FFB74D;font-weight:700;}
+/* 右面板 */
+.right-panel{flex:1;min-width:0;position:relative;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.game-area{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:14px;min-height:0;}
+.trial-bar{width:100%;max-width:440px;display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+.trial-info{display:flex;justify-content:space-between;font-size:12px;color:rgba(237,231,246,0.5);font-family:'JetBrains Mono',monospace;}
+.progress-bar{width:100%;height:6px;background:rgba(237,231,246,0.06);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#66BB6A,#26A69A);transition:width .25s;}
+.stim-zone{margin-top:6px;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.stim-label{font-size:12px;color:rgba(237,231,246,0.4);}
+.stim-card{width:clamp(112px,27vmin,150px);height:clamp(118px,28vmin,156px);border-radius:14px;background:rgba(102,187,106,0.05);border:2px dashed rgba(102,187,106,0.25);display:flex;align-items:center;justify-content:center;padding:8px;}
+.rule-hint{margin-top:4px;font-size:12px;font-weight:700;color:var(--accent);min-height:16px;}
+.std-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:10px 0 4px;}
+.std-card{width:clamp(84px,20vmin,104px);height:clamp(90px,22vmin,114px);border-radius:12px;background:rgba(237,231,246,0.04);border:2px solid rgba(237,231,246,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;transition:transform .15s,border-color .15s,box-shadow .15s;}
+.std-card:hover{transform:translateY(-3px);border-color:rgba(102,187,106,0.5);}
+.std-card.correct{border-color:var(--ok);box-shadow:0 0 24px rgba(102,187,106,0.55);}
+.std-card.wrong{border-color:var(--err);box-shadow:0 0 24px rgba(239,83,80,0.5);}
+.std-card.disabled{pointer-events:none;}
+.feedback{height:26px;margin-top:6px;font-size:17px;font-weight:800;opacity:0;transition:opacity .2s;}
+.feedback.show{opacity:1;}
+.feedback.ok{color:var(--ok);}
+.feedback.err{color:var(--err);}
+.game-footer{margin-top:14px;display:flex;flex-direction:column;gap:8px;z-index:5;}
+.start-btn{padding:10px 26px;border-radius:12px;border:none;background:linear-gradient(135deg,#66BB6A,#26A69A);color:#08130d;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(102,187,106,0.25);align-self:center;}
+.start-btn:hover{transform:translateY(-1px);}
+.start-btn:active{transform:scale(.96);}
+.start-btn.stop-mode{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;box-shadow:0 4px 16px rgba(229,57,53,0.3);}
+/* 顶部返回栏 */
+.game-header{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:6;}
+.game-title{color:#EDE7F6;font-size:18px;font-weight:800;}
+.back-btn{background:rgba(237,231,246,0.06);border:none;color:rgba(237,231,246,0.5);padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s;}
+.back-btn:hover{background:rgba(237,231,246,0.12);}
+/* 结果卡片 */
+.result-card{position:absolute;inset:0;background:rgba(8,20,15,0.97);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:20px 16px;z-index:10;overflow-y:auto;}
+.result-title{color:var(--accent);font-size:22px;font-weight:800;margin-top:4px;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:86%;max-width:420px;}
+.result-item{background:rgba(237,231,246,0.05);border-radius:10px;padding:10px;text-align:center;}
+.result-item .val{color:var(--accent);font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.result-item .lbl{color:rgba(237,231,246,0.5);font-size:11px;margin-top:3px;}
+.result-section{width:86%;max-width:420px;background:rgba(237,231,246,0.03);border-radius:10px;padding:12px 14px;}
+.section-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:8px;}
+.cond-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(237,231,246,0.04);}
+.cond-row:last-child{border-bottom:none;}
+.cond-row .cl{color:rgba(237,231,246,0.55);}
+.cond-row .cv{color:#EDE7F6;font-family:'JetBrains Mono',monospace;font-weight:700;}
+.result-eval{width:86%;max-width:420px;background:rgba(237,231,246,0.04);border-radius:10px;padding:10px 14px;font-size:12px;color:rgba(237,231,246,0.7);line-height:1.8;text-align:left;}
+.result-eval .eval-line{margin-bottom:3px;}
+.result-btns{display:flex;gap:10px;margin-top:4px;margin-bottom:10px;}
+.result-btns button{padding:10px 24px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-retry{background:linear-gradient(135deg,#66BB6A,#26A69A);color:#08130d;}
+.btn-home{background:rgba(237,231,246,0.1);color:#EDE7F6;}
+.btn-retry:hover{transform:translateY(-1px);}
+.btn-home:hover{background:rgba(237,231,246,0.16);}
+@media(max-width:680px){
+  html,body{height:auto;min-height:100dvh;overflow:visible;}
+  body{align-items:flex-start;overflow-y:auto;}
+  .container{flex-direction:column;height:auto;min-height:96vh;gap:10px;padding:10px;}
+  .left-panel{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;gap:8px;overflow-x:auto;}
+  .panel-title{width:100%;}
+  .age-switch{flex:1;min-width:120px;}
+  .diff-group{flex:1;min-width:90px;}
+  .guide-card{flex:1;min-width:200px;}
+  .right-panel{height:60vh;min-height:420px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 左面板 -->
+  <div class="left-panel">
+    <div class="panel-title">威斯康星卡片分类</div>
+    <div class="age-switch">
+      <button class="age-btn active" data-mode="child" onclick="setMode('child')">儿童</button>
+      <button class="age-btn" data-mode="adult" onclick="setMode('adult')">成人</button>
+    </div>
+    <div class="panel-title" style="margin-top:2px;">难度选择</div>
+    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
+    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
+    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        上方是<b>刺激卡</b>，下方 4 张是<b>标准卡</b>（每张含颜色/形状/数量三维度）。<br>
+        • 把刺激卡点到<b>最匹配</b>的标准卡上：系统只回<b>「对了/错了」</b>，<b>不告诉你规则</b>。<br>
+        • 背后的规则会在你连续答对若干次后<b>悄悄切换</b>（颜色→形状→数量）。<br>
+        • <b>关键</b>：错了就别再死守旧规则，要敏锐察觉新规律——这测的是<b>认知灵活性</b>。<br>
+        • 儿童版会在绿字提示「当前按什么分」，成人版不提示，更难。<br>
+        <span class="hint">提示：</span>靠反馈调整策略，别钻牛角尖。
+      </div>
+    </div>
+  </div>
+  <!-- 右面板 -->
+  <div class="right-panel">
+    <div class="game-header">
+      <div class="game-title">威斯康星卡片分类</div>
+      <button class="back-btn" onclick="location.href='index.html'">返回</button>
+    </div>
+    <div class="game-area" id="game-area">
+      <div class="trial-bar">
+        <div class="trial-info"><span id="trial-now">准备</span><span id="trial-total"></span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+      <div class="stim-zone">
+        <div class="stim-label">刺激卡（点下方标准卡归类）</div>
+        <div class="stim-card" id="stim-card"></div>
+        <div class="rule-hint" id="rule-hint"></div>
+      </div>
+      <div class="std-row" id="std-row"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="game-footer">
+        <button class="start-btn" id="start-btn" onclick="toggleGame()">开始训练</button>
+      </div>
+    </div>
+    <!-- 结果 -->
+    <div class="result-card" id="result-card" style="display:none;"></div>
+  </div>
+</div>
+<script>
+// ===== 维度与卡片定义 =====
+const COLOR_MAP={red:'#EF5350',green:'#66BB6A',blue:'#42A5F5',yellow:'#FFEE58'};
+const SHAPE_KEYS=['triangle','star','circle','plus'];
+const RULE_ORDER=['color','shape','count'];
+const RULE_NAME={color:'颜色',shape:'形状',count:'数量'};
+const STANDARD=[
+  {color:'red',shape:'triangle',count:1},
+  {color:'green',shape:'star',count:2},
+  {color:'blue',shape:'circle',count:3},
+  {color:'yellow',shape:'plus',count:4},
+];
+const LAYOUT={
+  1:[[0,0]],
+  2:[[0,-22],[0,22]],
+  3:[[-26,4],[26,4],[0,-26]],
+  4:[[-22,-22],[22,-22],[-22,22],[22,22]],
+};
+const CONFIG={
+  child:{
+    easy:  {total:48, threshold:4, showRule:true},
+    medium:{total:56, threshold:5, showRule:true},
+    hard:  {total:64, threshold:6, showRule:true},
+  },
+  adult:{
+    easy:  {total:64, threshold:6, showRule:false},
+    medium:{total:80, threshold:6, showRule:false},
+    hard:  {total:128,threshold:4, showRule:false},
+  }
+};
+// ===== DOM =====
+const $=id=>document.getElementById(id);
+// ===== 音频 =====
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){audioCtx=null;}}
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+}
+function playBeep(freq,dur){
+  if(!audioCtx)return;
+  try{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.frequency.value=freq;o.type='sine';
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25,audioCtx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur+0.02);
+  }catch(e){}
+}
+// ===== 形状绘制 =====
+function shapeSVG(shape,color,cx,cy,s){
+  if(shape==='circle')return `<circle cx="${cx}" cy="${cy}" r="${s}" fill="${color}"/>`;
+  if(shape==='triangle'){
+    const p1=`${cx},${cy-s}`,p2=`${(cx-s*0.866).toFixed(1)},${(cy+s*0.5).toFixed(1)}`,p3=`${(cx+s*0.866).toFixed(1)},${(cy+s*0.5).toFixed(1)}`;
+    return `<polygon points="${p1} ${p2} ${p3}" fill="${color}"/>`;
+  }
+  if(shape==='star'){
+    let pts=[];
+    for(let i=0;i<10;i++){const r=i%2===0?s:s*0.45;const a=-Math.PI/2+i*Math.PI/5;pts.push(`${(cx+r*Math.cos(a)).toFixed(1)},${(cy+r*Math.sin(a)).toFixed(1)}`);}
+    return `<polygon points="${pts.join(' ')}" fill="${color}"/>`;
+  }
+  // plus
+  const t=s*0.34;
+  return `<rect x="${(cx-s).toFixed(1)}" y="${(cy-t).toFixed(1)}" width="${(2*s).toFixed(1)}" height="${(2*t).toFixed(1)}" rx="2" fill="${color}"/>`+
+         `<rect x="${(cx-t).toFixed(1)}" y="${(cy-s).toFixed(1)}" width="${(2*t).toFixed(1)}" height="${(2*s).toFixed(1)}" rx="2" fill="${color}"/>`;
+}
+function drawCard(card,w,h){
+  const cx=w/2,cy=h/2,color=COLOR_MAP[card.color];
+  const pos=LAYOUT[card.count]||[[0,0]];
+  const s=w<100?13:16;
+  const svg=pos.map(([dx,dy])=>shapeSVG(card.shape,color,cx+dx,cy+dy,s)).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${svg}</svg>`;
+}
+// ===== 状态 =====
+let state={
+  mode:'child',level:'easy',running:false,
+  trial:0,total:48,threshold:4,showRule:true,
+  ruleIdx:0,lastRule:null,correctStreak:0,
+  stim:null,
+  timers:[],results:[],
+  catDone:0,
+};
+function at(delay,fn){const t=setTimeout(()=>{fn();},delay);state.timers.push(t);return t;}
+function clearTimers(){state.timers.forEach(t=>clearTimeout(t));state.timers=[];}
+// ===== 模式/难度 =====
+function setMode(m){
+  if(state.running)return;
+  state.mode=m;
+  document.querySelectorAll('.age-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  buildDiffBtns();
+}
+function buildDiffBtns(){
+  ['easy','medium','hard'].forEach(lvl=>{
+    const c=$('diff-'+lvl);c.innerHTML='';
+    [{k:'easy',n:'初级'},{k:'medium',n:'中级'},{k:'hard',n:'高级'}].forEach(sub=>{
+      const b=document.createElement('button');
+      b.className='diff-btn'+(state.level===sub.k?' active':'');
+      b.textContent=sub.n;
+      b.onclick=()=>{if(state.running)return;state.level=sub.k;document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+      c.appendChild(b);
+    });
+  });
+}
+// ===== 游戏流程 =====
+function toggleGame(){
+  if(state.running)stopGame();
+  else startGame();
+}
+function startGame(){
+  initAudio();
+  const cfg=CONFIG[state.mode][state.level];
+  state.total=cfg.total;state.threshold=cfg.threshold;state.showRule=cfg.showRule;
+  state.running=true;state.trial=0;state.ruleIdx=0;state.lastRule=null;
+  state.correctStreak=0;state.results=[];state.catDone=0;state.timers=[];
+  $('result-card').style.display='none';
+  $('start-btn').textContent='停止训练';
+  $('start-btn').classList.add('stop-mode');
+  $('trial-total').textContent='/ '+state.total;
+  nextTrial();
+}
+function stopGame(){
+  state.running=false;
+  clearTimers();
+  $('start-btn').textContent='开始训练';
+  $('start-btn').classList.remove('stop-mode');
+  document.querySelectorAll('.std-card').forEach(c=>c.classList.add('disabled'));
+  showResult();
+}
+function currentRule(){return RULE_ORDER[state.ruleIdx];}
+function matchingStd(card,rule){return STANDARD.findIndex(s=>s[rule]===card[rule]);}
+function nextTrial(){
+  if(!state.running)return;
+  if(state.trial>=state.total){stopGame();return;}
+  $('trial-now').textContent='第 '+(state.trial+1)+' 题';
+  $('progress-fill').style.width=((state.trial/state.total)*100)+'%';
+  // 生成刺激卡
+  state.stim={
+    color:['red','green','blue','yellow'][Math.floor(Math.random()*4)],
+    shape:SHAPE_KEYS[Math.floor(Math.random()*4)],
+    count:[1,2,3,4][Math.floor(Math.random()*4)],
+  };
+  $('stim-card').innerHTML=drawCard(state.stim,150,156);
+  // 规则提示（儿童版）
+  if(state.showRule)$('rule-hint').textContent='当前按【'+RULE_NAME[currentRule()]+'】分';
+  else $('rule-hint').textContent='';
+  // 渲染标准卡
+  const row=$('std-row');row.innerHTML='';
+  STANDARD.forEach((sc,i)=>{
+    const d=document.createElement('div');
+    d.className='std-card';
+    d.innerHTML=drawCard(sc,104,114);
+    d.onclick=()=>chooseStd(i,d);
+    row.appendChild(d);
+  });
+  $('feedback').className='feedback';
+}
+function chooseStd(idx,el){
+  if(!state.running)return;
+  const rule=currentRule();
+  const correctIdx=matchingStd(state.stim,rule);
+  const correct=(idx===correctIdx);
+  // 坚持错误判定：切换后，仍按上一条规则归类
+  let persev=false;
+  if(!correct&&state.lastRule){
+    const lastIdx=matchingStd(state.stim,state.lastRule);
+    if(idx===lastIdx)persev=true;
+  }
+  state.results.push({rule,choice:idx,correct,persev});
+  // 视觉反馈
+  document.querySelectorAll('.std-card').forEach(c=>c.classList.add('disabled'));
+  el.classList.add(correct?'correct':'wrong');
+  const fb=$('feedback');
+  fb.textContent=correct?'✓ 对了':'✗ 错了';
+  fb.className='feedback show '+(correct?'ok':'err');
+  playBeep(correct?880:220,correct?0.18:0.28);
+  // 计分 / 规则切换
+  if(correct){
+    state.correctStreak++;
+    if(state.correctStreak>=state.threshold){
+      state.lastRule=rule;
+      state.ruleIdx=(state.ruleIdx+1)%RULE_ORDER.length;
+      state.correctStreak=0;
+      state.catDone++;
+    }
+  }else{
+    state.correctStreak=0;
+  }
+  state.trial++;
+  at(700,()=>{if(state.running)nextTrial();});
+}
+// ===== 结果 =====
+function showResult(){
+  const r=state.results;
+  const total=r.length;
+  const correct=r.filter(x=>x.correct).length;
+  const errors=total-correct;
+  const persev=r.filter(x=>x.persev).length;
+  const acc=total?Math.round(correct/total*100):0;
+  // 分规则正确率
+  const byRule={color:{n:0,c:0},shape:{n:0,c:0},count:{n:0,c:0}};
+  r.forEach(x=>{byRule[x.rule].n++;if(x.correct)byRule[x.rule].c++;});
+  const ruleLines=Object.keys(byRule).map(k=>{
+    const o=byRule[k];const a=o.n?Math.round(o.c/o.n*100):0;
+    return `<div class="cond-row"><span class="cl">按${RULE_NAME[k]}分</span><span class="cv">${o.c}/${o.n} (${a}%)</span></div>`;
+  }).join('');
+  let grade,interpret;
+  if(persev===0&&acc>=80){grade='优秀';interpret='几乎无坚持错误且正确率高，认知灵活性很好，能迅速从旧策略切换到新规则。';}
+  else if(persev<=2&&acc>=60){grade='良好';interpret='偶有固着但能较快调整，认知灵活性中等偏上。';}
+  else if(persev<=6){grade='待提升';interpret='出现一定坚持错误，规则切换后容易沿用旧策略。可多做此类训练增强思维灵活性。';}
+  else{grade='需关注';interpret='坚持错误较多，切换规则后明显固着于旧策略，提示认知灵活性较弱，建议降低难度（儿童版+提示）循序渐进。';}
+  const html=`
+    <div class="result-title">训练结果</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val">${state.catDone}</div><div class="lbl">完成分类数</div></div>
+      <div class="result-item"><div class="val">${acc}%</div><div class="lbl">总正确率</div></div>
+      <div class="result-item"><div class="val">${persev}</div><div class="lbl">坚持错误数</div></div>
+      <div class="result-item"><div class="val">${errors}</div><div class="lbl">总错误数</div></div>
+    </div>
+    <div class="result-section">
+      <div class="section-title">分规则表现</div>
+      ${ruleLines}
+    </div>
+    <div class="result-section">
+      <div class="section-title">综合评估 · ${grade}</div>
+      <div class="result-eval">
+        <div class="eval-line">• 完成分类 ${state.catDone} 段，规则在背后悄悄切换了 ${state.catDone} 次。</div>
+        <div class="eval-line">• 坚持错误 ${persev} 次（规则切换后仍按旧规则归类），是认知灵活性的核心指标。</div>
+        <div class="eval-line">• ${interpret}</div>
+      </div>
+    </div>
+    <div class="result-btns">
+      <button class="btn-retry" onclick="startGame()">再练一次</button>
+      <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
+    </div>`;
+  $('result-card').innerHTML=html;
+  $('result-card').style.display='flex';
+  $('progress-fill').style.width='100%';
+}
+function backHome(){
+  $('result-card').style.display='none';
+  $('stim-card').innerHTML='';
+  $('std-row').innerHTML='';
+  $('rule-hint').textContent='';
+  $('feedback').className='feedback';
+  $('trial-now').textContent='准备';
+  $('trial-total').textContent='';
+  $('progress-fill').style.width='0%';
+}
+// ===== 初始化 =====
+buildDiffBtns();
+</script>
+</body>
+</html>

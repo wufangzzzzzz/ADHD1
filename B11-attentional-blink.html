@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>注意力眨眼 · 专注力训练</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#FF8A65;--accent2:#FF7043;
+  --err:#EF5350;--ok:#66BB6A;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100dvh;overflow:hidden;}
+body{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:500;background:radial-gradient(1200px 800px at 70% -10%,#1a174080,transparent),#0a0e1a;color:#EDE7F6;display:flex;align-items:center;justify-content:center;height:100dvh;user-select:none;-webkit-user-select:none;}
+.container{display:flex;gap:16px;width:min(98vw,1100px);height:min(96vh,680px);padding:12px;}
+.left-panel{width:270px;min-width:270px;display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px 12px;overflow-y:auto;}
+.panel-title{color:var(--accent);font-size:14px;font-weight:800;letter-spacing:0.05em;margin-top:6px;}
+.diff-group{margin-bottom:2px;}
+.diff-label{color:rgba(237,231,246,0.45);font-size:11px;margin-bottom:3px;}
+.diff-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+.diff-btn{flex:1;min-width:42px;padding:6px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(237,231,246,0.55);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;}
+.diff-btn:hover{background:rgba(255,138,101,0.08);}
+.diff-btn.active{background:linear-gradient(135deg,#FF8A65,#FF7043);border-color:transparent;color:#0a0e1a;font-weight:800;}
+/* 模式切换 */
+.mode-btns{display:flex;gap:5px;}
+.mode-btn{flex:1;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(237,231,246,0.55);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;}
+.mode-btn:hover{background:rgba(255,138,101,0.08);}
+.mode-btn.active{background:linear-gradient(135deg,#FF8A65,#FF7043);border-color:transparent;color:#0a0e1a;font-weight:800;}
+/* 颜色选择器 */
+.color-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.color-swatch{width:22px;height:22px;border-radius:6px;border:2px solid rgba(255,255,255,0.15);cursor:pointer;transition:all .15s;padding:0;}
+.color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--accent);}
+.color-pick{width:26px;height:26px;border:none;border-radius:6px;background:none;cursor:pointer;padding:0;}
+/* 进度条 */
+.progress-wrap{width:96%;max-width:460px;height:6px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;}
+.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#FF8A65,#FF7043);border-radius:4px;transition:width .3s;}
+/* 阅读模式答案 */
+.read-answer{display:flex;gap:42px;align-items:center;justify-content:center;}
+.ra-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.ra-lbl{font-size:14px;color:rgba(237,231,246,0.5);font-weight:700;}
+.ra-item .ra-val{font-size:60px;font-weight:800;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;line-height:1;}
+/* 阅读模式中央进度条 */
+.read-progress{display:flex;align-items:center;width:78%;max-width:300px;height:14px;background:rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;}
+.read-progress-bar{height:100%;width:0;background:linear-gradient(90deg,#FF8A65,#FF7043);border-radius:8px;transition:width 2s linear;}
+/* 阅读模式答案绿色 */
+.ra-item .ra-val.ra-correct{color:#4CAF50;}
+.guide-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 13px;margin-top:2px;}
+.guide-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:6px;}
+.guide-text{font-size:11.5px;line-height:1.85;color:rgba(237,231,246,0.62);}
+.guide-text b{color:#EDE7F6;}
+.guide-text .hint{color:#FFB74D;font-weight:700;}
+/* 右面板 */
+.right-panel{flex:1;min-width:0;position:relative;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.game-header{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:6;}
+.game-title{color:#EDE7F6;font-size:18px;font-weight:800;}
+.back-btn{background:rgba(237,231,246,0.06);border:none;color:rgba(237,231,246,0.5);padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s;}
+.back-btn:hover{background:rgba(237,231,246,0.12);}
+.game-area{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:46px 14px 14px;min-height:0;width:100%;overflow-y:auto;}
+.rsvp-display{width:96%;max-width:460px;height:150px;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-size:96px;font-weight:800;color:var(--accent);background:rgba(255,138,101,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:14px;letter-spacing:0.05em;}
+.rsvp-display.flash{animation:rsvpIn 0.18s ease-out;}
+@keyframes rsvpIn{0%{opacity:0;transform:scale(0.7);}40%{opacity:1;transform:scale(1);}100%{opacity:0.9;}}
+.rsvp-display.idle{color:rgba(237,231,246,0.25);font-size:18px;font-weight:600;}
+.hud{display:flex;gap:18px;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-size:13px;color:rgba(237,231,246,0.6);}
+.hud .hud-val{color:var(--accent);font-weight:800;font-size:16px;}
+.feedback{height:20px;font-size:13px;font-weight:700;color:rgba(237,231,246,0.55);min-height:20px;text-align:center;}
+/* 报告区 */
+.report-zone{display:flex;flex-direction:column;gap:10px;align-items:center;width:96%;max-width:460px;}
+.report-block{width:100%;display:flex;flex-direction:column;gap:6px;align-items:center;}
+.report-label{font-size:12px;color:rgba(237,231,246,0.55);}
+.report-label b{color:var(--accent);}
+.digit-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;}
+.digit-btn{padding:12px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#EDE7F6;font-size:18px;font-weight:800;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;cursor:pointer;transition:all .15s;}
+.digit-btn:hover{background:rgba(255,138,101,0.1);}
+.digit-btn.sel{background:linear-gradient(135deg,#FF8A65,#FF7043);border-color:transparent;color:#0a0e1a;}
+.submit-btn{margin-top:4px;padding:11px 30px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF8A65,#FF7043);color:#0a0e1a;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(255,112,67,0.25);}
+.submit-btn:hover{transform:translateY(-1px);}
+.submit-btn:active{transform:scale(.96);}
+.game-footer{margin-top:6px;display:flex;flex-direction:column;gap:8px;align-items:center;z-index:5;}
+.start-btn{padding:10px 26px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF8A65,#FF7043);color:#0a0e1a;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(255,112,67,0.25);}
+.start-btn:hover{transform:translateY(-1px);}
+.start-btn:active{transform:scale(.96);}
+.start-btn.stop-mode{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;box-shadow:0 4px 16px rgba(229,57,53,0.3);}
+/* 结果卡片 */
+.result-card{position:absolute;inset:0;background:rgba(10,14,26,0.97);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:20px 16px;z-index:10;overflow-y:auto;}
+.result-title{color:var(--accent);font-size:22px;font-weight:800;margin-top:4px;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:88%;max-width:440px;}
+.result-item{background:rgba(237,231,246,0.05);border-radius:10px;padding:10px;text-align:center;}
+.result-item .val{color:var(--accent);font-size:20px;font-weight:800;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;}
+.result-item .lbl{color:rgba(237,231,246,0.5);font-size:11px;margin-top:3px;}
+.result-section{width:88%;max-width:440px;background:rgba(237,231,246,0.03);border-radius:10px;padding:12px 14px;}
+.section-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:8px;}
+.cond-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(237,231,246,0.04);}
+.cond-row:last-child{border-bottom:none;}
+.cond-row .cl{color:rgba(237,231,246,0.55);}
+.cond-row .cv{color:#EDE7F6;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:700;}
+.result-eval{width:88%;max-width:440px;background:rgba(237,231,246,0.04);border-radius:10px;padding:10px 14px;font-size:12px;color:rgba(237,231,246,0.7);line-height:1.8;text-align:left;}
+.result-eval .eval-line{margin-bottom:3px;}
+.result-btns{display:flex;gap:10px;margin-top:4px;margin-bottom:10px;}
+.result-btns button{padding:10px 24px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-retry{background:linear-gradient(135deg,#FF8A65,#FF7043);color:#0a0e1a;}
+.btn-home{background:rgba(237,231,246,0.1);color:#EDE7F6;}
+.btn-retry:hover{transform:translateY(-1px);}
+.btn-home:hover{background:rgba(237,231,246,0.16);}
+@media(max-width:680px){
+  html,body{height:auto;min-height:100dvh;overflow:visible;}
+  body{align-items:flex-start;overflow-y:auto;}
+  .container{flex-direction:column;height:auto;min-height:96vh;gap:10px;padding:10px;}
+  .left-panel{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;gap:8px;overflow-x:auto;}
+  .panel-title{width:100%;}
+  .diff-group{flex:1;min-width:120px;}
+  .guide-card{flex:1;min-width:200px;}
+  .right-panel{height:64vh;min-height:440px;}
+  .rsvp-display{height:120px;font-size:72px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 左面板 -->
+  <div class="left-panel">
+    <div class="panel-title">注意力眨眼 · 瞬脱训练</div>
+    <div class="diff-group">
+      <div class="diff-label">游戏模式</div>
+      <div class="mode-btns" id="mode-btns">
+        <button class="mode-btn active" data-mode="train">训练模式</button>
+        <button class="mode-btn" data-mode="read">阅读模式</button>
+      </div>
+    </div>
+    <div class="diff-group">
+      <div class="diff-label">闪现颜色</div>
+      <div class="color-row" id="color-row"></div>
+    </div>
+    <div class="panel-title" style="margin-top:2px;">难度</div>
+    <div class="diff-btns" id="diff-all"></div>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        屏幕中央会<b>高速闪过</b>一串字母，其中藏着<b>两个数字</b>目标（<b>T1</b> 与 <b>T2</b>）。<br>
+        • 任务：序列结束后，在下方点选你看到的 <b>T1</b> 和 <b>T2</b> 两个数字。<br>
+        • <span class="hint">注意瞬脱：</span>当 T2 紧跟 T1 出现时，大脑正忙着加工 T1，会短暂"看不见"T2——这正是训练要突破的瓶颈。<br>
+        • <b>lag</b> 越小（T2越靠近T1）越难，难度越高 lag 越小、闪得越快。
+      </div>
+    </div>
+  </div>
+  <!-- 右面板 -->
+  <div class="right-panel">
+    <div class="game-header">
+      <div class="game-title">注意力眨眼</div>
+      <button class="back-btn" onclick="location.href='index.html'">返回</button>
+    </div>
+    <div class="game-area" id="game-area">
+      <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="rsvp-display idle" id="rsvp-display">准备开始</div>
+      <div class="hud">
+        <span>轮次 <span class="hud-val" id="hud-round">0</span></span>
+        <span>lag <span class="hud-val" id="hud-lag">-</span></span>
+        <span>T1对 <span class="hud-val" id="hud-t1">0</span></span>
+        <span>T2对 <span class="hud-val" id="hud-t2">0</span></span>
+      </div>
+      <div class="report-zone" id="report-zone" style="display:none;">
+        <div class="report-block">
+          <div class="report-label">第一个数字 <b>T1</b></div>
+          <div class="digit-btns" id="t1-btns"></div>
+        </div>
+        <div class="report-block">
+          <div class="report-label">第二个数字 <b>T2</b></div>
+          <div class="digit-btns" id="t2-btns"></div>
+        </div>
+        <button class="submit-btn" onclick="onSubmit()">提交报告</button>
+      </div>
+      <div class="feedback" id="feedback">选好难度，点开始训练</div>
+      <div class="game-footer">
+        <button class="start-btn" id="start-btn" onclick="toggleGame()">开始训练</button>
+      </div>
+    </div>
+    <!-- 结果 -->
+    <div class="result-card" id="result-card" style="display:none;"></div>
+  </div>
+</div>
+<script>
+// ===== 配置 =====
+const LETTERS='ABCDEFGHJKLMNPQRSTUVWXYZ'; // 避开 I/O 防止与数字混淆
+const LEVELS={
+  entry :{name:'入门',lagMin:8,lagMax:10,speed:140,len:12},
+  easy  :{name:'初级',lagMin:5,lagMax:7, speed:120,len:14},
+  medium:{name:'中级',lagMin:3,lagMax:5, speed:100,len:16},
+  hard  :{name:'高级',lagMin:2,lagMax:3, speed:85, len:18},
+  expert:{name:'专家',lagMin:2,lagMax:2, speed:70, len:20},
+};
+const DIFF_ORDER=['entry','easy','medium','hard','expert'];
+const TOTAL_ROUNDS=10; // 每局固定轮数
+const COLOR_PRESETS=['#FF8A65','#EF5350','#66BB6A','#42A5F5','#FFEB3B','#AB47BC','#EDE7F6']; // 闪现颜色预设
+const READ_REVEAL_MS=2000; // 阅读模式答案展示后停留进入下一轮的时间
+const READ_PROGRESS_MS=2000; // 阅读模式闪完后中央进度条读条时长（2秒）
+// ===== DOM =====
+const $=id=>document.getElementById(id);
+// ===== 音频 =====
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){audioCtx=null;}}
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+}
+function playBeep(freq,dur){
+  if(!audioCtx)return;
+  try{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.frequency.value=freq;o.type='sine';
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25,audioCtx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur+0.02);
+  }catch(e){}
+}
+// ===== 颜色工具 =====
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function colorDist(a,b){const x=hexToRgb(a),y=hexToRgb(b);return Math.sqrt(Math.pow(x[0]-y[0],2)+Math.pow(x[1]-y[1],2)+Math.pow(x[2]-y[2],2));}
+// 倒计时颜色：默认青色，若与闪现色太接近则切黄色，保证不撞色
+function pickCountdownColor(flash){const cyan='#26C6DA';return colorDist(flash,cyan)<90?'#FFEB3B':cyan;}
+// ===== 工具 =====
+function randInt(a,b){return a+Math.floor(Math.random()*(b-a+1));}
+function randLetter(){return LETTERS[Math.floor(Math.random()*LETTERS.length)];}
+// 生成 RSVP 序列：嵌两个数字目标 T1、T2，T2 距 T1 为 lag
+function genProblem(level){
+  const cfg=LEVELS[level];
+  const L=cfg.len;
+  const lag=randInt(cfg.lagMin,cfg.lagMax);
+  const maxPos1=Math.max(1,L-lag-1);
+  const pos1=randInt(1,maxPos1);
+  const pos2=pos1+lag;
+  const t1=randInt(0,9),t2=randInt(0,9);
+  const seq=[];
+  for(let i=0;i<L;i++)seq.push(randLetter());
+  seq[pos1]=String(t1);
+  seq[pos2]=String(t2);
+  return {seq,t1,t2,lag,pos1,pos2};
+}
+// ===== session 统计（跨轮累计，分难度）=====
+const sessionStats={};
+DIFF_ORDER.forEach(k=>sessionStats[k]={count:0,t1c:0,t2c:0,t1c_t2c:0,t1w:0,t1w_t2c:0});
+let roundCount=0;
+// ===== 状态 =====
+let state={
+  level:'entry',running:false,phase:'idle',
+  seq:[],answers:null,selT1:null,selT2:null,
+  timers:[],
+  flashColor:'#FF8A65',   // 闪现字符颜色（可自定义）
+  gameMode:'train',       // train=训练模式 / read=阅读模式
+  roundsPlayed:0,         // 本局已完成轮数
+};
+function at(delay,fn){const t=setTimeout(fn,delay);state.timers.push(t);return t;}
+function clearTimers(){state.timers.forEach(t=>clearTimeout(t));state.timers=[];}
+// ===== 难度按钮 =====
+function buildDiffBtns(){
+  const c=$('diff-all');c.innerHTML='';
+  DIFF_ORDER.forEach(k=>{
+    const b=document.createElement('button');
+    b.className='diff-btn'+(state.level===k?' active':'');
+    b.textContent=LEVELS[k].name;
+    b.onclick=()=>{if(state.running)return;state.level=k;document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+    c.appendChild(b);
+  });
+}
+// ===== 模式切换 =====
+function buildModeBtns(){
+  document.querySelectorAll('#mode-btns .mode-btn').forEach(b=>{
+    b.onclick=()=>{
+      if(state.running)return;
+      state.gameMode=b.dataset.mode;
+      document.querySelectorAll('#mode-btns .mode-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      $('feedback').textContent=state.gameMode==='read'?'阅读模式：只看不选，闪完自动亮出答案':'选好难度，点开始训练';
+    };
+  });
+}
+// ===== 颜色选择器 =====
+function buildColorRow(){
+  const c=$('color-row');c.innerHTML='';
+  COLOR_PRESETS.forEach(col=>{
+    const b=document.createElement('button');
+    b.className='color-swatch'+(state.flashColor===col?' active':'');
+    b.style.background=col;b.title=col;
+    b.onclick=()=>{if(state.running)return;setFlashColor(col);};
+    c.appendChild(b);
+  });
+  const picker=document.createElement('input');
+  picker.type='color';picker.className='color-pick';picker.value=state.flashColor;picker.title='自定义颜色';
+  picker.oninput=()=>{if(state.running){picker.value=state.flashColor;return;}setFlashColor(picker.value);};
+  c.appendChild(picker);
+}
+function setFlashColor(col){
+  state.flashColor=col;
+  document.querySelectorAll('.color-swatch').forEach(x=>{
+    x.classList.toggle('active',x.style.background===hexToRgbStr(col));
+  });
+}
+function hexToRgbStr(h){const r=hexToRgb(h);return 'rgb('+r[0]+', '+r[1]+', '+r[2]+')';}
+// ===== 渲染 =====
+function buildDigitBtns(containerId,kind){
+  const c=$(containerId);c.innerHTML='';
+  for(let d=0;d<10;d++){
+    const b=document.createElement('button');
+    b.className='digit-btn';b.textContent=d;
+    b.onclick=()=>{
+      if(state.phase!=='report')return;
+      state['sel'+kind]=d;
+      c.querySelectorAll('.digit-btn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+    };
+    c.appendChild(b);
+  }
+}
+function updateHud(){
+  $('hud-round').textContent=state.roundsPlayed+'/'+TOTAL_ROUNDS;
+  $('hud-lag').textContent=state.answers?state.answers.lag:'-';
+  $('hud-t1').textContent=sessionStats[state.level].t1c;
+  $('hud-t2').textContent=sessionStats[state.level].t2c;
+  $('progress-bar').style.width=(state.roundsPlayed/TOTAL_ROUNDS*100)+'%';
+}
+// ===== 游戏流程 =====
+function toggleGame(){
+  if(state.running)stopGame();
+  else startGame();
+}
+// 开始新的一局（重置本局轮数与统计）
+function startGame(){
+  initAudio();
+  DIFF_ORDER.forEach(k=>{sessionStats[k]={count:0,t1c:0,t2c:0,t1c_t2c:0,t1w:0,t1w_t2c:0};});
+  roundCount=0;
+  state.roundsPlayed=0;
+  state.running=true;
+  $('result-card').style.display='none';
+  $('report-zone').style.display='none';
+  $('start-btn').textContent='停止训练';
+  $('start-btn').classList.add('stop-mode');
+  updateHud();
+  nextRound();
+}
+// 进入下一轮：生成题目 → 倒计时 → 闪现
+function nextRound(){
+  const p=genProblem(state.level);
+  state.seq=p.seq;
+  state.answers=p;
+  state.selT1=null;state.selT2=null;
+  $('report-zone').style.display='none';
+  const disp=$('rsvp-display');
+  disp.classList.remove('idle');
+  updateHud();
+  runCountdown(()=>{
+    if(!state.running)return;
+    playSequence();
+  });
+}
+// 开始前倒计时 3→2→1（颜色与闪现色自动区分）
+function runCountdown(done){
+  state.phase='countdown';
+  const disp=$('rsvp-display');
+  const cdColor=pickCountdownColor(state.flashColor);
+  $('feedback').textContent='准备…';
+  let n=3;
+  const step=()=>{
+    if(!state.running)return;
+    if(n>0){
+      disp.classList.add('countdown');disp.classList.remove('idle');
+      disp.style.color=cdColor;
+      disp.textContent=n;
+      disp.classList.remove('flash');void disp.offsetWidth;disp.classList.add('flash');
+      playBeep(520,0.08);
+      n--;
+      at(700,step);
+    }else{
+      disp.classList.remove('countdown');
+      disp.textContent='';
+      done();
+    }
+  };
+  step();
+}
+function playSequence(){
+  state.phase='playing';
+  const seq=state.seq;
+  const speed=LEVELS[state.level].speed;
+  const disp=$('rsvp-display');
+  disp.style.color=state.flashColor;
+  $('feedback').textContent=state.gameMode==='read'?'仔细看，记住闪过的两个数字':'盯住中央，记住闪过的两个数字';
+  for(let i=0;i<seq.length;i++){
+    at(i*speed,()=>{
+      if(!state.running)return;
+      const ch=seq[i];
+      disp.textContent=ch;
+      disp.style.color=state.flashColor;
+      disp.classList.remove('flash');void disp.offsetWidth;disp.classList.add('flash');
+      // T1 高音、T2 中音、其余轻响
+      if(i===state.answers.pos1)playBeep(880,0.06);
+      else if(i===state.answers.pos2)playBeep(660,0.06);
+      else playBeep(330,0.04);
+    });
+  }
+  at(seq.length*speed+60,()=>{
+    if(!state.running)return;
+    if(state.gameMode==='read')showReadAnswer();
+    else showReport();
+  });
+}
+// 训练模式：报告区
+function showReport(){
+  state.phase='report';
+  const disp=$('rsvp-display');
+  disp.textContent='报告';disp.classList.add('idle');disp.style.color='';
+  buildDigitBtns('t1-btns','T1');
+  buildDigitBtns('t2-btns','T2');
+  $('report-zone').style.display='flex';
+  $('feedback').textContent='点选你看到的两个数字（T1 → T2），再提交';
+}
+// 阅读模式：闪完→中央2秒进度条→进度条满揭晓绿色答案→停留2秒进下一轮
+function showReadAnswer(){
+  state.phase='reveal';
+  const a=state.answers;
+  const disp=$('rsvp-display');
+  disp.classList.remove('idle','countdown');
+  disp.style.color='';
+  // 先显示中央 2 秒进度条
+  disp.innerHTML='<div class="read-progress"><div class="read-progress-bar"></div></div>';
+  $('feedback').textContent='即将揭晓答案…';
+  const bar=disp.querySelector('.read-progress-bar');
+  void disp.offsetWidth; // 强制 reflow 启动 transition
+  bar.style.width='100%';
+  at(READ_PROGRESS_MS,()=>{
+    if(!state.running)return;
+    // 进度条读完，揭晓绿色答案
+    disp.innerHTML='<div class="read-answer">'+
+      '<div class="ra-item"><span class="ra-lbl">T1</span><span class="ra-val ra-correct">'+a.t1+'</span></div>'+
+      '<div class="ra-item"><span class="ra-lbl">T2</span><span class="ra-val ra-correct">'+a.t2+'</span></div></div>';
+    $('feedback').textContent='答案：T1 = '+a.t1+'，T2 = '+a.t2;
+    playBeep(880,0.12);
+    state.roundsPlayed++;
+    updateHud();
+    at(READ_REVEAL_MS,()=>{
+      if(!state.running)return;
+      disp.innerHTML='';disp.textContent='';
+      if(state.roundsPlayed>=TOTAL_ROUNDS)endSession();
+      else nextRound();
+    });
+  });
+}
+function onSubmit(){
+  if(!state.running||state.phase!=='report')return;
+  if(state.selT1===null||state.selT2===null){$('feedback').textContent='请先选好 T1 和 T2 两个数字再提交';return;}
+  const a=state.answers;
+  const t1ok=state.selT1===a.t1;
+  const t2ok=state.selT2===a.t2;
+  recordRound(state.level,t1ok,t2ok);
+  roundCount++;
+  state.roundsPlayed++;
+  playBeep(t1ok&&t2ok?990:(t1ok||t2ok?740:330),0.2);
+  updateHud();
+  if(state.roundsPlayed>=TOTAL_ROUNDS)endSession();
+  else nextRound();
+}
+function recordRound(k,t1,t2){
+  const s=sessionStats[k];
+  s.count++;
+  if(t1)s.t1c++;
+  if(t2)s.t2c++;
+  if(t1){s.t1c_t2c+=t2?1:0;}
+  else{s.t1w++;s.t1w_t2c+=t2?1:0;}
+}
+// 打满固定轮数：自动结算
+function endSession(){
+  clearTimers();
+  state.running=false;state.phase='idle';
+  $('start-btn').textContent='开始训练';
+  $('start-btn').classList.remove('stop-mode');
+  $('report-zone').style.display='none';
+  const disp=$('rsvp-display');disp.classList.add('idle');disp.style.color='';disp.innerHTML='已完成';
+  if(state.gameMode==='read')showReadDone();
+  else showResult();
+}
+// 中途手动停止
+function stopGame(){
+  clearTimers();
+  state.running=false;state.phase='idle';
+  $('start-btn').textContent='开始训练';
+  $('start-btn').classList.remove('stop-mode');
+  $('report-zone').style.display='none';
+  const disp=$('rsvp-display');disp.classList.add('idle');disp.style.color='';disp.innerHTML='准备开始';
+  if(state.gameMode==='read')showReadDone();
+  else showResult();
+}
+// 阅读模式结束提示（不评分）
+function showReadDone(){
+  const html=`
+    <div class="result-title">阅读完成</div>
+    <div class="result-section">
+      <div class="section-title">浏览记录</div>
+      <div class="result-eval">
+        <div class="eval-line">• 本次以<b>阅读模式</b>完成 <b>${state.roundsPlayed}</b> 轮浏览（共 ${TOTAL_ROUNDS} 轮）。</div>
+        <div class="eval-line">• 阅读模式只展示不评分：每轮闪完后自动亮出 T1、T2 答案，用于熟悉节奏、建立目标预期。</div>
+        <div class="eval-line">• 想测成绩，切到<b>训练模式</b>亲手报告两个数字，即可获得注意瞬脱评估。</div>
+      </div>
+    </div>
+    <div class="result-btns">
+      <button class="btn-retry" onclick="startGame()">再来一次</button>
+      <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
+    </div>`;
+  $('result-card').innerHTML=html;
+  $('result-card').style.display='flex';
+}
+// ===== 评估 =====
+function showResult(){
+  // 聚合所有玩过的难度
+  let C=0,T1=0,T2=0,T1T2=0,T1W=0,T1W_T2=0;
+  DIFF_ORDER.forEach(k=>{
+    const s=sessionStats[k];
+    if(s.count===0)return;
+    C+=s.count;T1+=s.t1c;T2+=s.t2c;T1T2+=s.t1c_t2c;T1W+=s.t1w;T1W_T2+=s.t1w_t2c;
+  });
+  if(C===0){
+    $('result-card').innerHTML=`<div class="result-title">训练结果</div><div class="result-section"><div class="section-title">提示</div><div class="result-eval">还没有完成任何一轮，点"开始训练"后盯住序列并报告两个数字即可。</div></div><div class="result-btns"><button class="btn-retry" onclick="startGame()">开始训练</button><button class="btn-home" onclick="location.href='index.html'">返回大厅</button></div>`;
+    $('result-card').style.display='flex';
+    return;
+  }
+  const pT1=Math.round(T1/C*100);
+  const pT2=Math.round(T2/C*100);
+  const condT1=T1>0?T1T2/T1:0;          // P(T2对|T1对)
+  const condT1w=T1W>0?T1W_T2/T1W:0;      // P(T2对|T1错)
+  const AB=Math.round((condT1-condT1w)*100); // 注意瞬脱量(%)
+  let grade,interpret;
+  if(pT1<70){
+    grade='需练习';
+    interpret=`T1 正确率仅 ${pT1}%，说明整体注意力捕捉不稳定，建议从入门难度起步，先把第一个目标看准，再逐步提高速度。`;
+  }else if(pT2>=80&&AB<10){
+    grade='优秀';
+    interpret=`T2 正确率 ${pT2}%，且注意瞬脱量仅 ${AB}%，即便 T2 紧挨 T1 也能稳定捕获，注意资源的分配与切换已非常高效。`;
+  }else if(pT2>=60){
+    grade='良好';
+    interpret=`T2 正确率 ${pT2}%，注意瞬脱量 ${AB}%（越小说明 T1 对时仍能抓住 T2 的能力越强）。整体表现良好，可在高难度下继续压缩 lag。`;
+  }else{
+    grade='合格';
+    interpret=`T2 正确率 ${pT2}%，注意瞬脱量 ${AB}%——T1 正确时 T2 明显下滑，正是典型的注意瞬脱。多练高速度/小 lag 关卡，训练 T1 加工与 T2 捕获的并行。`;
+  }
+  // 分难度明细
+  let diffRows='';
+  DIFF_ORDER.forEach(k=>{
+    const s=sessionStats[k];
+    if(s.count===0)return;
+    const dT1=Math.round(s.t1c/s.count*100);
+    const dT2=Math.round(s.t2c/s.count*100);
+    const c1=s.t1c>0?s.t1c_t2c/s.t1c:0;
+    const c1w=s.t1w>0?s.t1w_t2c/s.t1w:0;
+    const dAB=Math.round((c1-c1w)*100);
+    diffRows+=`<div class="cond-row"><span class="cl">${LEVELS[k].name}（${s.count}轮）</span><span class="cv">T1 ${dT1}% · T2 ${dT2}% · AB ${dAB}%</span></div>`;
+  });
+  const html=`
+    <div class="result-title">训练结果</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val">${pT1}%</div><div class="lbl">T1 正确率</div></div>
+      <div class="result-item"><div class="val">${pT2}%</div><div class="lbl">T2 正确率</div></div>
+      <div class="result-item"><div class="val">${AB}%</div><div class="lbl">注意瞬脱量</div></div>
+    </div>
+    <div class="result-section">
+      <div class="section-title">分难度统计</div>
+      ${diffRows}
+      <div class="cond-row"><span class="cl">总轮次</span><span class="cv">${C}</span></div>
+    </div>
+    <div class="result-section">
+      <div class="section-title">综合评估 · ${grade}</div>
+      <div class="result-eval">
+        <div class="eval-line">• ${interpret}</div>
+        <div class="eval-line">• 注意瞬脱量 AB = P(T2对|T1对) − P(T2对|T1错)：<b>正值越大</b>代表 T1 抢占了注意资源、T2 越容易被"漏看"，是注意瞬脱的核心指标。</div>
+      </div>
+    </div>
+    <div class="result-btns">
+      <button class="btn-retry" onclick="startGame()">再练一次</button>
+      <button class="btn-home" onclick="location.href='index.html'">返回大厅</button>
+    </div>`;
+  $('result-card').innerHTML=html;
+  $('result-card').style.display='flex';
+}
+// ===== 初始化 =====
+buildDiffBtns();
+buildModeBtns();
+buildColorRow();
+</script>
+</body>
+</html>

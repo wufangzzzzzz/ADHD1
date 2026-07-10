@@ -367,6 +367,9 @@
       .effect-btn.destroy.state4 { border-color: #FFD700; color: #FFD700; }
       .effect-btn.destroy.state4:hover,
       .effect-btn.destroy.state4.active { background: #FFD700; color: #333; }
+      .effect-btn.destroy.state5 { border-color: #00E676; color: #00E676; }
+      .effect-btn.destroy.state5:hover,
+      .effect-btn.destroy.state5.active { background: #00E676; color: #333; }
 
       /* 数字选择按钮 */
       .effect-btn.numtype {
@@ -1012,6 +1015,50 @@
       }
       .grid-cell.destroy-mode-4.wrong .number-text {
         color: #ffffff !important;
+      }
+
+      /* 毁灭5：曲面棋盘格 — SVG 渲染 */
+      .grid-container.destroy-mode-5 {
+        display: block !important;
+        background: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+      }
+      .grid-container.destroy-mode-5 svg {
+        overflow: visible;
+        display: block;
+        margin: 0 auto;
+      }
+      .grid-container.destroy-mode-5 g.cell-group {
+        cursor: pointer;
+      }
+      .grid-container.destroy-mode-5 g.cell-group text {
+        font-family: 'Segoe UI', 'Helvetica Neue', 'PingFang SC', sans-serif;
+        font-weight: 700;
+        user-select: none;
+        pointer-events: none;
+      }
+      /* 混乱模式：SVG text 摆动动画 */
+      .grid-container.destroy-mode-5 g.cell-group text.chaos-mode {
+        animation: variantSwing 2s ease-in-out infinite;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      /* correct 状态：所有色块变绿 */
+      .grid-container.destroy-mode-5 g.correct path.cell-bg {
+        fill: #4CAF50 !important;
+      }
+      .grid-container.destroy-mode-5 g.correct text {
+        fill: #ffffff !important;
+      }
+      /* wrong 状态：所有色块闪红 */
+      .grid-container.destroy-mode-5 g.wrong path.cell-bg {
+        fill: #FF6B6B !important;
+      }
+      .grid-container.destroy-mode-5 g.wrong text {
+        fill: #ffffff !important;
       }
       /* 菱形交点 overlay */
       .destroy-diamond-overlay {
@@ -2189,10 +2236,7 @@
               }
             }
           } else if (this.circularRotating === 2) {
-            // 重置翻转定时器，确保 60s 从游戏开始起算（而非从开启变速模式起算）
-            if (this._speedFlipTimer) { clearInterval(this._speedFlipTimer); this._speedFlipTimer = null; }
-            this._speedFlipCW = true;
-            this._applySpeedRotation(this._speedFlipCW);
+            // RAF 将由 this.start() 中重置计时起点
           }
           this.start();
         } else if (this.isRotateMode) {
@@ -2249,7 +2293,7 @@
               }
             }
           } else if (this.circularRotating === 2) {
-            this._applySpeedRotation(this._speedFlipCW);
+            this._startSpeedRAF();
           }
           return;
         }
@@ -2258,11 +2302,13 @@
         if (mode === 'circular') {
           if (this.isCircularMode) {
             if (this.isPlaying) {
-              this.stopTimer();
-              this.isPlaying = false;
+              // 游戏中：不停止游戏、不重建DOM，只切换旋转状态（避免画面刷新中断游戏）
+              this.toggleCircularRotation();
+            } else {
+              // 非游戏中：重建DOM后切换
+              this.renderCircularGrid();
+              this.toggleCircularRotation();
             }
-            this.renderCircularGrid();
-            this.toggleCircularRotation();
             return;
           } else {
             if (this.isPlaying) {
@@ -2311,7 +2357,7 @@
             var dbtnV = document.querySelector('.destroy-toggle');
             if (dbtnV) {
               dbtnV.dataset.destroy = 'false';
-              dbtnV.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+              dbtnV.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
               dbtnV.textContent = '毁灭';
             }
           }
@@ -2364,6 +2410,20 @@
             }
           }
           this.renderSquareMoveGrid();
+          return;
+        }
+
+        // 毁灭5模式下切换偏移/混乱：不退出毁灭模式，直接重新渲染
+        if (this.destroyMode === 5 && (mode === 'offset' || mode === 'chaos')) {
+          this.currentMode = mode;
+          var btnsD5 = document.querySelectorAll('.mode-btn');
+          for (var biD5 = 0; biD5 < btnsD5.length; biD5++) {
+            btnsD5[biD5].classList.remove('active');
+            if (btnsD5[biD5].dataset.mode === mode) {
+              btnsD5[biD5].classList.add('active');
+            }
+          }
+          this.reset();
           return;
         }
 
@@ -2586,7 +2646,7 @@
           var dbtn = document.querySelector('.destroy-toggle');
           if (dbtn) {
             dbtn.dataset.destroy = 'false';
-            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
             dbtn.textContent = '毁灭';
           }
         }
@@ -2694,7 +2754,7 @@
           var dbtn = document.querySelector('.destroy-toggle');
           if (dbtn) {
             dbtn.dataset.destroy = 'false';
-            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
             dbtn.textContent = '毁灭';
           }
         }
@@ -3559,7 +3619,7 @@
       };
 
       SchulteGridGame.prototype.toggleFontMode = function() {
-        if (this.isPlaying) {
+        if (this.isPlaying && this.destroyMode !== 5) {
           return;
         }
 
@@ -3640,10 +3700,7 @@
           if (this.isPlaying) {
             // 游戏中：原地更新样式，不重建 DOM（避免动画重置）
             this._updateCircularSectorStyles();
-            // 变速模式下更新 void-speed 类
-            if (this.circularRotating === 2) {
-              this._applySpeedRotation(this._speedFlipCW);
-            }
+            // 动2模式 RAF 循环每帧自动检查 voidMode/destroy 速度，无需额外调用
             // 重启计时器，直接开始新一局
             this.stopTimer();
             this.startTime = Date.now();
@@ -3662,7 +3719,7 @@
                 }
               }
             } else if (this.circularRotating === 2) {
-              this._applySpeedRotation(this._speedFlipCW);
+              this._startSpeedRAF();
             }
           }
         } else if (this.isVariantMode) {
@@ -3707,9 +3764,9 @@
           // 圆形模式：游戏中原地更新样式，否则重建 DOM
           if (this.isPlaying) {
             this._updateCircularSectorStyles();
-            // 变速模式下更新 void-speed 类（毁灭模式转速+10%）
+            // 动2模式 RAF 循环每帧自动检查 voidMode/destroy 速度，无需额外调用
             if (this.circularRotating === 2) {
-              this._applySpeedRotation(this._speedFlipCW);
+              // RAF 自动适应
             }
           } else {
             this.renderCircularGrid();
@@ -3725,19 +3782,19 @@
                 }
               }
             } else if (this.circularRotating === 2) {
-              this._applySpeedRotation(this._speedFlipCW);
+              this._startSpeedRAF();
             }
           }
           return;
         }
 
-        // 方形模式：五态切换：0(关闭) -> 1(背景变换) -> 2(炫光效果) -> 3(错觉背景) -> 4(交错棋盘) -> 0(关闭)
-        this.destroyMode = (this.destroyMode + 1) % 5;
+        // 方形模式：六态切换：0(关闭) -> 1(背景变换) -> 2(炫光效果) -> 3(错觉背景) -> 4(交错棋盘) -> 5(曲面棋盘) -> 0(关闭)
+        this.destroyMode = (this.destroyMode + 1) % 6;
 
         var btn = document.querySelector('.destroy-toggle');
         if (btn) {
           btn.dataset.destroy = this.destroyMode.toString();
-          btn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+          btn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
           
           if (this.destroyMode === 0) {
             btn.textContent = '毁灭';
@@ -3762,6 +3819,9 @@
                 diffBtns[d].classList.add('active');
               }
             }
+          } else if (this.destroyMode === 5) {
+            btn.classList.add('active', 'state5');
+            btn.textContent = '毁灭5';
           }
         }
 
@@ -3891,7 +3951,7 @@
               }
             }
           } else if (this.circularRotating === 2) {
-            this._applySpeedRotation(this._speedFlipCW);
+            this._startSpeedRAF();
           }
         } else if (this.isBounceMode) {
           document.getElementById('bounce-canvas').style.display = 'block';
@@ -3950,6 +4010,11 @@
           this._bounceStart();
         } else if (this.isRotateMode) {
           this._rotateStart();
+        }
+
+        // 圆形动2模式：重置 RAF 计时起点，确保30秒从游戏开始时起算
+        if (this.isCircularMode && this.circularRotating === 2) {
+          this._startSpeedRAF();
         }
 
         this.initAudio();
@@ -4109,11 +4174,20 @@
         var cellSize = this.calculateCellSize();
 
         // 先清理可能残留的特殊模式 class，避免影响显示
-        container.classList.remove('destroy-mode-4');
+        container.classList.remove('destroy-mode-4', 'destroy-mode-5');
+        // 恢复 game-container 默认宽度（毁灭5会放大）
+        var gcRestore = document.querySelector('.game-container');
+        if (gcRestore) gcRestore.style.maxWidth = '';
 
         // 毁灭4模式：特殊渲染路径
         if (this.destroyMode === 4) {
           this._renderDestroy4Grid(container, cellSize);
+          return;
+        }
+
+        // 毁灭5模式：曲面棋盘格
+        if (this.destroyMode === 5) {
+          this._renderDestroy5Grid(container, cellSize);
           return;
         }
 
@@ -4588,6 +4662,179 @@
         }
       };
 
+      // ========== 毁灭5：曲面棋盘格 ==========
+      // 黑白交替棋盘；黑格左右各2条6%宽色块（1:#f1d213 2:#e92239 黑 3:#031cc7 4:#1896e7）
+      // 所有方格竖边弯成>150°圆弧，奇数行(0-indexed偶)向右弯，偶数行(0-indexed奇)向左弯
+      SchulteGridGame.prototype._renderDestroy5Grid = function(container, cellSize) {
+        container.innerHTML = '';
+        container.className = 'grid-container destroy-mode-5';
+        container.style.gridTemplateColumns = '';
+        container.style.display = 'block';
+        // 毁灭5容器宽度：根据cs反推总宽度（含色块+弧形+偏移），不超屏幕
+        var N5 = this.gridSize;
+        var needW5 = cellSize * (1.2 * N5 + 0.70) + 8;
+        var gc5 = document.querySelector('.game-container');
+        if (gc5) gc5.style.maxWidth = Math.min(window.innerWidth - 20, needW5) + 'px';
+        // 清理毁灭4/散布等模式残留的内联样式
+        container.style.width = '100%';
+        container.style.height = '';
+        container.style.gap = '';
+        container.style.position = '';
+        container.style.overflow = '';
+        container.style.background = '';
+        container.style.padding = '';
+        container.style.boxSizing = '';
+        container.style.borderRadius = '';
+
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        var N = this.gridSize;
+        var cs = cellSize;
+        var r = Math.floor(cs * 0.9); // 圆弧半径，弧角≈67°，外凸≈15%cs
+        var bulge = r - Math.sqrt(r * r - (cs / 2) * (cs / 2)); // sagitta ≈ 0.15*cs
+
+        // 色块宽度比例（每条 10% cs）
+        var stripW = 0.10;
+        var stripPx = stripW * cs;           // 每条色块像素宽度
+        var groupW = 2 * stripPx;            // 每组色块宽度（2条）
+
+        // 总内容宽度 = N个格子 + (N+1)组色块
+        var contentW = N * cs + (N + 1) * groupW;
+        var maxOffset = stripPx;                 // 行整体平移最大偏移（3号色块宽度）
+        var svgW = contentW + 2 * bulge + 2 * maxOffset;
+        var svgH = N * cs;
+
+        var svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('viewBox', (-(bulge + maxOffset)) + ' 0 ' + svgW + ' ' + svgH);
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.display = 'block';
+
+        var angles = [25, 30, 45, 75];
+
+        // 色块颜色（装饰色块，不算黑白面积）
+        var stripColors12 = ['#f1d213', '#e92239']; // 色块1, 2
+        var stripColors34 = ['#1525f0', '#1896e7']; // 色块3(改色), 4
+
+        for (var row = 0; row < N; row++) {
+          var curveRight = (row % 2 === 0); // 第1行(row=0)向右，第2行(row=1)向左，交替
+          var leftSweep = curveRight ? 1 : 0;
+          var rightSweep = curveRight ? 0 : 1;
+          var y0 = row * cs;
+          var xCur = 0; // 从0开始，SVG viewBox偏移处理bulge
+
+          // 整行平移：奇数行(第1,3,5行)右移1个色块宽度，偶数行(第2,4,6行)左移1个色块宽度
+          var rowOffsetX = (row % 2 === 0) ? stripPx : -stripPx;
+          var rowG = document.createElementNS(SVGNS, 'g');
+          rowG.setAttribute('transform', 'translate(' + rowOffsetX + ', 0)');
+
+          // 遍历：色块组0 → 格子0 → 色块组1 → 格子1 → ... → 色块组N
+          for (var col = 0; col <= N; col++) {
+            // 渲染色块组（装饰，不可点击）
+            // 奇数行(第1,3,5行)：1,2,3,4,1,2,3,4...（偶数位=12，奇数位=34）
+            // 偶数行(第2,4,6行)：4,3,2,1,4,3,2,1...（偶数位=43反转，奇数位=21反转）
+            var groupIsEven = (col % 2 === 0);
+            var rowIsOdd = (row % 2 === 0); // row=0是第1行=奇数行
+            var sColors;
+            if (rowIsOdd) {
+              sColors = groupIsEven ? stripColors12 : stripColors34;
+            } else {
+              sColors = groupIsEven
+                ? [stripColors34[1], stripColors34[0]]  // [4, 3]
+                : [stripColors12[1], stripColors12[0]]; // [2, 1]
+            }
+
+            for (var s = 0; s < 2; s++) {
+              var sPath = document.createElementNS(SVGNS, 'path');
+              sPath.setAttribute('fill', sColors[s]);
+              sPath.setAttribute('d',
+                'M ' + xCur + ',' + y0 +
+                ' A ' + r + ',' + r + ' 0 0 ' + leftSweep + ' ' + xCur + ',' + (y0 + cs) +
+                ' L ' + (xCur + stripPx) + ',' + (y0 + cs) +
+                ' A ' + r + ',' + r + ' 0 0 ' + rightSweep + ' ' + (xCur + stripPx) + ',' + y0 +
+                ' Z'
+              );
+              rowG.appendChild(sPath);
+              xCur += stripPx;
+            }
+
+            // 渲染格子主体（最后一组色块后无格子）
+            if (col < N) {
+              var idx = row * N + col;
+              var isWhite = (row + col) % 2 === 0;
+              var cellColor = isWhite ? '#FFFFFF' : '#000000';
+
+              var g = document.createElementNS(SVGNS, 'g');
+              g.setAttribute('class', 'cell-group');
+
+              var cellPath = document.createElementNS(SVGNS, 'path');
+              cellPath.setAttribute('class', 'cell-bg');
+              cellPath.setAttribute('fill', cellColor);
+              cellPath.setAttribute('d',
+                'M ' + xCur + ',' + y0 +
+                ' A ' + r + ',' + r + ' 0 0 ' + leftSweep + ' ' + xCur + ',' + (y0 + cs) +
+                ' L ' + (xCur + cs) + ',' + (y0 + cs) +
+                ' A ' + r + ',' + r + ' 0 0 ' + rightSweep + ' ' + (xCur + cs) + ',' + y0 +
+                ' Z'
+              );
+              g.appendChild(cellPath);
+
+              // 数字位置：居中 + 奇数行(第1,3,5行)右偏，偶数行(第2,4,6行)左偏
+              var textCX = xCur + cs / 2 + (row % 2 === 0 ? cs * 0.05 : -cs * 0.05);
+              var textCY = y0 + cs / 2;
+
+              var txt = document.createElementNS(SVGNS, 'text');
+              txt.setAttribute('x', textCX);
+              txt.setAttribute('y', textCY);
+              txt.setAttribute('text-anchor', 'middle');
+              txt.setAttribute('dominant-baseline', 'central');
+              txt.setAttribute('fill', isWhite ? '#000000' : '#FFFFFF');
+              txt.setAttribute('font-size', Math.floor(cs * 0.5));
+              txt.textContent = this.numbers[idx];
+              g.appendChild(txt);
+
+              // 偏移模式：数字随机旋转（静态）
+              if (this.currentMode === 'offset') {
+                var offAngle = angles[Math.floor(Math.random() * angles.length)];
+                var offDir = Math.random() > 0.5 ? 1 : -1;
+                txt.setAttribute('transform', 'rotate(' + (offAngle * offDir) + ' ' + textCX + ' ' + textCY + ')');
+              }
+
+              // 混乱模式：数字随机摆动（CSS动画）
+              if (this.currentMode === 'chaos') {
+                var chAngle = angles[Math.floor(Math.random() * angles.length)];
+                var chDir = Math.random() > 0.5 ? 1 : -1;
+                var startAngle = chAngle * chDir;
+                var endAngle = -startAngle;
+                txt.classList.add('chaos-mode');
+                txt.style.setProperty('--start-angle', startAngle + 'deg');
+                txt.style.setProperty('--end-angle', endAngle + 'deg');
+              }
+
+              // 换字模式：随机字体
+              if (this.fontMode) {
+                var randomFont = this.fonts[Math.floor(Math.random() * this.fonts.length)];
+                txt.setAttribute('font-family', randomFont);
+              }
+
+              // 点击事件
+              g.onclick = (function(number, group) {
+                return function() {
+                  game.handleClick(number, group);
+                };
+              })(this.numbers[idx], g);
+
+              rowG.appendChild(g);
+
+              xCur += cs;
+            }
+          }
+          svg.appendChild(rowG);
+        }
+
+        container.appendChild(svg);
+      };
+
       SchulteGridGame.prototype._createDestroyOverlay = function(container, cellSize) {
         this._removeDestroyOverlay(container);
         var overlay = document.createElement('div');
@@ -4735,6 +4982,14 @@
           if (vTxt) {
             vTxt.style.animation = 'none';
             vTxt.classList.remove('chaos-mode');
+          }
+        }
+        // 毁灭5模式混乱：停止SVG文字摆动
+        if (this.destroyMode === 5 && this.currentMode === 'chaos') {
+          var d5Txt = element.querySelector('text');
+          if (d5Txt) {
+            d5Txt.style.animation = 'none';
+            d5Txt.classList.remove('chaos-mode');
           }
         }
 
@@ -5381,7 +5636,8 @@
         var rings = svg.querySelectorAll('.ring');
         var btn = document.getElementById('circular-mode-btn');
 
-        // 三态切换: 0(静) → 1(动1:交替CW/CCW) → 2(动2:变速+60s翻转) → 0(静)
+        var prevState = this.circularRotating;
+        // 三态切换: 0(静) → 1(动1:交替CW/CCW) → 2(动2:变速+30s翻转) → 0(静)
         this.circularRotating = (this.circularRotating + 1) % 3;
 
         // 先清除所有旋转类（含变速/虚无/方向类）
@@ -5399,12 +5655,11 @@
           }
         });
 
-        // 清除动2的翻转定时器
-        if (this._speedFlipTimer) {
-          clearInterval(this._speedFlipTimer);
-          this._speedFlipTimer = null;
+        // 退出动2模式时停止RAF + 清除inline transform
+        if (prevState === 2 && this.circularRotating !== 2) {
+          this._stopSpeedRAF();
+          this._speedFlipCW = true;
         }
-        this._speedFlipCW = true;
 
         if (this.circularRotating === 1) {
           // 动1：交替CW/CCW（当前行为）
@@ -5417,66 +5672,95 @@
           });
           btn.textContent = '圆形（动）';
         } else if (this.circularRotating === 2) {
-          // 动2：全CW，内圈快外圈慢，每60s翻转方向（定时器由 _applySpeedRotation 内部管理）
-          this._applySpeedRotation(true);
+          // 动2：JS RAF控制旋转，每30s翻转方向，角度连续无跳变
+          if (prevState !== 2) {
+            this._speedFlipCW = true;
+          }
+          this._startSpeedRAF();
           btn.textContent = '圆形（动·变速）';
         } else {
           btn.textContent = '圆形（静）';
         }
       };
 
-      SchulteGridGame.prototype._applySpeedRotation = function(cw) {
+      // 动2模式：JS RAF 控制旋转，替代 CSS animation + animation-direction
+      // 优势：翻转方向时角度连续无跳变（CSS animation-direction 变化会重置动画进度）
+      // 30秒从 _speedRAFStart 起算，start() 时重置以确保从游戏开始计时
+      // 累计角度法：每帧增量累加，翻转方向只改变增量符号，角度天然连续
+      SchulteGridGame.prototype._startSpeedRAF = function() {
         var self = this;
-        var svg = document.getElementById('circular-svg');
-        if (!svg) return;
-        var rings = svg.querySelectorAll('.ring');
-        var numRings = rings.length;
-        // 始终用 CW 基础类 + animation-direction: reverse 翻转方向
-        // 不再 remove/add 类名切换，避免 CSS 动画从 0 帧重启导致数字重置
-        for (var r = 0; r < numRings; r++) {
-          // 确保基础 CW 类存在（首次调用或 renderCircularGrid 重建后）
-          rings[r].classList.remove('rotate-ccw-r'+r);
-          if (!rings[r].classList.contains('rotate-cw-r'+r)) {
-            rings[r].classList.add('rotate-cw-r'+r);
+        if (this._speedRAFId) cancelAnimationFrame(this._speedRAFId);
+        this._speedRAFStart = performance.now();
+        this._speedRAFLast = this._speedRAFStart;
+        this._speedAngles = []; // 每个ring的累计角度
+
+        function tick(now) {
+          if (!self.isCircularMode || self.circularRotating !== 2) {
+            self._speedRAFId = null;
+            return;
           }
+          var dt = (now - self._speedRAFLast) / 1000; // 秒
+          self._speedRAFLast = now;
+          var elapsed = (now - self._speedRAFStart) / 1000;
+
+          // 每30秒翻转方向：0-30s → CW(1)，30-60s → CCW(-1)，60-90s → CW(1)...
+          var direction = Math.floor(elapsed / 30) % 2 === 0 ? 1 : -1;
+          self._speedFlipCW = direction === 1;
+
+          var svg = document.getElementById('circular-svg');
+          if (!svg) { self._speedRAFId = requestAnimationFrame(tick); return; }
+          var rings = svg.querySelectorAll('.ring');
+
+          // 每圈速度（秒/圈）：r0=20, r1=25, r2=30, r3=35, r4=40, r5=45, r6=50
+          var durations = [20, 25, 30, 35, 40, 45, 50];
           // 虚无/毁灭模式转速+10%
           if (self.voidMode || self.circularDestroy > 0) {
-            rings[r].classList.add('void-speed');
-          } else {
-            rings[r].classList.remove('void-speed');
+            durations = [18, 22.5, 27, 31.5, 36, 40.5, 45];
           }
-          // 通过 ring-reverse 切换方向，动画不中断
-          if (cw) {
-            rings[r].classList.remove('ring-reverse');
-          } else {
-            rings[r].classList.add('ring-reverse');
+
+          for (var r = 0; r < rings.length; r++) {
+            var dur = durations[r] || durations[durations.length - 1];
+            // 累计角度：每帧增量 = direction * (360/dur) * dt
+            if (self._speedAngles[r] === undefined) self._speedAngles[r] = 0;
+            self._speedAngles[r] += direction * (360 / dur) * dt;
+            var angle = self._speedAngles[r] % 360;
+            if (angle < 0) angle += 360;
+            rings[r].style.transform = 'rotate(' + angle + 'deg)';
+
+            // text 反向旋转（保持数字朝上），transform-origin 已在 renderCircularGrid 中逐元素设置
+            var texts = rings[r].querySelectorAll('.sector-text');
+            for (var t = 0; t < texts.length; t++) {
+              texts[t].style.transform = 'rotate(' + (-angle) + 'deg)';
+            }
           }
-          var texts = rings[r].querySelectorAll('.sector-text');
-          for (var t = 0; t < texts.length; t++) {
-            texts[t].classList.remove('counter-ccw-r'+r);
-            if (!texts[t].classList.contains('counter-cw-r'+r)) {
-              texts[t].classList.add('counter-cw-r'+r);
-            }
-            // 虚无/毁灭模式 text 也加速，与 ring void-speed 同步
-            if (self.voidMode || self.circularDestroy > 0) {
-              texts[t].classList.add('void-speed');
-            } else {
-              texts[t].classList.remove('void-speed');
-            }
-            if (cw) {
-              texts[t].classList.remove('text-reverse');
-            } else {
-              texts[t].classList.add('text-reverse');
+
+          self._speedRAFId = requestAnimationFrame(tick);
+        }
+        self._speedRAFId = requestAnimationFrame(tick);
+      };
+
+      SchulteGridGame.prototype._stopSpeedRAF = function() {
+        if (this._speedRAFId) {
+          cancelAnimationFrame(this._speedRAFId);
+          this._speedRAFId = null;
+        }
+        this._speedAngles = null; // 清除累计角度状态
+        // 清除 inline transform（让 CSS 动画类或静态状态接管）
+        var svg = document.getElementById('circular-svg');
+        if (svg) {
+          var rings = svg.querySelectorAll('.ring');
+          for (var i = 0; i < rings.length; i++) {
+            rings[i].style.transform = '';
+            var texts = rings[i].querySelectorAll('.sector-text');
+            for (var t = 0; t < texts.length; t++) {
+              texts[t].style.transform = '';
             }
           }
         }
-
-        // 60 秒翻转定时器（仅在首次初始化时创建，避免 toggleDestroyMode 等操作重置计时）
-        if (!this._speedFlipTimer) {
-          this._speedFlipTimer = setInterval(function() {
-            self._speedFlipCW = !self._speedFlipCW;
-            self._applySpeedRotation(self._speedFlipCW);
-          }, 60000);
+        // 清除翻转定时器（兼容旧代码）
+        if (this._speedFlipTimer) {
+          clearInterval(this._speedFlipTimer);
+          this._speedFlipTimer = null;
         }
       };
 
@@ -5493,6 +5777,10 @@
         if (this.isBounceMode) {
           this.exitBounceMode();
         }
+        // 如果当前在旋转模式，先退出（修复 rotate→circular 时 bounce-canvas 残留）
+        if (this.isRotateMode) {
+          this.exitRotateMode();
+        }
         // 如果当前在变体模式，先退出
         if (this.isVariantMode) {
           this.exitVariantMode();
@@ -5507,7 +5795,7 @@
           var dbtn = document.querySelector('.destroy-toggle');
           if (dbtn) {
             dbtn.dataset.destroy = 'false';
-            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
             dbtn.textContent = '毁灭';
           }
         }
@@ -5552,11 +5840,8 @@
         // 停止旋转 — 清除所有旋转类
         if (this.circularRotating > 0) {
           this.circularRotating = 0;
-          // 清除动2翻转定时器
-          if (this._speedFlipTimer) {
-            clearInterval(this._speedFlipTimer);
-            this._speedFlipTimer = null;
-          }
+          // 停止动2 RAF + 清除 inline transform + 清除翻转定时器
+          this._stopSpeedRAF();
           var rings = document.querySelectorAll('#circular-svg .ring');
           for (var ri = 0; ri < rings.length; ri++) {
             // 清除动1类
@@ -5604,7 +5889,7 @@
           var dbtn = document.querySelector('.destroy-toggle');
           if (dbtn) {
             dbtn.dataset.destroy = 'false';
-            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
             dbtn.textContent = '毁灭';
           }
         }
@@ -5777,13 +6062,21 @@
         if (this.isVisualParallaxMode) {
           this.exitVisualParallaxMode();
         }
+        // 如果当前在跳动模式，先退出（停止 RAF + 清理 isBounceMode）
+        if (this.isBounceMode) {
+          this.exitBounceMode();
+        }
+        // 如果当前在旋转模式，先退出（清理 isRotateMode 标志 + 停止旋转 RAF）
+        if (this.isRotateMode) {
+          this.exitRotateMode();
+        }
         // 毁灭模式重置
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
           var dbtn = document.querySelector('.destroy-toggle');
           if (dbtn) {
             dbtn.dataset.destroy = 'false';
-            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4');
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
             dbtn.textContent = '毁灭';
           }
         }
