@@ -262,6 +262,29 @@
   text-decoration:none;
 }
 .back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
+    /* 手机窄屏适配：选项区由 3×160px(约510px) 改为 2 列自适应，消除横向溢出 */
+    @media (max-width: 560px) {
+      .options-grid {
+        grid-template-columns: repeat(2, 1fr);
+        width: 100%;
+        gap: 10px;
+      }
+      .option-box {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        font-size: clamp(30px, 12vw, 70px);
+      }
+      .question-box {
+        width: 92px;
+        height: 92px;
+        font-size: 46px;
+      }
+      .container {
+        padding: 20px 16px;
+      }
+    }
+
 </style>
 </head>
 <body>

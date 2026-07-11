@@ -1806,30 +1806,108 @@ justify-content: center;
         </div>
       </div>
 
-      <!-- 感知训练：B14 数字广度 -->
-      <div class="game-card" data-category="behavior" onclick="location.href='B14-digit-span.html'">
-        <div class="card-image" style="background: linear-gradient(135deg, #FFB300 0%, #FF8F00 100%);">
+      <!-- 感知训练：B15 西蒙任务 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B15-simon-task.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #26C6DA 0%, #00897B 100%);">
           <svg viewBox="0 0 120 80" width="120" height="80">
-            <rect x="20" y="24" width="22" height="32" rx="5" fill="white" opacity="0.92"/>
-            <text x="31" y="49" font-size="24" font-weight="800" fill="#FF8F00" text-anchor="middle" font-family="Arial,sans-serif">7</text>
-            <rect x="50" y="24" width="22" height="32" rx="5" fill="white" opacity="0.5"/>
-            <text x="61" y="49" font-size="24" font-weight="800" fill="#FF8F00" text-anchor="middle" font-family="Arial,sans-serif">3</text>
-            <rect x="80" y="24" width="22" height="32" rx="5" fill="white" opacity="0.22"/>
-            <text x="91" y="49" font-size="24" font-weight="800" fill="#FF8F00" text-anchor="middle" font-family="Arial,sans-serif">9</text>
+            <circle cx="60" cy="40" r="30" fill="#0a0e1a"/>
+            <path d="M60 40 L60 10 A30 30 0 0 1 90 40 Z" fill="#2ECC71" opacity="0.92"/>
+            <path d="M60 40 L90 40 A30 30 0 0 1 60 70 Z" fill="#E74C3C" opacity="0.92"/>
+            <path d="M60 40 L60 70 A30 30 0 0 1 30 40 Z" fill="#F1C40F" opacity="0.92"/>
+            <path d="M60 40 L30 40 A30 30 0 0 1 60 10 Z" fill="#3498DB" opacity="0.92"/>
           </svg>
         </div>
         <div class="card-content">
-          <h2 class="card-title">数字广度</h2>
+          <h2 class="card-title">西蒙任务</h2>
           <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
-          <p class="card-desc">屏幕逐个闪现数字串，按提示顺背或倒背复述。测工作记忆语音回路的存储与操纵容量。</p>
+          <p class="card-desc">观看并复述逐渐增长的四色闪光序列，测工作记忆的存储容量与顺序保持。</p>
           <div class="card-features">
-            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">工作记忆</span>
-            <span class="feature-tag" style="background:#ffe0b2;color:#bf360c;">顺背/倒背</span>
-            <span class="feature-tag" style="background:#fff8e1;color:#f57f17;">5级难度</span>
+            <span class="feature-tag" style="background:#e0f7fa;color:#006064;">工作记忆</span>
+            <span class="feature-tag" style="background:#b2ebf2;color:#00838f;">顺序保持</span>
+            <span class="feature-tag" style="background:#80deea;color:#00695c;">5级难度</span>
           </div>
         </div>
         <div class="card-footer">
           <span class="difficulty">难度：5级（入门→专家）</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 感知训练：B16 分散注意力双任务 -->
+      <div class="game-card" data-category="behavior" onclick="location.href='B16-divided-attention.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #7E57C2 0%, #5E35B1 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="60" cy="40" r="22" fill="#ffffff" opacity="0.92"/>
+            <circle cx="60" cy="40" r="22" fill="none" stroke="#26C6DA" stroke-width="3" opacity="0.9"/>
+            <rect x="16" y="14" width="13" height="13" rx="3" fill="#FFA726"/>
+            <rect x="91" y="14" width="13" height="13" rx="3" fill="#FFA726"/>
+            <rect x="16" y="53" width="13" height="13" rx="3" fill="#FFA726"/>
+            <rect x="91" y="53" width="13" height="13" rx="3" fill="#FFA726"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">分散注意力双任务</h2>
+          <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
+          <p class="card-desc">中央盯目标数字、四角抓高亮位置，两件事同时做。测注意资源在双通道间的分配容量与双任务代价。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e1bee7;color:#4a148c;">分散注意</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">双通道</span>
+            <span class="feature-tag" style="background:#e0f7fa;color:#006064;">5级难度</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：5级（入门→专家）</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 视觉训练：视觉辨别力·色彩识别 -->
+      <div class="game-card" data-category="visual" onclick="location.href='visual-color-discrimination.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="60" cy="40" r="10" fill="#FF3B30"/>
+            <circle cx="60" cy="40" r="20" fill="none" stroke="#34C759" stroke-width="6"/>
+            <circle cx="60" cy="40" r="31" fill="none" stroke="#007AFF" stroke-width="6" stroke-dasharray="18 12"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">视觉辨别力 · 色彩识别</h2>
+          <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
+          <p class="card-desc">观察中心圆 A 与内外双环（B1–4 / C1–4，各随机缺一块）的配色，在下方网格中找出配色完全一致的完整图形。测色彩工作记忆与视觉辨别。</p>
+          <div class="card-features">
+            <span class="feature-tag">色彩辨别</span>
+            <span class="feature-tag">4档难度</span>
+            <span class="feature-tag">动模式</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：4档（25–100格）</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 视觉训练：译码连线 -->
+      <div class="game-card" data-category="visual" onclick="location.href='decode-connect.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <circle cx="40" cy="40" r="10" fill="#D62828"/>
+            <circle cx="80" cy="40" r="10" fill="#4361EE"/>
+            <line x1="40" y1="40" x2="80" y2="40" stroke="#2f6bff" stroke-width="3"/>
+            <text x="60" y="16" font-size="12" text-anchor="middle" fill="#2a3142" font-weight="bold">A→B</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">译码连线</h2>
+          <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
+          <p class="card-desc">顶部译码表给出字母→颜色对应（12 色环随机 8 色）。在下方 4 组圆环上，按字母顺序依次点击对应颜色的圆圈连线。测视觉搜索与色彩工作记忆。</p>
+          <div class="card-features">
+            <span class="feature-tag">译码连线</span>
+            <span class="feature-tag">4组</span>
+            <span class="feature-tag">随机字母</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：固定（8字母·8色·4组）</span>
           <button class="play-btn">开始游戏 →</button>
         </div>
       </div>

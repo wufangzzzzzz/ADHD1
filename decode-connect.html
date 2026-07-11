@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>译码连线 · 视觉专注力</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    margin: 0; padding: 10px;
+    height: 100vh; display: flex; flex-direction: column;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f4f6fb; color: #1f2430;
+  }
+
+  /* 顶栏 */
+  .topbar {
+    flex: none; width: 100%; max-width: 1080px; margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .back-btn {
+    border: 1px solid #d4d9e2; background: #fff; color: #33405a;
+    padding: 7px 12px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .topbar h1 { font-size: 17px; margin: 0; color: #2f6bff; }
+  .start-btn {
+    border: none; border-radius: 10px; padding: 10px 18px; flex: none;
+    background: #2f6bff; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(47,107,255,0.3);
+  }
+  .start-btn.stop { background: #e23b3b; box-shadow: 0 4px 14px rgba(226,59,59,0.3); }
+
+  /* 展示区：译码表 */
+  .showcase-area {
+    flex: none; width: 100%; max-width: 1080px; margin: 0 auto;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: #fff; border-radius: 12px; padding: 8px 10px;
+    box-shadow: 0 2px 10px rgba(20,30,60,0.06);
+  }
+  .showcase-area .cap { font-size: 11px; color: #8a93a6; text-align: center; }
+  .code-table { border-collapse: collapse; margin: 0 auto; }
+  .code-table td { text-align: center; padding: 2px 7px; vertical-align: middle; }
+  .cl { font-size: 15px; font-weight: 800; color: #2a3142; }
+  .cc-cell { line-height: 1; }
+  .cc { display: inline-block; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #d4d9e2; }
+
+  /* 游戏区：2x2 四组 */
+  .game-area {
+    flex: 1; min-height: 0; width: 100%; max-width: 1080px; margin: 8px auto 0;
+    display: flex;
+  }
+  .grid-2x2 {
+    flex: 1; min-height: 0; width: 100%;
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px;
+  }
+  .group-card {
+    background: #fff; border-radius: 12px; padding: 6px 8px;
+    display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(20,30,60,0.06); border: 2px solid transparent;
+  }
+  .group-card.done { border-color: #34c759; }
+  .group-no { font-size: 10px; color: #9aa3b5; font-weight: 700; }
+  .chain {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+    gap: 1px; font-size: clamp(9px, 1.5vh, 14px); margin: 1px 0 3px;
+  }
+  .chain .L { padding: 1px 3px; border-radius: 4px; font-weight: 800; color: #3a4154; }
+  .chain .L.current { background: #2f6bff; color: #fff; transform: scale(1.18); }
+  .chain .arr { color: #b6bdcc; font-size: 0.8em; }
+  .group-svg { flex: 1; min-height: 0; width: 100%; touch-action: none; }
+  .node { cursor: crosshair; }
+  .node.connected { stroke: #2ecc40 !important; stroke-width: 4 !important; }
+  .node.flash-err { stroke: #ff3b30 !important; stroke-width: 5 !important; }
+  .ink { stroke: #2f6bff; stroke-width: 3; fill: none; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+  .placeholder {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+    color: #aab1c2; font-size: 14px; text-align: center;
+  }
+
+  /* 结果卡（浮层） */
+  .result-card {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    align-items: center; justify-content: center; padding: 16px;
+    background: rgba(20,28,48,0.45);
+  }
+  .result-card.show { display: flex; }
+  .result-inner {
+    background: #fff; border-radius: 16px; padding: 20px 22px; max-width: 440px; width: 100%;
+    max-height: 90vh; overflow: auto;
+  }
+  .result-inner h3 { margin: 0 0 12px; color: #2f6bff; font-size: 18px; }
+  .result-inner .stats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .result-inner .stat {
+    display: flex; justify-content: space-between; background: #f6f8fb;
+    border-radius: 9px; padding: 8px 12px; font-size: 13px;
+  }
+  .result-inner .stat b { color: #1f2430; }
+  .result-inner .interp { font-size: 13px; line-height: 1.6; color: #3a4154; }
+  .result-inner .close-btn {
+    margin-top: 14px; width: 100%; padding: 10px; border: none; border-radius: 10px;
+    background: #2f6bff; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+  }
+
+  @media (max-width: 560px) {
+    .cl { width: 18px; font-size: 13px; }
+    .cc { width: 16px; height: 16px; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="back-btn" onclick="location.href='index.html'">← 返回</button>
+    <h1>译码连线</h1>
+    <button class="start-btn" id="start-btn">刷新</button>
+  </div>
+
+  <div class="showcase-area">
+    <div class="cap">译码表：上行字母 → 下行对应颜色（12 色相环随机 8 色），上下一一对齐。<br>在下方每组圆环上，<b>按字母顺序</b>用鼠标/手指<b>自由划线</b>依次穿过对应颜色的圆圈：划到正确颜色即在该圈加<b>绿色描边</b>，顺序连完 A→H 即完成。</div>
+    <table class="code-table">
+      <tr id="code-letters"></tr>
+      <tr id="code-colors"></tr>
+    </table>
+  </div>
+
+  <div class="game-area">
+    <div class="grid-2x2" id="groups">
+      <div class="placeholder">点击「刷新」换一批题目</div>
+    </div>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div class="result-inner">
+      <h3>训练结果</h3>
+      <div class="stats" id="result-stats"></div>
+      <div class="interp" id="result-interp"></div>
+      <button class="close-btn" id="result-close">关闭</button>
+    </div>
+  </div>
+
+<script>
+  // ===== 12 色相环 =====
+  var SCALE12 = [
+    "#D62828", "#F77F00", "#FCBF49", "#80B918",
+    "#2D6A4F", "#168AAD", "#1D3557", "#4361EE",
+    "#7209B7", "#B5179E", "#F72585", "#FF8FAB"
+  ];
+  var LETTERS_ALL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  // ===== 工具 =====
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function sample(arr, n) { return shuffle(arr.slice()).slice(0, n); }
+
+  // ===== 音效 =====
+  var audioCtx = null;
+  function initAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  }
+  function beep(freq, dur, type, when, vol) {
+    if (!audioCtx) return;
+    when = when || 0; vol = vol || 0.22;
+    var t0 = audioCtx.currentTime + when;
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.setValueAtTime(freq, t0);
+    o.type = type || "sine";
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  // 对了：清脆上行双音「叮」
+  function correctSound() {
+    beep(660, 0.10, "sine", 0, 0.22);
+    beep(988, 0.14, "sine", 0.09, 0.20);
+  }
+  // 错了：低沉下行方波「噗」
+  function errorSound() {
+    beep(220, 0.16, "square", 0, 0.20);
+    beep(130, 0.20, "square", 0.10, 0.18);
+  }
+
+  // ===== 状态 =====
+  var state = {
+    running: false,
+    letters: [],      // 按序排列的 8 个字母
+    code: {},         // 字母 -> 颜色 index
+    colorIdxs: [],    // 8 个颜色 index（与 letters 对齐）
+    groups: [],       // 4 组
+    startTime: null
+  };
+
+  var groupsEl = document.getElementById("groups");
+  var codeLettersEl = document.getElementById("code-letters");
+  var codeColorsEl = document.getElementById("code-colors");
+  var startBtn = document.getElementById("start-btn");
+  var resultCard = document.getElementById("result-card");
+
+  // ===== 生成一局 =====
+  function newGame() {
+    // 选 8 个字母并按字母序排列
+    var letters = sample(LETTERS_ALL, 8).sort();
+    // 选 8 个颜色（12 色相环随机）
+    var colorIdxs = sample([0,1,2,3,4,5,6,7,8,9,10,11], 8);
+    state.letters = letters;
+    state.colorIdxs = colorIdxs;
+    state.code = {};
+    for (var i = 0; i < 8; i++) state.code[letters[i]] = colorIdxs[i];
+
+    // 4 组：每组圆环上 8 个节点 = 这 8 种颜色的一个随机排列（保证每组都有全部 8 色）
+    state.groups = [];
+    for (var g = 0; g < 4; g++) {
+      var nodeColors = shuffle(colorIdxs.slice());
+      var positions = [];
+      for (var k = 0; k < 8; k++) {
+        var ang = (-90 + k * 45) * Math.PI / 180;
+        positions.push({
+          colorIdx: nodeColors[k],
+          x: 100 + 72 * Math.cos(ang),
+          y: 100 + 72 * Math.sin(ang)
+        });
+      }
+      state.groups.push({
+        positions: positions,
+        targetIdx: 0,
+        connected: [],
+        connectedNi: [],
+        ink: [],
+        done: false,
+        errors: 0,
+        errMarkNi: null,
+        startTime: null,
+        endTime: null
+      });
+    }
+    renderCodeTable();
+    renderGroups();
+    state.running = true; // 进入即处于训练中（计时/计分有效），刷新按钮会重新生成
+  }
+
+  function renderCodeTable() {
+    codeLettersEl.innerHTML = state.letters.map(function (L) {
+      return '<td class="cl">' + L + "</td>";
+    }).join("");
+    codeColorsEl.innerHTML = state.colorIdxs.map(function (ci) {
+      return '<td class="cc-cell"><span class="cc" style="background:' + SCALE12[ci] + '"></span></td>';
+    }).join("");
+  }
+
+  function chainHTML(gi) {
+    var g = state.groups[gi];
+    var html = "";
+    for (var i = 0; i < state.letters.length; i++) {
+      var cls = "L" + (i === g.targetIdx ? " current" : "");
+      html += '<span class="' + cls + '">' + state.letters[i] + "</span>";
+      if (i < state.letters.length - 1) html += '<span class="arr">→</span>';
+    }
+    return html;
+  }
+
+  function renderGroups() {
+    groupsEl.innerHTML = state.groups.map(function (g, gi) {
+      var nodes = g.positions.map(function (p, ni) {
+        return '<circle class="node" data-ni="' + ni + '" cx="' + p.x.toFixed(1) +
+               '" cy="' + p.y.toFixed(1) + '" r="15" fill="' + SCALE12[p.colorIdx] +
+               '" stroke="#fff" stroke-width="2"></circle>';
+      }).join("");
+      return '<div class="group-card" data-gi="' + gi + '">' +
+               '<div class="group-no">第 ' + (gi + 1) + ' 组</div>' +
+               '<div class="chain" id="chain-' + gi + '">' + chainHTML(gi) + "</div>" +
+               '<svg class="group-svg" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">' +
+                 '<path class="ink" id="ink-' + gi + '" d=""></path>' +
+                 nodes +
+               "</svg>" +
+             "</div>";
+    }).join("");
+  }
+
+  // ===== 交互：自由手绘划线，按字母顺序连接 =====
+  var HIT_R = 16;
+  var drawing = null; // { gi, g, svg }
+
+  function toSvg(svg, evt) {
+    var pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    var m = svg.getScreenCTM();
+    if (!m) return { x: 0, y: 0 };
+    var p = pt.matrixTransform(m.inverse());
+    return { x: p.x, y: p.y };
+  }
+  function nearestNode(g, cp) {
+    var best = -1, bd = 1e9;
+    for (var i = 0; i < g.positions.length; i++) {
+      var dx = cp.x - g.positions[i].x, dy = cp.y - g.positions[i].y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return { ni: best, dist: bd };
+  }
+  function flashNode(svg, ni) {
+    var c = svg.querySelector('.node[data-ni="' + ni + '"]');
+    if (!c) return;
+    c.classList.add("flash-err");
+    setTimeout(function () { c.classList.remove("flash-err"); }, 300);
+  }
+  function renderInk(gi, g) {
+    // 生成 SVG path：遇到「抬笔」哨兵({break:true})就另起一笔(M)，避免松手后再起笔时出现跨笔直线连到错误圆
+    var d = "", started = false;
+    for (var i = 0; i < g.ink.length; i++) {
+      var p = g.ink[i];
+      if (p && p.break) { started = false; continue; }
+      d += (started ? "L " : "M ") + p.x.toFixed(1) + " " + p.y.toFixed(1) + " ";
+      started = true;
+    }
+    document.getElementById("ink-" + gi).setAttribute("d", d);
+  }
+  function confirmNode(gi, ni) {
+    var g = state.groups[gi];
+    var card = groupsEl.querySelector('.group-card[data-gi="' + gi + '"]');
+    var svg = card.querySelector(".group-svg");
+    g.connected.push({ x: g.positions[ni].x, y: g.positions[ni].y });
+    g.connectedNi.push(ni);
+    if (g.startTime == null) g.startTime = performance.now();
+    var c = svg.querySelector('.node[data-ni="' + ni + '"]');
+    if (c) c.classList.add("connected"); // 正确连线 → 绿色描边
+    g.targetIdx++;
+    updateChainHighlight(gi);
+    correctSound();
+    // 连对后「自动断笔」：把已连对的这段线锁定成独立一段（墨线断开、不接着连），
+    // 并把截断基准 inkBase 重置到抬笔哨兵之后 —— 这样即使之后连错，
+    // 也只删除最新这一小段，不会把前面已连对的线（如 A→B）一起删掉。
+    g.ink.push({ break: true });
+    if (drawing) drawing.inkBase = g.ink.length;
+    renderInk(gi, g);
+    if (g.targetIdx >= 8) {
+      g.done = true;
+      g.endTime = performance.now();
+      card.classList.add("done");
+      if (state.groups.every(function (x) { return x.done; })) finish();
+    }
+  }
+
+  groupsEl.addEventListener("pointerdown", function (e) {
+    initAudio(); // 第一手势解锁音频：连线对了/错了都有声音
+    var card = e.target.closest(".group-card");
+    if (!card) return;
+    var gi = +card.dataset.gi;
+    var g = state.groups[gi];
+    if (g.done) return;
+    var svg = card.querySelector(".group-svg");
+    var cp = toSvg(svg, e);
+    var inkBase = g.ink.length; // 记录本笔起点，连错时用于截断这一笔
+    if (g.ink.length > 0) g.ink.push({ break: true }); // 新起一笔：与上一笔断开，避免跨笔直线连到错误圆
+    g.ink.push(cp); // 自由起笔，不要求落在某个圈上
+    drawing = { gi: gi, g: g, svg: svg, inkBase: inkBase };
+    renderInk(gi, g);
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+
+  groupsEl.addEventListener("pointermove", function (e) {
+    if (!drawing) return;
+    var gi = drawing.gi, g = drawing.g, svg = drawing.svg;
+    if (g.done) { drawing = null; return; }
+    var cp = toSvg(svg, e);
+    g.ink.push(cp);
+    renderInk(gi, g);
+    var near = nearestNode(g, cp);
+    if (near.dist > HIT_R) { g.errMarkNi = null; return; }
+    var ni = near.ni;
+    if (g.connectedNi.indexOf(ni) >= 0) return; // 已连过的圈，忽略（不重复计误点）
+    var nodeColor = g.positions[ni].colorIdx;
+    var targetColor = state.code[state.letters[g.targetIdx]];
+    if (nodeColor === targetColor) {
+      confirmNode(gi, ni); // 划到正确顺序的颜色 → 绿描边 + 推进
+      g.errMarkNi = null;
+    } else if (ni !== g.errMarkNi) {
+      g.errors++; errorSound(); flashNode(svg, ni); g.errMarkNi = ni;
+      // 连错：把这一笔的蓝线从墨迹数组截断（线消失、不显示），并结束当前这一笔，需抬手重画
+      g.ink.length = drawing.inkBase;
+      renderInk(gi, g);
+      try { svg.releasePointerCapture(e.pointerId); } catch (err) {}
+      drawing = null;
+    }
+  });
+
+  function endDraw() { drawing = null; }
+  window.addEventListener("pointerup", endDraw);
+  window.addEventListener("pointercancel", endDraw);
+
+  function updateChainHighlight(gi) {
+    var chain = document.getElementById("chain-" + gi);
+    var spans = chain.querySelectorAll(".L");
+    for (var i = 0; i < spans.length; i++) {
+      spans[i].classList.toggle("current", i === state.groups[gi].targetIdx);
+    }
+  }
+
+  // ===== 开始 / 停止 =====
+  startBtn.addEventListener("click", function () {
+    initAudio();
+    resultCard.classList.remove("show");
+    newGame();            // 刷新 = 换一批新题目（进入即显示，无需先点开始）
+    state.running = true;
+  });
+
+  document.getElementById("result-close").addEventListener("click", function () {
+    resultCard.classList.remove("show");
+    newGame(); // 关闭结果后换新题，保持「进入即见画面」
+    state.running = true;
+    startBtn.textContent = "刷新";
+    startBtn.classList.remove("stop");
+  });
+
+  // 进入页面直接展示题目（不点开始也看得到画面）
+  newGame();
+
+  // ===== 结果 =====
+  function finish() {
+    state.running = false;
+    startBtn.textContent = "刷新";
+    startBtn.classList.remove("stop");
+
+    var totalErrors = 0, doneCount = 0, totalConn = 0, totalTime = 0;
+    state.groups.forEach(function (g) {
+      totalErrors += g.errors;
+      totalConn += g.connected.length;
+      if (g.done) {
+        doneCount++;
+        if (g.endTime != null && g.startTime != null) {
+          totalTime += (g.endTime - g.startTime) / 1000;
+        }
+      }
+    });
+    var attempts = totalConn + totalErrors;
+    var acc = attempts > 0 ? Math.round((totalConn / attempts) * 100) : 0;
+
+    var statsHtml =
+      '<div class="stat"><span>完成组数</span><b>' + doneCount + " / 4</b></div>" +
+      '<div class="stat"><span>正确连线</span><b>' + totalConn + " 段</b></div>" +
+      '<div class="stat"><span>误点次数</span><b>' + totalErrors + " 次</b></div>" +
+      '<div class="stat"><span>连线准确率</span><b>' + acc + "%</b></div>" +
+      '<div class="stat"><span>完成组总用时</span><b>' + totalTime.toFixed(1) + " 秒</b></div>";
+    document.getElementById("result-stats").innerHTML = statsHtml;
+
+    var msg;
+    if (doneCount === 0) {
+      msg = "本次未连接任何一组。先看清顶部<b>译码表</b>（字母→颜色），再到圆环上按字母顺序，用一笔<b>手绘连线</b>依次穿过对应颜色的圆圈。建议放慢节奏、从「A 对应色」起笔开始练习。";
+    } else if (acc >= 90 && totalErrors <= 2) {
+      msg = "<b>优秀</b>：你能快速把字母译码成颜色，并在随机排布的圆环上准确按序定位，说明<b>视觉搜索</b>与<b>色彩工作记忆</b>都很强。";
+    } else if (acc >= 70) {
+      msg = "<b>良好</b>：多数能按序找到对应颜色并手绘连上，偶有划错。保持练习可进一步缩短在圆环上的<b>扫描时间</b>。";
+    } else {
+      msg = "<b>需加强</b>：在 8 色随机圆环中容易迷失、划错较多。可放慢节奏，先在脑中默念「A=某色、B=某色…」建立<b>译码模板</b>再动笔。";
+    }
+    document.getElementById("result-interp").innerHTML = msg;
+    resultCard.classList.add("show");
+  }
+</script>
+</body>
+</html>

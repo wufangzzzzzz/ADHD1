@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>分散注意力双任务 · 专注力训练</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#7E57C2;--accent2:#5E35B1;
+  --err:#EF5350;--ok:#66BB6A;
+  --main:#26C6DA;--sub:#FFA726;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100dvh;overflow:hidden;}
+body{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:500;background:radial-gradient(1200px 800px at 70% -10%,#1a174080,transparent),#0a0e1a;color:#EDE7F6;display:flex;align-items:center;justify-content:center;height:100dvh;user-select:none;-webkit-user-select:none;}
+.container{display:flex;gap:16px;width:min(98vw,1100px);height:min(96vh,680px);padding:12px;}
+.left-panel{width:270px;min-width:270px;display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px 12px;overflow-y:auto;}
+.panel-title{color:var(--accent);font-size:14px;font-weight:800;letter-spacing:0.05em;margin-top:6px;}
+.diff-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+.diff-btn{flex:1;min-width:42px;padding:6px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(237,231,246,0.55);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;}
+.diff-btn:hover{background:rgba(126,87,194,0.08);}
+.diff-btn.active{background:linear-gradient(135deg,#7E57C2,#5E35B1);border-color:transparent;color:#0a0e1a;font-weight:800;}
+.guide-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 13px;margin-top:2px;}
+.guide-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:6px;}
+.guide-text{font-size:11.5px;line-height:1.85;color:rgba(237,231,246,0.62);}
+.guide-text b{color:#EDE7F6;}
+.guide-text .hint{color:#CE93D8;font-weight:700;}
+.guide-text .m{color:var(--main);font-weight:700;}
+.guide-text .s{color:var(--sub);font-weight:700;}
+/* 右面板 */
+.right-panel{flex:1;min-width:0;position:relative;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.game-header{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:6;}
+.game-title{color:#EDE7F6;font-size:18px;font-weight:800;}
+.back-btn{background:rgba(237,231,246,0.06);border:none;color:rgba(237,231,246,0.5);padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s;}
+.back-btn:hover{background:rgba(237,231,246,0.12);}
+.game-area{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:46px 14px 14px;min-height:0;width:100%;overflow-y:auto;}
+.progress-wrap{width:96%;max-width:480px;height:6px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;}
+.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#7E57C2,#5E35B1);border-radius:4px;transition:width .3s;}
+.target-hint{font-size:14px;font-weight:700;height:22px;min-height:22px;text-align:center;padding:0 8px;}
+.target-hint .num{color:var(--main);font-size:17px;font-weight:800;}
+/* 双任务舞台 */
+.da-stage{position:relative;width:min(86vw,440px);height:min(58vh,360px);margin:4px auto;border-radius:16px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.da-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;pointer-events:none;}
+.da-stim{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-size:84px;font-weight:800;line-height:1;color:#EDE7F6;height:96px;display:flex;align-items:center;justify-content:center;width:120px;text-shadow:0 0 18px rgba(255,255,255,0.12);}
+.da-stim.target{color:var(--main);text-shadow:0 0 26px rgba(38,198,218,0.55);}
+.da-yes{padding:10px 30px;border-radius:12px;border:1px solid rgba(38,198,218,0.4);background:rgba(38,198,218,0.12);color:var(--main);font-size:15px;font-weight:800;cursor:pointer;transition:all .12s;pointer-events:auto;}
+.da-yes:active{background:rgba(38,198,218,0.3);transform:scale(0.96);}
+.corner-btn{position:absolute;width:min(88px,24vw);height:min(88px,24vw);border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:rgba(237,231,246,0.45);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;text-align:center;line-height:1.3;touch-action:manipulation;}
+.corner-btn .ck{display:block;font-size:10px;opacity:0.6;margin-top:2px;}
+.corner-btn[data-corner="0"]{top:12px;left:12px;}
+.corner-btn[data-corner="1"]{top:12px;right:12px;}
+.corner-btn[data-corner="2"]{bottom:12px;left:12px;}
+.corner-btn[data-corner="3"]{bottom:12px;right:12px;}
+.corner-btn.active{border-color:var(--sub);background:rgba(255,167,38,0.22);color:var(--sub);box-shadow:0 0 28px 4px rgba(255,167,38,0.4);}
+.corner-btn:active{transform:scale(0.95);}
+.hud{display:flex;gap:14px;font-size:13px;color:rgba(237,231,246,0.6);flex-wrap:wrap;justify-content:center;}
+.hud .hud-val{font-weight:800;font-size:15px;}
+.hud .m .hud-val{color:var(--main);}
+.hud .s .hud-val{color:var(--sub);}
+.feedback{height:20px;font-size:13px;font-weight:700;color:rgba(237,231,246,0.55);min-height:20px;text-align:center;}
+.game-footer{margin-top:6px;display:flex;flex-direction:column;gap:8px;align-items:center;z-index:5;}
+.start-btn{padding:10px 26px;border-radius:12px;border:none;background:linear-gradient(135deg,#7E57C2,#5E35B1);color:#0a0e1a;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(94,53,177,0.25);}
+.start-btn:hover{transform:translateY(-1px);}
+.start-btn:active{transform:scale(.96);}
+.start-btn.stop-mode{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;box-shadow:0 4px 16px rgba(229,57,53,0.3);}
+/* 结果卡片 */
+.result-card{position:absolute;inset:0;background:rgba(10,14,26,0.97);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:20px 16px;z-index:10;overflow-y:auto;}
+.result-title{color:var(--accent);font-size:22px;font-weight:800;margin-top:4px;}
+.result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:88%;max-width:440px;}
+.result-item{background:rgba(237,231,246,0.05);border-radius:10px;padding:10px;text-align:center;}
+.result-item .val{font-size:20px;font-weight:800;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;}
+.result-item.main .val{color:var(--main);}
+.result-item.sub .val{color:var(--sub);}
+.result-item .lbl{color:rgba(237,231,246,0.5);font-size:11px;margin-top:3px;}
+.result-section{width:88%;max-width:440px;background:rgba(237,231,246,0.03);border-radius:10px;padding:12px 14px;}
+.section-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:8px;}
+.cond-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(237,231,246,0.04);}
+.cond-row:last-child{border-bottom:none;}
+.cond-row .cl{color:rgba(237,231,246,0.55);}
+.cond-row .cv{color:#EDE7F6;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:700;}
+.result-eval{width:88%;max-width:440px;background:rgba(237,231,246,0.04);border-radius:10px;padding:10px 14px;font-size:12px;color:rgba(237,231,246,0.7);line-height:1.8;text-align:left;}
+.result-eval .eval-line{margin-bottom:3px;}
+.result-btns{display:flex;gap:10px;margin-top:4px;margin-bottom:10px;}
+.result-btns button{padding:10px 24px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-retry{background:linear-gradient(135deg,#7E57C2,#5E35B1);color:#0a0e1a;}
+.btn-home{background:rgba(237,231,246,0.1);color:#EDE7F6;}
+.btn-retry:hover{transform:translateY(-1px);}
+.btn-home:hover{background:rgba(237,231,246,0.16);}
+@media(max-width:680px){
+  html,body{height:auto;min-height:100dvh;overflow:visible;}
+  body{align-items:flex-start;overflow-y:auto;}
+  .container{flex-direction:column;height:auto;min-height:96vh;gap:10px;padding:10px;}
+  .left-panel{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;gap:8px;overflow-x:auto;}
+  .panel-title{width:100%;}
+  .diff-btns{display:flex;}
+  .diff-btns .diff-btn{flex:1;}
+  .guide-card{flex:1;min-width:200px;}
+  .right-panel{height:70vh;min-height:520px;}
+  .result-grid{grid-template-columns:repeat(2,1fr);}
+  .da-stage{height:54vh;min-height:380px;}
+}
+/* ===== 儿童色彩模式 (kid-mode) ===== */
+body.kid-mode{background:#FFFFFF;color:#2A2A35;}
+body.kid-mode .container{padding:12px;}
+body.kid-mode .left-panel,
+body.kid-mode .right-panel{background:#FFFFFF;border:1px solid #E4E4EC;box-shadow:0 6px 24px rgba(80,80,120,0.10);}
+body.kid-mode .panel-title,
+body.kid-mode .guide-title,
+body.kid-mode .section-title,
+body.kid-mode .result-title{color:#7C4DFF;}
+body.kid-mode .game-title{color:#2A2A35;}
+body.kid-mode .guide-card,
+body.kid-mode .result-section,
+body.kid-mode .result-eval,
+body.kid-mode .result-item{background:#F6F6FB;border-color:#E4E4EC;}
+body.kid-mode .guide-text,
+body.kid-mode .guide-text b,
+body.kid-mode .hud,
+body.kid-mode .feedback,
+body.kid-mode .cond-row .cl,
+body.kid-mode .cond-row .cv,
+body.kid-mode .result-eval,
+body.kid-mode .result-item .lbl{color:#3A3A45;}
+body.kid-mode .back-btn{background:#F0F0F6;color:#5A5A66;border:1px solid #E4E4EC;}
+body.kid-mode .back-btn:hover{background:#E8E8F0;}
+body.kid-mode .diff-label{color:#7A7A86;}
+body.kid-mode .diff-btn{background:#FFFFFF;border:2px solid #FFD54F;color:#5A5A66;}
+body.kid-mode .diff-btn:hover{background:#FFF8E1;}
+body.kid-mode .diff-btn.active{background:linear-gradient(135deg,#FF5252,#FF9800);border-color:transparent;color:#fff;}
+body.kid-mode .start-btn{background:linear-gradient(135deg,#66BB6A,#26C6DA);color:#fff;box-shadow:0 4px 16px rgba(38,198,218,0.30);}
+body.kid-mode .start-btn.stop-mode{background:linear-gradient(135deg,#FF5252,#FF9800);color:#fff;box-shadow:0 4px 16px rgba(255,82,82,0.30);}
+body.kid-mode .btn-retry{background:linear-gradient(135deg,#66BB6A,#26C6DA);color:#fff;}
+body.kid-mode .btn-home{background:#F0F0F6;color:#5A5A66;border:1px solid #E4E4EC;}
+body.kid-mode .progress-bar{background:linear-gradient(90deg,#FF5252,#FFC107,#4CAF50,#2196F3);}
+body.kid-mode .target-hint{color:#3A3A45;}
+/* 双任务内部元素 */
+body.kid-mode .da-stage{background:#F7F7FB;border:1px solid #E4E4EC;}
+body.kid-mode .da-stim{color:#2A2A35;}
+body.kid-mode .da-stim.target{color:#2196F3;text-shadow:0 0 26px rgba(33,150,243,0.4);}
+body.kid-mode .corner-btn{background:#FFF3E0;border-color:#FFCC80;color:#E65100;}
+body.kid-mode .corner-btn.active{border-color:#FF9800;background:rgba(255,152,0,0.22);color:#E65100;box-shadow:0 0 28px 4px rgba(255,152,0,0.4);}
+body.kid-mode .da-yes{background:linear-gradient(135deg,#66BB6A,#26C6DA);color:#fff;border-color:transparent;}
+/* 儿童切换按钮（常驻显示） */
+.kid-toggle{background:linear-gradient(135deg,#FF5252,#FF9800,#FFC107,#4CAF50,#2196F3,#9C27B0);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(124,77,255,0.25);transition:transform .12s;}
+.kid-toggle:active{transform:scale(.95);}
+body.kid-mode .kid-toggle{background:linear-gradient(135deg,#9C27B0,#2196F3);}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 左面板 -->
+  <div class="left-panel">
+    <div class="panel-title">分散注意力 · 双任务</div>
+    <div class="panel-title" style="margin-top:2px;">难度</div>
+    <div class="diff-btns" id="diff-all"></div>
+    <div class="guide-card">
+      <div class="guide-title">玩法说明</div>
+      <div class="guide-text">
+        同一时间做<b>两件</b>事：<br>
+        <span class="m">中央主任务</span>：屏幕中央连续闪现数字，每轮有一个<span class="m">目标数字</span>（标红）。看到目标数字点中间的<b>「是」</b>按钮。<br>
+        <span class="s">周边副任务</span>：屏幕四角之一会高亮并发声，点<b>对应角落</b>的按钮。<br>
+        • 两套刺激<b>同时出现</b>，要兼顾两边、互不遗漏。<br>
+        • <span class="hint">平板/手机</span>：直接点屏幕上的按钮即可（无键盘也能玩）；桌面端也可用空格 / 7·9·1·3 键。<br>
+        • <span class="hint">难度越高</span>：主/副刺激出现更快、重叠更多，对注意分配的负荷越大。
+      </div>
+    </div>
+  </div>
+  <!-- 右面板 -->
+  <div class="right-panel">
+    <div class="game-header">
+      <div class="game-title">分散注意力双任务</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="kid-toggle" onclick="toggleKidMode()" title="切换儿童色彩">🎨 儿童</button>
+        <button class="back-btn" onclick="location.href='index.html'">返回</button>
+      </div>
+    </div>
+    <div class="game-area" id="game-area">
+      <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="target-hint" id="target-hint">选好难度，点开始训练</div>
+      <div class="da-stage" id="da-stage">
+        <div class="corner-btn" data-corner="0">左上<span class="ck">点击</span></div>
+        <div class="corner-btn" data-corner="1">右上<span class="ck">点击</span></div>
+        <div class="corner-btn" data-corner="2">左下<span class="ck">点击</span></div>
+        <div class="corner-btn" data-corner="3">右下<span class="ck">点击</span></div>
+        <div class="da-center">
+          <div class="da-stim" id="da-stim"></div>
+          <button class="da-yes" id="da-yes" onclick="onYes()">是 (点此)</button>
+        </div>
+      </div>
+      <div class="hud">
+        <span class="m">中央命中 <span class="hud-val" id="hud-main">0</span></span>
+        <span class="s">角落命中 <span class="hud-val" id="hud-sub">0</span></span>
+        <span>轮次 <span class="hud-val" id="hud-round">0/10</span></span>
+        <span>状态 <span class="hud-val" id="hud-status">准备</span></span>
+      </div>
+      <div class="feedback" id="feedback">选好难度，点开始训练</div>
+      <div class="game-footer">
+        <button class="start-btn" id="start-btn" onclick="toggleGame()">开始训练</button>
+      </div>
+    </div>
+    <!-- 结果 -->
+    <div class="result-card" id="result-card" style="display:none;"></div>
+  </div>
+</div>
+<script>
+// ===== 配置 =====
+const LEVELS={
+  entry :{name:'入门',mainGap:1400,subGap:3000,dur:20000},
+  easy  :{name:'初级',mainGap:1200,subGap:2600,dur:20000},
+  medium:{name:'中级',mainGap:1000,subGap:2200,dur:20000},
+  hard  :{name:'高级',mainGap:850 ,subGap:1800,dur:20000},
+  expert:{name:'专家',mainGap:700 ,subGap:1500,dur:20000},
+};
+const DIFF_ORDER=['entry','easy','medium','hard','expert'];
+const TOTAL_ROUNDS=10;
+const STIM_SHOW=420;            // 数字/高亮可见时长(ms)
+const TARGET_RATE=0.30;         // 主任务目标数字出现概率
+const SINGLE_BASELINE=0.92;     // 经验单任务基线命中率
+// ===== DOM =====
+const $=id=>document.getElementById(id);
+// ===== 音频 =====
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){audioCtx=null;}}
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+}
+function playBeep(freq,dur,type){
+  if(!audioCtx)return;
+  try{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.frequency.value=freq;o.type=type||'sine';
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.22,audioCtx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur+0.02);
+  }catch(e){}
+}
+// ===== 工具 =====
+function randInt(a,b){return a+Math.floor(Math.random()*(b-a+1));}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+// ===== session 统计（跨轮累计，分难度）=====
+const sessionStats={};
+DIFF_ORDER.forEach(k=>sessionStats[k]={
+  rounds:0,
+  mainHits:0,mainFa:0,mainMiss:0,mainRtSum:0,mainRtC:0,
+  subHits:0,subFa:0,subMiss:0,subRtSum:0,subRtC:0,
+});
+// ===== 状态 =====
+let state={
+  level:'entry',running:false,round:0,roundActive:false,timers:[],
+  targetNum:1,
+  main:{pending:false,lastT:0},
+  sub:{pending:false,activeCorner:-1,lastT:0},
+  mainHits:0,subHits:0,
+};
+function at(delay,fn){const t=setTimeout(fn,delay);state.timers.push(t);return t;}
+function clearTimers(){
+  state.timers.forEach(t=>clearTimeout(t));state.timers=[];
+  const st=$('da-stim');if(st){st.textContent='';st.classList.remove('target');}
+  document.querySelectorAll('.corner-btn').forEach(c=>c.classList.remove('active'));
+}
+// ===== 难度按钮 =====
+function buildDiffBtns(){
+  const c=$('diff-all');c.innerHTML='';
+  DIFF_ORDER.forEach(k=>{
+    const b=document.createElement('button');
+    b.className='diff-btn'+(state.level===k?' active':'');
+    b.textContent=LEVELS[k].name;
+    b.onclick=()=>{if(state.running)return;state.level=k;document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+    c.appendChild(b);
+  });
+}
+function updateHud(){
+  $('hud-main').textContent=state.mainHits;
+  $('hud-sub').textContent=state.subHits;
+  $('hud-round').textContent=state.round+'/'+TOTAL_ROUNDS;
+  $('hud-status').textContent=state.running&&state.roundActive?'训练中':'准备';
+  $('progress-bar').style.width=(state.round/TOTAL_ROUNDS*100)+'%';
+}
+// ===== 主任务流（中央 oddball）=====
+function startMainStream(){
+  if(!state.running||!state.roundActive)return;
+  showStim();
+  const gap=LEVELS[state.level].mainGap;
+  at(gap,startMainStream);
+}
+function showStim(){
+  const st=$('da-stim');
+  // 上一目标若仍 pending（未响应）-> 遗漏
+  if(state.main.pending){state.main.pending=false;addStat('mainMiss',1);}
+  st.classList.remove('target');
+  st.textContent='';
+  // 生成数字
+  let n;
+  if(Math.random()<TARGET_RATE)n=state.targetNum;
+  else{do{n=randInt(1,9);}while(n===state.targetNum);}
+  st.textContent=n;
+  if(n===state.targetNum){
+    st.classList.add('target');
+    state.main.pending=true;
+    state.main.lastT=performance.now();
+    playBeep(660,0.12,'triangle');
+  }
+  // 数字保留短暂后清空，留出间隔
+  at(STIM_SHOW,()=>{ if(st.textContent===String(n)){st.textContent='';st.classList.remove('target');} });
+}
+// ===== 副任务流（四角位置监控）=====
+function startSubStream(){
+  if(!state.running||!state.roundActive)return;
+  showCorner();
+  const gap=LEVELS[state.level].subGap;
+  at(gap,startSubStream);
+}
+function showCorner(){
+  // 上一角若仍 pending -> 遗漏
+  if(state.sub.pending){state.sub.pending=false;addStat('subMiss',1);clearCornerActive();}
+  const c=randInt(0,3);
+  const el=document.querySelector('.corner-btn[data-corner="'+c+'"]');
+  if(!el)return;
+  el.classList.add('active');
+  state.sub.pending=true;
+  state.sub.activeCorner=c;
+  state.sub.lastT=performance.now();
+  playBeep(440,0.14,'sine');
+  at(STIM_SHOW,()=>{
+    if(state.sub.pending&&state.sub.activeCorner===c){
+      state.sub.pending=false;addStat('subMiss',1);
+    }
+    if(el.classList.contains('active')&&state.sub.activeCorner===c)el.classList.remove('active');
+  });
+}
+function clearCornerActive(){
+  document.querySelectorAll('.corner-btn').forEach(c=>c.classList.remove('active'));
+}
+// ===== 响应 =====
+function onYes(){
+  if(!state.running||!state.roundActive)return;
+  if(state.main.pending){
+    state.main.pending=false;
+    const rt=performance.now()-state.main.lastT;
+    addStat('mainHits',1);addStat('mainRtSum',rt);addStat('mainRtC',1);
+    state.mainHits++;
+    flashStim();
+    $('feedback').textContent='中央命中';
+  }else{
+    addStat('mainFa',1);
+    $('feedback').textContent='中央误报';
+  }
+}
+function onCorner(idx){
+  if(!state.running||!state.roundActive)return;
+  if(state.sub.pending){
+    if(idx===state.sub.activeCorner){
+      const rt=performance.now()-state.sub.lastT;
+      addStat('subHits',1);addStat('subRtSum',rt);addStat('subRtC',1);
+      state.subHits++;
+      const el=document.querySelector('.corner-btn[data-corner="'+idx+'"]');if(el)el.classList.remove('active');
+      $('feedback').textContent='角落命中';
+    }else{
+      addStat('subFa',1);
+      state.sub.pending=false;clearCornerActive();
+      $('feedback').textContent='角落误点';
+    }
+  }else{
+    addStat('subFa',1);
+    $('feedback').textContent='角落误报';
+  }
+}
+function flashStim(){
+  const st=$('da-stim');
+  st.style.transition='none';
+  st.style.transform='scale(1.18)';
+  setTimeout(()=>{st.style.transition='transform .15s';st.style.transform='scale(1)';},60);
+}
+function addStat(key,val){
+  const s=sessionStats[state.level];
+  if(key==='mainHits')s.mainHits+=val;
+  else if(key==='mainFa')s.mainFa+=val;
+  else if(key==='mainMiss')s.mainMiss+=val;
+  else if(key==='mainRtSum')s.mainRtSum+=val;
+  else if(key==='mainRtC')s.mainRtC+=val;
+  else if(key==='subHits')s.subHits+=val;
+  else if(key==='subFa')s.subFa+=val;
+  else if(key==='subMiss')s.subMiss+=val;
+  else if(key==='subRtSum')s.subRtSum+=val;
+  else if(key==='subRtC')s.subRtC+=val;
+}
+// ===== 游戏流程 =====
+function toggleGame(){ if(state.running)stopGame(); else startGame(); }
+function startGame(){
+  initAudio();
+  DIFF_ORDER.forEach(k=>{sessionStats[k]={rounds:0,mainHits:0,mainFa:0,mainMiss:0,mainRtSum:0,mainRtC:0,subHits:0,subFa:0,subMiss:0,subRtSum:0,subRtC:0};});
+  state.round=0;state.mainHits=0;state.subHits=0;
+  state.running=true;
+  $('result-card').style.display='none';
+  $('start-btn').textContent='停止训练';
+  $('start-btn').classList.add('stop-mode');
+  updateHud();
+  nextRound();
+}
+function nextRound(){
+  if(state.round>=TOTAL_ROUNDS){showResult();return;}
+  state.round++;
+  const s=sessionStats[state.level];s.rounds++;
+  // 本轮目标数字
+  state.targetNum=randInt(1,9);
+  state.roundActive=true;
+  state.main.pending=false;state.sub.pending=false;state.sub.activeCorner=-1;
+  $('target-hint').innerHTML='本轮中央目标数字：<span class="num">'+state.targetNum+'</span>（标红）';
+  $('feedback').textContent='第 '+state.round+' 轮 · 开始';
+  updateHud();
+  const dur=LEVELS[state.level].dur;
+  // 启动双流
+  startMainStream();
+  startSubStream();
+  // 本轮结束
+  at(dur,endRound);
+}
+function endRound(){
+  if(!state.running)return;
+  state.roundActive=false;
+  // 收尾：仍 pending 的计为遗漏
+  if(state.main.pending){state.main.pending=false;addStat('mainMiss',1);}
+  if(state.sub.pending){state.sub.pending=false;addStat('subMiss',1);clearCornerActive();}
+  clearTimers();
+  updateHud();
+  at(500,()=>{ if(!state.running)return; nextRound(); });
+}
+function stopGame(){
+  clearTimers();
+  state.roundActive=false;
+  if(state.running)showResult();
+  else {state.running=false;$('start-btn').textContent='开始训练';$('start-btn').classList.remove('stop-mode');}
+}
+// ===== 结果 =====
+function acc(h,f,m){const tot=h+m;return tot?Math.round(h/tot*100):0;}
+function avgRt(sum,c){return c?(sum/c/1000).toFixed(2)+'s':'-';}
+function cost(accuracy){ // 相对单任务基线的双任务代价(%)
+  return Math.max(0,Math.round((SINGLE_BASELINE-accuracy/100)*100));
+}
+function showResult(){
+  state.running=false;
+  clearTimers();
+  $('start-btn').textContent='开始训练';
+  $('start-btn').classList.remove('stop-mode');
+  $('feedback').textContent='选好难度，点开始训练';
+  $('target-hint').textContent='选好难度，点开始训练';
+  // 累计（当前难度为主，跨难度合并展示）
+  let mH=0,mF=0,mM=0,mRs=0,mRc=0,sH=0,sF=0,sM=0,sRs=0,sRc=0;
+  DIFF_ORDER.forEach(k=>{const s=sessionStats[k];mH+=s.mainHits;mF+=s.mainFa;mM+=s.mainMiss;mRs+=s.mainRtSum;mRc+=s.mainRtC;sH+=s.subHits;sF+=s.subFa;sM+=s.subMiss;sRs+=s.subRtSum;sRc+=s.subRtC;});
+  const mA=acc(mH,mF,mM), sA=acc(sH,sF,sM);
+  const mRt=avgRt(mRs,mRc), sRt=avgRt(sRs,sRc);
+  const mCost=cost(mA), sCost=cost(sA);
+  // 评级
+  let grade,evalTxt;
+  if(mA>=85&&sA>=85){grade='优秀';evalTxt='你在双任务并行下仍能维持高准确率，说明注意资源分配灵活、中央执行系统对双通道的协调能力强，多任务代价很小。';}
+  else if(mA>=70&&sA>=70){grade='良好';evalTxt='两项任务整体表现良好，但已能看出并行负荷：准确率较单任务基线下降，说明注意容量接近上限。可针对性提升较慢一侧的自动化程度。';}
+  else if(mA>=55&&sA>=55){grade='中等';evalTxt='双任务下出现明显遗漏或误报，说明同时维持两个通道已超出舒适注意容量。建议先用单任务分别练熟，再逐步叠加并行。';}
+  else{grade='需加强';evalTxt='双任务表现较弱、遗漏/误报偏多，反映分散注意力容量有限。请从入门难度起步，先把主、副任务各自做稳，再挑战并行。';}
+  const condRows=DIFF_ORDER.map(k=>{
+    const s=sessionStats[k];
+    if(s.rounds===0)return '';
+    const ma=acc(s.mainHits,s.mainFa,s.mainMiss), sa=acc(s.subHits,s.subFa,s.subMiss);
+    return '<div class="cond-row"><span class="cl">'+LEVELS[k].name+'</span>'+
+      '<span class="cv">中央 '+ma+'% · 角落 '+sa+'% · 中央误报 '+s.mainFa+' · 角落误报 '+s.subFa+'</span></div>';
+  }).filter(Boolean).join('');
+  $('result-card').innerHTML=
+    '<div class="result-title">分散注意力双任务 · 结果</div>'+
+    '<div class="result-grid">'+
+      '<div class="result-item main"><div class="val">'+mA+'%</div><div class="lbl">中央命中率</div></div>'+
+      '<div class="result-item sub"><div class="val">'+sA+'%</div><div class="lbl">角落命中率</div></div>'+
+      '<div class="result-item main"><div class="val">'+mRt+'</div><div class="lbl">中央平均反应时</div></div>'+
+      '<div class="result-item sub"><div class="val">'+sRt+'</div><div class="lbl">角落平均反应时</div></div>'+
+    '</div>'+
+    (condRows?'<div class="result-section"><div class="section-title">分难度统计</div>'+condRows+'</div>':'')+
+    '<div class="result-eval">'+
+      '<div class="eval-line">综合评级：<b style="color:var(--accent)">'+grade+'</b></div>'+
+      '<div class="eval-line">'+evalTxt+'</div>'+
+      '<div class="eval-line">中央任务双任务代价 ≈ <b style="color:var(--main)">'+mCost+'%</b>（相对单任务基线 92%）；角落任务代价 ≈ <b style="color:var(--sub)">'+sCost+'%</b>。</div>'+
+      (mF?'<div class="eval-line">中央误报 '+mF+' 次：非目标数字却点了「是」，注意门控偏松。</div>':'')+
+      (sF?'<div class="eval-line">角落误报 '+sF+' 次：无高亮时点了角落，副任务反应过度。</div>':'')+
+      '<div class="eval-line">理论：分散注意力依赖 Baddeley 的<b>中央执行</b>在双通道间分配注意资源；双任务并行时准确率下降即「双任务代价」，反映注意容量上限与任务切换/协调负荷。</div>'+
+    '</div>'+
+    '<div class="result-btns">'+
+      '<button class="btn-retry" onclick="startGame()">再来一局</button>'+
+      '<button class="btn-home" onclick="location.href=\'index.html\'">返回大厅</button>'+
+    '</div>';
+  $('result-card').style.display='flex';
+}
+// ===== 初始化 =====
+buildDiffBtns();
+document.querySelectorAll('.corner-btn').forEach(c=>{ c.onclick=()=>onCorner(+c.dataset.corner); });
+document.addEventListener('keydown',e=>{
+  if(!state.running||!state.roundActive)return;
+  if(e.code==='Space'){e.preventDefault();onYes();}
+  else{const map={'7':0,'9':1,'1':2,'3':3};if(e.key in map)onCorner(map[e.key]);}
+});
+// ===== 儿童色彩切换 =====
+function toggleKidMode(){ document.body.classList.toggle('kid-mode'); }
+</script>
+</body>
+</html>

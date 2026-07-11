@@ -115,6 +115,56 @@ body{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:500;
   .right-panel{height:64vh;min-height:440px;}
   .rsvp-display{height:120px;font-size:72px;}
 }
+/* ===== 儿童色彩模式 (kid-mode) ===== */
+body.kid-mode{background:#FFFFFF;color:#2A2A35;}
+body.kid-mode .container{padding:12px;}
+body.kid-mode .left-panel,
+body.kid-mode .right-panel{background:#FFFFFF;border:1px solid #E4E4EC;box-shadow:0 6px 24px rgba(80,80,120,0.10);}
+body.kid-mode .panel-title,
+body.kid-mode .guide-title,
+body.kid-mode .section-title,
+body.kid-mode .result-title{color:#7C4DFF;}
+body.kid-mode .game-title{color:#2A2A35;}
+body.kid-mode .guide-card,
+body.kid-mode .result-section,
+body.kid-mode .result-eval,
+body.kid-mode .result-item{background:#F6F6FB;border-color:#E4E4EC;}
+body.kid-mode .guide-text,
+body.kid-mode .guide-text b,
+body.kid-mode .hud,
+body.kid-mode .feedback,
+body.kid-mode .cond-row .cl,
+body.kid-mode .cond-row .cv,
+body.kid-mode .result-eval,
+body.kid-mode .result-item .lbl{color:#3A3A45;}
+body.kid-mode .back-btn{background:#F0F0F6;color:#5A5A66;border:1px solid #E4E4EC;}
+body.kid-mode .back-btn:hover{background:#E8E8F0;}
+body.kid-mode .diff-label{color:#7A7A86;}
+body.kid-mode .diff-btn{background:#FFFFFF;border:2px solid #FFD54F;color:#5A5A66;}
+body.kid-mode .diff-btn:hover{background:#FFF8E1;}
+body.kid-mode .diff-btn.active{background:linear-gradient(135deg,#FF5252,#FF9800);border-color:transparent;color:#fff;}
+body.kid-mode .mode-btn{background:#FFFFFF;border:2px solid #4FC3F7;color:#5A5A66;}
+body.kid-mode .mode-btn:hover{background:#E1F5FE;}
+body.kid-mode .mode-btn.active{background:linear-gradient(135deg,#2196F3,#9C27B0);border-color:transparent;color:#fff;}
+body.kid-mode .start-btn{background:linear-gradient(135deg,#66BB6A,#26C6DA);color:#fff;box-shadow:0 4px 16px rgba(38,198,218,0.30);}
+body.kid-mode .start-btn.stop-mode{background:linear-gradient(135deg,#FF5252,#FF9800);color:#fff;box-shadow:0 4px 16px rgba(255,82,82,0.30);}
+body.kid-mode .btn-retry{background:linear-gradient(135deg,#66BB6A,#26C6DA);color:#fff;}
+body.kid-mode .btn-home{background:#F0F0F6;color:#5A5A66;border:1px solid #E4E4EC;}
+body.kid-mode .progress-bar{background:linear-gradient(90deg,#FF5252,#FFC107,#4CAF50,#2196F3);}
+body.kid-mode .target-hint{color:#3A3A45;}
+/* 注意力眨眼内部元素 */
+body.kid-mode .rsvp-display{background:#F2F2F8;border-color:#E4E4EC;color:#FF7043;}
+body.kid-mode .rsvp-display.idle{color:#B0B0BC;font-size:18px;font-weight:600;}
+body.kid-mode .digit-btn{background:#F2F2F8;color:#2A2A35;border:2px solid #E4E4EC;}
+body.kid-mode .digit-btn:hover{background:#E8F5E9;}
+body.kid-mode .digit-btn.sel{background:linear-gradient(135deg,#66BB6A,#26C6DA);border-color:transparent;color:#fff;}
+body.kid-mode .submit-btn{background:linear-gradient(135deg,#66BB6A,#26C6DA);color:#fff;}
+body.kid-mode .report-label{color:#5A5A66;}
+body.kid-mode .report-label b{color:#7C4DFF;}
+/* 儿童切换按钮（常驻显示） */
+.kid-toggle{background:linear-gradient(135deg,#FF5252,#FF9800,#FFC107,#4CAF50,#2196F3,#9C27B0);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(124,77,255,0.25);transition:transform .12s;}
+.kid-toggle:active{transform:scale(.95);}
+body.kid-mode .kid-toggle{background:linear-gradient(135deg,#9C27B0,#2196F3);}
 </style>
 </head>
 <body>
@@ -149,7 +199,10 @@ body{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:500;
   <div class="right-panel">
     <div class="game-header">
       <div class="game-title">注意力眨眼</div>
-      <button class="back-btn" onclick="location.href='index.html'">返回</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="kid-toggle" onclick="toggleKidMode()" title="切换儿童色彩">🎨 儿童</button>
+        <button class="back-btn" onclick="location.href='index.html'">返回</button>
+      </div>
     </div>
     <div class="game-area" id="game-area">
       <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
@@ -584,6 +637,8 @@ function showResult(){
 buildDiffBtns();
 buildModeBtns();
 buildColorRow();
+// ===== 儿童色彩切换 =====
+function toggleKidMode(){ document.body.classList.toggle('kid-mode'); }
 </script>
 </body>
 </html>

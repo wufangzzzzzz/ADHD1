@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>找不同 · 专注力训练</title>
+<title>西蒙任务 · 专注力训练</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --accent:#EC407A;--accent2:#D81B60;
+  --accent:#26C6DA;--accent2:#00897B;
   --err:#EF5350;--ok:#66BB6A;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -20,13 +20,13 @@ body{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:500;
 .panel-title{color:var(--accent);font-size:14px;font-weight:800;letter-spacing:0.05em;margin-top:6px;}
 .diff-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
 .diff-btn{flex:1;min-width:42px;padding:6px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(237,231,246,0.55);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;}
-.diff-btn:hover{background:rgba(236,64,122,0.08);}
-.diff-btn.active{background:linear-gradient(135deg,#EC407A,#D81B60);border-color:transparent;color:#0a0e1a;font-weight:800;}
+.diff-btn:hover{background:rgba(38,198,218,0.08);}
+.diff-btn.active{background:linear-gradient(135deg,#26C6DA,#00897B);border-color:transparent;color:#0a0e1a;font-weight:800;}
 .guide-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 13px;margin-top:2px;}
 .guide-title{color:var(--accent);font-size:13px;font-weight:700;margin-bottom:6px;}
 .guide-text{font-size:11.5px;line-height:1.85;color:rgba(237,231,246,0.62);}
 .guide-text b{color:#EDE7F6;}
-.guide-text .hint{color:#F48FB1;font-weight:700;}
+.guide-text .hint{color:#4DD0E1;font-weight:700;}
 /* 右面板 */
 .right-panel{flex:1;min-width:0;position:relative;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .game-header{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:6;}
@@ -35,23 +35,28 @@ body{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:500;
 .back-btn:hover{background:rgba(237,231,246,0.12);}
 .game-area{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:46px 14px 14px;min-height:0;width:100%;overflow-y:auto;}
 .progress-wrap{width:96%;max-width:480px;height:6px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;}
-.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#EC407A,#D81B60);border-radius:4px;transition:width .3s;}
-.target-hint{font-size:15px;font-weight:800;color:var(--accent);height:22px;min-height:22px;text-align:center;}
-.grid-wrap{display:grid;gap:8px;width:96%;max-width:480px;margin:0 auto;}
-.glyph-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);border:2px solid transparent;border-radius:10px;cursor:pointer;transition:all .15s;}
-.glyph-cell:hover{background:rgba(255,255,255,0.06);}
-.glyph-cell svg{width:72%;height:72%;}
-.glyph-cell.picked{border-color:#4CAF50;background:rgba(76,175,80,0.12);cursor:default;}
-.glyph-cell.picked svg{opacity:0.5;}
-.glyph-cell.wrong{border-color:#EF5350;animation:shake .4s;}
-@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
-.hud{display:flex;gap:18px;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-size:13px;color:rgba(237,231,246,0.6);flex-wrap:wrap;justify-content:center;}
+.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#26C6DA,#00897B);border-radius:4px;transition:width .3s;}
+.target-hint{font-size:14px;font-weight:700;color:rgba(237,231,246,0.7);height:22px;min-height:22px;text-align:center;padding:0 8px;}
+/* 西蒙圆盘 */
+.simon-board{position:relative;width:min(78vw,330px);aspect-ratio:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;margin:4px auto;border-radius:50%;overflow:hidden;background:#06121a;}
+.simon-pad{opacity:0.4;cursor:default;transition:opacity .12s, box-shadow .12s, filter .12s, transform .08s;}
+.simon-pad[data-pad="0"]{background:#2ECC71;border-top-left-radius:50%;}
+.simon-pad[data-pad="1"]{background:#E74C3C;border-top-right-radius:50%;}
+.simon-pad[data-pad="2"]{background:#F1C40F;border-bottom-left-radius:50%;}
+.simon-pad[data-pad="3"]{background:#3498DB;border-bottom-right-radius:50%;}
+.simon-board.input-on .simon-pad{cursor:pointer;}
+.simon-pad.lit{opacity:1;filter:brightness(1.55);box-shadow:0 0 36px 8px rgba(255,255,255,0.35);}
+.simon-pad.wrong{opacity:1;filter:brightness(1.1);box-shadow:0 0 30px 6px #ef5350;animation:shake .4s;}
+.simon-pad:active{transform:scale(0.97);}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+.simon-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36%;height:36%;border-radius:50%;background:#0a0e1a;border:3px solid rgba(255,255,255,0.14);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--accent);pointer-events:none;z-index:3;text-align:center;}
+.hub-main{font-size:17px;font-weight:800;line-height:1.1;}
+.hub-sub{font-size:11px;opacity:0.7;margin-top:2px;}
+.hud{display:flex;gap:16px;font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-size:13px;color:rgba(237,231,246,0.6);flex-wrap:wrap;justify-content:center;}
 .hud .hud-val{color:var(--accent);font-weight:800;font-size:16px;}
-.hud-val.urgent{color:#ef5350;animation:timeflash .5s steps(1,end) infinite;}
-@keyframes timeflash{0%,100%{opacity:1;}50%{opacity:.35;}}
 .feedback{height:20px;font-size:13px;font-weight:700;color:rgba(237,231,246,0.55);min-height:20px;text-align:center;}
 .game-footer{margin-top:6px;display:flex;flex-direction:column;gap:8px;align-items:center;z-index:5;}
-.start-btn{padding:10px 26px;border-radius:12px;border:none;background:linear-gradient(135deg,#EC407A,#D81B60);color:#0a0e1a;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(216,27,96,0.25);}
+.start-btn{padding:10px 26px;border-radius:12px;border:none;background:linear-gradient(135deg,#26C6DA,#00897B);color:#0a0e1a;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(0,137,123,0.25);}
 .start-btn:hover{transform:translateY(-1px);}
 .start-btn:active{transform:scale(.96);}
 .start-btn.stop-mode{background:linear-gradient(135deg,#e53935,#ef5350);color:#fff;box-shadow:0 4px 16px rgba(229,57,53,0.3);}
@@ -72,7 +77,7 @@ body{font-family:'Noto Sans SC','Source Han Sans SC',sans-serif;font-weight:500;
 .result-eval .eval-line{margin-bottom:3px;}
 .result-btns{display:flex;gap:10px;margin-top:4px;margin-bottom:10px;}
 .result-btns button{padding:10px 24px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
-.btn-retry{background:linear-gradient(135deg,#EC407A,#D81B60);color:#0a0e1a;}
+.btn-retry{background:linear-gradient(135deg,#26C6DA,#00897B);color:#0a0e1a;}
 .btn-home{background:rgba(237,231,246,0.1);color:#EDE7F6;}
 .btn-retry:hover{transform:translateY(-1px);}
 .btn-home:hover{background:rgba(237,231,246,0.16);}
@@ -122,10 +127,8 @@ body.kid-mode .btn-retry{background:linear-gradient(135deg,#66BB6A,#26C6DA);colo
 body.kid-mode .btn-home{background:#F0F0F6;color:#5A5A66;border:1px solid #E4E4EC;}
 body.kid-mode .progress-bar{background:linear-gradient(90deg,#FF5252,#FFC107,#4CAF50,#2196F3);}
 body.kid-mode .target-hint{color:#3A3A45;}
-/* 找不同内部元素 */
-body.kid-mode .glyph-cell{background:#F2F2F8;border-color:#E4E4EC;}
-body.kid-mode .glyph-cell:hover{background:#ECECF4;}
-body.kid-mode .glyph-cell.picked{border-color:#4CAF50;background:rgba(76,175,80,0.12);}
+/* 西蒙圆盘在白底下保留深色圆盘，彩色块可见；中心 hub 保持深色 */
+body.kid-mode .simon-hub{background:#0a0e1a;}
 /* 儿童切换按钮（常驻显示） */
 .kid-toggle{background:linear-gradient(135deg,#FF5252,#FF9800,#FFC107,#4CAF50,#2196F3,#9C27B0);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(124,77,255,0.25);transition:transform .12s;}
 .kid-toggle:active{transform:scale(.95);}
@@ -136,23 +139,24 @@ body.kid-mode .kid-toggle{background:linear-gradient(135deg,#9C27B0,#2196F3);}
 <div class="container">
   <!-- 左面板 -->
   <div class="left-panel">
-    <div class="panel-title">找不同 · 视觉搜索</div>
+    <div class="panel-title">西蒙任务 · 工作记忆</div>
     <div class="panel-title" style="margin-top:2px;">难度</div>
     <div class="diff-btns" id="diff-all"></div>
     <div class="guide-card">
       <div class="guide-title">玩法说明</div>
       <div class="guide-text">
-        屏幕会铺一组<b>彩色图形</b>，其中藏着若干个<b>目标图形</b>（形状与颜色都要匹配上方提示）。<br>
-        • 任务：按提示 <b>点击所有目标图形</b>。<br>
-        • 点错会记一次误点；找全所有目标即过关进入下一轮。<br>
-        • <span class="hint">难度越高：</span>图形越多、干扰项越接近目标（共享形状或颜色），越考验选择性注意。
+        圆盘有 <b>四块颜色</b>（绿/红/黄/蓝），每块对应一个音调。<br>
+        • 每轮先<b>观看</b>一段闪光 + 音调序列（长度逐轮 +1）。<br>
+        • 观看结束后，按<b>相同顺序点击</b>四块复述出来。<br>
+        • 全部点对我们记一轮通过；点错则本轮失败。<br>
+        • <span class="hint">难度越高：</span>起始序列越长（入门2 / 专家6），越考验工作记忆的存储容量与顺序保持。
       </div>
     </div>
   </div>
   <!-- 右面板 -->
   <div class="right-panel">
     <div class="game-header">
-      <div class="game-title">找不同</div>
+      <div class="game-title">西蒙任务</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="kid-toggle" onclick="toggleKidMode()" title="切换儿童色彩">🎨 儿童</button>
         <button class="back-btn" onclick="location.href='index.html'">返回</button>
@@ -161,13 +165,18 @@ body.kid-mode .kid-toggle{background:linear-gradient(135deg,#9C27B0,#2196F3);}
     <div class="game-area" id="game-area">
       <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
       <div class="target-hint" id="target-hint">选好难度，点开始训练</div>
-      <div class="grid-wrap" id="grid-wrap"></div>
+      <div class="simon-board" id="simon-board">
+        <div class="simon-pad" data-pad="0"></div>
+        <div class="simon-pad" data-pad="1"></div>
+        <div class="simon-pad" data-pad="2"></div>
+        <div class="simon-pad" data-pad="3"></div>
+        <div class="simon-hub" id="simon-hub"><div class="hub-main">准备</div><div class="hub-sub"></div></div>
+      </div>
       <div class="hud">
         <span>轮次 <span class="hud-val" id="hud-round">0/10</span></span>
-        <span>找到 <span class="hud-val" id="hud-found">0/0</span></span>
-        <span>误点 <span class="hud-val" id="hud-miss">0</span></span>
-        <span>命中 <span class="hud-val" id="hud-hit">-</span></span>
-        <span>剩余 <span class="hud-val" id="hud-time">-</span></span>
+        <span>长度 <span class="hud-val" id="hud-len">-</span></span>
+        <span>最佳 <span class="hud-val" id="hud-best">0</span></span>
+        <span>状态 <span class="hud-val" id="hud-status">准备</span></span>
       </div>
       <div class="feedback" id="feedback">选好难度，点开始训练</div>
       <div class="game-footer">
@@ -180,23 +189,14 @@ body.kid-mode .kid-toggle{background:linear-gradient(135deg,#9C27B0,#2196F3);}
 </div>
 <script>
 // ===== 配置 =====
-const COLORS=[
-  {hex:'#EF5350',name:'红'},{hex:'#FF7043',name:'橙'},
-  {hex:'#FFCA28',name:'黄'},{hex:'#C0CA33',name:'黄绿'},
-  {hex:'#66BB6A',name:'绿'},{hex:'#26A69A',name:'青绿'},
-  {hex:'#26C6DA',name:'青'},{hex:'#29B6F6',name:'浅蓝'},
-  {hex:'#42A5F5',name:'蓝'},{hex:'#7E57C2',name:'蓝紫'},
-  {hex:'#AB47BC',name:'紫'},{hex:'#EC407A',name:'粉'},
-];
-const SHAPES=[
-  {key:'circle',name:'圆'},{key:'square',name:'方'},{key:'triangle',name:'三角'},
-];
+const PAD_TONES=[329.63,440.00,277.18,392.00]; // 绿 红 黄 蓝
+const PAD_NAMES=['绿','红','黄','蓝'];
 const LEVELS={
-  entry :{name:'入门',count:12,targets:1,cols:4,sim:0,  time:9},
-  easy  :{name:'初级',count:16,targets:1,cols:4,sim:0.3,time:10},
-  medium:{name:'中级',count:24,targets:2,cols:6,sim:0.5,time:13},
-  hard  :{name:'高级',count:32,targets:2,cols:7,sim:0.7,time:15},
-  expert:{name:'专家',count:40,targets:3,cols:8,sim:0.9,time:19},
+  entry :{name:'入门',start:2},
+  easy  :{name:'初级',start:3},
+  medium:{name:'中级',start:4},
+  hard  :{name:'高级',start:5},
+  expert:{name:'专家',start:6},
 };
 const DIFF_ORDER=['entry','easy','medium','hard','expert'];
 const TOTAL_ROUNDS=10; // 每局固定轮数
@@ -222,39 +222,22 @@ function playBeep(freq,dur){
 }
 // ===== 工具 =====
 function randInt(a,b){return a+Math.floor(Math.random()*(b-a+1));}
-function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
-function randOtherColor(hex){const pool=COLORS.filter(c=>c.hex!==hex);return pool[Math.floor(Math.random()*pool.length)].hex;}
-function randOtherShape(key){const pool=SHAPES.filter(s=>s.key!==key);return pool[Math.floor(Math.random()*pool.length)].key;}
-function glyphSVG(shape,color,size){
-  const c=size/2;let inner='';
-  if(shape==='circle')inner='<circle cx="'+c+'" cy="'+c+'" r="'+(c*0.82)+'" fill="'+color+'"/>';
-  else if(shape==='square'){const r=size*0.16;inner='<rect x="'+r+'" y="'+r+'" width="'+(size-2*r)+'" height="'+(size-2*r)+'" rx="'+(size*0.08)+'" fill="'+color+'"/>';}
-  else if(shape==='triangle'){const m=size*0.14;inner='<polygon points="'+c+','+m+' '+(size-m)+','+(size-m)+' '+m+','+(size-m)+'" fill="'+color+'"/>';}
-  return '<svg viewBox="0 0 '+size+' '+size+'">'+inner+'</svg>';
-}
-// 生成干扰项：sim 概率与目标共享一个特征（同形异色 / 异形同色），否则完全随机
-function genDistractor(ts,th,sim){
-  let shape,color;
-  if(Math.random()<sim){
-    if(Math.random()<0.5){shape=ts;color=randOtherColor(th);}
-    else{shape=randOtherShape(ts);color=th;}
-  }else{shape=randOtherShape(ts);color=randOtherColor(th);}
-  return {shape,color,isTarget:false};
-}
 // ===== session 统计（跨轮累计，分难度）=====
 const sessionStats={};
-DIFF_ORDER.forEach(k=>sessionStats[k]={rounds:0,found:0,targets:0,misses:0,timeouts:0,rtSum:0,rtCount:0});
+DIFF_ORDER.forEach(k=>sessionStats[k]={rounds:0,pass:0,errors:0,bestLen:0,rtSum:0,rtCount:0,streak:0,longest:0});
 // ===== 状态 =====
 let state={
   level:'entry',running:false,phase:'idle',
-  timers:[],timeTimer:null,
-  curTargets:0,found:0,misses:0,
-  roundsPlayed:0,
-  curTargetDesc:'',
-  roundStart:0,timeLimit:0,timeLeft:0,
+  timers:[],
+  seq:[],inputIdx:0,round:0,
+  bestLen:0,passRounds:0,errors:0,rtSum:0,rtCount:0,
+  roundStartInput:0,clickTimes:[],
 };
 function at(delay,fn){const t=setTimeout(fn,delay);state.timers.push(t);return t;}
-function clearTimers(){state.timers.forEach(t=>clearTimeout(t));state.timers=[];if(state.timeTimer){clearInterval(state.timeTimer);state.timeTimer=null;}}
+function clearTimers(){
+  state.timers.forEach(t=>clearTimeout(t));state.timers=[];
+  document.querySelectorAll('.simon-pad').forEach(p=>p.classList.remove('lit','wrong'));
+}
 // ===== 难度按钮 =====
 function buildDiffBtns(){
   const c=$('diff-all');c.innerHTML='';
@@ -266,135 +249,127 @@ function buildDiffBtns(){
     c.appendChild(b);
   });
 }
-// ===== 渲染 =====
-function renderGrid(items){
-  const cfg=LEVELS[state.level];
-  const wrap=$('grid-wrap');
-  wrap.style.gridTemplateColumns='repeat('+cfg.cols+',1fr)';
-  wrap.innerHTML='';
-  items.forEach(it=>{
-    const cell=document.createElement('div');
-    cell.className='glyph-cell';
-    cell.innerHTML=glyphSVG(it.shape,it.color,64);
-    cell.dataset.target=it.isTarget?'1':'0';
-    cell.onclick=()=>onPick(cell);
-    wrap.appendChild(cell);
-  });
+// ===== 圆盘交互 =====
+function setHub(main,sub){
+  $('simon-hub').innerHTML='<div class="hub-main">'+main+'</div>'+(sub?'<div class="hub-sub">'+sub+'</div>':'');
 }
+function lightPad(pad,dur){
+  const el=document.querySelector('.simon-pad[data-pad="'+pad+'"]');
+  if(!el)return;
+  el.classList.add('lit');
+  setTimeout(()=>el.classList.remove('lit'),dur);
+}
+function enableInput(on){ $('simon-board').classList.toggle('input-on',on); }
 function updateHud(){
-  $('hud-round').textContent=state.roundsPlayed+'/'+TOTAL_ROUNDS;
-  $('hud-found').textContent=state.found+'/'+state.curTargets;
-  $('hud-miss').textContent=state.misses;
-  const s=sessionStats[state.level];
-  $('hud-hit').textContent=s.targets?Math.round(s.found/s.targets*100)+'%':'-';
-  $('progress-bar').style.width=(state.roundsPlayed/TOTAL_ROUNDS*100)+'%';
-  updateTimeHud();
+  $('hud-round').textContent=state.round+'/'+TOTAL_ROUNDS;
+  $('hud-len').textContent=state.seq.length?state.seq.length:LEVELS[state.level].start;
+  $('hud-best').textContent=state.bestLen;
+  $('hud-status').textContent= state.phase==='watch'?'观看中':(state.phase==='input'?'请复述':(state.phase==='done'?'':'准备'));
+  $('progress-bar').style.width=(state.round/TOTAL_ROUNDS*100)+'%';
+}
+// ===== 序列生成（避免连续三次相同，尽量减少连续重复）=====
+function genSeq(len){
+  const s=[];let prev=-1,run=0;
+  for(let i=0;i<len;i++){
+    let v;
+    do{v=randInt(0,3);}while(v===prev&&run>=1&&Math.random()<0.7);
+    s.push(v);
+    if(v===prev)run++;else run=1;
+    prev=v;
+  }
+  return s;
 }
 // ===== 游戏流程 =====
-function toggleGame(){
-  if(state.running)stopGame();
-  else startGame();
-}
+function toggleGame(){ if(state.running)stopGame(); else startGame(); }
 function startGame(){
   initAudio();
-  DIFF_ORDER.forEach(k=>{sessionStats[k]={rounds:0,found:0,targets:0,misses:0,rtSum:0,rtCount:0};});
-  state.roundsPlayed=0;
+  DIFF_ORDER.forEach(k=>{sessionStats[k]={rounds:0,pass:0,errors:0,bestLen:0,rtSum:0,rtCount:0,streak:0,longest:0};});
+  state.round=0;state.bestLen=0;state.passRounds=0;state.errors=0;state.rtSum=0;state.rtCount=0;
   state.running=true;
   $('result-card').style.display='none';
   $('start-btn').textContent='停止训练';
   $('start-btn').classList.add('stop-mode');
+  setHub('准备','');
   updateHud();
   nextRound();
 }
 function nextRound(){
+  state.round++;
   const cfg=LEVELS[state.level];
-  state.curTargets=cfg.targets;
-  state.found=0;state.misses=0;
-  const tColor=COLORS[randInt(0,COLORS.length-1)];
-  const tShape=SHAPES[randInt(0,SHAPES.length-1)];
-  state.curTargetDesc=tColor.name+tShape.name;
-  const items=[];
-  for(let i=0;i<cfg.targets;i++)items.push({shape:tShape.key,color:tColor.hex,isTarget:true});
-  for(let i=0;i<cfg.count-cfg.targets;i++)items.push(genDistractor(tShape.key,tColor.hex,cfg.sim));
-  shuffle(items);
-  renderGrid(items);
-  $('target-hint').textContent='找出所有 '+state.curTargetDesc;
-  $('feedback').textContent='点击所有目标图形';
-  state.roundStart=performance.now();
-  state.timeLimit=cfg.time;state.timeLeft=cfg.time;
-  state.phase='playing';
+  const L=cfg.start+(state.round-1);
+  state.seq=genSeq(L);
+  state.inputIdx=0;
   updateHud();
-  startTimer();
+  $('feedback').textContent='第 '+state.round+' 轮 · 长度 '+L;
+  playSequence(state.seq);
 }
-function onPick(cell){
-  if(state.phase!=='playing'||cell.dataset.done)return;
-  if(cell.dataset.target==='1'){
-    cell.dataset.done='1';
-    cell.classList.add('picked');
-    state.found++;
-    playBeep(880,0.08);
-    updateHud();
-    if(state.found>=state.curTargets)roundDone();
+// 播放序列：每块亮 600ms + 间隔 250ms
+function playSequence(seq){
+  state.phase='watch';
+  enableInput(false);
+  setHub('看','长度 '+seq.length);
+  const on=600,gap=250,step=on+gap;let t=0;
+  seq.forEach((pad)=>{
+    at(t,()=>{ lightPad(pad,on); playBeep(PAD_TONES[pad],on/1000*0.9); });
+    t+=step;
+  });
+  at(t+200,()=>{
+    if(!state.running)return;
+    state.phase='input';
+    enableInput(true);
+    setHub('复述',String(seq.length));
+    $('hud-status').textContent='请复述';
+    state.roundStartInput=performance.now();
+    state.clickTimes=[];
+  });
+}
+function onPadClick(pad){
+  if(state.phase!=='input')return;
+  lightPad(pad,200);
+  playBeep(PAD_TONES[pad],0.18);
+  const now=performance.now();
+  if(state.clickTimes.length){ state.rtSum+=now-state.clickTimes[state.clickTimes.length-1]; state.rtCount++; }
+  else { state.rtSum+=now-state.roundStartInput; state.rtCount++; }
+  state.clickTimes.push(now);
+  if(state.seq[state.inputIdx]===pad){
+    state.inputIdx++;
+    if(state.inputIdx>=state.seq.length) roundSuccess();
   }else{
-    state.misses++;
-    cell.classList.add('wrong');
-    playBeep(300,0.1);
-    setTimeout(()=>cell.classList.remove('wrong'),400);
-    updateHud();
+    roundFail(pad);
   }
 }
-function roundDone(){
+function roundSuccess(){
   state.phase='done';
-  const rt=performance.now()-state.roundStart;
+  enableInput(false);
+  const L=state.seq.length;
   const s=sessionStats[state.level];
-  s.rounds++;s.found+=state.found;s.targets+=state.curTargets;s.misses+=state.misses;
-  if(rt>0){s.rtSum+=rt;s.rtCount++;}
-  playBeep(990,0.18);
-  state.roundsPlayed++;
+  s.rounds++;s.pass++;if(L>s.bestLen)s.bestLen=L;
+  s.streak++;if(s.streak>s.longest)s.longest=s.streak;
+  state.passRounds++;if(L>state.bestLen)state.bestLen=L;
+  playBeep(990,0.2);
+  setHub('✓','');
+  $('feedback').textContent='正确！长度 '+L;
   updateHud();
-  $('feedback').textContent='本轮完成！';
-  at(700,()=>{
-    if(!state.running)return;
-    if(state.roundsPlayed>=TOTAL_ROUNDS)showResult();
-    else nextRound();
-  });
+  at(800,()=>{ if(!state.running)return; afterRound(); });
 }
-// ===== 倒计时（时间压力）=====
-function startTimer(){
-  clearInterval(state.timeTimer);
-  updateTimeHud();
-  state.timeTimer=setInterval(()=>{
-    if(state.phase!=='playing'){clearInterval(state.timeTimer);state.timeTimer=null;return;}
-    const el=performance.now()-state.roundStart;
-    state.timeLeft=Math.max(0,state.timeLimit-el/1000);
-    updateTimeHud();
-    if(state.timeLeft<=0){clearInterval(state.timeTimer);state.timeTimer=null;onTimeout();}
-  },100);
-}
-function updateTimeHud(){
-  const t=$('hud-time');
-  if(state.phase==='playing'||state.phase==='timeout'){
-    t.textContent=state.timeLeft.toFixed(1)+'s';
-    if(state.timeLeft<=5)t.classList.add('urgent');else t.classList.remove('urgent');
-  }else{t.textContent='-';t.classList.remove('urgent');}
-}
-function onTimeout(){
-  if(state.phase!=='playing')return;
-  state.phase='timeout';
-  const rt=performance.now()-state.roundStart;
+function roundFail(pad){
+  state.phase='done';
+  enableInput(false);
+  const L=state.seq.length;
   const s=sessionStats[state.level];
-  s.rounds++;s.found+=state.found;s.targets+=state.curTargets;s.misses+=state.misses;s.timeouts++;
-  if(rt>0){s.rtSum+=rt;s.rtCount++;}
+  s.rounds++;s.errors++;s.streak=0;
+  state.errors++;
   playBeep(200,0.3);
-  document.querySelectorAll('.glyph-cell[data-target="1"]:not([data-done])').forEach(c=>c.classList.add('wrong'));
-  state.roundsPlayed++;
+  const el=document.querySelector('.simon-pad[data-pad="'+pad+'"]');
+  if(el){el.classList.add('wrong');setTimeout(()=>el.classList.remove('wrong'),450);}
+  setHub('✗','');
+  $('feedback').textContent='错误！应点 '+PAD_NAMES[state.seq[state.inputIdx]];
   updateHud();
-  $('feedback').textContent='时间到！漏找 '+(state.curTargets-state.found)+' 个目标';
-  at(1100,()=>{
-    if(!state.running)return;
-    if(state.roundsPlayed>=TOTAL_ROUNDS)showResult();
-    else nextRound();
-  });
+  at(1000,()=>{ if(!state.running)return; afterRound(); });
+}
+function afterRound(){
+  if(state.round>=TOTAL_ROUNDS)showResult();
+  else nextRound();
 }
 function stopGame(){
   clearTimers();
@@ -405,43 +380,42 @@ function stopGame(){
 function showResult(){
   state.running=false;
   clearTimers();
-  state.phase='idle';updateTimeHud();
+  state.phase='idle';
   $('start-btn').textContent='开始训练';
   $('start-btn').classList.remove('stop-mode');
-  $('grid-wrap').innerHTML='';
-  $('target-hint').textContent='选好难度，点开始训练';
+  setHub('准备','');
+  $('feedback').textContent='选好难度，点开始训练';
   // 累计
-  let tf=0,tt=0,tm=0,tto=0,rtSum=0,rtC=0;
-  DIFF_ORDER.forEach(k=>{const s=sessionStats[k];tf+=s.found;tt+=s.targets;tm+=s.misses;tto+=s.timeouts;rtSum+=s.rtSum;rtC+=s.rtCount;});
-  const hitRate=tt?Math.round(tf/tt*100):0;
-  const avgRt=rtC?(rtSum/rtC/1000).toFixed(1):'-';
-  // 评级（含时间压力）
+  let tp=0,te=0,tb=0,trSum=0,trC=0,tLong=0;
+  DIFF_ORDER.forEach(k=>{const s=sessionStats[k];tp+=s.pass;te+=s.errors;if(s.bestLen>tb)tb=s.bestLen;trSum+=s.rtSum;trC+=s.rtCount;if(s.longest>tLong)tLong=s.longest;});
+  const avgRt=trC?(trSum/trC/1000).toFixed(2):'-';
+  // 评级
   let grade,evalTxt;
-  if(hitRate>=90&&tm<=4&&tto<=1){grade='优秀';evalTxt='在限时压力下你的选择性注意依然出色：多数轮次从容找全目标，误点与超时极少，抗时间压迫能力强。';}
-  else if(hitRate>=75&&tto<=3){grade='良好';evalTxt='整体良好，但限时下偶有漏找或超时。建议先整体扫视定位、再聚焦点击，减少冲动与犹豫。';}
-  else if(hitRate>=60){grade='中等';evalTxt='命中率中等，时间压力上来后容易分心或被逼停。建议从入门难度练起，逐步提升特征辨别与搜索速度。';}
-  else{grade='需加强';evalTxt='命中率偏低、误点或超时偏多，说明在限时压力下尚未稳定掌握目标与干扰的细微差异。放慢节奏、逐格确认会有帮助。';}
+  if(state.passRounds>=9&&state.errors<=1){grade='优秀';evalTxt='你的序列记忆容量与顺序保持非常稳定：10 轮中几乎全部通过，错误极少，工作记忆的存储与复述能力出色。';}
+  else if(state.passRounds>=7){grade='良好';evalTxt='整体表现良好，大多数轮次能完整复述。偶尔出错多发生在序列变长时，说明容量接近上限，可通过刻意延长复述来扩充广度。';}
+  else if(state.passRounds>=5){grade='中等';evalTxt='能通过约一半轮次，序列长度增加后容易跟丢顺序。建议从入门难度稳练，关注「分组复述」策略以提升保持。';}
+  else{grade='需加强';evalTxt='通过轮次偏少、错误偏多，说明当前序列长度已超出舒适容量。先从短序列（入门/初级）建立稳定的编码—复述环路，再循序渐进加长。';}
   const condRows=DIFF_ORDER.map(k=>{
     const s=sessionStats[k];
-    const hr=s.targets?Math.round(s.found/s.targets*100)+'%':'-';
-    const ar=s.rtCount?(s.rtSum/s.rtCount/1000).toFixed(1)+'s':'-';
+    const ar=s.rtCount?(s.rtSum/s.rtCount/1000).toFixed(2)+'s':'-';
     return '<div class="cond-row"><span class="cl">'+LEVELS[k].name+'</span>'+
-      '<span class="cv">命中 '+hr+' · 误点 '+s.misses+' · 超时 '+s.timeouts+' · 反应 '+ar+'</span></div>';
+      '<span class="cv">通过 '+s.pass+'/'+s.rounds+' · 最佳长度 '+s.bestLen+' · 错误 '+s.errors+' · 反应 '+ar+'</span></div>';
   }).join('');
   $('result-card').innerHTML=
-    '<div class="result-title">找不同 · 训练结果</div>'+
+    '<div class="result-title">西蒙任务 · 训练结果</div>'+
     '<div class="result-grid">'+
-      '<div class="result-item"><div class="val">'+hitRate+'%</div><div class="lbl">总命中率</div></div>'+
-      '<div class="result-item"><div class="val">'+(avgRt==='-'?'-':avgRt+'s')+'</div><div class="lbl">平均反应时</div></div>'+
-      '<div class="result-item"><div class="val">'+tm+'</div><div class="lbl">误点总数</div></div>'+
-      '<div class="result-item"><div class="val">'+tto+'</div><div class="lbl">超时轮数</div></div>'+
+      '<div class="result-item"><div class="val">'+state.bestLen+'</div><div class="lbl">记忆广度(最长)</div></div>'+
+      '<div class="result-item"><div class="val">'+state.passRounds+'/'+TOTAL_ROUNDS+'</div><div class="lbl">通过轮数</div></div>'+
+      '<div class="result-item"><div class="val">'+state.errors+'</div><div class="lbl">错误次数</div></div>'+
+      '<div class="result-item"><div class="val">'+(avgRt==='-'?'-':avgRt+'s')+'</div><div class="lbl">平均点击间隔</div></div>'+
     '</div>'+
     '<div class="result-section"><div class="section-title">分难度统计</div>'+condRows+'</div>'+
     '<div class="result-eval">'+
       '<div class="eval-line">综合评级：<b style="color:var(--accent)">'+grade+'</b></div>'+
       '<div class="eval-line">'+evalTxt+'</div>'+
-      (rtC?'<div class="eval-line">平均反应时 '+avgRt+' 秒/轮，数值越大说明限时下搜索越慢。</div>':'')+
-      (tto>0?'<div class="eval-line">共有 '+tto+' 轮未在限时内完成，超时越多说明时间压迫下稳定性越不足。</div>':'<div class="eval-line">全部轮次均在限时内完成，时间管理良好。</div>')+
+      (trC?'<div class="eval-line">平均点击间隔 '+avgRt+' 秒/步，间隔越短说明编码—复述越流畅。</div>':'')+
+      (tLong>0?'<div class="eval-line">最长连续通过 '+tLong+' 轮，反映稳定保持的上限。</div>':'')+
+      '<div class="eval-line">理论：西蒙任务依赖 Baddeley 工作记忆的<b>视空间模板</b>暂存序列位置、<b>中央执行</b>系统维持顺序与抑制干扰；广度越长，对复述策略与注意控制的负荷越高。</div>'+
     '</div>'+
     '<div class="result-btns">'+
       '<button class="btn-retry" onclick="startGame()">再来一局</button>'+
@@ -451,6 +425,12 @@ function showResult(){
 }
 // ===== 初始化 =====
 buildDiffBtns();
+document.querySelectorAll('.simon-pad').forEach(p=>{ p.onclick=()=>onPadClick(+p.dataset.pad); });
+document.addEventListener('keydown',e=>{
+  if(state.phase!=='input')return;
+  const map={'1':0,'2':1,'3':2,'4':3};
+  if(e.key in map)onPadClick(map[e.key]);
+});
 // ===== 儿童色彩切换 =====
 function toggleKidMode(){ document.body.classList.toggle('kid-mode'); }
 </script>

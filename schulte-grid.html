@@ -2332,6 +2332,21 @@
           return;
         }
 
+        // 变体模式下切偏移/混乱：保持变体仅切子模式（修复：原 2374 段被下方 variant 整段拦截，前移至此优先）
+        if (this.isVariantMode && (mode === 'offset' || mode === 'chaos')) {
+          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          this.currentMode = mode;
+          var btns2v = document.querySelectorAll('.mode-btn');
+          for (var bi2v = 0; bi2v < btns2v.length; bi2v++) {
+            btns2v[bi2v].classList.remove('active');
+            if (btns2v[bi2v].dataset.mode === mode) {
+              btns2v[bi2v].classList.add('active');
+            }
+          }
+          this.reset();
+          return;
+        }
+
         // 变体模式
         if (mode === 'variant') {
           if (this.isVariantMode) {
@@ -2369,20 +2384,6 @@
         if (this.isPlaying) {
           this.stopTimer();
           this.isPlaying = false;
-        }
-
-        // 变体模式下切换偏移/混乱：不退出变体模式，直接重新渲染（保留虚无状态）
-        if (this.isVariantMode && (mode === 'offset' || mode === 'chaos')) {
-          this.currentMode = mode;
-          var btns2v = document.querySelectorAll('.mode-btn');
-          for (var bi2v = 0; bi2v < btns2v.length; bi2v++) {
-            btns2v[bi2v].classList.remove('active');
-            if (btns2v[bi2v].dataset.mode === mode) {
-              btns2v[bi2v].classList.add('active');
-            }
-          }
-          this.reset();
-          return;
         }
 
         // 马赛克模式下切换偏移/混乱：不退出马赛克模式，直接重新渲染
@@ -2462,6 +2463,18 @@
           this.exitVisualParallaxMode();
         }
 
+        // 统一毁灭模式清理保险：切到非 offset/chaos 的其他模式时确保 destroyMode 已清零（修复毁灭5残留）
+        // 上方毁灭5保持段（offset/chaos）已 return，不会到此；此处覆盖真正切走毁灭5的 normal/variant 等路径
+        if (this.destroyMode > 0) {
+          this.destroyMode = 0;
+          var dbtnG = document.querySelector('.destroy-toggle');
+          if (dbtnG) {
+            dbtnG.dataset.destroy = 'false';
+            dbtnG.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
+            dbtnG.textContent = '毁灭';
+          }
+        }
+
         this.currentMode = mode;
 
         var buttons = document.querySelectorAll('.mode-btn');
@@ -2519,6 +2532,16 @@
           if (this.isVariantMode) this.exitVariantMode();
           if (this.isSquareMoveMode) this.exitSquareMoveMode();
           if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+          // 毁灭模式重置（修复：毁灭5下进入马赛克需清理 destroyMode，否则残留）
+          if (this.destroyMode > 0) {
+            this.destroyMode = 0;
+            var dbtnM = document.querySelector('.destroy-toggle');
+            if (dbtnM) {
+              dbtnM.dataset.destroy = 'false';
+              dbtnM.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
+              dbtnM.textContent = '毁灭';
+            }
+          }
           // 隐藏其他容器，显示 mosaic-container
           document.getElementById('grid-container').style.display = 'none';
           document.getElementById('circular-container').style.display = 'none';
@@ -3390,7 +3413,7 @@
             poly.setAttribute('points', pointsStr);
             var fillColor = cellColors[idx];
             poly.setAttribute('fill', fillColor);
-            poly.setAttribute('opacity', '0.7');
+            poly.setAttribute('opacity', '1');
             poly.originalFill = fillColor;
             poly.setAttribute('stroke', 'rgba(0,0,0,0.15)');
             poly.setAttribute('stroke-width', '1');
@@ -4171,13 +4194,14 @@
 
       SchulteGridGame.prototype.renderGrid = function() {
         var container = document.getElementById('grid-container');
-        var cellSize = this.calculateCellSize();
-
         // 先清理可能残留的特殊模式 class，避免影响显示
         container.classList.remove('destroy-mode-4', 'destroy-mode-5');
-        // 恢复 game-container 默认宽度（毁灭5会放大）
+        // 恢复 game-container 默认宽度（毁灭5会放大）。必须在 calculateCellSize 之前执行，
+        // 否则重开时容器仍带着上次毁灭5撑大的 maxWidth，calculateCellSize 读到的 clientWidth 越来越大，形成滚雪球放大
         var gcRestore = document.querySelector('.game-container');
         if (gcRestore) gcRestore.style.maxWidth = '';
+
+        var cellSize = this.calculateCellSize();
 
         // 毁灭4模式：特殊渲染路径
         if (this.destroyMode === 4) {
@@ -5578,8 +5602,9 @@
             sectors[i].style.transition = 'fill 0.8s ease, stroke 0.8s ease';
             sectors[i].classList.remove('destroy-color-cycle');
           } else if (isDestroy === 1) {
-            sectors[i].style.fill = (i % 2 === 0) ? '#000000' : '#f2f2f2';
-            sectors[i].style.stroke = (i % 2 === 0) ? '#333333' : '#cccccc';
+            var siFill = parseInt(sg.getAttribute('data-sector')) || 0;
+            sectors[i].style.fill = (siFill % 2 === 0) ? '#000000' : '#f2f2f2';
+            sectors[i].style.stroke = (siFill % 2 === 0) ? '#333333' : '#cccccc';
           } else if (isVoid) {
             sectors[i].style.fill = '';
             sectors[i].style.stroke = '';
@@ -5598,11 +5623,9 @@
             texts[j].style.stroke = '#ffffff';
             texts[j].classList.add('destroy-text-cycle');
           } else if (isDestroy === 1) {
-            var ringEl = texts[j].parentElement.parentElement;
-            var ringId = ringEl.getAttribute('id') || '';
-            var ringIdx = parseInt(ringId.replace('ring-', '')) || 0;
-            texts[j].style.fill = (ringIdx % 2 === 0) ? '#ffffff' : '#000000';
-            texts[j].style.stroke = (ringIdx % 2 === 0) ? '#ffffff' : '#000000';
+            var siTxt = parseInt(texts[j].parentElement.getAttribute('data-sector')) || 0;
+            texts[j].style.fill = (siTxt % 2 === 0) ? '#f2f2f2' : '#000000';
+            texts[j].style.stroke = (siTxt % 2 === 0) ? '#f2f2f2' : '#000000';
             texts[j].classList.add('destroy-text');
           } else if (isVoid) {
             texts[j].style.fill = '';

@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>视觉辨别力 · 色彩识别</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  :root { --cell: min(5.5vh, 8vw, 52px); }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
+    background: #eef1f6;
+    color: #1f2430;
+    line-height: 1.5;
+    padding: 12px;
+    height: 100vh;
+    display: flex; flex-direction: column;
+  }
+
+  /* 顶栏：返回 + 标题 + 玩法按钮（始终在顶部） */
+  .topbar {
+    flex: none;
+    width: 100%; max-width: 1080px; margin: 0 auto 10px;
+    display: flex; align-items: center; gap: 12px;
+    background: #ffffff; border-radius: 14px; padding: 10px 18px;
+    box-shadow: 0 2px 10px rgba(20,30,60,0.06);
+  }
+  .topbar .back-btn {
+    border: 1px solid #d4d9e2; background: #f6f8fb; color: #33405a;
+    padding: 7px 16px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .topbar .back-btn:active { transform: scale(0.97); }
+  .topbar h1 { font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+  .topbar .help-btn {
+    margin-left: auto; border: 1px solid #d4d9e2; background: #f6f8fb; color: #33405a;
+    padding: 7px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .topbar .help-btn:active { transform: scale(0.97); }
+
+  /* 主容器：纵向。上方 = 左工具栏 + 右(展示区在上、游戏区在下)；下方 = 结果卡 */
+  .shell {
+    width: 100%; max-width: 1080px; margin: 0 auto;
+    flex: 1; min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; gap: 12px; align-items: stretch;
+  }
+  /* 主区：左工具栏 + 右列（展示区在上、游戏区在下） */
+  .main { flex: 1; min-height: 0; display: flex; gap: 10px; align-items: stretch; }
+  .left-col { width: 210px; flex: none; display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+  .right-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+
+  /* 左侧工具栏（窄栏，不再占满宽） */
+  .toolbar {
+    width: 210px; flex: none; align-self: flex-start;
+    background: #ffffff; border-radius: 12px; padding: 10px 12px;
+    box-shadow: 0 2px 10px rgba(20,30,60,0.06);
+  }
+  .sec-title { font-size: 12px; font-weight: 800; color: #475069; margin: 6px 0 4px; }
+  .sec-title:first-child { margin-top: 0; }
+
+  .diff-row { display: flex; flex-wrap: nowrap; gap: 5px; }
+  .diff-btn {
+    flex: 1 1 0; min-width: 0;
+    border: 1px solid #d4d9e2; background: #f6f8fb; color: #33405a;
+    padding: 5px 2px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+    text-align: center; white-space: nowrap;
+  }
+  .diff-btn.active { background: #2f6bff; border-color: #2f6bff; color: #fff; box-shadow: 0 3px 10px rgba(47,107,255,0.3); }
+  .diff-btn:active { transform: scale(0.97); }
+
+  .switch-row { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; }
+  .switch-row .lab { font-size: 13px; font-weight: 700; color: #33405a; }
+  .switch { position: relative; width: 50px; height: 28px; flex: none; }
+  .switch input { display: none; }
+  .switch .track {
+    position: absolute; inset: 0; background: #cfd6e2; border-radius: 999px; transition: background .2s;
+  }
+  .switch .knob {
+    position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: #fff;
+    border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .switch input:checked + .track { background: #2f6bff; }
+  .switch input:checked + .track + .knob { transform: translateX(22px); }
+
+  .start-btn {
+    width: 100%; margin-top: 8px; padding: 8px; border: none; border-radius: 10px;
+    background: #2f6bff; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(47,107,255,0.32);
+  }
+  .start-btn.stopping { background: #ef4444; box-shadow: 0 4px 14px rgba(239,68,68,0.32); }
+  .start-btn:active { transform: scale(0.98); }
+
+  .hud { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11px; }
+  .hud .line { display: flex; gap: 3px; color: #5b6478; }
+  .hud .line b { color: #1f2430; font-weight: 800; }
+  .status { margin-top: 6px; font-size: 11.5px; color: #2f6bff; font-weight: 700; min-height: 16px; }
+
+  /* 右侧展示区（无白卡方框，直接敞开在浅色页上；缺块即露出底色=缺失） */
+  .showcase-area {
+    flex: none; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 4px 8px;
+  }
+  .showcase-area .cap { font-size: 11px; color: #8a93a6; margin-bottom: 5px; text-align: center; }
+  .showcase { width: min(108px, 28vw); height: min(108px, 28vw); }
+  .showcase svg { width: 100%; height: 100%; display: block; }
+
+  /* 展示区下方的游戏区（占右列剩余高度，居中网格） */
+  .game-area { flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .grid {
+    display: grid; gap: 4px;
+    grid-template-columns: repeat(var(--cols, 5), var(--cell));
+    grid-template-rows: repeat(var(--rows, 5), var(--cell));
+    max-width: 100%; max-height: 100%;
+  }
+  .cell {
+    position: relative; min-width: 0; min-height: 0; cursor: pointer;
+    background: #fbfcfe; border: 1px solid #e6eaf1; border-radius: 8px;
+    transition: transform .08s;
+  }
+  .cell:active { transform: scale(0.95); }
+  .cell svg { width: 100%; height: 100%; display: block; border-radius: 10px; }
+  .cell.correct { box-shadow: 0 0 0 3px #16a34a inset; border-color: #16a34a; }
+  .cell.wrong { animation: shake .4s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .mark {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; opacity: 0; pointer-events: none;
+  }
+  .mark.show-check { opacity: 1; color: #16a34a; }
+  .mark.show-cross { opacity: 1; color: #ef4444; }
+
+  /* 动模式：仅下方网格圆环绕图形中心(60,60)旋转（view-box 坐标系，缺失段也不偏心） */
+  .grid.motion .ring-b { animation: spin-cw 9s linear infinite; transform-box: view-box; transform-origin: 50% 50%; will-change: transform; }
+  .grid.motion .ring-c { animation: spin-ccw 9s linear infinite; transform-box: view-box; transform-origin: 50% 50%; will-change: transform; }
+  @keyframes spin-cw { to { transform: rotate(360deg); } }
+  @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+
+  .result-card {
+    display: none; flex: none; padding: 12px; border-radius: 12px; width: 100%;
+    background: #f7f9ff; border: 1px solid #dbe4ff;
+  }
+  .result-card h3 { font-size: 15px; margin-bottom: 10px; color: #2f6bff; }
+  .result-card .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .result-card .stat {
+    flex: 1 1 100%; background: #fff; border-radius: 10px; padding: 8px 10px; border: 1px solid #e6eaf1;
+  }
+  .result-card .stat .k { font-size: 12px; color: #8a93a6; }
+  .result-card .stat .v { font-size: 20px; font-weight: 800; color: #1f2430; }
+  .result-card .interp { font-size: 13px; color: #475069; line-height: 1.8; }
+  .result-card .interp b { color: #2f6bff; }
+
+  /* 玩法弹窗 */
+  .modal-mask {
+    display: none; position: fixed; inset: 0; background: rgba(15,20,35,0.45);
+    z-index: 50; align-items: flex-start; justify-content: center; padding: 4vh 16px;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 16px; max-width: 480px; width: 100%;
+    max-height: 92vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid #eef1f6; position: sticky; top: 0; background: #fff;
+  }
+  .modal-head span { font-size: 16px; font-weight: 800; color: #1f2430; }
+  .modal-close {
+    border: none; background: #f0f2f7; color: #475069; width: 30px; height: 30px;
+    border-radius: 8px; font-size: 15px; cursor: pointer;
+  }
+  .modal-body { padding: 16px 18px 22px; }
+  .guide-text { font-size: 13px; color: #5b6478; line-height: 1.8; }
+  .guide-text b { color: #1f2430; }
+  .guide-text .m { color: #c0392b; font-weight: 700; }
+  .guide-text .hint { color: #b8860b; font-weight: 700; }
+
+  /* 窄屏（手机竖屏）：左工具栏 + 右列(展示区在上、游戏区在下) 仍为左右一行 */
+  @media (max-width: 560px) {
+    .main { flex-direction: row; }
+    .toolbar { width: 42%; padding: 10px 10px; }
+    .toolbar .sec-title { font-size: 12px; margin: 10px 0 6px; }
+    .diff-btn { font-size: 12px; padding: 7px 4px; }
+    .switch-row .lab { font-size: 12px; }
+    .start-btn { font-size: 13px; padding: 10px; margin-top: 10px; }
+    .hud { font-size: 11.5px; margin-top: 10px; }
+    .showcase-area { width: 58%; }
+    .showcase { width: min(120px, 36vw); height: min(120px, 36vw); }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="back-btn" onclick="location.href='index.html'">返回</button>
+    <h1>视觉辨别力 · 色彩识别</h1>
+    <button class="help-btn" id="help-btn">📖 玩法</button>
+  </div>
+
+  <div class="shell">
+    <div class="main">
+      <div class="left-col">
+        <div class="toolbar">
+          <div class="sec-title">难度（网格 / 配色）</div>
+          <div class="diff-row" id="diff-row">
+            <button class="diff-btn active" data-diff="入门">入门</button>
+            <button class="diff-btn" data-diff="普通">普通</button>
+            <button class="diff-btn" data-diff="困难">困难</button>
+          </div>
+
+          <div class="sec-title">动模式</div>
+          <div class="switch-row">
+            <span class="lab">圆环旋转</span>
+            <label class="switch">
+              <input type="checkbox" id="motion-toggle">
+              <span class="track"></span><span class="knob"></span>
+            </label>
+          </div>
+
+          <button class="start-btn" id="start-btn">开始训练</button>
+
+          <div class="hud">
+            <div class="line"><span>回合</span><b id="hud-round">0 / 10</b></div>
+            <div class="line"><span>已找 / 共</span><b id="hud-found">0 / 0</b></div>
+            <div class="line"><span>误点</span><b id="hud-err">0</b></div>
+          </div>
+          <div class="status" id="status">点「开始训练」开始</div>
+        </div>
+
+        <div class="result-card" id="result-card">
+          <h3>训练结果</h3>
+          <div class="stats" id="result-stats"></div>
+          <div class="interp" id="result-interp"></div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="showcase-area">
+          <div class="cap">展示区（B、C 各有 1 块空缺）<br>在下方找出与展示区<b>相同、或其水平/垂直镜像</b>的图形，约 10% 符合</div>
+          <div class="showcase" id="showcase"></div>
+        </div>
+
+        <div class="game-area">
+          <div class="grid" id="grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 玩法弹窗 -->
+  <div class="modal-mask" id="help-mask">
+    <div class="modal" id="help-modal">
+      <div class="modal-head">
+        <span>玩法说明</span>
+        <button class="modal-close" id="help-close">✕</button>
+      </div>
+      <div class="modal-body guide-text">
+        上方<b>展示区</b>有一个中心圆 <b>A</b>、内环 <b>B</b>(B1–B4)、外环 <b>C</b>(C1–C4)，共 <b>9 块</b>；其中 <b>B 与 C 各有 1 块空缺</b>（露出底色，即"缺块"）。<br><br>
+        下方是一网格<b>完整图形</b>：每个完整图在展示区的空缺处，填上了「12 色阶里<b>没有</b>在其它块出现的颜色」（外来色）。其中约 <b>10%</b> 的图与展示区<b>7 块实色的位置与颜色完全一致</b>（空缺处填的是外来色，仅作干扰、<b>不作为判定依据</b>——你只需对照展示区看得到的 7 块位置）。<br>
+        <b>镜像也算相同</b>：把展示区图案<b>水平翻转</b>或<b>垂直翻转</b>（或两者都翻）后的图形，同样算匹配；网格里的图形可能以任意翻转姿态出现，请认准"7 块位置与颜色是否一致"。<br><br>
+        观察展示区，点击<b>所有</b>配色相同的图形：<b>正确</b>响提示音并打勾；<b>错误</b>响错误音并打叉（可继续找）。找齐本轮所有匹配即进入下一回合。<br><br>
+        <span class="hint">动模式</span>：开启后下方所有图形的 B/C 圆环会缓慢正反向旋转，增加辨识难度。
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ===== 难度配置 =====
+    var DIFFS = {
+      "入门": { rows: 5, cols: 5, colors: 3 },
+      "普通": { rows: 8, cols: 6, colors: 4 },
+      "困难": { rows: 10, cols: 7, colors: 5 }
+    };
+
+    // ===== 12 色阶（高对比、相邻区分度更大：红/橙/琥珀/绿/深绿/青/藏青/蓝/靛紫/品红/粉/玫红） =====
+    var SCALE12 = [
+      "#D62828", "#F77F00", "#FCBF49", "#80B918",
+      "#2D6A4F", "#168AAD", "#1D3557", "#4361EE",
+      "#7209B7", "#B5179E", "#F72585", "#FF8FAB"
+    ];
+
+    // 缺块外来色的均衡使用计数（保证 12 色阶未现色出现比例差不多）
+    var missingUsage = {};
+
+    // ===== 状态 =====
+    var state = {
+      difficulty: "入门",
+      motion: false,
+      running: false,
+      round: 0,
+      totalRounds: 10,
+      totalCorrect: 0,
+      errors: 0,
+      rts: [],
+      roundStart: 0,
+      sampleShow: null,   // 展示区配置（缺块为 null = 真空缺）
+      sampleFull: null,   // 完整配置（缺块填外来色，用于下方正确图与比较）
+      gridConfigs: [],
+      correctTotal: 0,
+      correctFound: 0
+    };
+
+    // ===== 工具 =====
+    function shuffle(a) {
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+    function cloneCfg(c) { return { A: c.A, B: c.B.slice(), C: c.C.slice() }; }
+    function randItem(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+    // 环形扇区路径
+    function annularSector(cx, cy, rIn, rOut, a0, a1) {
+      function pt(r, a) {
+        var rad = a * Math.PI / 180;
+        return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+      }
+      var p0 = pt(rOut, a0), p1 = pt(rOut, a1), p2 = pt(rIn, a1), p3 = pt(rIn, a0);
+      var large = (a1 - a0) > 180 ? 1 : 0;
+      return "M " + p0[0].toFixed(2) + " " + p0[1].toFixed(2) +
+             " A " + rOut + " " + rOut + " 0 " + large + " 1 " + p1[0].toFixed(2) + " " + p1[1].toFixed(2) +
+             " L " + p2[0].toFixed(2) + " " + p2[1].toFixed(2) +
+             " A " + rIn + " " + rIn + " 0 " + large + " 0 " + p3[0].toFixed(2) + " " + p3[1].toFixed(2) + " Z";
+    }
+
+    // 均衡抽取一个「未出现」的色阶颜色（用得少优先）
+    function pickSpecial(eligible) {
+      var min = Infinity, cands = [];
+      eligible.forEach(function (c) {
+        var u = missingUsage[c] || 0;
+        if (u < min) { min = u; cands = [c]; }
+        else if (u === min) cands.push(c);
+      });
+      var pick = cands[Math.floor(Math.random() * cands.length)];
+      missingUsage[pick] = (missingUsage[pick] || 0) + 1;
+      return pick;
+    }
+
+    // 生成样本：返回展示区(show, 缺块 null) 与 完整版(full, 缺块填外来色)
+    function genSample(n) {
+      var pool = shuffle(SCALE12.slice());
+      var vis = pool.slice(0, n);                       // n 种出现的颜色
+      var base = { A: vis[0], B: [vis[1 % n], 0, 0, 0], C: [vis[2 % n], 0, 0, 0] };
+      for (var i = 1; i < 4; i++) base.B[i] = vis[Math.floor(Math.random() * n)];
+      for (var j = 1; j < 4; j++) base.C[j] = vis[Math.floor(Math.random() * n)];
+
+      var appear = {};
+      appear[base.A] = 1;
+      base.B.forEach(function (c) { appear[c] = 1; });
+      base.C.forEach(function (c) { appear[c] = 1; });
+      var eligible = SCALE12.filter(function (c) { return !appear[c]; });
+
+      var missingB = Math.floor(Math.random() * 4);
+      var missingC = Math.floor(Math.random() * 4);
+
+      var show = cloneCfg(base);
+      show.B[missingB] = null;                          // 展示区：真空缺
+      show.C[missingC] = null;
+
+      var full = cloneCfg(base);
+      full.B[missingB] = pickSpecial(eligible);         // 完整图：缺块填外来色
+      full.C[missingC] = pickSpecial(eligible);
+
+      return { show: show, full: full };
+    }
+
+    // 构建单个图形 SVG（所有圆缩小、圆环变薄；rotB/rotC 为 B/C 环随机初始角度）
+    function buildFigureSVG(cfg, rotB, rotC) {
+      var cx = 60, cy = 60;
+      var rA = 14, rInB = 16, rOutB = 24.4, rInC = 26.4, rOutC = 34.8;
+      var parts = "";
+      parts += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rA + '" fill="' + cfg.A + '" stroke="#cfcfcf" stroke-width="0.6"/>';
+
+      var bparts = "";
+      for (var i = 0; i < 4; i++) {
+        if (cfg.B[i] === null) continue;                // 缺块不绘制（露出底色 = 缺失）
+        var a0 = -90 + i * 90, a1 = -90 + (i + 1) * 90;
+        bparts += '<path d="' + annularSector(cx, cy, rInB, rOutB, a0, a1) + '" fill="' + cfg.B[i] + '" stroke="#cfcfcf" stroke-width="0.6"/>';
+      }
+      var btr = rotB ? ' transform="rotate(' + rotB + ' ' + cx + ' ' + cy + ')"' : '';
+      parts += '<g class="ring-b"' + btr + '>' + bparts + '</g>';
+
+      var cparts = "";
+      for (var j = 0; j < 4; j++) {
+        if (cfg.C[j] === null) continue;
+        var b0 = -90 + j * 90, b1 = -90 + (j + 1) * 90;
+        cparts += '<path d="' + annularSector(cx, cy, rInC, rOutC, b0, b1) + '" fill="' + cfg.C[j] + '" stroke="#cfcfcf" stroke-width="0.6"/>';
+      }
+      var ctr = rotC ? ' transform="rotate(' + rotC + ' ' + cx + ' ' + cy + ')"' : '';
+      parts += '<g class="ring-c"' + ctr + '>' + cparts + '</g>';
+
+      return '<svg viewBox="0 0 120 120" class="fig">' + parts + '</svg>';
+    }
+
+    // 干扰项：在正确配置上改 1–3 块颜色（取自 12 色阶、保证不同）
+    // 关键：必须至少改动 1 块「展示区可见」的实色，否则会与展示区 7 块实色完全相同而误判为正确
+    function makeDistractor(src, show) {
+      var c = cloneCfg(src);
+      var allSegs = [["A"], ["B", 0], ["B", 1], ["B", 2], ["B", 3], ["C", 0], ["C", 1], ["C", 2], ["C", 3]];
+      var k = 1 + Math.floor(Math.random() * 3);
+      var picks = shuffle(allSegs.slice()).slice(0, k);
+      // 已选线段里是否包含至少 1 块展示区可见实色
+      var hasVisible = picks.some(function (p) {
+        if (p[0] === "A") return true;
+        if (p[0] === "B") return show.B[p[1]] !== null;
+        if (p[0] === "C") return show.C[p[1]] !== null;
+        return false;
+      });
+      if (!hasVisible) {
+        // 把第一个改动点强制换成一块可见实色
+        var visSegs = [["A"]];
+        for (var vi = 0; vi < 4; vi++) if (show.B[vi] !== null) visSegs.push(["B", vi]);
+        for (var vj = 0; vj < 4; vj++) if (show.C[vj] !== null) visSegs.push(["C", vj]);
+        picks[0] = visSegs[Math.floor(Math.random() * visSegs.length)];
+      }
+      picks.forEach(function (p) {
+        var cur = p[0] === "A" ? c.A : c[p[0]][p[1]];
+        var pool = SCALE12.filter(function (x) { return x !== cur; });
+        var nc = randItem(pool);
+        if (p[0] === "A") c.A = nc; else c[p[0]][p[1]] = nc;
+      });
+      return c;
+    }
+
+    // 判定：仅比较「展示区可见的实色」块（空缺位置的外来色不参与判定）
+    // 这样玩家只需对照展示区 7 块实色即可，公平可玩
+    function segsMatch(cfg, show) {
+      if (cfg.A !== show.A) return false;
+      for (var i = 0; i < 4; i++) {
+        if (show.B[i] !== null && cfg.B[i] !== show.B[i]) return false;
+        if (show.C[i] !== null && cfg.C[i] !== show.C[i]) return false;
+      }
+      return true;
+    }
+
+    // 镜像变换：数组顺序 i 固定为 0=上 1=右 2=下 3=左
+    //   水平翻转(左右换)：B[1]↔B[3]，上下不动 → [0,3,2,1]
+    //   垂直翻转(上下换)：B[0]↔B[2]，左右不动 → [2,1,0,3]
+    function mirrorH(c) { return { A: c.A, B: [c.B[0], c.B[3], c.B[2], c.B[1]], C: [c.C[0], c.C[3], c.C[2], c.C[1]] }; }
+    function mirrorV(c) { return { A: c.A, B: [c.B[2], c.B[1], c.B[0], c.B[3]], C: [c.C[2], c.C[1], c.C[0], c.C[3]] }; }
+    function mirrorHV(c) { return mirrorH(mirrorV(c)); }
+
+    // 游戏核心规则（用户的"包换/包含"）：展示区原图，及其水平 / 垂直 / 水平+垂直 镜像，都算相同
+    function isCorrectFigure(cfg, show) {
+      return segsMatch(cfg, show) || segsMatch(cfg, mirrorH(show)) ||
+             segsMatch(cfg, mirrorV(show)) || segsMatch(cfg, mirrorHV(show));
+    }
+
+    // ===== 音效 =====
+    var audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    }
+    function playBeep(freq, dur, type) {
+      if (!audioCtx) return;
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = type || "sine";
+      o.frequency.value = freq;
+      o.connect(g); g.connect(audioCtx.destination);
+      var t = audioCtx.currentTime;
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+
+    // ===== DOM =====
+    var showcaseEl = document.getElementById("showcase");
+    var gridEl = document.getElementById("grid");
+    var startBtn = document.getElementById("start-btn");
+    var statusEl = document.getElementById("status");
+    var hudRound = document.getElementById("hud-round");
+    var hudFound = document.getElementById("hud-found");
+    var hudErr = document.getElementById("hud-err");
+    var resultCard = document.getElementById("result-card");
+    var resultStats = document.getElementById("result-stats");
+    var resultInterp = document.getElementById("result-interp");
+    var helpBtn = document.getElementById("help-btn");
+    var helpMask = document.getElementById("help-mask");
+    var helpClose = document.getElementById("help-close");
+    var helpModal = document.getElementById("help-modal");
+
+    // ===== 渲染 =====
+    function renderShowcase() {
+      // 展示区固定角度（不随机），作为对照样板
+      showcaseEl.innerHTML = buildFigureSVG(state.sampleShow, 0, 0);
+    }
+
+    // 动态计算格子尺寸：上限 = 展示区大小，确保在游戏区内整屏放下不裁剪
+    function sizeGrid() {
+      var d = DIFFS[state.difficulty];
+      if (!d) return;
+      var gap = 4; // 须与 .grid 的 gap 一致
+      var pa = gridEl.parentElement; // .game-area
+      var availW = pa.clientWidth - 4;
+      var availH = pa.clientHeight - 4;
+      var cellW = (availW - (d.cols - 1) * gap) / d.cols;
+      var cellH = (availH - (d.rows - 1) * gap) / d.rows;
+      var sh = showcaseEl.getBoundingClientRect().width || 108;
+      var cell = Math.max(18, Math.floor(Math.min(cellW, cellH, sh)));
+      gridEl.style.setProperty('--cell', cell + 'px');
+      // 直接写死 px 轨道，避免依赖 CSS 变量解析导致网格退化成单列、撑爆画面
+      gridEl.style.gridTemplateColumns = 'repeat(' + d.cols + ', ' + cell + 'px)';
+      gridEl.style.gridTemplateRows = 'repeat(' + d.rows + ', ' + cell + 'px)';
+    }
+
+    function renderGrid() {
+      var d = DIFFS[state.difficulty];
+      var total = d.rows * d.cols;
+      var correctCount = Math.max(1, Math.round(total * 0.1));
+      var configs = [];
+      // 镜像变换集合：原图 / 水平 / 垂直 / 水平+垂直，随机取其一
+      var mirrorFns = [function (c) { return c; }, mirrorH, mirrorV, mirrorHV];
+      // 正确答案 = 展示区原图或其任意镜像（4 种变体），随机取自其中之一
+      for (var k = 0; k < correctCount; k++) {
+        var fn = mirrorFns[Math.floor(Math.random() * 4)];
+        configs.push(fn(cloneCfg(state.sampleFull)));
+      }
+      // 干扰项：基于完整图改色；每个图形再随机施加镜像，使"是否翻转"本身不成为"正确"的提示
+      // 安全性：若随机镜像后恰好命中任一变体（概率极低），则丢弃重生成
+      var guard = 0;
+      while (configs.length < total && guard < total * 50) {
+        var d = makeDistractor(state.sampleFull, state.sampleShow);
+        d = mirrorFns[Math.floor(Math.random() * 4)](d);
+        if (!isCorrectFigure(d, state.sampleShow)) configs.push(d);
+        guard++;
+      }
+      shuffle(configs);
+      state.gridConfigs = configs;
+      state.correctTotal = correctCount;
+      state.correctFound = 0;
+
+      gridEl.style.setProperty('--cols', d.cols);
+      gridEl.style.setProperty('--rows', d.rows);
+      sizeGrid();
+      gridEl.classList.toggle("motion", state.motion && state.running);
+      var html = "";
+      for (var i = 0; i < configs.length; i++) {
+        // 取消随机旋转：所有图形固定朝向（与展示区 0° 一致），玩家可按位置直接对照
+        // 动模式（圆环旋转）下由 CSS 动画从 0° 干净旋转，不与属性 transform 抢同一属性
+        var rb = 0, rc = 0;
+        html += '<div class="cell" data-idx="' + i + '">' + buildFigureSVG(configs[i], rb, rc) + '<div class="mark"></div></div>';
+      }
+      gridEl.innerHTML = html;
+    }
+
+    function updateHud() {
+      hudRound.textContent = Math.min(state.round, state.totalRounds) + " / " + state.totalRounds;
+      hudFound.textContent = state.correctFound + " / " + (state.correctTotal || 0);
+      hudErr.textContent = state.errors;
+    }
+
+    // ===== 回合流程 =====
+    function nextRound() {
+      state.round++;
+      if (state.round > state.totalRounds) { stopGame(); return; }
+      updateHud();
+      var s = genSample(DIFFS[state.difficulty].colors);
+      state.sampleShow = s.show;
+      state.sampleFull = s.full;
+      renderShowcase();
+      renderGrid();
+      state.roundStart = performance.now();
+      statusEl.textContent = "观察展示区，找出配色相同的图形";
+    }
+
+    function onCellClick(e) {
+      if (!state.running) return;
+      var cell = e.target.closest(".cell");
+      if (!cell) return;
+      if (cell.classList.contains("done")) return;
+      var idx = +cell.dataset.idx;
+      var cfg = state.gridConfigs[idx];
+      var mark = cell.querySelector(".mark");
+      if (isCorrectFigure(cfg, state.sampleShow)) {
+        var rt = performance.now() - state.roundStart;
+        state.rts.push(rt);
+        state.correctFound++;
+        state.totalCorrect++;
+        cell.classList.add("correct", "done");
+        mark.textContent = "✓";
+        mark.classList.add("show-check");
+        playBeep(880, 0.18, "sine");
+        updateHud();
+        if (state.correctFound >= state.correctTotal) {
+          statusEl.textContent = "✓ 本轮全部找到！";
+          setTimeout(function () { if (state.running) nextRound(); }, 620);
+        } else {
+          statusEl.textContent = "✓ 正确！还差 " + (state.correctTotal - state.correctFound);
+        }
+      } else {
+        state.errors++;
+        cell.classList.add("wrong", "done");
+        mark.textContent = "✗";
+        mark.classList.add("show-cross");
+        playBeep(180, 0.22, "square");
+        updateHud();
+        statusEl.textContent = "✗ 不对，继续找";
+      }
+    }
+
+    function startGame() {
+      initAudio();
+      missingUsage = {};               // 每局重新均衡
+      state.running = true;
+      state.round = 0;
+      state.totalCorrect = 0;
+      state.errors = 0;
+      state.rts = [];
+      startBtn.textContent = "停止训练";
+      startBtn.classList.add("stopping");
+      resultCard.style.display = "none";
+      nextRound();
+    }
+
+    function stopGame() {
+      state.running = false;
+      startBtn.textContent = "开始训练";
+      startBtn.classList.remove("stopping");
+      showResult();
+    }
+
+    function showResult() {
+      var completed = Math.min(state.round, state.totalRounds);
+      var totalAttempts = state.totalCorrect + state.errors;
+      var acc = totalAttempts > 0 ? Math.round(state.totalCorrect / totalAttempts * 100) : 0;
+      var avgRt = state.rts.length ? Math.round(state.rts.reduce(function (a, b) { return a + b; }, 0) / state.rts.length) : 0;
+      resultStats.innerHTML =
+        '<div class="stat"><div class="k">完成回合</div><div class="v">' + completed + "/" + state.totalRounds + '</div></div>' +
+        '<div class="stat"><div class="k">找到正确</div><div class="v">' + state.totalCorrect + '</div></div>' +
+        '<div class="stat"><div class="k">正确率</div><div class="v">' + acc + '%</div></div>' +
+        '<div class="stat"><div class="k">误点次数</div><div class="v">' + state.errors + '</div></div>' +
+        '<div class="stat"><div class="k">平均反应时</div><div class="v">' + avgRt + 'ms</div></div>';
+
+      var msg;
+      if (completed === 0) {
+        msg = "本次未完成回合，无法评估。点击「开始训练」重新进行。";
+      } else if (state.totalCorrect === 0) {
+        msg = "<b>需加强</b>：本轮未找到任何匹配图形（或尚未开始找）。建议从「入门」档、关闭动模式，先建立稳定的<b>色彩模板记忆</b>，再逐步加难。";
+      } else if (state.errors === 0 && avgRt > 0 && avgRt < 4000) {
+        msg = "<b>优秀</b>：你在所有回合中一次命中、反应迅速，说明<b>色彩工作记忆</b>与<b>视觉辨别力</b>都很强，能快速在大量相似配色中锁定全部匹配模板。";
+      } else if (state.errors <= 2 && avgRt > 0 && avgRt < 7000) {
+        msg = "<b>良好</b>：多数匹配能准确找到，偶有干扰误判。保持练习可进一步缩短<b>视觉搜索</b>的扫描时间。";
+      } else if (acc >= 60) {
+        msg = "<b>中等</b>：能在多色干扰中找到匹配，但反应偏慢或误点较多。建议从「入门 / 普通」起步，逐步提升<b>注意分配</b>与<b>色彩模板保持</b>能力。";
+      } else {
+        msg = "<b>需加强</b>：在大量相似配色中容易迷失，误点较多。可先关闭动模式、用「入门」档建立稳定的<b>色彩模板记忆</b>，再逐步加难。";
+      }
+      if (state.motion) {
+        msg += " 本次开启了<b>动模式</b>（圆环旋转），在运动干扰下辨别配色难度更高，结果已包含该负荷。";
+      }
+      resultInterp.innerHTML = msg;
+      resultCard.style.display = "block";
+      statusEl.textContent = "训练结束";
+    }
+
+    // ===== 事件 =====
+    startBtn.addEventListener("click", function () {
+      if (state.running) stopGame(); else startGame();
+    });
+
+    document.getElementById("diff-row").addEventListener("click", function (e) {
+      var b = e.target.closest(".diff-btn");
+      if (!b) return;
+      if (state.running) return; // 进行中不切换难度
+      state.difficulty = b.dataset.diff;
+      var all = this.querySelectorAll(".diff-btn");
+      for (var i = 0; i < all.length; i++) all[i].classList.remove("active");
+      b.classList.add("active");
+      // 切换难度：隐藏上一次的结果卡，回到该难度的演示态（避免结果卡错位残留）
+      resultCard.style.display = "none";
+      var demo = genSample(DIFFS[state.difficulty].colors);
+      state.sampleShow = demo.show;
+      state.sampleFull = demo.full;
+      renderShowcase();
+      gridEl.innerHTML = "";
+      statusEl.textContent = "点「开始训练」开始";
+    });
+
+    // 窗口尺寸变化：重新计算格子大小（不重排内容），保持不裁剪
+    window.addEventListener("resize", function () {
+      if (gridEl.children.length) sizeGrid();
+    });
+
+    document.getElementById("motion-toggle").addEventListener("change", function () {
+      state.motion = this.checked;
+      gridEl.classList.toggle("motion", state.motion && state.running);
+    });
+
+    gridEl.addEventListener("click", onCellClick);
+
+    helpBtn.addEventListener("click", function () { helpMask.classList.add("show"); });
+    helpClose.addEventListener("click", function () { helpMask.classList.remove("show"); });
+    helpMask.addEventListener("click", function (e) { if (e.target === helpMask) helpMask.classList.remove("show"); });
+
+    // 初始演示（非游戏内），用当前难度的配色数
+    var demo = genSample(DIFFS[state.difficulty].colors);
+    state.sampleShow = demo.show;
+    state.sampleFull = demo.full;
+    renderShowcase();
+  })();
+  </script>
+</body>
+</html>
