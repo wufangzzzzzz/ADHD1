@@ -106,6 +106,17 @@
     .cl { width: 18px; font-size: 13px; }
     .cc { width: 16px; height: 16px; }
   }
+    /* ============ 打印模式 ============ */
+    .print-btn { background: #27ae60; color: #fff; border: none; padding: 8px 14px; font-size: clamp(12px, 1.8vw, 15px); border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; }
+    .print-btn:hover { background: #1e8449; }
+    @media print {
+      .no-print, .back-btn, .modal, .modal-overlay, .overlay, .win-overlay, .message, .result-card, .completion-modal, .success-modal { display: none !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { background: #fff !important; overflow: visible !important; height: auto !important; }
+      /* 解除满屏/禁滚动容器的高度与裁切锁，保证打印时工具栏与画面完整不被裁切 */
+      body { display: block !important; }
+      .app, .container, .wrap, .content, .layout, .game-wrap, .game-container, .main, .stage, .side, .topbar, .toolbar, .controls, .btn-row, .button-group, .header, .nav, .game-header, .game-area, .showcase-area, .group-card, .panel, .board, .canvas-container, .sequence-area, .maze-area, #app { height: auto !important; max-height: none !important; overflow: visible !important; flex-wrap: wrap !important; }
+    }
 </style>
 </head>
 <body>
@@ -113,6 +124,7 @@
     <button class="back-btn" onclick="location.href='index.html'">← 返回</button>
     <h1>译码连线</h1>
     <button class="start-btn" id="start-btn">刷新</button>
+    <button class="print-btn no-print" onclick="window.print()">打印</button>
   </div>
 
   <div class="showcase-area">

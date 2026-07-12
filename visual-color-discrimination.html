@@ -46,8 +46,8 @@
   }
   /* 主区：左工具栏 + 右列（展示区在上、游戏区在下） */
   .main { flex: 1; min-height: 0; display: flex; gap: 10px; align-items: stretch; }
-  .left-col { width: 210px; flex: none; display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
-  .right-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+  .side { width: 210px; flex: none; display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+  .stage { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
 
   /* 左侧工具栏（窄栏，不再占满宽） */
   .toolbar {
@@ -55,6 +55,8 @@
     background: #ffffff; border-radius: 12px; padding: 10px 12px;
     box-shadow: 0 2px 10px rgba(20,30,60,0.06);
   }
+  /* 一个「标题 + 控件」紧凑单元：横屏内部竖向（标题在上、控件在下），竖屏内部横向不拆行 */
+  .sec { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
   .sec-title { font-size: 12px; font-weight: 800; color: #475069; margin: 6px 0 4px; }
   .sec-title:first-child { margin-top: 0; }
 
@@ -105,8 +107,8 @@
   .showcase { width: min(108px, 28vw); height: min(108px, 28vw); }
   .showcase svg { width: 100%; height: 100%; display: block; }
 
-  /* 展示区下方的游戏区（占右列剩余高度，居中网格） */
-  .game-area { flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  /* 展示区下方的游戏区（占右列剩余高度，居中网格；底部留安全距离，绝不贴屏底/超出屏幕） */
+  .game-area { flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding-bottom: 16px; }
   .grid {
     display: grid; gap: 4px;
     grid-template-columns: repeat(var(--cols, 5), var(--cell));
@@ -181,18 +183,39 @@
   .guide-text .m { color: #c0392b; font-weight: 700; }
   .guide-text .hint { color: #b8860b; font-weight: 700; }
 
-  /* 窄屏（手机竖屏）：左工具栏 + 右列(展示区在上、游戏区在下) 仍为左右一行 */
-  @media (max-width: 560px) {
-    .main { flex-direction: row; }
-    .toolbar { width: 42%; padding: 10px 10px; }
-    .toolbar .sec-title { font-size: 12px; margin: 10px 0 6px; }
-    .diff-btn { font-size: 12px; padding: 7px 4px; }
-    .switch-row .lab { font-size: 12px; }
-    .start-btn { font-size: 13px; padding: 10px; margin-top: 10px; }
-    .hud { font-size: 11.5px; margin-top: 10px; }
-    .showcase-area { width: 58%; }
-    .showcase { width: min(120px, 36vw); height: min(120px, 36vw); }
+  /* 竖屏：整条工具栏压缩成顶部单行横排（窄屏放不下才换行，绝不出现滚动条）；其下 展示区 → 游戏区 */
+  @media (orientation: portrait) {
+    .main { flex-direction: column; gap: 6px; }
+    .side {
+      width: 100%; flex: none;
+      display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 5px 10px;
+    }
+    .toolbar {
+      width: 100%; flex: none;
+      display: flex; flex-direction: row; flex-wrap: wrap; align-items: center;
+      gap: 5px 10px; padding: 8px 10px;
+    }
+    .sec { flex-direction: row; align-items: center; gap: 4px 8px; flex: 0 0 auto; }
+    .sec-title { width: auto; margin: 0; font-size: 11px; }
+    .diff-row { flex: 0 0 auto; gap: 4px; }
+    .diff-btn { font-size: 10px; padding: 4px 3px; }
+    .switch-row { margin-top: 0; }
+    .switch-row .lab { font-size: 11px; }
+    .start-btn { width: auto; margin-top: 0; flex: 0 0 auto; font-size: 12px; padding: 7px 14px; }
+    .hud { margin-top: 0; flex: 0 0 auto; font-size: 10px; gap: 2px 8px; }
+    .status { margin-top: 0; flex: 0 0 auto; font-size: 10px; }
+    .result-card { flex: 1 1 100%; }
+    .stage { gap: 4px; }
+    .showcase { width: min(120px, 30vw); height: min(120px, 30vw); }
   }
+    /* ============ 打印模式 ============ */
+    .print-btn { background: #27ae60; color: #fff; border: none; padding: 8px 14px; font-size: clamp(12px, 1.8vw, 15px); border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; }
+    .print-btn:hover { background: #1e8449; }
+    @media print {
+      .no-print, .back-btn, .modal, .modal-overlay, .overlay, .win-overlay, .message, .result-card, .completion-modal, .success-modal { display: none !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { background: #fff !important; overflow: visible !important; height: auto !important; }
+    }
 </style>
 </head>
 <body>
@@ -204,22 +227,26 @@
 
   <div class="shell">
     <div class="main">
-      <div class="left-col">
+      <div class="side">
         <div class="toolbar">
-          <div class="sec-title">难度（网格 / 配色）</div>
-          <div class="diff-row" id="diff-row">
-            <button class="diff-btn active" data-diff="入门">入门</button>
-            <button class="diff-btn" data-diff="普通">普通</button>
-            <button class="diff-btn" data-diff="困难">困难</button>
+          <div class="sec">
+            <div class="sec-title">难度</div>
+            <div class="diff-row" id="diff-row">
+              <button class="diff-btn active" data-diff="入门">入门</button>
+              <button class="diff-btn" data-diff="普通">普通</button>
+              <button class="diff-btn" data-diff="困难">困难</button>
+            </div>
           </div>
 
-          <div class="sec-title">动模式</div>
-          <div class="switch-row">
-            <span class="lab">圆环旋转</span>
-            <label class="switch">
-              <input type="checkbox" id="motion-toggle">
-              <span class="track"></span><span class="knob"></span>
-            </label>
+          <div class="sec">
+            <div class="sec-title">动</div>
+            <div class="switch-row">
+              <span class="lab">圆环旋转</span>
+              <label class="switch">
+                <input type="checkbox" id="motion-toggle">
+                <span class="track"></span><span class="knob"></span>
+              </label>
+            </div>
           </div>
 
           <button class="start-btn" id="start-btn">开始训练</button>
@@ -230,6 +257,7 @@
             <div class="line"><span>误点</span><b id="hud-err">0</b></div>
           </div>
           <div class="status" id="status">点「开始训练」开始</div>
+          <button class="print-btn no-print" onclick="window.print()">打印</button>
         </div>
 
         <div class="result-card" id="result-card">
@@ -239,7 +267,7 @@
         </div>
       </div>
 
-      <div class="right-col">
+      <div class="stage">
         <div class="showcase-area">
           <div class="cap">展示区（B、C 各有 1 块空缺）<br>在下方找出与展示区<b>相同、或其水平/垂直镜像</b>的图形，约 10% 符合</div>
           <div class="showcase" id="showcase"></div>
@@ -279,6 +307,14 @@
       "普通": { rows: 8, cols: 6, colors: 4 },
       "困难": { rows: 10, cols: 7, colors: 5 }
     };
+
+    // 横竖屏自适应：竖屏用原始「竖长」网格；横屏行/列反向成「横宽」网格
+    function isPortrait() { return window.matchMedia('(orientation: portrait)').matches; }
+    function effDims() {
+      var d = DIFFS[state.difficulty];
+      if (isPortrait()) return { rows: d.rows, cols: d.cols };
+      return { rows: d.cols, cols: d.rows }; // 横屏：行列反向
+    }
 
     // ===== 12 色阶（高对比、相邻区分度更大：红/橙/琥珀/绿/深绿/青/藏青/蓝/靛紫/品红/粉/玫红） =====
     var SCALE12 = [
@@ -501,7 +537,7 @@
 
     // 动态计算格子尺寸：上限 = 展示区大小，确保在游戏区内整屏放下不裁剪
     function sizeGrid() {
-      var d = DIFFS[state.difficulty];
+      var d = effDims();
       if (!d) return;
       var gap = 4; // 须与 .grid 的 gap 一致
       var pa = gridEl.parentElement; // .game-area
@@ -510,7 +546,13 @@
       var cellW = (availW - (d.cols - 1) * gap) / d.cols;
       var cellH = (availH - (d.rows - 1) * gap) / d.rows;
       var sh = showcaseEl.getBoundingClientRect().width || 108;
-      var cell = Math.max(18, Math.floor(Math.min(cellW, cellH, sh)));
+      // 取「能 fit 进可用区」且「不大于展示区」的最大值（不再无条件抬高到 18，避免困难模式行多时溢出被裁切）
+      var cell = Math.floor(Math.min(cellW, cellH, sh));
+      if (cell < 12) cell = 12; // 极低下限，仅防格子不可点；下方 fit 保护会把它压回安全值
+      // 硬性 fit 保护：无论横屏/竖屏，保证整张网格都不超出 game-area
+      if (cell * d.cols + (d.cols - 1) * gap > availW) cell = Math.floor((availW - (d.cols - 1) * gap) / d.cols);
+      if (cell * d.rows + (d.rows - 1) * gap > availH) cell = Math.floor((availH - (d.rows - 1) * gap) / d.rows);
+      if (cell < 10) cell = 10;
       gridEl.style.setProperty('--cell', cell + 'px');
       // 直接写死 px 轨道，避免依赖 CSS 变量解析导致网格退化成单列、撑爆画面
       gridEl.style.gridTemplateColumns = 'repeat(' + d.cols + ', ' + cell + 'px)';
@@ -518,7 +560,7 @@
     }
 
     function renderGrid() {
-      var d = DIFFS[state.difficulty];
+      var d = effDims();
       var total = d.rows * d.cols;
       var correctCount = Math.max(1, Math.round(total * 0.1));
       var configs = [];
@@ -578,6 +620,7 @@
     }
 
     function onCellClick(e) {
+      initAudio();              // 自动开始的游戏首局，首次点击解锁音频，确保有声音
       if (!state.running) return;
       var cell = e.target.closest(".cell");
       if (!cell) return;
@@ -686,12 +729,15 @@
       state.sampleShow = demo.show;
       state.sampleFull = demo.full;
       renderShowcase();
-      gridEl.innerHTML = "";
+      renderGrid();                 // 重新展示该难度的静态网格（不进入游戏态）
       statusEl.textContent = "点「开始训练」开始";
     });
 
-    // 窗口尺寸变化：重新计算格子大小（不重排内容），保持不裁剪
+    // 窗口尺寸 / 横竖屏切换：重新计算格子大小（不重排内容），保持不裁剪
     window.addEventListener("resize", function () {
+      if (gridEl.children.length) sizeGrid();
+    });
+    window.addEventListener("orientationchange", function () {
       if (gridEl.children.length) sizeGrid();
     });
 
@@ -706,11 +752,15 @@
     helpClose.addEventListener("click", function () { helpMask.classList.remove("show"); });
     helpMask.addEventListener("click", function (e) { if (e.target === helpMask) helpMask.classList.remove("show"); });
 
-    // 初始演示（非游戏内），用当前难度的配色数
-    var demo = genSample(DIFFS[state.difficulty].colors);
-    state.sampleShow = demo.show;
-    state.sampleFull = demo.full;
-    renderShowcase();
+    // 进入页面即展示一局静态画面（展示区 + 网格图形），但不进入游戏态（需点「开始训练」才计成绩）
+    requestAnimationFrame(function () {
+      var demo = genSample(DIFFS[state.difficulty].colors);
+      state.sampleShow = demo.show;
+      state.sampleFull = demo.full;
+      renderShowcase();
+      renderGrid();                 // 仅渲染图形，state.running 仍为 false，点击不判分
+      statusEl.textContent = "点「开始训练」开始";
+    });
   })();
   </script>
 </body>

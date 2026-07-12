@@ -1912,6 +1912,69 @@ justify-content: center;
         </div>
       </div>
 
+      <!-- 视觉训练：指令迷宫 -->
+      <div class="game-card" data-category="visual" onclick="location.href='command-maze.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <g stroke="#cfd8e3" stroke-width="1">
+              <line x1="20" y1="20" x2="95" y2="20"/>
+              <line x1="20" y1="45" x2="95" y2="45"/>
+              <line x1="20" y1="70" x2="95" y2="70"/>
+              <line x1="20" y1="20" x2="20" y2="70"/>
+              <line x1="50" y1="20" x2="50" y2="70"/>
+              <line x1="80" y1="20" x2="80" y2="70"/>
+            </g>
+            <g fill="#fff" stroke="#333" stroke-width="1.5">
+              <circle cx="20" cy="20" r="3"/><circle cx="50" cy="20" r="3"/><circle cx="80" cy="20" r="3"/>
+              <circle cx="20" cy="45" r="3"/><circle cx="50" cy="45" r="3"/><circle cx="80" cy="45" r="3"/>
+              <circle cx="20" cy="70" r="3"/><circle cx="50" cy="70" r="3"/><circle cx="80" cy="70" r="3"/>
+            </g>
+            <polyline points="20,20 50,20 50,45 80,45" fill="none" stroke="#34C759" stroke-width="3"/>
+            <circle cx="20" cy="20" r="5" fill="#34C759" stroke="#1b1b1b" stroke-width="1.5"/>
+            <circle cx="80" cy="45" r="5" fill="#FF3B30" stroke="#1b1b1b" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">指令迷宫</h2>
+          <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
+          <p class="card-desc">展示区给出指令序列（如 2→ 3↓ 1← 2↓，每步≤4）。在围棋盘式交叉点网格上，从绿色入口出发按指令逐格走，全部走完到达红色出口即通关。简单 4 向、困难加 4 斜向。</p>
+          <div class="card-features">
+            <span class="feature-tag">指令执行</span>
+            <span class="feature-tag">简单/困难</span>
+            <span class="feature-tag">路径记忆</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：简单4向 / 困难8向</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 视觉训练：重叠字符解密 -->
+      <div class="game-card" data-category="visual" onclick="location.href='overlap-decrypt.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <text x="32" y="54" font-size="38" font-weight="900" fill="#e74c3c" opacity="0.85" transform="rotate(-8 32 54)">A</text>
+            <text x="52" y="54" font-size="38" font-weight="900" fill="#3498db" opacity="0.85" transform="rotate(6 52 54)">B</text>
+            <text x="44" y="54" font-size="38" font-weight="900" fill="#2ecc71" opacity="0.85" transform="rotate(-2 44 54)">C</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">重叠字符解密</h2>
+          <p class="load-warning">首次加载速度偏慢 请耐心等待</p>
+          <p class="card-desc">画面上多个彩色字符互相重叠、旋转、错位。观察并辨认出所有字符，在下方方框里按辨认顺序填出。可在线检查答案，也可一键打印空白题卡离线练习。</p>
+          <div class="card-features">
+            <span class="feature-tag">视觉辨别</span>
+            <span class="feature-tag">4–6字符</span>
+            <span class="feature-tag">可打印</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：随机 4–6 个字符</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
       <!-- 视觉训练：Dual N-back -->
       <div class="game-card" data-category="visual" onclick="location.href='dual-nback.html'">
         <div class="card-image" style="background: linear-gradient(135deg, #FF5E0E 0%, #7209B7 100%);">

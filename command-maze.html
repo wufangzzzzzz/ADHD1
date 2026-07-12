@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>指令迷宫</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #f5f7fb; color: #2a3142; -webkit-text-size-adjust: 100%; }
+
+  .app { height: 100vh; display: flex; flex-direction: column; }
+
+  .topbar { flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: #fff; border-bottom: 1px solid #e3e8f0; }
+  .back-btn { border: none; background: #eef2ff; color: #4361EE; font-weight: 700;
+    padding: 7px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+  .back-btn:hover { background: #e0e7ff; }
+  .topbar h1 { font-size: 18px; margin: 0; flex: 1; font-weight: 800; letter-spacing: 1px; }
+  .topbar .badge { font-size: 12px; color: #8a93a6; background: #f0f3f8;
+    padding: 5px 10px; border-radius: 8px; }
+
+  .main { flex: 1 1 auto; display: flex; min-height: 0; }
+
+  .side { flex: 0 0 340px; display: flex; flex-direction: column; gap: 12px;
+    padding: 14px; min-height: 0; overflow: hidden; }
+
+  .stage { flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
+    justify-content: center; padding: 16px; min-height: 0; }
+  .board { width: 100%; height: 100%; max-height: 100%; touch-action: manipulation; }
+
+  .showcase { background: #fff; border: 1px solid #e3e8f0; border-radius: 14px;
+    padding: 12px; flex: 0 0 auto; }
+  .panel-title { font-size: 13px; font-weight: 700; color: #6b7488; margin-bottom: 8px; }
+  .cmd-list { display: flex; flex-wrap: wrap; gap: 6px 8px; justify-content: center; }
+  .cmd-card { display: flex; align-items: center; gap: 3px; padding: 6px 10px;
+    border: 2px solid #e0e5ee; border-radius: 10px; background: #f7f9fc;
+    font-weight: 700; color: #2a3142; transition: all .2s; }
+  .cmd-card .num { font-size: 18px; }
+  .cmd-card .arrow { font-size: 20px; line-height: 1; }
+  .cmd-card.active { border-color: #34C759; background: #eafff0; color: #1a7a3c;
+    box-shadow: 0 0 0 3px rgba(52,199,89,.15); }
+  .cmd-card.done { border-color: #bfe9cc; background: #f0fbf3; color: #8aa893; opacity: .7; }
+  .cmd-hint { font-size: 12px; color: #8a93a6; margin-top: 8px; line-height: 1.4; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px;
+    font-size: 12px; color: #6b7488; line-height: 1.5; }
+  .lg-item { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { display: inline-block; width: 13px; height: 13px; border-radius: 50%;
+    border: 1.5px solid #1b1b1b; box-sizing: border-box; }
+  .dot-green { background: #34C759; }
+  .dot-red { background: #FF3B30; }
+
+  .toolbar { background: #fff; border: 1px solid #e3e8f0; border-radius: 14px;
+    padding: 12px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; }
+  .sec { display: flex; flex-direction: column; gap: 6px; }
+  .sec-title { font-size: 11px; color: #6b7488; font-weight: 600; }
+  .diff-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+  .diff-label { font-size: 12px; color: #6b7488; font-weight: 600; }
+  .diff-btn { padding: 5px 12px; font-size: 12px; border: 2px solid #e0e5ee; border-radius: 9px;
+    background: #f7f9fc; font-weight: 700; cursor: pointer; color: #2a3142; transition: all .2s; }
+  .diff-btn.active { border-color: #4361EE; background: #eef2ff; color: #2a4bd0; }
+  .start-btn { padding: 7px 14px; border: none; border-radius: 9px;
+    background: linear-gradient(135deg, #4361EE, #7048e8); color: #fff;
+    font-weight: 700; font-size: 13px; cursor: pointer; }
+  .start-btn:hover { filter: brightness(1.05); }
+  .hud { display: flex; gap: 8px; font-size: 12px; color: #4a5160; }
+  .hud b { color: #2a3142; }
+  .status { font-size: 12px; color: #8a93a6; min-height: 16px; line-height: 1.4; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(20,24,33,.45);
+    display: none; align-items: center; justify-content: center; z-index: 60; padding: 16px; }
+  .modal-overlay.show { display: flex; }
+  .modal-card { background: #fff; border-radius: 16px; padding: 16px 18px 18px;
+    width: min(84vw, 260px); box-shadow: 0 16px 48px rgba(0,0,0,.28); text-align: center;
+    animation: modal-pop .22s ease; }
+  @keyframes modal-pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-card h3 { margin: 0 0 10px; font-size: 19px; color: #1a7a3c; letter-spacing: 1px; }
+  .modal-rows { display: flex; flex-direction: column; gap: 6px; font-size: 14px;
+    color: #4a5160; margin-bottom: 10px; }
+  .modal-rows b { color: #2a3142; }
+  .modal-text { font-size: 12px; color: #6b7488; line-height: 1.55; margin-bottom: 14px; }
+  .modal-card button { width: 100%; padding: 10px; border: none; border-radius: 11px;
+    background: #34C759; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .modal-card button:hover { filter: brightness(1.05); }
+
+  @media (orientation: portrait) {
+    .main { flex-direction: column; }
+    .side { flex: 0 0 auto; }
+    .stage { flex: 1 1 auto; min-height: 46vh; }
+    .toolbar { flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .toolbar .sec { flex-direction: row; align-items: center; }
+    .start-btn { flex: 0 0 auto; }
+  }
+    /* ============ 打印模式 ============ */
+    .print-btn { background: #27ae60; color: #fff; border: none; padding: 8px 14px; font-size: clamp(12px, 1.8vw, 15px); border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; }
+    .print-btn:hover { background: #1e8449; }
+    @media print {
+      .no-print, .back-btn, .modal, .modal-overlay, .overlay, .win-overlay, .message, .result-card, .completion-modal, .success-modal { display: none !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { background: #fff !important; overflow: visible !important; height: auto !important; }
+      /* 解除满屏/禁滚动容器的高度与裁切锁，保证打印时工具栏与画面完整不被裁切 */
+      body { display: block !important; }
+      .app, .container, .wrap, .content, .layout, .game-wrap, .game-container, .main, .stage, .side, .topbar, .toolbar, .controls, .btn-row, .button-group, .header, .nav, .game-header, .game-area, .showcase-area, .group-card, .panel, .board, .canvas-container, .sequence-area, .maze-area, #app { height: auto !important; max-height: none !important; overflow: visible !important; flex-wrap: wrap !important; }
+    }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <button class="back-btn" onclick="location.href='index.html'">← 返回</button>
+    <h1>指令迷宫</h1>
+    <span class="badge">展示区给指令 · 棋盘上逐格走</span>
+    <button class="print-btn no-print" onclick="window.print()">打印</button>
+  </header>
+
+  <div class="main">
+    <div class="side">
+      <div class="showcase diff-bar">
+        <span class="diff-label">难度</span>
+        <button class="diff-btn active" data-diff="easy" onclick="setDiff('easy')">简单</button>
+        <button class="diff-btn" data-diff="hard" onclick="setDiff('hard')">困难</button>
+        <button class="start-btn" onclick="newGame()">新开一局</button>
+        <div class="hud">走错：<b id="errCount">0</b></div>
+        <div class="status" id="status">进入即可直接游玩，中途点「新开一局」重开</div>
+      </div>
+
+      <div class="showcase">
+        <div class="panel-title">指令序列（按此顺序走）</div>
+        <div class="cmd-list" id="cmdList"></div>
+        <div class="legend">
+          <span class="lg-item">从<span class="dot dot-green"></span>（入口）出发，沿指令方向逐格走到<span class="dot dot-red"></span>（出口）</span>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="resultModal">
+        <div class="modal-card" id="resultCard"></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <svg class="board" id="board" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // 方向定义：axis 分轴 —— V=垂直(上/下，即用户A轴)、H=水平(左/右，即用户B轴)、D=斜向(独立轴，不破坏 V/H 交替)
+  var DIRS = {
+    easy: [ {dr:0,dc:1,sym:'→',axis:'H'}, {dr:0,dc:-1,sym:'←',axis:'H'}, {dr:-1,dc:0,sym:'↑',axis:'V'}, {dr:1,dc:0,sym:'↓',axis:'V'} ],
+    hard: [ {dr:0,dc:1,sym:'→',axis:'H'}, {dr:0,dc:-1,sym:'←',axis:'H'}, {dr:-1,dc:0,sym:'↑',axis:'V'}, {dr:1,dc:0,sym:'↓',axis:'V'},
+            {dr:-1,dc:1,sym:'↗',axis:'D'}, {dr:1,dc:1,sym:'↘',axis:'D'}, {dr:1,dc:-1,sym:'↙',axis:'D'}, {dr:-1,dc:-1,sym:'↖',axis:'D'} ]
+  };
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var W = 600;
+  var diff = 'easy';
+  var maze = null;   // { commands, N, absPts }
+  var grid = null;   // grid[r][c] = { outer, inner, g }
+  var state = null;  // 运行态
+  var startTime = 0, elapsed = 0;
+  var actx = null;
+  var board = document.getElementById('board');
+  var cmdList = document.getElementById('cmdList');
+  var statusEl = document.getElementById('status');
+  var resultCard = document.getElementById('resultCard');
+  var errCountEl = document.getElementById('errCount');
+
+  function initAudio() {
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) {}
+  }
+  function beep(freq, dur, type, vol) {
+    if (!actx) return;
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.value = vol || 0.2; o.connect(g); g.connect(actx.destination);
+    var t = actx.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol || 0.2, t + 0.012);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function correctSound() { beep(660, 0.09, 'sine', 0.22); }
+  function errorSound() { beep(150, 0.16, 'square', 0.18); }
+  function winSound() {
+    if (!actx) return;
+    var notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6 上行琶音，通关提示
+    var t0 = actx.currentTime;
+    for (var i = 0; i < notes.length; i++) {
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = notes[i];
+      o.connect(g); g.connect(actx.destination);
+      var st = t0 + i * 0.11;
+      g.gain.setValueAtTime(0, st);
+      g.gain.linearRampToValueAtTime(0.22, st + 0.02);
+      g.gain.linearRampToValueAtTime(0, st + 0.16);
+      o.start(st); o.stop(st + 0.18);
+    }
+  }
+
+  function setDiff(d) {
+    diff = d;
+    var btns = document.querySelectorAll('.diff-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', btns[i].dataset.diff === d);
+    newGame();
+  }
+
+  function genMaze() {
+    var numCmd = (diff === 'hard') ? 12 : 10;
+    var pool = DIRS[diff];
+    var maxSpan = (diff === 'hard') ? 11 : 9; // 跨度上限：防止路径单调外漂导致棋盘面积暴增
+
+    // 单次尝试：相邻指令异轴交替（A↔B）+ 跨度受限 + 路径不重复经过任何交叉点
+    function tryGen() {
+      var commands = [], path = [{r:0, c:0}], r = 0, c = 0;
+      var minR = 0, maxR = 0, minC = 0, maxC = 0, prevD = null;
+      var visited = {}; visited['0,0'] = true;
+      function key(rr, cc) { return rr + ',' + cc; }
+      function within(rr, cc, st, d) {
+        for (var k = 1; k <= st; k++) {
+          var tr = rr + d.dr * k, tc = cc + d.dc * k;
+          if (Math.max(maxR, tr) - Math.min(minR, tr) > maxSpan) return false;
+          if (Math.max(maxC, tc) - Math.min(minC, tc) > maxSpan) return false;
+        }
+        return true;
+      }
+      // 从 (rr,cc) 沿 d 走，不超界且不踩已访问点，最大可走步数（1..4）
+      function maxFreeStep(rr, cc, d) {
+        var ms = 0;
+        for (var k = 1; k <= 4; k++) {
+          var tr = rr + d.dr * k, tc = cc + d.dc * k;
+          if (visited[key(tr, tc)]) break;       // 该点已走过，不可重复
+          if (!within(rr, cc, k, d)) break;       // 超出跨度上限
+          ms = k;
+        }
+        return ms;
+      }
+      for (var i = 0; i < numCmd; i++) {
+        // 候选：异轴 + 至少能走 1 步（不重复且不超界）
+        var cands = [];
+        for (var k = 0; k < pool.length; k++) {
+          var d = pool[k];
+          if (prevD && d.axis === prevD.axis) continue;
+          var ms = maxFreeStep(r, c, d);
+          if (ms >= 1) cands.push({ d: d, ms: ms });
+        }
+        var pick;
+        if (cands.length === 0) return { ok: false, maze: null }; // 无合法方向（异轴 + 不重复 + 不超界）：本局作废，外层重试
+        pick = cands[Math.floor(Math.random() * cands.length)];
+        var step = 1 + Math.floor(Math.random() * pick.ms);
+        commands.push({ dir: pick.d, step: step, sym: pick.d.sym });
+        for (var s = 0; s < step; s++) { // 逐格推进，每步新点登记 visited
+          r += pick.d.dr; c += pick.d.dc;
+          visited[key(r, c)] = true;
+          if (r < minR) minR = r; if (r > maxR) maxR = r;
+          if (c < minC) minC = c; if (c > maxC) maxC = c;
+          path.push({ r: r, c: c });
+        }
+        prevD = pick.d;
+      }
+      // 校验：全程异轴交替 + 无重复交叉点
+      var consistent = true;
+      for (var j = 1; j < commands.length; j++) {
+        if (commands[j].dir.axis === commands[j-1].dir.axis) { consistent = false; break; }
+      }
+      var noDup = true, seen = {};
+      for (var p = 0; p < path.length; p++) {
+        var kk = key(path[p].r, path[p].c);
+        if (seen[kk]) { noDup = false; break; }
+        seen[kk] = true;
+      }
+      var rMin = minR, rMax = maxR, cMin = minC, cMax = maxC;
+      var spanR = rMax - rMin, spanC = cMax - cMin;
+      var minSize = (diff === 'hard') ? 10 : 8;
+      var N = Math.max(spanR + 1, spanC + 1, minSize) + 2; // +2 上下留边距
+      var offR = -rMin + Math.floor((N - (spanR + 1)) / 2);
+      var offC = -cMin + Math.floor((N - (spanC + 1)) / 2);
+      var absPts = path.map(function (pp) { return { r: pp.r + offR, c: pp.c + offC }; });
+      return { ok: consistent && noDup, maze: { commands: commands, N: N, absPts: absPts } };
+    }
+
+    var last = null;
+    for (var attempt = 0; attempt < 150; attempt++) {
+      var res = tryGen();
+      if (res.ok) return res.maze;           // 找到一局：轴交替 + 无重复，直接采用
+      if (res.maze) last = res.maze;          // 记录最近一局（极罕见兜底）
+    }
+    return last;
+  }
+
+  function renderBoard() {
+    board.innerHTML = '';
+    var N = maze.N;
+    var cell = W / (N + 1);
+    board.setAttribute('viewBox', '0 0 ' + W + ' ' + W);
+
+    var gridG = document.createElementNS(SVGNS, 'g');
+    gridG.setAttribute('stroke', '#cfd8e6');
+    gridG.setAttribute('stroke-width', Math.max(1, cell * 0.05));
+    for (var i = 0; i < N; i++) {
+      var p = cell * (i + 1);
+      var hl = document.createElementNS(SVGNS, 'line');
+      hl.setAttribute('x1', cell); hl.setAttribute('y1', p);
+      hl.setAttribute('x2', W - cell); hl.setAttribute('y2', p);
+      gridG.appendChild(hl);
+      var vl = document.createElementNS(SVGNS, 'line');
+      vl.setAttribute('x1', p); vl.setAttribute('y1', cell);
+      vl.setAttribute('x2', p); vl.setAttribute('y2', W - cell);
+      gridG.appendChild(vl);
+    }
+    board.appendChild(gridG);
+
+    if (diff === 'hard') {
+      var diagG = document.createElementNS(SVGNS, 'g');
+      diagG.setAttribute('stroke', '#dbe3f0');
+      diagG.setAttribute('stroke-width', Math.max(0.8, cell * 0.035));
+      for (var k = -(N - 1); k <= (N - 1); k++) {
+        var pts1 = [];
+        for (var rr = 0; rr < N; rr++) { var cc = rr - k; if (cc >= 0 && cc < N) pts1.push({ r: rr, c: cc }); }
+        if (pts1.length >= 2) addDiag(diagG, pts1, cell);
+      }
+      for (var s = 0; s <= 2 * (N - 1); s++) {
+        var pts2 = [];
+        for (var rr2 = 0; rr2 < N; rr2++) { var cc2 = s - rr2; if (cc2 >= 0 && cc2 < N) pts2.push({ r: rr2, c: cc2 }); }
+        if (pts2.length >= 2) addDiag(diagG, pts2, cell);
+      }
+      board.appendChild(diagG);
+    }
+
+    var linkG = document.createElementNS(SVGNS, 'g');
+    linkG.setAttribute('id', 'linkLayer');
+    board.appendChild(linkG);
+
+    grid = [];
+    var outerR = cell * 0.24, innerR = cell * 0.10, sw = Math.max(1.5, cell * 0.06);
+    for (var r = 0; r < N; r++) {
+      grid[r] = [];
+      for (var c = 0; c < N; c++) {
+        var g = document.createElementNS(SVGNS, 'g');
+        g.setAttribute('class', 'node');
+        g.setAttribute('data-r', r); g.setAttribute('data-c', c);
+        g.style.cursor = 'pointer';
+        var outer = document.createElementNS(SVGNS, 'circle');
+        outer.setAttribute('cx', cell * (c + 1)); outer.setAttribute('cy', cell * (r + 1));
+        outer.setAttribute('r', outerR);
+        outer.setAttribute('fill', '#ffffff');
+        outer.setAttribute('stroke', '#1b1b1b');
+        outer.setAttribute('stroke-width', sw);
+        var inner = document.createElementNS(SVGNS, 'circle');
+        inner.setAttribute('cx', cell * (c + 1)); inner.setAttribute('cy', cell * (r + 1));
+        inner.setAttribute('r', innerR);
+        inner.setAttribute('fill', '#ffffff');
+        g.appendChild(outer); g.appendChild(inner);
+        (function (rr, cc) { g.addEventListener('click', function () { onNodeClick(rr, cc); }); })(r, c);
+        board.appendChild(g);
+        grid[r][c] = { outer: outer, inner: inner, g: g };
+      }
+    }
+    var s = maze.absPts[0], e = maze.absPts[maze.absPts.length - 1];
+    setNodeColor(s.r, s.c, 'start');
+    setNodeColor(e.r, e.c, 'end');
+  }
+
+  function setNodeColor(r, c, kind) {
+    var n = grid[r][c];
+    if (kind === 'start' || kind === 'visited') n.outer.setAttribute('fill', '#34C759');
+    else if (kind === 'end') n.outer.setAttribute('fill', '#FF3B30');
+    else n.outer.setAttribute('fill', '#ffffff');
+  }
+
+  function renderCmdList() {
+    cmdList.innerHTML = '';
+    maze.commands.forEach(function (cmd, i) {
+      var card = document.createElement('div');
+      card.className = 'cmd-card';
+      card.id = 'cmd' + i;
+      card.innerHTML = '<span class="num">' + cmd.step + '</span><span class="arrow">' + cmd.sym + '</span>';
+      cmdList.appendChild(card);
+    });
+  }
+  function updateCmdHighlight() {
+    maze.commands.forEach(function (cmd, i) {
+      var card = document.getElementById('cmd' + i);
+      if (!card) return;
+      card.classList.toggle('active', i === state.cmdIdx);
+      card.classList.toggle('done', i < state.cmdIdx);
+    });
+  }
+
+  function onNodeClick(r, c) {
+    if (!state || state.finished) return;
+    initAudio();
+    var cur = maze.absPts[state.curIdx];
+    if (r === cur.r && c === cur.c) return; // 点到当前所在格（出发点/已走到的位置）：无效操作，忽略，不报错、不闪红、绿点保留
+    var dir = maze.commands[state.cmdIdx].dir;
+    var expR = cur.r + dir.dr, expC = cur.c + dir.dc;
+    if (r === expR && c === expC) {
+      setNodeColor(r, c, 'visited');
+      drawLink(state.curIdx, state.curIdx + 1, '#2ecc40');
+      correctSound();
+      if (!state.started) { state.started = true; startTime = Date.now(); }
+      state.curIdx++;
+      state.stepLeft--;
+      if (state.stepLeft === 0) {
+        if (state.cmdIdx === maze.commands.length - 1) {
+          finishGame();
+        } else {
+          state.cmdIdx++;
+          state.cmdStartIdx = state.curIdx;
+          state.stepLeft = maze.commands[state.cmdIdx].step;
+          updateCmdHighlight();
+        }
+      }
+      if (!state.finished) {
+        var cm = maze.commands[state.cmdIdx];
+        setStatus('走第 ' + (state.cmdIdx + 1) + ' / ' + maze.commands.length + ' 条：剩 ' + state.stepLeft + ' 步 ' + cm.sym);
+      }
+    } else {
+      errorSound();
+      flashError(r, c);
+      state.errors++;
+      errCountEl.textContent = state.errors;
+      setStatus('走错！这一步作废，从当前位置继续走第 ' + (state.cmdIdx + 1) + ' 条：' + maze.commands[state.cmdIdx].step + maze.commands[state.cmdIdx].sym);
+    }
+  }
+
+  function drawLink(i0, i1, color) {
+    var a = maze.absPts[i0], b = maze.absPts[i1];
+    var cell = W / (maze.N + 1);
+    var ln = document.createElementNS(SVGNS, 'line');
+    ln.setAttribute('x1', cell * (a.c + 1)); ln.setAttribute('y1', cell * (a.r + 1));
+    ln.setAttribute('x2', cell * (b.c + 1)); ln.setAttribute('y2', cell * (b.r + 1));
+    ln.setAttribute('stroke', color);
+    ln.setAttribute('stroke-width', cell * 0.14);
+    ln.setAttribute('stroke-linecap', 'round');
+    ln.setAttribute('fill', 'none');
+    document.getElementById('linkLayer').appendChild(ln);
+    state.links.push(ln);
+  }
+  function flashError(r, c) {
+    // 走错不画线，仅让点错的圆闪红 0.5s 后恢复「原色」（绿/红/白），不强制变白
+    var n = grid[r][c];
+    var orig = n.outer.getAttribute('fill');
+    setNodeColor(r, c, 'end');
+    setTimeout(function () {
+      // 仅当本局未重开、仍是刚才那个格子元素、且仍显示红色时，才恢复原色（避免误改新棋盘/正确走对的绿点）
+      if (grid[r] && grid[r][c] === n && n.outer.getAttribute('fill') === '#FF3B30') {
+        n.outer.setAttribute('fill', orig);
+      }
+    }, 500);
+  }
+  function addDiag(g, pts, cell) {
+    var pl = document.createElementNS(SVGNS, 'polyline');
+    pl.setAttribute('points', pts.map(function (p) { return (cell * (p.c + 1)) + ',' + (cell * (p.r + 1)); }).join(' '));
+    pl.setAttribute('fill', 'none');
+    g.appendChild(pl);
+  }
+
+  function newGame() {
+    maze = genMaze();
+    renderBoard();
+    renderCmdList();
+    state = {
+      curIdx: 0, cmdIdx: 0, stepLeft: maze.commands[0].step, cmdStartIdx: 0,
+      errors: 0, started: false, finished: false, links: []
+    };
+    hideResultModal();
+    errCountEl.textContent = '0';
+    updateCmdHighlight();
+    setStatus('按指令从绿色入口出发，逐格走到红色出口（共 ' + maze.commands.length + ' 条指令）');
+  }
+
+  function setStatus(t) { statusEl.textContent = t; }
+
+  function finishGame() {
+    state.finished = true;
+    var e = maze.absPts[maze.absPts.length - 1];
+    setNodeColor(e.r, e.c, 'visited');
+    maze.commands.forEach(function (cmd, i) {
+      var card = document.getElementById('cmd' + i);
+      if (card) { card.classList.remove('active'); card.classList.add('done'); }
+    });
+    elapsed = state.started ? (Date.now() - startTime) : 0;
+    winSound();
+    showResult();
+  }
+
+  function hideResultModal() {
+    var m = document.getElementById('resultModal');
+    if (m) m.classList.remove('show');
+  }
+  function showResult() {
+    var sec = Math.floor(elapsed / 1000), ms = Math.floor((elapsed % 1000) / 100);
+    var timeStr = sec + '.' + ms + '秒';
+    var total = maze.commands.length;
+    var text;
+    if (state.errors === 0) text = '完美！严格按指令方向逐格走，零失误，路径执行准确。';
+    else if (state.errors <= 2) text = '不错，仅 ' + state.errors + ' 次走错。继续练习按指令方向逐格走，避免抢步或方向混淆。';
+    else text = '走错 ' + state.errors + ' 次。建议先看展示区的指令方向与步数，再沿正确方向逐格走，不要凭直觉。';
+    resultCard.innerHTML =
+      '<h3>通关！🎉</h3>' +
+      '<div class="result-rows">' +
+      '<div>指令总数：<b>' + total + '</b></div>' +
+      '<div>走错次数：<b>' + state.errors + '</b></div>' +
+      '<div>用时：<b>' + timeStr + '</b></div>' +
+      '</div>' +
+      '<div class="result-text">' + text + '</div>' +
+      '<button onclick="newGame()">再来一局</button>';
+    document.getElementById('resultModal').classList.add('show');
+    setStatus('通关！用时 ' + timeStr + '，走错 ' + state.errors + ' 次');
+  }
+
+  window.newGame = newGame;
+  window.setDiff = setDiff;
+  newGame();
+})();
+</script>
+</body>
+</html>

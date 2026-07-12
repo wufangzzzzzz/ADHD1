@@ -705,6 +705,34 @@
         to { transform: rotate(-360deg); }
       }
 
+      /* 凹凸模式 */
+      .bumpy-container {
+        display: none;
+        background: #f4f4f4;
+        padding: 0;
+        border-radius: 8px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        margin-top: -15px;
+        overflow: hidden;
+        position: relative;
+        max-width: 500px;
+        width: 100%;
+      }
+      .bumpy-grid {
+        display: grid;
+        justify-content: center;
+        align-content: center;
+      }
+      .bumpy-cell {
+        position: relative;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.15s ease;
+      }
+      .bumpy-cell:active { transform: scale(0.95); }
+      .bumpy-cell.correct { outline: 3px solid #4CAF50; outline-offset: -3px; }
+      .bumpy-cell.wrong { outline: 3px solid #FF5252; outline-offset: -3px; }
+
       /* 虚无模式 - 边框放射颜色动画 */
       @keyframes voidGlow1 {
         0% { box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000, 0 0 15px #ff0000; }
@@ -1991,6 +2019,7 @@
           <button class="mode-btn" data-mode="mosaic" id="mosaic-mode-btn" onclick="game.toggleMosaicMode()">马赛克</button>
           <button class="mode-btn" data-mode="square-move" id="square-move-btn" onclick="game.toggleSquareMoveMode()">方形（动）</button>
           <button class="mode-btn" data-mode="vp" id="vp-mode-btn" onclick="game.toggleVisualParallaxMode()">视差</button>
+          <button class="mode-btn" data-mode="bumpy" id="bumpy-mode-btn" onclick="game.toggleBumpyMode()">凹凸</button>
           <button class="mode-btn speed-toggle" id="speed-toggle-btn" onclick="game.toggleSpeed()" style="display:none;">转速:0.1</button>
         </div>
       </div>
@@ -2066,6 +2095,7 @@
       <div class="mosaic-container" id="mosaic-container" style="display:none;"></div>
       <div class="square-move-container" id="square-move-container" style="display:none;"></div>
       <div class="vp-container" id="vp-container" style="display:none;"></div>
+      <div class="bumpy-container" id="bumpy-container" style="display:none;"></div>
     </div>
 
     <div class="controls">
@@ -2159,6 +2189,8 @@
         this.squareMoveDirection = 0; // 0=关, 1=横向, 2=纵向, 3=横纵
         this.isVisualParallaxMode = false; // 视觉差模式
         this.vpSubMode = 0; // 0=关, 1=A静, 2=A动
+        this.isBumpyMode = false; // 凹凸模式
+        this.bumpySubMode = 0; // 0=关, 1=静, 2=动
         this.variantNumbers = [];     // 变体模式数字数组
         this.circularRotating = 0; // 0=静, 1=动1(交替), 2=动2(变速) // 圆形模式旋转状态
         // 20种字体
@@ -2463,6 +2495,11 @@
           this.exitVisualParallaxMode();
         }
 
+        // 从凹凸模式切换到其他模式
+        if (this.isBumpyMode) {
+          this.exitBumpyMode();
+        }
+
         // 统一毁灭模式清理保险：切到非 offset/chaos 的其他模式时确保 destroyMode 已清零（修复毁灭5残留）
         // 上方毁灭5保持段（offset/chaos）已 return，不会到此；此处覆盖真正切走毁灭5的 normal/variant 等路径
         if (this.destroyMode > 0) {
@@ -2494,6 +2531,7 @@
         if (this.isVariantMode) this.exitVariantMode();
         if (this.isSquareMoveMode) this.exitSquareMoveMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+        if (this.isBumpyMode) this.exitBumpyMode();
         if (this.isRotateMode) {
           // 当前转 → 切到动
           this.exitRotateMode();
@@ -2532,6 +2570,7 @@
           if (this.isVariantMode) this.exitVariantMode();
           if (this.isSquareMoveMode) this.exitSquareMoveMode();
           if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+          if (this.isBumpyMode) this.exitBumpyMode();
           // 毁灭模式重置（修复：毁灭5下进入马赛克需清理 destroyMode，否则残留）
           if (this.destroyMode > 0) {
             this.destroyMode = 0;
@@ -2663,6 +2702,7 @@
         if (this.isVariantMode) this.exitVariantMode();
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+        if (this.isBumpyMode) this.exitBumpyMode();
         // 毁灭模式重置
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
@@ -2772,6 +2812,7 @@
         if (this.isVariantMode) this.exitVariantMode();
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isSquareMoveMode) this.exitSquareMoveMode();
+        if (this.isBumpyMode) this.exitBumpyMode();
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
           var dbtn = document.querySelector('.destroy-toggle');
@@ -2912,6 +2953,291 @@
 
             cell.appendChild(bottom);
             cell.appendChild(top);
+            grid.appendChild(cell);
+          }
+        }
+        container.appendChild(grid);
+      };
+
+      // ===== 凹凸模式（bumpy）：静/动两态；每格几何随机(4种合法配置)；每局全套随机配色 =====
+      SchulteGridGame.prototype._generateBumpyPalette = function() {
+        // 12 色相环（每 30° 一档，index = 色相/30）：
+        // 0红 1红橙 2黄 3黄绿 4绿 5青绿 6青 7蓝 8蓝紫 9紫 10品红 11红紫
+        var W = ['#FF3B30','#FF9500','#FFCC00','#A2E000','#34C759','#00C7A0','#00C2F0','#0A84FF','#5E5CE6','#AF52DE','#FF2D92','#FF375F'];
+        // 把 hex 颜色在 HSL 空间「加深 pct」：明度 L 乘以 (1-pct)
+        function darkenHex(hex, pct){
+          var h = hex.replace('#','');
+          var r = parseInt(h.substr(0,2),16)/255, g = parseInt(h.substr(2,2),16)/255, b = parseInt(h.substr(4,2),16)/255;
+          var max = Math.max(r,g,b), min = Math.min(r,g,b), l = (max+min)/2, d = max-min, s = 0, hh = 0;
+          if(d!==0){
+            s = l>0.5 ? d/(2-max-min) : d/(max+min);
+            if(max===r)      hh = (g-b)/d + (g<b?6:0);
+            else if(max===g) hh = (b-r)/d + 2;
+            else             hh = (r-g)/d + 4;
+            hh /= 6;
+          }
+          l = Math.max(0, l * (1 - pct));
+          function h2rgb(p,q,t){ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }
+          var q = l<0.5 ? l*(1+s) : l+s-l*s;
+          var p = 2*l-q;
+          var rr = h2rgb(p,q,hh+1/3), gg = h2rgb(p,q,hh), bb = h2rgb(p,q,hh-1/3);
+          function toHex(x){ var v = Math.round(x*255).toString(16); return v.length===1 ? '0'+v : v; }
+          return '#' + toHex(rr) + toHex(gg) + toHex(bb);
+        }
+        // 把 hex 颜色在 HSL 空间「降纯度 pct」：饱和度 S 乘以 (1-pct)（明度/色相不变）
+        function desatHex(hex, pct){
+          var h = hex.replace('#','');
+          var r = parseInt(h.substr(0,2),16)/255, g = parseInt(h.substr(2,2),16)/255, b = parseInt(h.substr(4,2),16)/255;
+          var max = Math.max(r,g,b), min = Math.min(r,g,b), l = (max+min)/2, d = max-min, s = 0, hh = 0;
+          if(d!==0){
+            s = l>0.5 ? d/(2-max-min) : d/(max+min);
+            if(max===r)      hh = (g-b)/d + (g<b?6:0);
+            else if(max===g) hh = (b-r)/d + 2;
+            else             hh = (r-g)/d + 4;
+            hh /= 6;
+          }
+          s = Math.max(0, s * (1 - pct));
+          function h2rgb(p,q,t){ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }
+          var q = l<0.5 ? l*(1+s) : l+s-l*s;
+          var p = 2*l-q;
+          var rr = h2rgb(p,q,hh+1/3), gg = h2rgb(p,q,hh), bb = h2rgb(p,q,hh-1/3);
+          function toHex(x){ var v = Math.round(x*255).toString(16); return v.length===1 ? '0'+v : v; }
+          return '#' + toHex(rr) + toHex(gg) + toHex(bb);
+        }
+        // 间隔配色法（用户 20:19 拍板）：C 随机锚定；A/B1 各只取一个色，按固定间隔随 C 在 12 色环上推算。
+        //   间隔：B1 = C + 4（中间隔 3 色：3,4,5），A = C + 7（中间隔 6 色：3..8），均 mod 12（同向 +）。
+        //   B2 = B1 加深 60%（派生，不占独立档）。
+        var cI = Math.floor(Math.random() * 12);  // C：随机锚定 0..11
+        var b1I = (cI + 4) % 12;                  // B1：C 之后 4 位
+        var aI  = (cI + 7) % 12;                  // A：C 之后 7 位
+        var C  = W[cI];
+        var B1 = W[b1I];
+        var B2 = darkenHex(B1, 0.60);             // B2 = B1 加深 60%
+        var A  = W[aI];
+        // 整体纯度(饱和度)降低 10%：四色统一在 HSL 空间把 S 乘 0.90
+        return {
+          A:  desatHex(A,  0.10),
+          B1: desatHex(B1, 0.10),
+          B2: desatHex(B2, 0.10),
+          C:  desatHex(C,  0.10)
+        };
+      };
+
+      // 几何（用户 19:26 拍板确认）：全局坐标 0..100。
+      //   A  = 全格大粉方块（100×100，底层）。
+      //   A1 = 居中方块，占 A 的 84%（84×84，全局 8..92，四周留 8px 粉边）。
+      //   A1 被一条【对角线】切成两块三角形 B1/B2：对角线从「C 与 A1 重合的角 P」连到「A1 对顶角 Q」。
+      //   C  = 显示数字的方块 = A1 的 60%（边长 50.4），坐在 A1 四角之一（角 P），与 A1 的 2 条边重合。
+      // idx 决定 C 所在角（循环出现）：0=右下 1=左下 2=右上 3=左上。坐标均为全局，渲染无需 translate。
+      SchulteGridGame.prototype._bumpyGeom = function(idx) {
+        var O = 8, A1S = 84;
+        // C 边长随难度放大：入门/初级/中级=基准(0.6)；高级+15% 专家+25% 极限+30%
+        var csScale = 1.0;
+        var gs = this.gridSize;
+        if (gs === 6) csScale = 1.15;        // 高级
+        else if (gs === 7) csScale = 1.25;  // 专家
+        else if (gs === 10) csScale = 1.30; // 极限
+        var CS = 50.4 * csScale; // = 0.6 * 84 * 难度系数（仍 < A1 边长 84）
+        var L = O, H = O + A1S;         // A1 左上=8, 右下=92
+        var configs = [
+          // 0: C 右下角，主对角线 (8,8)->(92,92)
+          { C: [H - CS, H - CS, H, H],
+            B1: [[L, L], [H, L], [H, H]],   // 上三角
+            B2: [[L, L], [H, H], [L, H]] }, // 下三角
+          // 1: C 左下角，反对角线 (8,92)->(92,8)
+          { C: [L, H - CS, L + CS, H],
+            B1: [[L, L], [H, L], [L, H]],   // 上三角
+            B2: [[H, L], [L, H], [H, H]] }, // 下三角
+          // 2: C 右上角，反对角线 (92,8)->(8,92)
+          { C: [H - CS, L, H, L + CS],
+            B1: [[L, L], [H, L], [L, H]],
+            B2: [[H, L], [L, H], [H, H]] },
+          // 3: C 左上角，主对角线 (8,8)->(92,92)
+          { C: [L, L, L + CS, L + CS],
+            B1: [[L, L], [H, L], [H, H]],
+            B2: [[L, L], [H, H], [L, H]] }
+        ];
+        var c = configs[((idx % 4) + 4) % 4] || configs[0];
+        function polyStr(pts) { return pts.map(function(p) { return p[0] + ',' + p[1]; }).join(' '); }
+        var cx = (c.C[0] + c.C[2]) / 2, cy = (c.C[1] + c.C[3]) / 2;
+        return {
+          numPos: [cx, cy],
+          cSide: CS, // C 块真实边长（本地坐标 0..100 体系），供数字字号按比例跟随
+          C: polyStr([[c.C[0], c.C[1]], [c.C[2], c.C[1]], [c.C[2], c.C[3]], [c.C[0], c.C[3]]]),
+          B1: polyStr(c.B1),
+          B2: polyStr(c.B2)
+        };
+      };
+
+      SchulteGridGame.prototype.toggleBumpyMode = function() {
+        if (!this.isBumpyMode) {
+          this.bumpySubMode = 1;
+          this.enterBumpyMode();
+        } else if (this.bumpySubMode === 1) {
+          this.bumpySubMode = 2;
+          this.renderBumpyGrid();
+          var b1 = document.getElementById('bumpy-mode-btn');
+          if (b1) b1.textContent = '凹凸（动）';
+        } else {
+          this.bumpySubMode = 1;
+          this.renderBumpyGrid();
+          var b2 = document.getElementById('bumpy-mode-btn');
+          if (b2) b2.textContent = '凹凸（静）';
+        }
+      };
+
+      SchulteGridGame.prototype.enterBumpyMode = function() {
+        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        if (this.isCircularMode) this.exitCircularMode();
+        if (this.isBounceMode) this.exitBounceMode();
+        if (this.isRotateMode) this.exitRotateMode();
+        if (this.isVariantMode) this.exitVariantMode();
+        if (this.isMosaicMode) this.exitMosaicMode();
+        if (this.isSquareMoveMode) this.exitSquareMoveMode();
+        if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+
+        this.isBumpyMode = true;
+        this.currentMode = 'normal';
+        // 每局随机一套配色 + 一种合法几何（4种：2相邻边中点 + 其对顶角）
+        this.bumpyPalette = this._generateBumpyPalette();
+        // 四种效果循环出现：每次切换到本模式前进一格（0→1→2→3→0）
+        this.bumpyIdx = ((this.bumpyIdx == null ? -1 : this.bumpyIdx) + 1) % 4;
+
+        document.getElementById('grid-container').style.display = 'none';
+        document.getElementById('circular-container').style.display = 'none';
+        document.getElementById('bounce-canvas').style.display = 'none';
+        document.getElementById('variant-container').style.display = 'none';
+        document.getElementById('mosaic-container').style.display = 'none';
+        document.getElementById('square-move-container').style.display = 'none';
+        document.getElementById('vp-container').style.display = 'none';
+        document.getElementById('bumpy-container').style.display = 'block';
+
+        var btns = document.querySelectorAll('.mode-btn');
+        for (var bi = 0; bi < btns.length; bi++) btns[bi].classList.remove('active');
+        var bb = document.getElementById('bumpy-mode-btn');
+        if (bb) { bb.classList.add('active'); bb.textContent = '凹凸（静）'; }
+
+        this.generateNumbers();
+        this.renderBumpyGrid();
+        this.updateUI();
+        this.updateStartButtonText();
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('restart-btn').style.display = 'none';
+      };
+
+      SchulteGridGame.prototype.exitBumpyMode = function() {
+        this.isBumpyMode = false;
+        this.bumpySubMode = 0;
+        var bb = document.getElementById('bumpy-mode-btn');
+        if (bb) { bb.classList.remove('active'); bb.textContent = '凹凸'; }
+        var bc = document.getElementById('bumpy-container');
+        if (bc) { bc.style.display = 'none'; bc.innerHTML = ''; }
+      };
+
+      SchulteGridGame.prototype.renderBumpyGrid = function() {
+        var container = document.getElementById('bumpy-container');
+        if (!container) return;
+        container.innerHTML = '';
+        var gridSize = this.gridSize;
+        var pal = this.bumpyPalette || (this.bumpyPalette = this._generateBumpyPalette());
+        // 预先把「粉 0.35 叠白」算成一坨不透明浅粉，作格子/容器底色；
+        // 这样子像素取整缝在缩放≠100%时只露出同色浅粉而非白，白线消失（8%留白环色不变）
+        function mixOverWhite(hex, op) {
+          var h = hex.replace('#', '');
+          var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+          var wb = 244; // #f4f4f4 分量
+          var m = function (c) { return Math.round(c * op + wb * (1 - op)); };
+          return 'rgb(' + m(r) + ',' + m(g) + ',' + m(b) + ')';
+        }
+        var cellBg = mixOverWhite(pal.A, 0.35);
+        container.style.background = cellBg;
+        var geom = this._bumpyGeom(this.bumpyIdx != null ? this.bumpyIdx : (this.bumpyIdx = 0));
+        var motion = (this.bumpySubMode === 2);
+
+        var cw = container.clientWidth || Math.min(window.innerWidth - 20, 500);
+        var containerWidth = Math.min(cw, 500);
+        var padding = 0, gap = 0;
+        var availableWidth = containerWidth - padding * 2 - (gridSize - 1) * gap;
+        var cellSize = Math.min(Math.floor(availableWidth / gridSize), 120);
+
+        var grid = document.createElement('div');
+        grid.className = 'bumpy-grid';
+        grid.style.gridTemplateColumns = 'repeat(' + gridSize + ', ' + cellSize + 'px)';
+        grid.style.gap = gap + 'px';
+
+        var numIdx = 0;
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        for (var row = 0; row < gridSize; row++) {
+          for (var col = 0; col < gridSize; col++) {
+            var number = this.numbers[numIdx++];
+            var cell = document.createElement('div');
+            cell.className = 'bumpy-cell';
+            cell.style.width = cellSize + 'px';
+            cell.style.height = cellSize + 'px';
+            cell.style.background = cellBg;
+            cell.dataset.number = number;
+            (function(slf, num, el) {
+              cell.onclick = function() { slf.handleClick(num, el); };
+            })(this, number, cell);
+
+            var svg = document.createElementNS(SVGNS, 'svg');
+            svg.setAttribute('viewBox', '0 0 100 100');
+            svg.setAttribute('width', cellSize);
+            svg.setAttribute('height', cellSize);
+            svg.style.display = 'block';
+
+            // 底粉改由 cell div 背景(cellBg)提供；去掉半透明 frame 矩形，杜绝缝漏白
+
+            // A1 居中，B1/B2/C 坐标已是全局(0..100)，无需 translate/rotate；仅用 g 容纳动画。
+            var g = document.createElementNS(SVGNS, 'g');
+
+            var pB1 = document.createElementNS(SVGNS, 'polygon');
+            pB1.setAttribute('points', geom.B1); pB1.setAttribute('fill', pal.B1);
+            var pB2 = document.createElementNS(SVGNS, 'polygon');
+            pB2.setAttribute('points', geom.B2); pB2.setAttribute('fill', pal.B2);
+            var pC = document.createElementNS(SVGNS, 'polygon');
+            pC.setAttribute('points', geom.C); pC.setAttribute('fill', pal.C);
+            g.appendChild(pB1); g.appendChild(pB2); g.appendChild(pC);
+
+            if (motion) {
+              var an1 = document.createElementNS(SVGNS, 'animate');
+              an1.setAttribute('attributeName', 'fill');
+              an1.setAttribute('values', pal.B1 + ';' + pal.B2 + ';' + pal.B1);
+              an1.setAttribute('dur', '10s'); an1.setAttribute('repeatCount', 'indefinite');
+              pB1.appendChild(an1);
+              var an2 = document.createElementNS(SVGNS, 'animate');
+              an2.setAttribute('attributeName', 'fill');
+              an2.setAttribute('values', pal.B2 + ';' + pal.B1 + ';' + pal.B2);
+              an2.setAttribute('dur', '10s'); an2.setAttribute('repeatCount', 'indefinite');
+              pB2.appendChild(an2);
+            }
+
+            // B1/B2/C 三块纯色无缝相接，不画白色分割线
+            svg.appendChild(g);
+
+            var txt = document.createElementNS(SVGNS, 'text');
+            txt.setAttribute('x', geom.numPos[0]);
+            txt.setAttribute('y', geom.numPos[1]);
+            txt.setAttribute('text-anchor', 'middle');
+            txt.setAttribute('dominant-baseline', 'central');
+            // 字号：高级/专家(grid 6/7)=30px；极限(grid 10)=在 30px 基础上再放大 30% → 39px；
+            //       入门/初级/中级按 C 块比例
+            var numFont;
+            if (gridSize === 10) numFont = 39;                    // 极限：30 × 1.30
+            else if (gridSize === 6 || gridSize === 7) numFont = 30; // 高级/专家
+            else numFont = Math.max(10, Math.floor((geom.cSide / 100) * cellSize * 0.64));
+            txt.setAttribute('font-size', numFont);
+            txt.setAttribute('font-weight', 'bold');
+            txt.setAttribute('fill', '#1a1a1a');
+            // 白边：描边粗细随字号等比例（factor≈0.14），paint-order 让白边衬在深色字下方
+            txt.setAttribute('stroke', '#ffffff');
+            txt.setAttribute('stroke-width', Math.max(1, +(numFont * 0.14).toFixed(2)));
+            txt.setAttribute('stroke-linejoin', 'round');
+            txt.setAttribute('paint-order', 'stroke');
+            txt.textContent = number;
+            svg.appendChild(txt);
+
+            cell.appendChild(svg);
             grid.appendChild(cell);
           }
         }
@@ -3959,6 +4285,7 @@
         document.getElementById('mosaic-container').style.display = 'none';
         document.getElementById('square-move-container').style.display = 'none';
         document.getElementById('vp-container').style.display = 'none';
+        if (document.getElementById('bumpy-container')) document.getElementById('bumpy-container').style.display = 'none';
 
         if (this.isCircularMode) {
           document.getElementById('circular-container').style.display = 'flex';
@@ -4003,6 +4330,13 @@
           document.getElementById('square-move-container').style.display = 'block';
           this.generateNumbers();
           this.renderSquareMoveGrid();
+        } else if (this.isBumpyMode) {
+          document.getElementById('bumpy-container').style.display = 'block';
+          // 开新一局：重新生成配色 + 四种效果循环前进一格（0→1→2→3→0）
+          this.bumpyPalette = this._generateBumpyPalette();
+          this.bumpyIdx = ((this.bumpyIdx == null ? -1 : this.bumpyIdx) + 1) % 4;
+          this.generateNumbers();
+          this.renderBumpyGrid();
         } else if (this.isVisualParallaxMode) {
           document.getElementById('vp-container').style.display = 'block';
           this.generateNumbers();
@@ -4835,10 +5169,11 @@
                 txt.style.setProperty('--end-angle', endAngle + 'deg');
               }
 
-              // 换字模式：随机字体
+              // 换字模式：随机字体（用内联样式，优先级高于 CSS 的 font-family 规则；
+              // 用 setAttribute 会成为表现属性被 CSS 覆盖，字体换不掉）
               if (this.fontMode) {
                 var randomFont = this.fonts[Math.floor(Math.random() * this.fonts.length)];
-                txt.setAttribute('font-family', randomFont);
+                txt.style.fontFamily = randomFont;
               }
 
               // 点击事件
@@ -4985,6 +5320,17 @@
         } else if (this.isVisualParallaxMode) {
           // 视觉差模式：上圆变绿
           element.classList.add('correct');
+        } else if (this.isBumpyMode) {
+          // 凹凸模式：选中后 A1(B1+B2 两三角) 与 C 全部变绿；并停掉动模式下的 fill 渐变动画
+          var bsvg = element.querySelector('svg');
+          if (bsvg) {
+            var bpolys = bsvg.querySelectorAll('polygon');
+            for (var bpi = 0; bpi < bpolys.length; bpi++) {
+              var ban = bpolys[bpi].querySelector('animate');
+              if (ban) bpolys[bpi].removeChild(ban);
+              bpolys[bpi].setAttribute('fill', '#4CAF50');
+            }
+          }
         } else {
           element.classList.add('correct');
         }
@@ -5154,6 +5500,8 @@
           difficultyStr = (this.squareMoveDirection === 3 ? '方形（横纵）' : (this.squareMoveDirection === 2 ? '方形（纵）' : '方形（横）')) + '(' + total + '个' + ntLabel + ')';
         } else if (this.isVisualParallaxMode) {
           difficultyStr = '视差' + (this.vpSubMode === 2 ? '（动）' : '（静）') + ' (' + total + '个' + ntLabel + ')';
+        } else if (this.isBumpyMode) {
+          difficultyStr = '凹凸' + (this.bumpySubMode === 2 ? '（动）' : '（静）') + ' (' + total + '个' + ntLabel + ')';
         } else {
           difficultyStr = '难度: ' + this.gridSize + '×' + this.gridSize + ' (' + total + '个' + ntLabel + ')';
         }
@@ -5812,6 +6160,10 @@
         if (this.isVisualParallaxMode) {
           this.exitVisualParallaxMode();
         }
+        // 如果当前在凹凸模式，先退出
+        if (this.isBumpyMode) {
+          this.exitBumpyMode();
+        }
         // 毁灭4模式切换到圆形时，重置毁灭状态，避免切回方形时DOM不匹配
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
@@ -5923,6 +6275,10 @@
         // 如果当前在视觉差模式，先退出
         if (this.isVisualParallaxMode) {
           this.exitVisualParallaxMode();
+        }
+        // 如果当前在凹凸模式，先退出
+        if (this.isBumpyMode) {
+          this.exitBumpyMode();
         }
         this.isBounceMode = true;
         this.isCircularMode = false;
@@ -6084,6 +6440,10 @@
         // 如果当前在视觉差模式，先退出
         if (this.isVisualParallaxMode) {
           this.exitVisualParallaxMode();
+        }
+        // 如果当前在凹凸模式，先退出
+        if (this.isBumpyMode) {
+          this.exitBumpyMode();
         }
         // 如果当前在跳动模式，先退出（停止 RAF + 清理 isBounceMode）
         if (this.isBounceMode) {

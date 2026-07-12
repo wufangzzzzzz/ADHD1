@@ -185,13 +185,52 @@
       color: white;
     }
 
+    .tc-sep {
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      align-self: center;
+      margin: 0 2px;
+    }
+
+    .tc-select {
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(79,195,247,0.15);
+      color: white;
+      outline: none;
+    }
+
+    .tc-select:hover {
+      border-color: #4FC3F7;
+    }
+
+    .tc-select option {
+      background: #2a2a40;
+      color: #fff;
+    }
+
     .target-item {
       min-width: 60px;
     }
 
     .target-number-inline {
-      font-size: 22px !important;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px !important;
       color: #f44336 !important;
+    }
+
+    .target-number-inline .tgt {
+      color: #f44336;
+      font-weight: bold;
     }
 
     .grid {
@@ -424,6 +463,17 @@
   text-decoration:none;
 }
 .back-btn:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.8);}
+    /* ============ 打印模式 ============ */
+    .print-btn { background: #27ae60; color: #fff; border: none; padding: 8px 14px; font-size: clamp(12px, 1.8vw, 15px); border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; }
+    .print-btn:hover { background: #1e8449; }
+    @media print {
+      .no-print, .back-btn, .modal, .modal-overlay, .overlay, .win-overlay, .message, .result-card, .completion-modal, .success-modal { display: none !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { background: #fff !important; overflow: visible !important; height: auto !important; }
+      /* 解除满屏/禁滚动容器的高度与裁切锁，保证打印时工具栏与画面完整不被裁切 */
+      body { display: block !important; }
+      .app, .container, .wrap, .content, .layout, .game-wrap, .game-container, .main, .stage, .side, .topbar, .toolbar, .controls, .btn-row, .button-group, .header, .nav, .game-header, .game-area, .showcase-area, .group-card, .panel, .board, .canvas-container, .sequence-area, .maze-area, #app { height: auto !important; max-height: none !important; overflow: visible !important; flex-wrap: wrap !important; }
+    }
 </style>
 </head>
 <body>
@@ -448,10 +498,19 @@
       <option value="木字旁">木字旁</option>
       <option value="草字头">草字头</option>
       <option value="三点水">三点水</option>
+      <option value="人字旁">人字旁</option>
+      <option value="言字旁">言字旁</option>
+      <option value="火字旁">火字旁</option>
     </select>
     <button class="orient-btn active" id="orientH" onclick="setOrientation('horizontal')">横版</button>
     <button class="orient-btn" id="orientV" onclick="setOrientation('vertical')">竖版</button>
     <button class="colorful-btn" id="colorfulBtn" onclick="toggleColorful()">彩色</button>
+    <span class="tc-sep">找</span>
+    <select class="tc-select" id="targetCountSelect" onchange="setTargetCount(parseInt(this.value, 10))">
+      <option value="1">1个</option>
+      <option value="2">2个</option>
+      <option value="3">3个</option>
+    </select>
   </div>
 
   <div class="info-bar">
@@ -478,6 +537,7 @@
     <div class="controls">
       <button class="btn btn-start" onclick="startGame()">开始</button>
       <button class="btn btn-reset" onclick="resetGame()">重置</button>
+      <button class="print-btn no-print" onclick="window.print()">打印</button>
     </div>
   </div>
   
@@ -525,7 +585,8 @@
     var orientation = 'horizontal';
     var mode = 'number';
     var grid = [];
-    var targetValue = '';
+    var targetValues = [];
+    var multiCount = 1;
     var targetCells = [];
     var foundCount = 0;
     var wrongCount = 0;
@@ -537,18 +598,21 @@
     // 小写字母列表 (排除易混淆的字母)
     var letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
     
-    // 10套易混淆汉字模板（每套12字）
+    // 易混淆汉字模板（每套约18-20字，扩充自原12字，强化形近/同旁）
     var wordTemplates = {
-      '宝盖头': ['灾', '定', '官', '完', '守', '牢', '宗', '宝', '宁', '宋', '宇', '宅'],
-      '日字系列': ['日', '目', '白', '旧', '旦', '百', '自', '且', '田', '由', '申', '甲'],
-      '口字框': ['囚', '团', '四', '回', '囱', '囧', '圆', '圈', '囵', '固', '国', '圃'],
-      '土字底': ['至', '到', '致', '屋', '握', '卧', '底', '店', '垂', '塞', '坐', '堪'],
-      '月字旁': ['肝', '胆', '肺', '肚', '肠', '胃', '腰', '腹', '腿', '脚', '膝', '臂'],
-      '绞丝旁': ['红', '绿', '结', '织', '终', '绚', '给', '绝', '绞', '絮', '紫', '线'],
-      '金字旁': ['钟', '钉', '铁', '银', '铜', '锡', '铅', '钻', '锋', '链', '锁', '镜'],
-      '木字旁': ['林', '杨', '柳', '桃', '李', '梅', '桂', '桥', '板', '柜', '桌', '椅'],
-      '草字头': ['花', '草', '苗', '芽', '苟', '苞', '苔', '荷', '茶', '菊', '葱', '落'],
-      '三点水': ['汉', '汗', '江', '泪', '洒', '洗', '洁', '洛', '浪', '涌', '涛', '浮']
+      '宝盖头': ['灾', '定', '官', '完', '守', '牢', '宗', '宝', '宁', '宋', '宇', '宅', '宙', '宣', '审', '实', '客', '容', '密', '寒'],
+      '日字系列': ['日', '目', '白', '旧', '旦', '百', '自', '且', '田', '由', '申', '甲', '冒', '昌', '旭', '明', '旨', '暗', '显', '晴'],
+      '口字框': ['囚', '团', '四', '回', '囱', '囧', '圆', '圈', '囵', '固', '国', '圃', '因', '园', '围', '困', '图'],
+      '土字底': ['至', '到', '致', '屋', '握', '卧', '底', '店', '垂', '塞', '坐', '堪', '坑', '块', '坪', '坡', '坤', '坦', '城', '域'],
+      '月字旁': ['肝', '胆', '肺', '肚', '肠', '胃', '腰', '腹', '腿', '脚', '膝', '臂', '朋', '胺', '肥', '胖', '脂', '胞', '腔', '脱'],
+      '绞丝旁': ['红', '绿', '结', '织', '终', '绚', '给', '绝', '绞', '絮', '紫', '线', '纳', '纹', '纸', '纷', '统', '继', '续', '缓'],
+      '金字旁': ['钟', '钉', '铁', '银', '铜', '锡', '铅', '钻', '锋', '链', '锁', '镜', '钢', '钱', '铭', '铲', '错', '锣', '锤'],
+      '木字旁': ['林', '杨', '柳', '桃', '李', '梅', '桂', '桥', '板', '柜', '桌', '椅', '棵', '植', '机', '村', '枝', '柱', '标', '样'],
+      '草字头': ['花', '草', '苗', '芽', '苟', '苞', '苔', '荷', '茶', '菊', '葱', '落', '苦', '若', '茂', '英', '范', '蓝', '蔬', '萍'],
+      '三点水': ['汉', '汗', '江', '泪', '洒', '洗', '洁', '洛', '浪', '涌', '涛', '浮', '河', '湖', '海', '波', '深', '浅', '流', '消'],
+      '人字旁': ['他', '们', '你', '什', '仔', '住', '体', '休', '伸', '伴', '位', '低', '佛', '件', '任', '借', '值', '倒'],
+      '言字旁': ['说', '话', '语', '讲', '谈', '论', '许', '识', '诗', '词', '谎', '课', '读', '请', '谁', '谢', '记', '设'],
+      '火字旁': ['灯', '炉', '炒', '烧', '烟', '烂', '炮', '焰', '焕', '煌', '炊', '炯', '炼', '烘', '烤', '烛', '煤', '燃']
     };
     
     // 当前选中的文字模板名称
@@ -665,11 +729,11 @@
       templateSelect.style.display = m === 'word' ? 'inline-block' : 'none';
       
       if (m === 'number') {
-        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValues.join('、') + '！';
       } else if (m === 'letter') {
-        document.getElementById('status').textContent = '快速找出所有镜像字母 ' + targetValue + '！';
+        document.getElementById('status').textContent = '快速找出所有镜像字母 ' + targetValues.join('、') + '！';
       } else if (m === 'word') {
-        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValues.join('、') + '！';
       }
       
       resetGame();
@@ -700,30 +764,37 @@
       } else if (mode === 'word') {
         possibleValues = words.slice();
       }
-      targetValue = possibleValues[Math.floor(Math.random() * possibleValues.length)];
+      targetValues = getTargetValues(possibleValues);
+      var nonTargets = possibleValues.filter(function(v) { return targetValues.indexOf(v) === -1; });
       
-      // 随机选择每行至少一个位置放目标值
-      var rowTargetPositions = [];
+      // 随机选择每行1-3个目标位置（去重）
+      var posMap = {};
+      var targetPositions = [];
       for (var row = 0; row < ROWS; row++) {
-        // 每行随机选择1-3个位置放目标值
         var count = Math.floor(Math.random() * 3) + 1;
         for (var c = 0; c < count; c++) {
           var pos = row * COLS + Math.floor(Math.random() * COLS);
-          rowTargetPositions.push(pos);
+          if (!posMap[pos]) { posMap[pos] = true; targetPositions.push(pos); }
         }
+      }
+      // 保证目标位置数不少于目标字数（每个目标字至少出现一次）
+      while (targetPositions.length < targetValues.length) {
+        var extra = Math.floor(Math.random() * ROWS * COLS);
+        if (!posMap[extra]) { posMap[extra] = true; targetPositions.push(extra); }
       }
       
       for (var i = 0; i < ROWS * COLS; i++) {
         var value;
         
-        // 如果这个位置是目标位置，放目标值
-        if (rowTargetPositions.indexOf(i) !== -1) {
-          value = targetValue;
+        // 如果这个位置是目标位置，分配一个目标字（前 N 个位置各绑一个目标字，保证都出现）
+        if (posMap[i]) {
+          var pIdx = targetPositions.indexOf(i);
+          var tIdx = (pIdx < targetValues.length) ? pIdx : Math.floor(Math.random() * targetValues.length);
+          value = targetValues[tIdx];
           targetCells.push(i);
         } else {
-          // 否则放随机值（不能是目标值）
-          var otherValues = possibleValues.filter(function(v) { return v !== targetValue; });
-          value = otherValues[Math.floor(Math.random() * otherValues.length)];
+          // 否则放随机值（不能是任何目标值）
+          value = nonTargets[Math.floor(Math.random() * nonTargets.length)];
         }
         
         grid.push(value);
@@ -758,7 +829,7 @@
     
     function selectTarget() {
       // 显示目标（在info-bar的targetNumber中）
-      document.getElementById('targetNumber').textContent = targetValue;
+      document.getElementById('targetNumber').innerHTML = targetValues.map(function(v) { return '<span class="tgt">' + v + '</span>'; }).join('');
       document.getElementById('found').textContent = '0/' + targetCells.length;
     }
     
@@ -768,11 +839,11 @@
       var index = parseInt(cell.dataset.index);
       var value = cell.dataset.value;
       // 数字模式下需要类型转换
-      var targetVal = (mode === 'number') ? parseInt(value) : value;
+      var targetVal = (mode === 'number') ? parseInt(value, 10) : value;
       
       if (cell.classList.contains('found')) return;
       
-      if (targetVal === targetValue) {
+      if (targetValues.indexOf(targetVal) !== -1) {
         cell.classList.add('found');
         foundCount++;
         playSound('found');
@@ -813,11 +884,11 @@
       timerInterval = setInterval(updateTimer, 100);
       
       if (mode === 'number') {
-        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValues.join('、') + '！';
       } else if (mode === 'letter') {
-        document.getElementById('status').textContent = '快速找出所有镜像字母 ' + targetValue + '！';
+        document.getElementById('status').textContent = '快速找出所有镜像字母 ' + targetValues.join('、') + '！';
       } else if (mode === 'word') {
-        document.getElementById('status').textContent = '快速找出所有 ' + targetValue + '！';
+        document.getElementById('status').textContent = '快速找出所有 ' + targetValues.join('、') + '！';
       }
     }
     
@@ -880,7 +951,7 @@
       wrongCount = 0;
       grid = [];
       targetCells = [];
-      targetValue = '';
+      targetValues = [];
       
       clearInterval(timerInterval);
       
@@ -898,6 +969,25 @@
       });
     }
     
+    function getTargetValues(pool) {
+      if (multiCount <= 1) {
+        return [pool[Math.floor(Math.random() * pool.length)]];
+      }
+      var copy = pool.slice();
+      var res = [];
+      for (var k = 0; k < multiCount && copy.length > 0; k++) {
+        var idx = Math.floor(Math.random() * copy.length);
+        res.push(copy.splice(idx, 1)[0]);
+      }
+      return res;
+    }
+
+    function setTargetCount(n) {
+      multiCount = n;
+      resetGame();
+      initGrid();
+    }
+
     // 初始化网格（用于预览）
     function initGrid() {
       var container = document.getElementById('grid');
@@ -917,19 +1007,20 @@
       } else if (mode === 'word') {
         possibleValues = words.slice();
       }
-      var previewTarget = possibleValues[Math.floor(Math.random() * possibleValues.length)];
+      var previewTargets = getTargetValues(possibleValues);
+      var nonTargets = possibleValues.filter(function(v) { return previewTargets.indexOf(v) === -1; });
       
-      // 每行至少一个目标
+      // 每行至少一个目标（多目标时轮流放不同目标字，保证每个都出现）
       for (var row = 0; row < ROWS; row++) {
+        var tcol = Math.floor(Math.random() * COLS);
         for (var col = 0; col < COLS; col++) {
           var i = row * COLS + col;
           var value;
           
-          if (col === Math.floor(Math.random() * COLS)) {
-            value = previewTarget;
+          if (col === tcol) {
+            value = previewTargets[row % previewTargets.length];
           } else {
-            var otherValues = possibleValues.filter(function(v) { return v !== previewTarget; });
-            value = otherValues[Math.floor(Math.random() * otherValues.length)];
+            value = nonTargets[Math.floor(Math.random() * nonTargets.length)];
           }
           
           grid.push(value);

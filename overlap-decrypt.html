@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重叠字符 · 几何解密</title>
+    <style>
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Heiti SC', sans-serif;
+            background-color: #f7f9fc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            box-sizing: border-box;
+            height: 100vh;
+        }
+        h1 { color: #333; margin: 4px 0 10px; font-size: clamp(20px, 3.4vw, 28px); }
+        .toolbar { margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; align-items: center; }
+        .toolbar button {
+            background: #ff6b6b; color: white; border: none; padding: 8px 14px;
+            font-size: clamp(12px, 1.8vw, 15px); border-radius: 8px; cursor: pointer; 
+            transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+        .toolbar button:hover { background: #c0392b; transform: translateY(-2px); }
+        .toolbar button.secondary { background: #6c5ce7; }
+        .toolbar button.secondary:hover { background: #5a4bd1; }
+        .toolbar button.print-btn { background: #27ae60; }
+        .toolbar button.print-btn:hover { background: #1e8449; }
+        .toolbar button.reveal-btn { background: #e67e22; }
+        .toolbar button.reveal-btn:hover { background: #d35400; }
+        /* 分段控件：模式切换 / 数量切换 合为一组，省空间、保证几何模式工具栏单行 */
+        .seg { display: inline-flex; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .seg button { border-radius: 0 !important; margin: 0; box-shadow: none; }
+        .seg button + button { border-left: 1px solid rgba(255,255,255,0.45); }
+        .toolbar button.mode-btn { background: #3498db; }
+        .toolbar button.mode-btn:hover { background: #217dbb; }
+        .toolbar button.mode-btn.active { background: #1f6dad; }
+        .toolbar button.scale-btn { background: #6c5ce7; }
+        .toolbar button.scale-btn:hover { background: #5a4bd1; }
+        .toolbar button.scale-btn.active { background: #4a3bb0; }
+        .toolbar button.back-btn { background: #7f8c8d; }
+        .toolbar button.back-btn:hover { background: #636e72; }
+
+        /* 游戏卡片网格（字符模式：2列3行 / 几何模式：2列2行） */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            align-content: center;
+        }
+        .game-grid.mode-geo {
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+        @media (max-width: 700px) { .game-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); } }
+        @media (max-width: 450px) { .game-grid { grid-template-columns: 1fr; grid-template-rows: repeat(6, 1fr); } }
+
+        /* 单张卡片样式 */
+        .card {
+            background: white;
+            border: 4px solid #e84393;
+            border-radius: 12px;
+            padding: 15px 10px 18px 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            min-height: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 展示区容器 */
+        .overlap-container {
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+            overflow: hidden;
+        }
+        /* 展示区与回答区之间的分隔横线（横跨卡片实际宽度） */
+        .divider {
+            width: 100%;
+            height: 2px;
+            background: #cc8291;
+            border: none;
+            margin: 0 0 12px;
+            box-sizing: border-box;
+        }
+
+        /* ===== 字符模式：重叠字母/数字 ===== */
+        .row {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            white-space: nowrap;
+            line-height: 1;
+        }
+        .row { transform-origin: center center; }
+        .letter {
+            display: inline-block;
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Heiti SC', sans-serif;
+            font-weight: 500;                 /* 更细的黑体 */
+            font-size: clamp(60px, 13vw, 175px); /* 放大基准（渲染后自适应缩放填满卡片，不裁切） */
+            margin: 0 -0.15em;                /* 相邻字水平重叠 15%（规整一排轻微压叠） */
+            user-select: none;
+            pointer-events: none;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .row.color .letter { opacity: 0.92; }
+        .row.mono70 .letter { color: #cc8291; opacity: 0.7; }
+        .row.mono100 .letter { color: #cc8291; opacity: 1; }
+
+        /* ===== 几何模式：描边几何体展示区（大小不一、分散叠加） ===== */
+        .shape-show {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .shape-abs { position: absolute; aspect-ratio: 1 / 1; overflow: visible; }
+        .shape-abs .shape-svg { width: 100%; height: 100%; overflow: visible; display: block; }
+        .shape-svg {
+            width: clamp(26px, 4.6vw, 42px);
+            height: clamp(26px, 4.6vw, 42px);
+            overflow: visible;
+        }
+        /* 回答区：实际出现的几何形状（黑框）+ 次数输入框 */
+        .geo-answers {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .geo-answer-item {
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 2px 3px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        /* 几何与其次数输入框之间的横线 */
+        .geo-divider { width: 82%; height: 1px; background: #333; margin: 1px 0; }
+        .geo-shape { width: clamp(18px, 2.6vw, 24px); height: clamp(18px, 2.6vw, 24px); }
+        .geo-shape .shape-svg { width: 100%; height: 100%; }
+        .geo-count {
+            width: clamp(20px, 3vw, 26px);
+            height: clamp(20px, 3vw, 26px);
+            border: 1px solid #e84393;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            outline: none;
+            transition: 0.2s;
+            background: #fffafc;
+            box-sizing: border-box;
+        }
+        .geo-count:focus { border-color: #d6336c; background: #fff; }
+
+        /* ===== 通用输入框（字符模式字母 / 几何模式次数，class 均含 input-slot 以便打印清空） ===== */
+        .input-area {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .input-slot {
+            width: clamp(28px, 5vw, 35px);
+            height: clamp(28px, 5vw, 35px);
+            border: 2px solid #e84393;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            outline: none;
+            transition: 0.2s;
+            background: #fffafc;
+            box-sizing: border-box;
+        }
+        .input-slot:focus { border-color: #d6336c; background: #fff; }
+        .input-slot.correct { background: #d4edda; border-color: #28a745; color: #155724; }
+        .input-slot.wrong { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .card.completed .letter { opacity: 0.3 !important; }
+
+        /* ================= 打印专用样式 ================= */
+        @page { margin: 8mm; }
+        @media print {
+            html, body { height: auto !important; overflow: visible !important; }
+            body { background: white; padding: 6px; display: block; }
+            h1 { color: black; }
+            .toolbar { display: none !important; } /* 隐藏顶部按钮 */
+            .game-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-rows: repeat(3, auto) !important;
+                gap: 12px;
+                align-content: start;
+                max-width: 100%;
+            }
+            .game-grid.mode-geo { grid-template-rows: repeat(2, auto) !important; } /* 几何模式打印 2 列 2 行 */
+            .card {
+                border: 2px solid #000; /* 打印时边框改黑色 */
+                box-shadow: none;
+                page-break-inside: avoid;
+                background: white;
+                height: auto !important;
+                min-height: 175px !important;
+                justify-content: flex-start;
+            }
+            .overlap-container { flex: none; }
+            .divider { background: #666 !important; } /* 打印时横线更清晰可见 */
+            .letter { font-size: 108px !important; } /* 字符模式打印（2列内宽+旋转投影不裁切） */
+            /* 几何模式打印：展示区固定高度，分散叠加的几何体才能正常定位 */
+            .shape-show { height: 150px !important; }
+            /* 展示区几何体按容器百分比填充，答案区小图标固定尺寸 */
+            .shape-abs .shape-svg { width: 100% !important; height: 100% !important; }
+            .geo-shape { width: 18px !important; height: 18px !important; }
+            .geo-shape .shape-svg { width: 100% !important; height: 100% !important; }
+            .geo-count { width: 20px !important; height: 20px !important; font-size: 12px !important; }
+            /* 打印时，输入框全部变成实线黑框，去除高亮反馈，变成空白待填 */
+            .input-slot {
+                width: 35px !important;
+                height: 35px !important;
+                border: 2px solid #000 !important;
+                background: white !important;
+                color: black !important;
+                box-shadow: none !important;
+            }
+            .input-slot.correct, .input-slot.wrong {
+                background: white !important;
+                border-color: black !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧩 重叠字符 · 几何解密</h1>
+    <div class="toolbar">
+        <button class="back-btn" onclick="location.href='index.html'">返回</button>
+        <div class="seg">
+            <button id="btnModeChar" class="mode-btn active" onclick="setMode('char')">字符模式</button>
+            <button id="btnModeGeo" class="mode-btn" onclick="setMode('geo')">几何模式</button>
+        </div>
+        <div class="seg" id="geoScaleSeg" style="display:none">
+            <button id="btnGeo4" class="scale-btn active" onclick="setGeoScale('4')">4种</button>
+            <button id="btnGeo8" class="scale-btn" onclick="setGeoScale('8')">8种</button>
+        </div>
+        <button onclick="checkAllAnswers()">✅ 在线检查</button>
+        <button class="reveal-btn" onclick="revealAnswers()">👁 显示答案</button>
+        <button class="print-btn" onclick="prepareAndPrint()">🖨 打印</button>
+        <button class="secondary" onclick="initGame()">🔄 刷新</button>
+    </div>
+
+    <div class="game-grid" id="gameGrid">
+        <!-- JS 动态渲染卡片 -->
+    </div>
+
+    <script>
+        // ============ 几何体定义（纯描边，无填充） ============
+        const SHAPE_GEO = {
+            triangle:  { el: 'polygon', attrs: 'points="50,14 86,84 14,84"' },
+            square:    { el: 'rect',    attrs: 'x="15" y="15" width="70" height="70"' },
+            rectangle: { el: 'rect',    attrs: 'x="10" y="28" width="80" height="44"' },
+            circle:    { el: 'circle',  attrs: 'cx="50" cy="50" r="38"' },
+            trapezoid: { el: 'polygon', attrs: 'points="26,22 74,22 88,82 12,82"' },
+            diamond:   { el: 'polygon', attrs: 'points="50,12 88,50 50,88 12,50"' },
+            pentagon:  { el: 'polygon', attrs: 'points="50,12 87,41 71,85 29,85 13,41"' },
+            hexagon:   { el: 'polygon', attrs: 'points="50,10 87,30 87,70 50,90 13,70 13,30"' }
+        };
+        function shapeSVGHTML(type, color, strokeWidth) {
+            const g = SHAPE_GEO[type];
+            const sw = strokeWidth || 2; // 默认 2，更细
+            // vector-effect: 描边不随几何体缩放，保证大几何与小几何描边粗细一致
+            return '<svg viewBox="0 0 100 100" class="shape-svg"><' + g.el + ' ' + g.attrs +
+                   ' fill="none" stroke="' + color + '" stroke-width="' + sw + '" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+        }
+
+        const SHAPES4 = ['triangle', 'square', 'circle', 'rectangle'];
+        const SHAPES8 = SHAPES4.concat(['trapezoid', 'diamond', 'pentagon', 'hexagon']);
+        const COLORS4 = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
+        const COLORS8 = COLORS4; // 8种模式仍只用 4 种颜色（与参考图一致）
+        // tiers：每个档位占展示区“面积”的比例 + 该档出现个数（大图少、小图多，便于快速区分）
+        const GEO_CFG = {
+            '4': { shapes: SHAPES4, colors: COLORS4, n: 13, max: 4,
+                   tiers: { 0.65: 2, 0.50: 1, 0.30: 2, 0.15: 4, 0.06: 2, 0.03: 2 } },
+            '8': { shapes: SHAPES8, colors: COLORS4, n: 22, max: 9,
+                   tiers: { 0.70: 2, 0.50: 1, 0.25: 3, 0.10: 2, 0.06: 2, 0.01: 12 } }
+        };
+
+        // ============ 状态 ============
+        let gameMode = 'char';   // 'char' | 'geo'
+        let geoScale = '4';      // '4' | '8'
+
+        function initGame() {
+            if (gameMode === 'geo') { renderGeo(); return; }
+            renderChar();
+        }
+
+        // ============ 字符模式 ============
+        function renderChar() {
+            const grid = document.getElementById('gameGrid');
+            grid.innerHTML = ''; 
+            
+            const possibleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6', '#e67e22', '#1abc9c', '#e84393'];
+            
+            for (let i = 0; i < 6; i++) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                const count = 5; // 固定 5 个字符，所有卡片一致
+                let chosen = [];
+                let pool = possibleChars.split('');
+                for (let j = 0; j < count; j++) {
+                    const idx = Math.floor(Math.random() * pool.length);
+                    chosen.push(pool.splice(idx, 1)[0]); 
+                }
+                
+                // 卡片按网格位置分三类效果：第1行(A1/A2)=彩色版；第2行(B1/B2)=单色70%；第3行(C1/C2)=单色不透明
+                const type = i < 2 ? 'color' : (i < 4 ? 'mono70' : 'mono100');
+                const overlay = document.createElement('div');
+                overlay.className = 'overlap-container';
+                const row = document.createElement('div');
+                row.className = 'row ' + type;
+                chosen.forEach((char, index) => {
+                    const span = document.createElement('span');
+                    span.className = 'letter';
+                    span.innerText = char;
+                    if (type === 'color') span.style.color = colors[index % colors.length];
+                    span.style.transform = 'rotate(' + (Math.random() * 30 - 15).toFixed(1) + 'deg)';
+                    row.appendChild(span);
+                });
+                overlay.appendChild(row);
+                card.appendChild(overlay);
+                
+                // 展示区与回答区之间的分隔横线
+                const divider = document.createElement('div');
+                divider.className = 'divider';
+                card.appendChild(divider);
+                
+                // 生成下方的输入框
+                const inputArea = document.createElement('div');
+                inputArea.className = 'input-area';
+                card.dataset.answer = chosen.join('');
+                
+                for (let k = 0; k < chosen.length; k++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.className = 'input-slot';
+                    input.dataset.index = k;
+                    
+                    input.addEventListener('input', function(e) {
+                        const val = this.value.toUpperCase();
+                        this.value = val;
+                        if (val.length === 1) {
+                            const next = this.parentElement.children[parseInt(this.dataset.index) + 1];
+                            if (next) next.focus();
+                        }
+                        this.classList.remove('correct', 'wrong');
+                        card.classList.remove('completed');
+                    });
+                    inputArea.appendChild(input);
+                }
+                card.appendChild(inputArea);
+                grid.appendChild(card);
+            }
+            requestAnimationFrame(fitRows);
+        }
+
+        // 字符模式：渲染后自适应缩放（含±15°旋转投影），保证5字完整不裁切
+        function fitRows() {
+            document.querySelectorAll('.overlap-container').forEach(function (oc) {
+                var row = oc.querySelector('.row');
+                if (!row) return;
+                row.style.transform = 'none';
+                var avail = oc.clientWidth;
+                if (avail <= 0) return;
+                var spans = row.querySelectorAll('.letter');
+                var minX = Infinity, maxX = -Infinity;
+                spans.forEach(function (s) {
+                    var r = s.getBoundingClientRect();
+                    if (r.left < minX) minX = r.left;
+                    if (r.right > maxX) maxX = r.right;
+                });
+                var w = (minX === Infinity) ? row.getBoundingClientRect().width : (maxX - minX);
+                if (w > 0) {
+                    var scale = avail / w;
+                    row.style.transform = 'scale(' + (scale > 1 ? 1 : scale).toFixed(3) + ')';
+                }
+            });
+        }
+
+        // 几何模式：渲染后按容器实际像素定位，尺寸按“面积占比”开方得到正方形边长，保证完整落在展示区内
+        function fitGeo() {
+            document.querySelectorAll('.shape-show').forEach(function (ss) {
+                var W = ss.clientWidth, H = ss.clientHeight;
+                if (W <= 0 || H <= 0) return;
+                var minDim = Math.min(W, H);
+                ss.querySelectorAll('.shape-abs').forEach(function (holder) {
+                    var areaFrac = parseFloat(holder.dataset.frac);   // 占展示区面积比例
+                    var sizePx = Math.sqrt(areaFrac * W * H);          // 面积开方 → 正方形边长
+                    if (sizePx > minDim) sizePx = minDim;               // 极端宽高比时夹在容器内
+                    if (sizePx < 8) sizePx = 8;
+                    var cx = parseFloat(holder.dataset.px) * W;
+                    var cy = parseFloat(holder.dataset.py) * H;
+                    var left = cx - sizePx / 2;
+                    var top = cy - sizePx / 2;
+                    if (left < 0) left = 0;
+                    if (top < 0) top = 0;
+                    if (left + sizePx > W) left = W - sizePx;
+                    if (top + sizePx > H) top = H - sizePx;
+                    holder.style.width = sizePx + 'px';
+                    holder.style.height = sizePx + 'px';
+                    holder.style.left = left + 'px';
+                    holder.style.top = top + 'px';
+                });
+            });
+        }
+
+        // ============ 几何模式 ============
+        function renderGeo() {
+            const grid = document.getElementById('gameGrid');
+            grid.innerHTML = ''; 
+            const cfg = GEO_CFG[geoScale];
+            const possibleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+            for (let i = 0; i < 4; i++) { // 2×2 = 4 张卡片，每张独立几何谜题
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                // 生成 n 个实例：档位按固定个数铺好（面积占比），形状/颜色随机；保证每种≤max、总数=n
+                const counts = {};
+                cfg.shapes.forEach(s => counts[s] = 0);
+                const items = [];
+                // 构建档位队列：每个档位重复 tierCount 次，再打乱，使大/小图穿插
+                const tierList = [];
+                Object.keys(cfg.tiers).forEach(function (tf) {
+                    for (let c = 0; c < cfg.tiers[tf]; c++) tierList.push(parseFloat(tf));
+                });
+                for (let i = tierList.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    const t = tierList[i]; tierList[i] = tierList[j]; tierList[j] = t;
+                }
+                for (let k = 0; k < cfg.n; k++) {
+                    const avail = cfg.shapes.filter(s => counts[s] < cfg.max);
+                    const s = avail[Math.floor(Math.random() * avail.length)];
+                    counts[s]++;
+                    const color = cfg.colors[Math.floor(Math.random() * cfg.colors.length)];
+                    items.push({ shape: s, color: color, tier: tierList[k] });
+                }
+
+                // 展示区：纯描边几何体，随机颜色 + 大小不一 + 分散叠加（非全部压在中心）
+                const overlay = document.createElement('div');
+                overlay.className = 'overlap-container';
+                const showWrap = document.createElement('div');
+                showWrap.className = 'shape-show';
+                items.forEach(it => {
+                    const px = Math.random();                        // 中心横向随机种子 0–1
+                    const py = Math.random();                        // 中心纵向随机种子 0–1
+                    const holder = document.createElement('div');
+                    holder.className = 'shape-abs';
+                    holder.dataset.frac = it.tier;                   // 面积占比（50%/30%/15%/6%）
+                    holder.dataset.px = px;
+                    holder.dataset.py = py;
+                    holder.innerHTML = shapeSVGHTML(it.shape, it.color, 2);
+                    showWrap.appendChild(holder);
+                });
+                overlay.appendChild(showWrap);
+                card.appendChild(overlay);
+
+                // 分隔横线
+                const divider = document.createElement('div');
+                divider.className = 'divider';
+                card.appendChild(divider);
+
+                // 回答区：实际出现过的形状（按固定顺序），黑色描边 + 黑框 + 次数输入框
+                const occurred = cfg.shapes.filter(s => counts[s] > 0);
+                const inputArea = document.createElement('div');
+                inputArea.className = 'geo-answers';
+                occurred.forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'geo-answer-item';
+                    const shapeWrap = document.createElement('div');
+                    shapeWrap.className = 'geo-shape';
+                    shapeWrap.innerHTML = shapeSVGHTML(s, '#000', 1.6); // 答案区图标更细
+                    item.appendChild(shapeWrap);
+                    const d = document.createElement('div');     // 几何与答案之间的横线
+                    d.className = 'geo-divider';
+                    item.appendChild(d);
+                    const inp = document.createElement('input');
+                    inp.type = 'text';
+                    inp.maxLength = 2;
+                    inp.className = 'input-slot geo-count';
+                    inp.dataset.shape = s;
+                    inp.inputMode = 'numeric';
+                    item.appendChild(inp);
+                    inputArea.appendChild(item);
+                });
+                card.appendChild(inputArea);
+
+                card.dataset.answer = JSON.stringify(counts);
+                grid.appendChild(card);
+            }
+            requestAnimationFrame(fitGeo);
+        }
+
+        // ============ 模式切换 ============
+        function setMode(m) {
+            gameMode = m;
+            document.getElementById('btnModeChar').classList.toggle('active', m === 'char');
+            document.getElementById('btnModeGeo').classList.toggle('active', m === 'geo');
+            const showGeo = (m === 'geo');
+            document.getElementById('geoScaleSeg').style.display = showGeo ? 'inline-flex' : 'none';
+            const grid = document.getElementById('gameGrid');
+            grid.className = 'game-grid' + (showGeo ? ' mode-geo' : '');
+            initGame();
+        }
+        function setGeoScale(s) {
+            geoScale = s;
+            document.getElementById('btnGeo4').classList.toggle('active', s === '4');
+            document.getElementById('btnGeo8').classList.toggle('active', s === '8');
+            if (gameMode === 'geo') initGame();
+        }
+
+        // ============ 在线检查答案 ============
+        function checkAllAnswers() {
+            const cards = document.querySelectorAll('.card');
+            let allCorrect = true;
+
+            if (gameMode === 'geo') {
+                cards.forEach(card => {
+                    const counts = JSON.parse(card.dataset.answer);
+                    const inputs = card.querySelectorAll('.geo-count');
+                    let cardCorrect = true;
+                    inputs.forEach(inp => {
+                        const want = counts[inp.dataset.shape];
+                        const got = parseInt(inp.value, 10);
+                        inp.classList.remove('correct', 'wrong');
+                        if (got === want) {
+                            inp.classList.add('correct');
+                        } else {
+                            inp.classList.add('wrong');
+                            cardCorrect = false;
+                            allCorrect = false;
+                        }
+                    });
+                    if (cardCorrect) card.classList.add('completed');
+                    else card.classList.remove('completed');
+                });
+                setTimeout(() => {
+                    if (allCorrect) alert("🎉 太棒啦！所有卡片都填对了！");
+                    else alert("有些卡片填错了，红框的需要重新修改哦~");
+                }, 100);
+                return;
+            }
+
+            // 字符模式
+            cards.forEach(card => {
+                const answers = card.dataset.answer.split('');
+                const inputs = card.querySelectorAll('.input-slot');
+                let cardCorrect = true;
+                inputs.forEach((input, idx) => {
+                    const userChar = input.value.toUpperCase();
+                    const correctChar = answers[idx];
+                    input.classList.remove('correct', 'wrong');
+                    if (userChar === correctChar) {
+                        input.classList.add('correct');
+                    } else {
+                        input.classList.add('wrong');
+                        cardCorrect = false;
+                        allCorrect = false;
+                    }
+                });
+                if (cardCorrect) card.classList.add('completed');
+                else card.classList.remove('completed');
+            });
+            setTimeout(() => {
+                if (allCorrect) alert("🎉 太棒啦！所有卡片全都填对了！");
+                else alert("有些卡片填错了，红框的字母需要重新修改哦~");
+            }, 100);
+        }
+
+        // ============ 显示答案 ============
+        function revealAnswers() {
+            const cards = document.querySelectorAll('.card');
+            if (gameMode === 'geo') {
+                cards.forEach(card => {
+                    const counts = JSON.parse(card.dataset.answer);
+                    card.querySelectorAll('.geo-count').forEach(inp => {
+                        inp.value = (counts[inp.dataset.shape] || 0);
+                        inp.classList.remove('wrong');
+                        inp.classList.add('correct');
+                    });
+                    card.classList.add('completed');
+                });
+                return;
+            }
+            // 字符模式
+            cards.forEach(card => {
+                const answers = card.dataset.answer.split('');
+                const inputs = card.querySelectorAll('.input-slot');
+                inputs.forEach((input, idx) => {
+                    input.value = answers[idx] || '';
+                    input.classList.remove('wrong');
+                    input.classList.add('correct');
+                });
+                card.classList.add('completed');
+            });
+        }
+
+        // ============ 打印空白题卡 ============
+        function prepareAndPrint() {
+            const allInputs = document.querySelectorAll('.input-slot');
+            allInputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('correct', 'wrong');
+            });
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => card.classList.remove('completed'));
+            // 字符模式：清除屏幕端缩放
+            document.querySelectorAll('.overlap-container .row').forEach(function (r) { r.style.transform = 'none'; });
+            // 几何模式：打印时改用百分比定位（随打印容器自动缩放，保证不溢出、形状为正方形）
+            if (gameMode === 'geo') {
+                document.querySelectorAll('.shape-abs').forEach(function (h) {
+                    const frac = parseFloat(h.dataset.frac);
+                    h.style.width = (Math.sqrt(frac) * 100) + '%';   // 面积占比开方 → 边长占比，保持档位大小关系
+                    h.style.height = 'auto';   // 配合 .shape-abs 的 aspect-ratio:1/1 保持正方形
+                    h.style.left = (parseFloat(h.dataset.px) * 100) + '%';
+                    h.style.top = (parseFloat(h.dataset.py) * 100) + '%';
+                });
+                window.onafterprint = function () {
+                    fitGeo();                  // 打印结束恢复屏幕像素定位（同题布局）
+                    window.onafterprint = null;
+                };
+            }
+            window.print();
+        }
+
+        window.onload = initGame;
+        window.addEventListener('resize', function () { fitRows(); fitGeo(); });
+    </script>
+</body>
+</html>
