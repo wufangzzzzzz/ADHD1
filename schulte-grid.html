@@ -1071,8 +1071,7 @@
       /* 混乱模式：SVG text 摆动动画 */
       .grid-container.destroy-mode-5 g.cell-group text.chaos-mode {
         animation: variantSwing 2s ease-in-out infinite;
-        transform-box: fill-box;
-        transform-origin: center;
+        transform-box: view-box; /* 用 view-box 坐标系，旋转原点由 JS 显式设为中心，避开 Safari 对 <text> 的 fill-box 计算差异 */
       }
       /* correct 状态：所有色块变绿 */
       .grid-container.destroy-mode-5 g.correct path.cell-bg {
@@ -2504,6 +2503,15 @@
         // 上方毁灭5保持段（offset/chaos）已 return，不会到此；此处覆盖真正切走毁灭5的 normal/variant 等路径
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
+          // 清理毁灭5 SVG 残留：切走毁灭5时清空主容器，避免旧游戏区仍显示、与新模弐叠加
+          var dGrid = document.getElementById('grid-container');
+          if (dGrid) {
+            dGrid.innerHTML = '';
+            dGrid.className = 'grid-container';
+            dGrid.removeAttribute('style');
+          }
+          var dgc = document.querySelector('.game-container');
+          if (dgc) dgc.style.maxWidth = '';
           var dbtnG = document.querySelector('.destroy-toggle');
           if (dbtnG) {
             dbtnG.dataset.destroy = 'false';
@@ -5167,6 +5175,10 @@
                 txt.classList.add('chaos-mode');
                 txt.style.setProperty('--start-angle', startAngle + 'deg');
                 txt.style.setProperty('--end-angle', endAngle + 'deg');
+                // 跨浏览器：用 view-box 坐标系下数字中心(textCX,textCY)作为旋转原点，
+                // Safari/iPad 对 SVG <text> 的 fill-box 计算有差异，会导致所有数字绕左上角转
+                txt.style.transformBox = 'view-box';
+                txt.style.transformOrigin = textCX + 'px ' + textCY + 'px';
               }
 
               // 换字模式：随机字体（用内联样式，优先级高于 CSS 的 font-family 规则；

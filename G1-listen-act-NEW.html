@@ -13,7 +13,7 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
       background: linear-gradient(135deg, #FFF5E6 0%, #FFEAEE 30%, #FFF8E0 60%, #F0E6FF 100%);
-      min-height: 100vh;
+      min-height: 100vh; min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -524,7 +524,7 @@
 /* ===== 横屏布局：左功能 + 右游戏（同数字回音壁） ===== */
 @media (orientation: landscape) {
   body {
-    min-height: 100vh;
+    min-height: 100vh; min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -541,7 +541,7 @@
     overflow: hidden;
     flex: 0 1 auto;
     margin: 0 auto;
-    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
     background: #fff;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -598,7 +598,7 @@
 /* 手机横屏（矮屏紧凑布局） */
 @media (orientation: landscape) and (max-height: 500px) {
   body { padding: 6px; }
-  .container { max-width: min(96vw, 800px); max-height: calc(100vh - 12px); border-radius: 14px; }
+  .container { max-width: min(96vw, 800px); max-height: calc(100dvh - 12px); border-radius: 14px; }
   .land-left { width: clamp(240px, 34vw, 300px); padding: 10px 10px; gap: 2px; }
   .land-right { padding: 10px 12px; gap: 4px; }
   .land-left .title-area h1 { font-size: 16px; }

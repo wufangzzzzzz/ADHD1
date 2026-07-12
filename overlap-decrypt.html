@@ -15,10 +15,10 @@
             padding: 20px;
             margin: 0;
             box-sizing: border-box;
-            height: 100vh;
+            height: 100vh; height: 100dvh; /* 用动态视口高度，避免平板/移动端地址栏导致底部被裁切 */
         }
-        h1 { color: #333; margin: 4px 0 10px; font-size: clamp(20px, 3.4vw, 28px); }
-        .toolbar { margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; align-items: center; }
+        h1 { color: #333; margin: 4px 0 10px; font-size: clamp(20px, 3.4vw, 28px); flex-shrink: 0; }
+        .toolbar { margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; align-items: center; flex-shrink: 0; }
         .toolbar button {
             background: #ff6b6b; color: white; border: none; padding: 8px 14px;
             font-size: clamp(12px, 1.8vw, 15px); border-radius: 8px; cursor: pointer; 
