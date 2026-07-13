@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>手脑协调 · 行为训练</title>
+<style id="pageStyle">@page{size:landscape;margin:8mm;}</style>
+<style>
+:root{
+  --bg:#ffffff; --panel:#f5f6fa; --text:#1a1a2e; --muted:#5a6072;
+  --border:#d8dce6; --accent:#6a1b9a;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0; overflow:hidden;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  display:flex; flex-direction:column;
+}
+.app{height:100vh; height:100dvh; display:flex; flex-direction:column; overflow:hidden; padding:10px 14px; gap:8px;}
+.topbar{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+.back-btn{background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer; flex-shrink:0;}
+.title{flex:1; font-size:18px; font-weight:600; text-align:center;}
+.mode-toggle{display:flex; gap:0; flex-shrink:0; border:1px solid var(--border); border-radius:8px; overflow:hidden;}
+.mode-toggle button{background:#fff; color:var(--muted); border:none; padding:8px 14px; font-size:14px; cursor:pointer;}
+.mode-toggle button.active{background:var(--accent); color:#fff;}
+.controls{flex-shrink:0; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end; justify-content:center; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px 12px;}
+.ctrl-group{display:flex; flex-direction:column; gap:5px; min-width:0;}
+.ctrl-label{font-size:11px; color:var(--muted); font-weight:600;}
+.ctrl-row{display:flex; gap:5px; flex-wrap:wrap; align-items:center;}
+.sel{font-size:13px; padding:6px 8px; border:1px solid var(--border); border-radius:7px; background:#fff; color:var(--text); max-width:140px;}
+.btn{background:var(--accent); color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:14px; cursor:pointer; font-weight:600;}
+.btn.small{padding:6px 10px; font-size:12px;}
+.mirror-btn.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+.print-btn{background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer;}
+.status{font-size:13px; color:var(--muted);}
+.legend{display:flex; gap:14px; font-size:12px; color:var(--muted); align-items:center;}
+.legend .dot{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:middle;}
+
+/* 模式A 舞台：横版一分为二 */
+.stage{flex:1; min-height:0; display:flex; gap:0; overflow:hidden;}
+.panel{flex:1; min-width:0; display:flex; flex-direction:column; position:relative;}
+.panel-label{text-align:center; font-size:13px; font-weight:600; color:var(--muted); padding:2px 0; flex-shrink:0;}
+.panel.left .panel-label{color:var(--left);}
+.panel.right .panel-label{color:var(--right);}
+.panel canvas{flex:1; width:100%; min-height:0; background:#fff; touch-action:none; display:block;}
+.divider{width:2px; background:var(--border); flex-shrink:0;}
+
+/* 模式B：3D 魔方展示 */
+.mode-b{flex:1; min-height:0; display:none; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; gap:18px;}
+.cube-wrap{perspective:1000px;}
+.cube{width:220px; height:220px; position:relative; transform-style:preserve-3d; animation:spin 14s linear infinite;}
+.face{position:absolute; width:220px; height:220px; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:3px; padding:3px; background:#111; border-radius:8px; box-shadow:inset 0 0 0 2px rgba(0,0,0,0.25);}
+.face.front{transform:translateZ(110px);}
+.face.back{transform:rotateY(180deg) translateZ(110px);}
+.face.right{transform:rotateY(90deg) translateZ(110px);}
+.face.left{transform:rotateY(-90deg) translateZ(110px);}
+.face.top{transform:rotateX(90deg) translateZ(110px);}
+.face.bottom{transform:rotateX(-90deg) translateZ(110px);}
+.cell{border-radius:3px;}
+@keyframes spin{from{transform:rotateX(-22deg) rotateY(0deg);}to{transform:rotateX(-22deg) rotateY(360deg);}}
+.mode-b-caption{font-size:14px; color:var(--muted); text-align:center; max-width:80%; line-height:1.6;}
+
+@media (max-width:480px){
+  .title{font-size:15px;}
+  .app{padding:8px 10px; gap:6px;}
+  .sel{font-size:11px; padding:5px 6px; max-width:110px;}
+  .btn{padding:7px 12px; font-size:13px;}
+  .cube{width:160px; height:160px;}
+  .face{width:160px; height:160px;}
+  .face.front{transform:translateZ(80px);}
+  .face.back{transform:rotateY(180deg) translateZ(80px);}
+  .face.right{transform:rotateY(90deg) translateZ(80px);}
+  .face.left{transform:rotateY(-90deg) translateZ(80px);}
+  .face.top{transform:rotateX(90deg) translateZ(80px);}
+  .face.bottom{transform:rotateX(-90deg) translateZ(80px);}
+}
+@media print{
+  .no-print{display:none !important;}
+  html,body{height:auto !important; overflow:visible !important; background:#fff !important; margin:0 !important;}
+  .app{height:auto !important; display:block !important; padding:0 !important;}
+  .stage{display:flex !important; height:85vh !important; align-items:center; gap:0 !important;}
+  .panel{flex:1; min-width:0; height:100%;}
+  .panel canvas{width:100% !important; height:auto !important; max-height:85vh; background:#fff !important;}
+  .panel-label{display:block !important;}
+  *{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar no-print">
+    <button class="back-btn" onclick="location.href='index.html'">返回</button>
+    <div class="title">手脑协调</div>
+    <div class="mode-toggle">
+      <button id="modeA" class="active" onclick="setMode('A')">模式A</button>
+      <button id="modeB" onclick="setMode('B')">模式B</button>
+    </div>
+  </div>
+
+  <!-- 模式A 控制栏 -->
+  <div class="controls no-print" id="ctrlA">
+    <div class="ctrl-group">
+      <div class="ctrl-label">左侧图形（半边）</div>
+      <div class="ctrl-row">
+        <select id="selL" class="sel"></select>
+        <button class="btn small mirror-btn" id="mirrorL">↔ 左镜像</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">右侧图形（半边）</div>
+      <div class="ctrl-row">
+        <select id="selR" class="sel"></select>
+        <button class="btn small mirror-btn" id="mirrorR">↔ 右镜像</button>
+      </div>
+    </div>
+    <div class="ctrl-row" style="align-self:flex-end; gap:8px;">
+      <button class="btn" id="randomBtn">🎲 随机</button>
+      <button class="btn" id="clearBtn">清除</button>
+      <button class="btn" id="doneBtn">完成</button>
+      <button class="print-btn" onclick="window.print()">打印</button>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">状态</div>
+      <div class="status" id="status">就绪 · 用时 0.0s</div>
+    </div>
+    <div class="legend no-print">
+      <span><span class="dot" style="background:#e91e63"></span>左手</span>
+      <span><span class="dot" style="background:#1565c0"></span>右手</span>
+    </div>
+  </div>
+
+  <!-- 模式A 舞台 -->
+  <div class="stage" id="stage">
+    <div class="panel left">
+      <div class="panel-label">左手</div>
+      <canvas id="cvL"></canvas>
+    </div>
+    <div class="divider"></div>
+    <div class="panel right">
+      <div class="panel-label">右手</div>
+      <canvas id="cvR"></canvas>
+    </div>
+  </div>
+
+  <!-- 模式B：3D 魔方展示（内容待补充） -->
+  <div class="mode-b" id="modeB">
+    <div class="cube-wrap"><div class="cube" id="cube"></div></div>
+    <div class="mode-b-caption">模式 B：3D 魔方展示（展示型）<br>内容待补充 —— 此区域将用于呈现魔方类 3D 图像与对应训练说明。</div>
+  </div>
+</div>
+
+<script>
+const cvL=document.getElementById('cvL');
+const cvR=document.getElementById('cvR');
+let printing=false;
+let leftCommitted=[], rightCommitted=[];
+let leftActive=new Map(), rightActive=new Map();
+let state={mode:'A', L:'circle', R:'triangle', mirrorL:false, mirrorR:false, cL:'#e91e63', cR:'#1565c0'};
+
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+
+/* ---------- 素材库（约16个，全部等高） ---------- */
+const LABELS={
+  circle:'圆', triangle:'三角形', square:'正方形', diamond:'菱形',
+  ellipse:'椭圆', pentagon:'五边形', hexagon:'六边形', star:'五角星',
+  heart:'心形', cross:'十字', trapezoid:'梯形', parallelogram:'平行四边形',
+  arch:'拱形', arrowUp:'上箭头', slash:'斜线', sWave:'S曲线'
+};
+// 线类（斜线/S曲线）不竖切，完整显示在各自画面中央
+const LINE_SET={'slash':1,'sWave':1};
+// 高度系数 HK = 实际垂直跨度 / (2R)，用于把所有图形归一为统一高度
+const HK={circle:1,triangle:0.775,square:0.82,diamond:1,ellipse:0.62,pentagon:0.90,hexagon:1,
+  star:0.90,heart:0.55,cross:1,trapezoid:0.6,parallelogram:0.6,arch:0.875,arrowUp:1,slash:1,sWave:1};
+// 垂直居中修正：让几何中心对齐中线（三角偏上、拱形偏下）
+const VC={triangle:0.225, arch:-0.125};
+
+function drawStart(ctx,x,y,r){
+  ctx.save(); ctx.fillStyle='#2e7d32'; ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function starPath(ctx,cx,cy,R){
+  ctx.beginPath();
+  for(let i=0;i<10;i++){
+    const ang=-Math.PI/2 + i*Math.PI/5;
+    const rad=(i%2===0)?R:R*0.4;
+    const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad;
+    if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+}
+const SHAPES={
+  circle:(c,x,y,R)=>{c.beginPath();c.arc(x,y,R,-Math.PI/2,Math.PI*1.5);c.stroke();},
+  triangle:(c,x,y,R)=>{c.beginPath();c.moveTo(x,y-R);c.lineTo(x-R*0.87,y+R*0.55);c.lineTo(x+R*0.87,y+R*0.55);c.closePath();c.stroke();},
+  square:(c,x,y,R)=>{const s=R*0.82;c.beginPath();c.moveTo(x,y-s);c.lineTo(x+s,y-s);c.lineTo(x+s,y+s);c.lineTo(x-s,y+s);c.closePath();c.stroke();},
+  diamond:(c,x,y,R)=>{c.beginPath();c.moveTo(x,y-R);c.lineTo(x+R*0.72,y);c.lineTo(x,y+R);c.lineTo(x-R*0.72,y);c.closePath();c.stroke();},
+  star:(c,x,y,R)=>{starPath(c,x,y,R);c.stroke();},
+  heart:(c,x,y,R)=>{const t=R;c.beginPath();c.moveTo(x,y-t*0.5);c.bezierCurveTo(x+t*1.1,y-t*1.0,x+t*0.5,y+t*0.9,x,y+t*0.5);c.bezierCurveTo(x-t*0.5,y+t*0.9,x-t*1.1,y-t*1.0,x,y-t*0.5);c.closePath();c.stroke();},
+  ellipse:(c,x,y,R)=>{c.beginPath();c.ellipse(x,y,R,R*0.62,0,-Math.PI/2,Math.PI*1.5);c.stroke();},
+  pentagon:(c,x,y,R)=>{c.beginPath();for(let i=0;i<5;i++){const a=-Math.PI/2+i*2*Math.PI/5;const px=x+Math.cos(a)*R,py=y+Math.sin(a)*R;if(i===0)c.moveTo(px,py);else c.lineTo(px,py);}c.closePath();c.stroke();},
+  hexagon:(c,x,y,R)=>{c.beginPath();for(let i=0;i<6;i++){const a=-Math.PI/2+i*2*Math.PI/6;const px=x+Math.cos(a)*R,py=y+Math.sin(a)*R;if(i===0)c.moveTo(px,py);else c.lineTo(px,py);}c.closePath();c.stroke();},
+  cross:(c,x,y,R)=>{const a=R*0.34,b=R;c.beginPath();c.moveTo(x,y-b);c.lineTo(x+a,y-b);c.lineTo(x+a,y-a);c.lineTo(x+b,y-a);c.lineTo(x+b,y+a);c.lineTo(x+a,y+a);c.lineTo(x+a,y+b);c.lineTo(x-a,y+b);c.lineTo(x-a,y+a);c.lineTo(x-b,y+a);c.lineTo(x-b,y-a);c.lineTo(x-a,y-a);c.closePath();c.stroke();},
+  trapezoid:(c,x,y,R)=>{c.beginPath();c.moveTo(x,y-R*0.6);c.lineTo(x+R*0.5,y-R*0.6);c.lineTo(x+R*0.95,y+R*0.6);c.lineTo(x-R*0.95,y+R*0.6);c.closePath();c.stroke();},
+  parallelogram:(c,x,y,R)=>{c.beginPath();c.moveTo(x,y-R*0.6);c.lineTo(x+R*0.95,y-R*0.6);c.lineTo(x+R*0.5,y+R*0.6);c.lineTo(x-R*0.95,y+R*0.6);c.closePath();c.stroke();},
+  arch:(c,x,y,R)=>{const r=R*0.75;c.beginPath();c.moveTo(x,y-r);c.arc(x,y,r,-Math.PI/2,Math.PI/2,false);c.lineTo(x+r,y+R);c.lineTo(x-r,y+R);c.lineTo(x-r,y);c.arc(x,y,r,Math.PI,Math.PI*1.5,false);c.closePath();c.stroke();},
+  arrowUp:(c,x,y,R)=>{c.beginPath();c.moveTo(x,y-R);c.lineTo(x+R*0.7,y-R*0.1);c.lineTo(x+R*0.3,y-R*0.1);c.lineTo(x+R*0.3,y+R);c.lineTo(x-R*0.3,y+R);c.lineTo(x-R*0.3,y-R*0.1);c.lineTo(x-R*0.7,y-R*0.1);c.closePath();c.stroke();},
+  slash:(c,x,y,R)=>{c.beginPath();c.moveTo(x-R*0.7,y-R);c.lineTo(x+R*0.7,y+R);c.stroke();},
+  sWave:(c,x,y,R)=>{c.beginPath();c.moveTo(x,y-R);c.bezierCurveTo(x+R*0.95,y-R,x-R*0.95,y,x,y);c.bezierCurveTo(x+R*0.95,y,x-R*0.95,y+R,x,y+R);c.stroke();}
+};
+// 起点坐标（绿点，严格落在图形实际起笔处）
+const STARTS={
+  slash:(x,y,R)=>({x:x-R*0.7,y:y-R}),
+  sWave:(x,y,R)=>({x:x,y:y-R}),
+  square:(x,y,R)=>({x:x,y:y-R*0.82}),
+  cross:(x,y,R)=>({x:x,y:y-R}),
+  ellipse:(x,y,R)=>({x:x,y:y-R*0.62}),
+  heart:(x,y,R)=>({x:x,y:y-R*0.5}),
+  trapezoid:(x,y,R)=>({x:x,y:y-R*0.6}),
+  parallelogram:(x,y,R)=>({x:x,y:y-R*0.6}),
+  arch:(x,y,R)=>({x:x,y:y-R*0.75}),
+  _def:(x,y,R)=>({x:x,y:y-R})
+};
+function startOf(name,x,y,R){return (STARTS[name]||STARTS._def)(x,y,R);}
+
+const COLORS=['#e91e63','#1565c0','#2e7d32','#ef6c00','#8e24aa','#00838f','#d81b60','#f9a825'];
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function twoColors(){
+  const a=pick(COLORS); let b=pick(COLORS); let g=0;
+  while(b===a && g++<10) b=pick(COLORS);
+  return [a,b];
+}
+
+/* ---------- 渲染 ---------- */
+function drawStroke(ctx,pts,color,lw){
+  if(pts.length<1) return;
+  ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.stroke();
+}
+function renderSide(side){
+  const cv=side==='L'?cvL:cvR;
+  const ctx=cv.getContext('2d');
+  const w=cv._w, h=cv._h;
+  if(!w||!h) return;
+  ctx.clearRect(0,0,w,h);
+  const shape = side==='L'? state.L : state.R;
+  const mirror = side==='L'? state.mirrorL : state.mirrorR;
+  const color = side==='L'? state.cL : state.cR;
+  const isLine = !!LINE_SET[shape];
+  // 等高：统一垂直跨度
+  const targetH = Math.min(w,h)*0.60;
+  const R = targetH / (2*(HK[shape]||1));
+  const cy0 = h/2;
+  const oy = cy0 + (VC[shape]||0)*R;
+  // 竖切闭合图形：中心偏移 R/2 使其半边在本画面水平居中；线类完整居中
+  const cx = isLine ? w/2 : (side==='L' ? (w/2 + R/2) : (w/2 - R/2));
+  // 引导图形
+  ctx.save();
+  ctx.strokeStyle=color; ctx.globalAlpha=printing?0.85:0.35;
+  ctx.lineWidth=Math.max(3,w*0.014); ctx.lineJoin='round'; ctx.lineCap='round';
+  if(!isLine){
+    ctx.beginPath();
+    if(side==='L') ctx.rect(0,0,cx,h); else ctx.rect(cx,0,w-cx,h);
+    ctx.clip();
+  }
+  ctx.save();
+  if(mirror){ ctx.translate(w,0); ctx.scale(-1,1); }
+  SHAPES[shape](ctx, cx, oy, R);
+  ctx.restore();
+  ctx.restore();
+  // 绿点起点（clip 已解除，完整显示不被切）
+  const s=startOf(shape, cx, oy, R);
+  ctx.save();
+  if(mirror){ ctx.translate(w,0); ctx.scale(-1,1); }
+  drawStart(ctx, s.x, s.y, Math.max(5,w*0.022));
+  ctx.restore();
+  // 用户笔迹（不镜像）
+  const committed=side==='L'?leftCommitted:rightCommitted;
+  const active=side==='L'?leftActive:rightActive;
+  const lw=Math.max(3,w*0.016);
+  committed.forEach(s=>drawStroke(ctx,s,color,lw));
+  active.forEach(s=>drawStroke(ctx,s,color,lw));
+}
+
+function fitAll(){
+  [cvL,cvR].forEach(cv=>{
+    const rect=cv.getBoundingClientRect();
+    const dpr=window.devicePixelRatio||1;
+    cv.width=Math.max(1,Math.round(rect.width*dpr));
+    cv.height=Math.max(1,Math.round(rect.height*dpr));
+    cv._w=rect.width; cv._h=rect.height;
+    cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+  });
+  renderSide('L'); renderSide('R');
+}
+
+/* ---------- 计时 & 音效 ---------- */
+let timerRunning=false, startTime=0, timerId=null;
+function ensureTimer(){
+  if(!timerRunning){
+    timerRunning=true; startTime=performance.now();
+    timerId=setInterval(()=>{
+      const t=(performance.now()-startTime)/1000;
+      document.getElementById('status').textContent='训练中 · 用时 '+t.toFixed(1)+'s';
+    },100);
+  }
+}
+function stopTimer(){
+  if(timerId){clearInterval(timerId); timerId=null;}
+  timerRunning=false;
+  const t=(performance.now()-startTime)/1000;
+  return t;
+}
+let actx=null;
+function ensureAudio(){
+  if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
+  if(actx&&actx.state==='suspended') actx.resume();
+}
+function beep(){
+  ensureAudio(); if(!actx) return;
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.frequency.value=720; o.type='sine';
+  o.connect(g); g.connect(actx.destination);
+  const t=actx.currentTime;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.25,t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+  o.start(t); o.stop(t+0.2);
+}
+
+/* ---------- 绘制交互（双指同时） ---------- */
+function attach(cv, side){
+  cv.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    cv.setPointerCapture(e.pointerId);
+    const rect=cv.getBoundingClientRect();
+    const pt={x:clamp(e.clientX-rect.left,0,cv._w), y:clamp(e.clientY-rect.top,0,cv._h)};
+    const stroke=[pt];
+    if(side==='L') leftActive.set(e.pointerId,stroke); else rightActive.set(e.pointerId,stroke);
+    ensureTimer();
+    renderSide(side);
+  });
+  cv.addEventListener('pointermove',e=>{
+    const map=side==='L'?leftActive:rightActive;
+    if(!map.has(e.pointerId)) return;
+    e.preventDefault();
+    const rect=cv.getBoundingClientRect();
+    map.get(e.pointerId).push({x:clamp(e.clientX-rect.left,0,cv._w), y:clamp(e.clientY-rect.top,0,cv._h)});
+    renderSide(side);
+  });
+  function end(e){
+    const map=side==='L'?leftActive:rightActive;
+    const comm=side==='L'?leftCommitted:rightCommitted;
+    if(!map.has(e.pointerId)) return;
+    comm.push(map.get(e.pointerId));
+    map.delete(e.pointerId);
+    renderSide(side);
+  }
+  cv.addEventListener('pointerup',end);
+  cv.addEventListener('pointercancel',end);
+}
+attach(cvL,'L');
+attach(cvR,'R');
+
+/* ---------- 控制 ---------- */
+function fillSelect(sel, selected){
+  sel.innerHTML='';
+  Object.keys(LABELS).forEach(k=>{
+    const o=document.createElement('option'); o.value=k; o.textContent=LABELS[k];
+    if(k===selected) o.selected=true; sel.appendChild(o);
+  });
+}
+fillSelect(document.getElementById('selL'), state.L);
+fillSelect(document.getElementById('selR'), state.R);
+
+document.getElementById('selL').addEventListener('change',e=>{
+  state.L=e.target.value; state.mirrorL=false;
+  document.getElementById('mirrorL').classList.remove('active');
+  clearAll(false); renderSide('L'); renderSide('R');
+});
+document.getElementById('selR').addEventListener('change',e=>{
+  state.R=e.target.value; state.mirrorR=false;
+  document.getElementById('mirrorR').classList.remove('active');
+  clearAll(false); renderSide('L'); renderSide('R');
+});
+document.getElementById('mirrorL').addEventListener('click',()=>{
+  state.mirrorL=!state.mirrorL;
+  document.getElementById('mirrorL').classList.toggle('active',state.mirrorL);
+  renderSide('L');
+});
+document.getElementById('mirrorR').addEventListener('click',()=>{
+  state.mirrorR=!state.mirrorR;
+  document.getElementById('mirrorR').classList.toggle('active',state.mirrorR);
+  renderSide('R');
+});
+document.getElementById('randomBtn').addEventListener('click',()=>{
+  const keys=Object.keys(LABELS);
+  state.L=pick(keys);
+  let r=pick(keys), g=0;
+  while(r===state.L && g++<10) r=pick(keys);
+  state.R=r;
+  const [cL,cR]=twoColors(); state.cL=cL; state.cR=cR;
+  state.mirrorL=false; state.mirrorR=false;
+  document.getElementById('selL').value=state.L;
+  document.getElementById('selR').value=state.R;
+  document.getElementById('mirrorL').classList.remove('active');
+  document.getElementById('mirrorR').classList.remove('active');
+  clearAll(false); renderSide('L'); renderSide('R');
+});
+document.getElementById('clearBtn').addEventListener('click',()=>clearAll(true));
+function clearAll(announce){
+  leftCommitted=[]; rightCommitted=[]; leftActive.clear(); rightActive.clear();
+  if(timerId){clearInterval(timerId); timerId=null;}
+  timerRunning=false;
+  document.getElementById('status').textContent='就绪 · 用时 0.0s';
+  if(announce){ renderSide('L'); renderSide('R'); }
+}
+document.getElementById('doneBtn').addEventListener('click',()=>{
+  const t=stopTimer();
+  document.getElementById('status').textContent='已完成 · 用时 '+t.toFixed(1)+'s';
+  beep();
+});
+
+/* ---------- 模式切换 ---------- */
+function setMode(m){
+  state.mode=m;
+  document.getElementById('modeA').classList.toggle('active',m==='A');
+  document.getElementById('modeB').classList.toggle('active',m==='B');
+  document.getElementById('ctrlA').style.display = m==='A'?'flex':'none';
+  document.getElementById('stage').style.display = m==='A'?'flex':'none';
+  document.getElementById('modeB').style.display = m==='B'?'flex':'none';
+}
+
+/* ---------- 打印：清空笔迹只留模板 ---------- */
+let savedL=[], savedR=[];
+window.addEventListener('beforeprint',()=>{
+  printing=true;
+  savedL=leftCommitted; savedR=rightCommitted;
+  leftCommitted=[]; rightCommitted=[]; leftActive.clear(); rightActive.clear();
+  renderSide('L'); renderSide('R');
+});
+window.addEventListener('afterprint',()=>{
+  printing=false;
+  leftCommitted=savedL; rightCommitted=savedR;
+  renderSide('L'); renderSide('R');
+});
+
+/* ---------- 模式B 构建 3D 魔方 ---------- */
+(function buildCube(){
+  const cube=document.getElementById('cube');
+  const colors={front:'#fafafa',back:'#ffd600',right:'#1565c0',left:'#d50000',top:'#2e7d32',bottom:'#ff6d00'};
+  ['front','back','right','left','top','bottom'].forEach(k=>{
+    const f=document.createElement('div'); f.className='face '+k;
+    for(let i=0;i<9;i++){ const c=document.createElement('div'); c.className='cell'; c.style.background=colors[k]; f.appendChild(c); }
+    cube.appendChild(f);
+  });
+})();
+
+window.addEventListener('resize',()=>{ if(state.mode==='A') fitAll(); });
+requestAnimationFrame(fitAll);
+</script>
+</body>
+</html>
