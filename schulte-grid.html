@@ -2380,6 +2380,8 @@
           if (this._bounceAnimId) { cancelAnimationFrame(this._bounceAnimId); this._bounceAnimId = null; }
           this._bounceInit();
           this._bounceRender();
+          this.updateUI();
+          this.updateStartButtonText();
         } else if (this.isVariantMode) {
           this.currentNumber = this.getNumberStart();
           this.renderVariantGrid();
@@ -7653,7 +7655,7 @@
           if (b.y - b.r < 0) { b.y = b.r; b.vy = Math.abs(b.vy); }
           if (b.y + b.r > H) { b.y = H - b.r; b.vy = -Math.abs(b.vy); }
           if (self.bounceSubMode === 3 && b.targetR != null) {
-            b.r += (b.targetR - b.r) * 0.2;   // 混沌3：丝滑缓动到目标半径（提速至0.2）
+            b.r += (b.targetR - b.r) * 0.08;   // 混沌3：半径缓动（0.2→0.08，适中速度）
           }
         }
 
@@ -7680,15 +7682,10 @@
                 b2.vx += dvn * nx;
                 b2.vy += dvn * ny;
                 if (self.bounceSubMode === 3) {
-                  // 混沌3：相撞时两球朝彼此半径中点平滑靠拢（小的渐渐变大、大的慢慢变小）
-                  var midR2 = (a.targetR + b2.targetR) / 2;
-                  var EX = 0.5;
-                  a.targetR = a.targetR + (midR2 - a.targetR) * EX;
-                  b2.targetR = b2.targetR + (midR2 - b2.targetR) * EX;
-                  if (a.targetR < self.bounceRMin) a.targetR = self.bounceRMin;
-                  if (a.targetR > self.bounceRMax) a.targetR = self.bounceRMax;
-                  if (b2.targetR < self.bounceRMin) b2.targetR = self.bounceRMin;
-                  if (b2.targetR > self.bounceRMax) b2.targetR = self.bounceRMax;
+                  // 混沌3：相撞时两球交换目标半径（大小互换），保持尺寸多样性，不会趋同
+                  var tmpR = a.targetR;
+                  a.targetR = b2.targetR;
+                  b2.targetR = tmpR;
                 }
               }
             }
