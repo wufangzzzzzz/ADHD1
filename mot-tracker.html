@@ -78,6 +78,16 @@ body{
   padding:2px;
   background:#fff;
 }
+.pattern-select{
+  width:120px;height:28px;
+  border:2px solid rgba(45,43,85,0.15);
+  border-radius:8px;
+  background:#fff;
+  color:rgba(45,43,85,0.7);
+  font-size:12px;font-weight:600;
+  padding:0 6px;
+  cursor:pointer;
+}
 
 /* 进度条 */
 .progress-wrap{
@@ -167,6 +177,7 @@ body{
 }
 .start-btn:active{transform:scale(0.95);}
 .start-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.start-btn.stop{background:linear-gradient(135deg,#FF073A,#FF5E0E);box-shadow:0 3px 12px rgba(255,7,58,0.25);}
 
 /* 右面板 */
 .right-panel{
@@ -186,6 +197,8 @@ body{
 }
 .info-bar{
   display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+  position:relative;
+  width:100%;
 }
 .info-item{
   background:#FFFFFF;
@@ -288,6 +301,26 @@ canvas{display:block;width:100%;height:100%;}
 
 .countdown-ring{position:absolute;top:10px;right:10px;z-index:50;}
 .countdown-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#FF5E0E;}
+
+/* 倒计时读秒：绝对定位叠加在"轮次行"右端，不占布局流，避免游戏区位移；尺寸收窄 */
+.timer-badge{
+  display:none;
+  position:absolute;
+  top:50%;right:0;
+  transform:translateY(-50%);
+  align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#FF5E0E,#FF9800);
+  color:#fff;
+  font-size:18px;font-weight:800;
+  font-family:'JetBrains Mono','Courier New',monospace;
+  padding:5px 14px;
+  border-radius:20px;
+  box-shadow:0 4px 14px rgba(255,94,14,0.3);
+  min-width:48px;
+}
+.timer-badge.show{display:flex;}
+.timer-badge.big{font-size:22px;padding:7px 20px;min-width:56px;}
+.timer-badge.urgent{background:linear-gradient(135deg,#FF073A,#FF5E0E);box-shadow:0 4px 14px rgba(255,7,58,0.35);}
 </style>
 </head>
 <body>
@@ -305,9 +338,32 @@ canvas{display:block;width:100%;height:100%;}
       <button class="diff-btn" data-level="hard">高级</button>
     </div>
 
+    <div class="diff-label">球大小</div>
+    <div class="diff-btns" id="sizePanel">
+      <button class="diff-btn" data-size="small">小</button>
+      <button class="diff-btn active" data-size="medium">中</button>
+      <button class="diff-btn" data-size="large">大</button>
+    </div>
+
     <div class="color-row">
       <span class="color-label">目标球颜色</span>
       <input type="color" id="ballColorPicker" value="#FF5E0E" class="color-picker">
+    </div>
+
+    <div class="color-row">
+      <span class="color-label">背景颜色</span>
+      <input type="color" id="bgColorPicker" value="#EFEFF4" class="color-picker">
+    </div>
+    <div class="color-row">
+      <span class="color-label">背景纹理</span>
+      <select id="bgPatternSelect" class="pattern-select">
+        <option value="solid">纯色</option>
+        <option value="dots">圆点阵</option>
+        <option value="grid">网格</option>
+        <option value="stripe-h">横纹</option>
+        <option value="stripe-d">斜纹</option>
+        <option value="checker">棋盘</option>
+      </select>
     </div>
 
     <div class="config-desc" id="configDesc">
@@ -315,6 +371,7 @@ canvas{display:block;width:100%;height:100%;}
       <div class="row"><span>目标球</span><span id="cfgK">2</span></div>
       <div class="row"><span>追踪时长</span><span id="cfgDur">8s</span></div>
       <div class="row"><span>球速</span><span id="cfgSpeed">慢</span></div>
+      <div class="row"><span>球大小</span><span id="cfgSize">中</span></div>
     </div>
 
     <div class="speed-row">
@@ -332,7 +389,7 @@ canvas{display:block;width:100%;height:100%;}
       <p>初级：6球2目标，慢速8秒<br>中级：8球3目标，中速12秒<br>高级：10球4目标，快速15秒</p>
     </div>
 
-    <button class="start-btn" id="startBtn" onclick="startGame()">开始训练</button>
+    <button class="start-btn" id="startBtn" onclick="onStartBtn()">开始训练</button>
 
     <div class="result-card" id="resultCard">
       <div class="result-title">训练结束</div>
@@ -353,6 +410,7 @@ canvas{display:block;width:100%;height:100%;}
       <div class="info-item">轮次 <span class="val" id="roundNum">0</span>/10</div>
       <div class="info-item">得分 <span class="val" id="scoreVal">0</span></div>
       <div class="info-item">正确率 <span class="val" id="accVal">-</span></div>
+      <div class="timer-badge" id="countdownBadge"></div>
     </div>
 
     <div class="progress-wrap">
@@ -362,7 +420,6 @@ canvas{display:block;width:100%;height:100%;}
 
     <div class="canvas-wrap" id="canvasWrap">
       <canvas id="gameCanvas"></canvas>
-      <canvas id="countdownCanvas" class="countdown-ring" width="60" height="60" style="display:none;"></canvas>
     </div>
 
     <div class="hint-text" id="hintText">点击左侧「开始训练」</div>
@@ -371,13 +428,23 @@ canvas{display:block;width:100%;height:100%;}
 
 <script>
 const DIFFICULTY = {
-  easy:{N:6,K:2,speed:0.8,duration:8000,ballSize:18,label:'慢'},
-  medium:{N:8,K:3,speed:1.2,duration:12000,ballSize:15,label:'中'},
-  hard:{N:10,K:4,speed:1.6,duration:15000,ballSize:12,label:'快'}
+  easy:{N:6,K:2,speed:0.8,duration:8000,label:'慢'},
+  medium:{N:8,K:3,speed:1.2,duration:12000,label:'中'},
+  hard:{N:10,K:4,speed:1.6,duration:15000,label:'快'}
 };
+
+// 球大小：独立三档，用户自选，不随难度变化
+const BALL_SIZE = { small:18, medium:26, large:34 };
+function getBallSize(){ return BALL_SIZE[state.ballSizeTier]; }
+
+// 训练中可随时停止：集中管理 setTimeout，停止时一并清除，避免残留计时器继续推进游戏
+let pendingTimers = [];
+function setTimer(fn, ms){ const id = setTimeout(fn, ms); pendingTimers.push(id); return id; }
+function clearAllTimers(){ pendingTimers.forEach(clearTimeout); pendingTimers = []; }
 
 let state = {
   level:'easy',
+  ballSizeTier:'medium',
   round:0,
   totalScore:0,
   totalCorrect:0,
@@ -391,7 +458,9 @@ let state = {
   gameStarted:false,
   ballColor:'#FF5E0E',
   speedMultiplier:1.0,
-  selectDeadline:0
+  selectDeadline:0,
+  bgColor:'#EFEFF4',
+  bgPattern:'solid'
 };
 
 const canvas = document.getElementById('gameCanvas');
@@ -426,6 +495,7 @@ function resizeCanvas(){
   const rect = wrap.getBoundingClientRect();
   canvas.width = rect.width * 2;
   canvas.height = rect.height * 2;
+  ctx.setTransform(1,0,0,1,0,0);
   ctx.scale(2,2);
 }
 resizeCanvas();
@@ -437,6 +507,8 @@ function updateConfigDesc(){
   document.getElementById('cfgK').textContent = cfg.K;
   document.getElementById('cfgDur').textContent = (cfg.duration/1000)+'s';
   document.getElementById('cfgSpeed').textContent = cfg.label;
+  const sizeLabel = {small:'小',medium:'中',large:'大'}[state.ballSizeTier];
+  document.getElementById('cfgSize').textContent = sizeLabel + '（' + getBallSize() + 'px）';
   document.getElementById('speedVal').textContent = state.speedMultiplier.toFixed(1)+'x';
   document.getElementById('speedSlider').value = state.speedMultiplier;
 }
@@ -445,7 +517,8 @@ function initBalls(){
   const cfg = DIFFICULTY[state.level];
   const W = canvas.width / 2;
   const H = canvas.height / 2;
-  const margin = cfg.ballSize * 2;
+  const size = getBallSize();
+  const margin = size * 2;
   state.balls = [];
   state.targets = [];
   state.selected = new Set();
@@ -459,7 +532,7 @@ function initBalls(){
       y = margin + Math.random() * (H - margin * 2);
       overlap = positions.some(p=>{
         const dx = p.x - x, dy = p.y - y;
-        return Math.sqrt(dx*dx+dy*dy) < cfg.ballSize * 3;
+        return Math.sqrt(dx*dx+dy*dy) < size * 3;
       });
       attempts++;
     } while(overlap && attempts < 100);
@@ -488,6 +561,7 @@ function initBalls(){
 
 function startGame(){
   if(state.phase === 'tracking' || state.phase === 'marking') return;
+  clearAllTimers();
   state.round = 0;
   state.totalScore = 0;
   state.totalCorrect = 0;
@@ -496,34 +570,61 @@ function startGame(){
   state.ballColor = document.getElementById('ballColorPicker').value;
   if(state.animId) cancelAnimationFrame(state.animId);
   resultCard.classList.remove('show');
-  startBtn.disabled = true;
-  startBtn.textContent = '训练中...';
+  startBtn.classList.add('stop');
+  startBtn.textContent = '停止训练';
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=true);
+  document.querySelectorAll('#sizePanel .diff-btn').forEach(b=>b.disabled=true);
   updateUI();
   startRound();
 }
 
+// 开始/停止按钮：训练中点击变红的「停止训练」可随时中止
+function onStartBtn(){
+  if(state.gameStarted) stopGame();
+  else startGame();
+}
+
+// 随时停止：取消动画与所有残留计时器，回到空闲态
+function stopGame(){
+  if(state.animId) cancelAnimationFrame(state.animId);
+  state.animId = null;
+  clearAllTimers();
+  state.phase = 'idle';
+  state.gameStarted = false;
+  state.selectDeadline = 0;
+  state.round = 0;
+  state.totalScore = 0;
+  state.totalCorrect = 0;
+  state.totalRounds = 0;
+  state.balls = [];
+  state.targets = [];
+  state.selected = new Set();
+  resultCard.classList.remove('show');
+  startBtn.classList.remove('stop');
+  startBtn.textContent = '开始训练';
+  document.getElementById('countdownBadge').classList.remove('show','big','urgent');
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.querySelectorAll('#sizePanel .diff-btn').forEach(b=>b.disabled=false);
+  hintText.textContent = '点击「开始训练」';
+  hintText.style.color = '';
+  updateUI();
+  drawBalls();
+}
+
+// 倒计时读秒改为在游戏区外的 HTML 徽标显示，不再遮挡球场
 function showCountdown(cb){
-  const W = canvas.width / 2;
-  const H = canvas.height / 2;
   let count = 3;
+  const badge = document.getElementById('countdownBadge');
   function tick(){
-    ctx.clearRect(0,0,W,H);
-    drawGrid();
-    drawBalls(); // 倒计时期间球保持显示
+    drawBalls(); // 保持球显示（标记阶段高亮目标）
     if(count > 0){
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(0,0,W,H);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 80px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.3)';
-      ctx.shadowBlur = 20;
-      ctx.fillText(count, W/2, H/2);
-      ctx.shadowBlur = 0;
+      badge.textContent = count;
+      badge.classList.add('show','big');
+      badge.classList.remove('urgent');
       count--;
-      setTimeout(tick, 800);
+      setTimer(tick, 800);
     } else {
+      badge.classList.remove('show','big','urgent');
       cb();
     }
   }
@@ -543,6 +644,78 @@ function drawGrid(){
   }
 }
 
+// 颜色明暗调整（hex -> rgb 元组），用于球体立体渐变 & 背景纹理对比色
+function shiftRgb(hex, percent){
+  hex = (hex || '#9E9DB0').replace('#','');
+  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const num = parseInt(hex, 16);
+  let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent) / 100;
+  r = Math.round((t - r) * p) + r;
+  g = Math.round((t - g) * p) + g;
+  b = Math.round((t - b) * p) + b;
+  return {r,g,b};
+}
+function shadeColor(hex, percent){
+  const c = shiftRgb(hex, percent);
+  return 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+}
+
+// 背景容积：填充用户选定颜色 + 按所选纹理绘制与背景协调的半透明图案
+// 纹理颜色根据背景明暗自动取对比色，确保选了颜色后纹理依然清晰可见
+function drawBackground(){
+  const W = canvas.width / 2;
+  const H = canvas.height / 2;
+  ctx.fillStyle = state.bgColor;
+  ctx.fillRect(0, 0, W, H);
+  // 依据背景亮度计算纹理对比色：浅底用更深色，深底用更浅色
+  const c = shiftRgb(state.bgColor, 0);
+  const lum = 0.299*c.r + 0.587*c.g + 0.114*c.b;
+  let tint;
+  if(lum > 150){
+    const d = shiftRgb(state.bgColor, -30);
+    tint = `rgba(${d.r},${d.g},${d.b},0.2)`;
+  } else {
+    const l = shiftRgb(state.bgColor, 42);
+    tint = `rgba(${l.r},${l.g},${l.b},0.3)`;
+  }
+  ctx.strokeStyle = tint;
+  ctx.fillStyle = tint;
+  ctx.lineWidth = 1.5;
+  const p = state.bgPattern;
+  if(p === 'dots'){
+    for(let x = 22; x < W; x += 34) for(let y = 22; y < H; y += 34){
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+    }
+  } else if(p === 'grid'){
+    for(let x = 0; x <= W; x += 34){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y = 0; y <= H; y += 34){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  } else if(p === 'stripe-h'){
+    for(let y = 0; y <= H; y += 22){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  } else if(p === 'stripe-d'){
+    for(let d = -H; d < W; d += 22){ ctx.beginPath(); ctx.moveTo(d,0); ctx.lineTo(d + H, H); ctx.stroke(); }
+  } else if(p === 'checker'){
+    const s = 34;
+    for(let x = 0; x < W; x += s) for(let y = 0; y < H; y += s){
+      if((Math.floor(x/s) + Math.floor(y/s)) % 2 === 0) ctx.fillRect(x, y, s, s);
+    }
+  }
+}
+
+// 把"选择阶段倒计时读秒"显示到游戏区外的 HTML 徽标（不再遮挡球场）
+function updateTimerBadge(){
+  const badge = document.getElementById('countdownBadge');
+  if(state.phase === 'selecting' && state.selectDeadline){
+    const remaining = Math.max(0, Math.ceil((state.selectDeadline - Date.now()) / 1000));
+    badge.textContent = remaining + 's';
+    badge.classList.add('show');
+    badge.classList.toggle('urgent', remaining <= 1);
+  } else {
+    badge.classList.remove('show','urgent');
+  }
+}
+
 function startRound(){
   const cfg = DIFFICULTY[state.level];
   state.round++;
@@ -555,7 +728,7 @@ function startRound(){
   updateUI();
 
   // 2秒后倒计时
-  setTimeout(()=>{
+  setTimer(()=>{
     showCountdown(()=>{
       state.phase = 'tracking';
       state.startTime = Date.now();
@@ -582,7 +755,7 @@ function animate(){
   const cfg = DIFFICULTY[state.level];
   const W = canvas.width / 2;
   const H = canvas.height / 2;
-  const r = cfg.ballSize;
+  const r = getBallSize();
 
   state.balls.forEach(b=>{
     b.x += b.vx;
@@ -622,6 +795,14 @@ function animate(){
     }
   }
 
+  // 边界钳制：碰撞修正可能把球推出界外，绘制前强制拉回，杜绝球超出容积
+  state.balls.forEach(b=>{
+    if(b.x < r) b.x = r;
+    if(b.x > W - r) b.x = W - r;
+    if(b.y < r) b.y = r;
+    if(b.y > H - r) b.y = H - r;
+  });
+
   drawBalls();
 
   const elapsed = Date.now() - state.startTime;
@@ -643,48 +824,61 @@ function drawBalls(){
   const H = canvas.height / 2;
   ctx.clearRect(0,0,W,H);
 
+  drawBackground();
   drawGrid();
 
-  // 选择阶段倒计时
-  if(state.phase === 'selecting' && state.selectDeadline){
-    const remaining = Math.max(0, Math.ceil((state.selectDeadline - Date.now()) / 1000));
-    ctx.fillStyle = remaining <= 1 ? '#FF073A' : '#1a1a2e';
-    ctx.font = 'bold 48px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(remaining + 's', canvas.width/4, 60);
-  }
+  const r = getBallSize();
+  // 数字仅在答题阶段（selecting / reveal / result）显示；答题前（marking / tracking）不显示
+  const showNum = (state.phase === 'selecting' || state.phase === 'reveal' || state.phase === 'result');
 
   state.balls.forEach((b,i)=>{
-    const r = cfg.ballSize;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, r, 0, Math.PI*2);
-
-    if(state.phase === 'marking' && b.isTarget){
-      ctx.fillStyle = state.ballColor;
-      ctx.shadowColor = state.ballColor + '99';
-      ctx.shadowBlur = 12;
-    } else if(state.phase === 'reveal' && b.isTarget){
-      ctx.fillStyle = state.ballColor;
-      ctx.shadowColor = state.ballColor + '99';
-      ctx.shadowBlur = 12;
+    // 基础主色与发光
+    let base, glow = 'transparent', glowBlur = 0;
+    if((state.phase === 'marking' || state.phase === 'reveal') && b.isTarget){
+      base = state.ballColor; glow = state.ballColor + '99'; glowBlur = 12;
     } else if(state.phase === 'selecting' && state.selected.has(i)){
-      ctx.fillStyle = '#32CD32';
-      ctx.shadowColor = 'rgba(50,205,50,0.4)';
-      ctx.shadowBlur = 8;
+      base = '#32CD32'; glow = 'rgba(50,205,50,0.4)'; glowBlur = 8;
     } else {
-      ctx.fillStyle = 'rgba(45,43,85,0.2)';
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
+      base = '#9E9DB0';
     }
-    ctx.fill();
-    ctx.shadowBlur = 0;
 
+    // 径向渐变立体球（光源在左上）
+    const light = shadeColor(base, 45);
+    const dark = shadeColor(base, -38);
+    const grad = ctx.createRadialGradient(b.x - r*0.35, b.y - r*0.35, r*0.12, b.x, b.y, r);
+    grad.addColorStop(0, light);
+    grad.addColorStop(0.5, base);
+    grad.addColorStop(1, dark);
+
+    ctx.save();
+    if(glowBlur){ ctx.shadowColor = glow; ctx.shadowBlur = glowBlur; }
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // 高光点（体积感）
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.arc(b.x - r*0.32, b.y - r*0.32, r*0.2, 0, Math.PI*2); ctx.fill();
+
+    // 数字（仅答题阶段，白边黑字，字号放大更清晰）
+    if(showNum){
+      ctx.font = `bold ${Math.floor(r*1.1)}px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = '#fff';
+      ctx.strokeText(i+1, b.x, b.y);
+      ctx.fillStyle = '#000';
+      ctx.fillText(i+1, b.x, b.y);
+    }
+
+    // 结果标记
     if(state.phase === 'result'){
       if(b.isTarget && state.selected.has(i)){
         ctx.fillStyle = '#32CD32';
-        ctx.font = `bold ${r*1.2}px sans-serif`;
+        ctx.font = `bold ${r*1.1}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText('✓', b.x, b.y + r*0.4);
+        ctx.fillText('✓', b.x, b.y + r*0.55);
       } else if(b.isTarget && !state.selected.has(i)){
         ctx.strokeStyle = '#FF5E0E';
         ctx.lineWidth = 2;
@@ -693,9 +887,9 @@ function drawBalls(){
         ctx.setLineDash([]);
       } else if(!b.isTarget && state.selected.has(i)){
         ctx.fillStyle = '#FF073A';
-        ctx.font = `bold ${r*1.2}px sans-serif`;
+        ctx.font = `bold ${r*1.1}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText('✗', b.x, b.y + r*0.4);
+        ctx.fillText('✗', b.x, b.y + r*0.55);
       }
     }
 
@@ -708,6 +902,7 @@ function drawBalls(){
       ctx.setLineDash([]);
     }
   });
+  updateTimerBadge();
 }
 
 canvas.addEventListener('click',e=>{
@@ -721,7 +916,7 @@ canvas.addEventListener('click',e=>{
   state.balls.forEach((b,i)=>{
     const dx = b.x - mx, dy = b.y - my;
     const dist = Math.sqrt(dx*dx+dy*dy);
-    if(dist < cfg.ballSize * 1.5 && dist < minDist){
+    if(dist < getBallSize() * 1.5 && dist < minDist){
       minDist = dist;
       closest = i;
     }
@@ -759,9 +954,9 @@ function evaluateRound(){
   updateUI();
 
   if(state.round >= 10){
-    setTimeout(()=>endGame(),2000);
+    setTimer(()=>endGame(),2000);
   } else {
-    setTimeout(()=>startRound(),2000);
+    setTimer(()=>startRound(),2000);
   }
 }
 
@@ -794,6 +989,7 @@ function resetToIdle(){
   startBtn.disabled = false;
   startBtn.textContent = '开始训练';
   resultCard.classList.remove('show');
+  document.getElementById('countdownBadge').classList.remove('show','big','urgent');
   document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
   hintText.textContent = '';
   hintText.style.color = '';
@@ -820,6 +1016,7 @@ document.getElementById('diffPanel').addEventListener('click',e=>{
   e.target.classList.add('active');
   state.level = e.target.dataset.level;
   if(state.animId) cancelAnimationFrame(state.animId);
+  clearAllTimers();
   state.phase = 'idle';
   state.gameStarted = false;
   state.round = 0;
@@ -839,6 +1036,27 @@ document.getElementById('diffPanel').addEventListener('click',e=>{
 	  state.speedMultiplier = parseFloat(e.target.value);
 	  document.getElementById('speedVal').textContent = state.speedMultiplier.toFixed(1)+'x';
 	  updateConfigDesc();
+	});
+
+	// 球大小三档：独立自选，不影响难度配置
+	document.getElementById('sizePanel').addEventListener('click',e=>{
+	  if(!e.target.classList.contains('diff-btn')) return;
+	  document.querySelectorAll('#sizePanel .diff-btn').forEach(b=>b.classList.remove('active'));
+	  e.target.classList.add('active');
+	  state.ballSizeTier = e.target.dataset.size;
+	  updateConfigDesc();
+	  // 仅在非进行中（idle）时即时重绘预览；进行中下一轮生效
+	  if(state.phase === 'idle') drawBalls();
+	});
+
+	// 背景颜色 / 纹理自定义（即时重绘）
+	document.getElementById('bgColorPicker').addEventListener('input',e=>{
+	  state.bgColor = e.target.value;
+	  drawBalls();
+	});
+	document.getElementById('bgPatternSelect').addEventListener('change',e=>{
+	  state.bgPattern = e.target.value;
+	  drawBalls();
 	});
 
 updateConfigDesc();

@@ -412,6 +412,48 @@
       .numtype-dropdown .nt-item:hover { background: #E0F2F1; color: #00897B; }
       .numtype-dropdown .nt-item.selected { background: #00897B; color: #fff; }
 
+      /* ===== 通用模式下拉菜单（彩格/混沌/马赛克/方形/视差/凹凸） ===== */
+      .mode-dropdown-wrap { position: relative; display: inline-block; }
+      .mode-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        min-width: 108px;
+        overflow: hidden;
+      }
+      .mode-menu.show { display: block; }
+      .mode-menu .mode-menu-item {
+        display: block;
+        width: 100%;
+        padding: 7px 12px;
+        border: none;
+        background: #fff;
+        color: #333;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .mode-menu .mode-menu-item:hover { background: #E0F2F1; color: #00897B; }
+      .mode-menu .mode-menu-item.selected { background: #00897B; color: #fff; }
+
+      /* 彩格模式：点中正确→整格变绿并停转；点错→红色抖动 */
+      .color-cell.correct .color-cell-bg { background: #4CAF50 !important; transform: none !important; }
+      .color-cell.correct .color-cell-num { color: #fff !important; }
+      .color-cell.wrong .color-cell-bg { animation: color-wrong-shake 0.4s ease; }
+      @keyframes color-wrong-shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-5px); }
+        60% { transform: translateX(5px); }
+      }
+
       /* 背景选择按钮 */
       .effect-btn.bgtype {
         border: 1px solid #607D8B;
@@ -2012,13 +2054,57 @@
         <span class="row-label">布局</span>
         <div class="mode-group">
           <button class="mode-btn active" data-mode="normal" onclick="game.setMode('normal')">普通</button>
-          <button class="mode-btn" data-mode="circular" id="circular-mode-btn" onclick="game.setMode('circular')">圆形（静）</button>
-          <button class="mode-btn" data-mode="bounce" id="bounce-mode-btn" onclick="game.toggleBounceMode()">混沌（动/转）</button>
+          <button class="mode-btn" data-mode="circular" id="circular-mode-btn" onclick="game.setMode('circular')">圆形</button>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="chaos" id="chaos-btn" onclick="game.toggleModeMenu('chaos')">混沌 ▾</button>
+            <div class="mode-menu" id="chaos-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item" data-sub="1" onclick="game.setChaosSub(1)">混沌1</div>
+              <div class="mode-menu-item" data-sub="2" onclick="game.setChaosSub(2)">混沌2</div>
+              <div class="mode-menu-item" data-sub="3" onclick="game.setChaosSub(3)">混沌3</div>
+            </div>
+          </div>
           <button class="mode-btn" data-mode="variant" id="variant-mode-btn" onclick="game.setMode('variant')">变体</button>
-          <button class="mode-btn" data-mode="mosaic" id="mosaic-mode-btn" onclick="game.toggleMosaicMode()">马赛克</button>
-          <button class="mode-btn" data-mode="square-move" id="square-move-btn" onclick="game.toggleSquareMoveMode()">方形（动）</button>
-          <button class="mode-btn" data-mode="vp" id="vp-mode-btn" onclick="game.toggleVisualParallaxMode()">视差</button>
-          <button class="mode-btn" data-mode="bumpy" id="bumpy-mode-btn" onclick="game.toggleBumpyMode()">凹凸</button>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="mosaic" id="mosaic-mode-btn" onclick="game.toggleModeMenu('mosaic')">马赛克 ▾</button>
+            <div class="mode-menu" id="mosaic-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item" data-dyn="false" onclick="game.setMosaicSub(false)">马赛克·静</div>
+              <div class="mode-menu-item" data-dyn="true" onclick="game.setMosaicSub(true)">马赛克·动</div>
+            </div>
+          </div>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="square-move" id="square-move-btn" onclick="game.toggleModeMenu('square')">方形 ▾</button>
+            <div class="mode-menu" id="square-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item" data-dir="1" onclick="game.setSquareMoveSub(1)">方形·横</div>
+              <div class="mode-menu-item" data-dir="2" onclick="game.setSquareMoveSub(2)">方形·纵</div>
+              <div class="mode-menu-item" data-dir="3" onclick="game.setSquareMoveSub(3)">方形·横纵</div>
+            </div>
+          </div>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="vp" id="vp-mode-btn" onclick="game.toggleModeMenu('vp')">视差 ▾</button>
+            <div class="mode-menu" id="vp-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item" data-dyn="false" onclick="game.setVpSub(false)">视差·静</div>
+              <div class="mode-menu-item" data-dyn="true" onclick="game.setVpSub(true)">视差·动</div>
+            </div>
+          </div>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="bumpy" id="bumpy-mode-btn" onclick="game.toggleModeMenu('bumpy')">凹凸 ▾</button>
+            <div class="mode-menu" id="bumpy-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item" data-dyn="false" onclick="game.setBumpySub(false)">凹凸·静</div>
+              <div class="mode-menu-item" data-dyn="true" onclick="game.setBumpySub(true)">凹凸·动</div>
+            </div>
+          </div>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="color" id="color-btn" onclick="game.toggleModeMenu('color')">彩格 ▾</button>
+            <div class="mode-menu" id="color-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item" data-sub="1" data-dyn="false" onclick="game.setColorSub(1,false)">彩格1·静</div>
+              <div class="mode-menu-item" data-sub="1" data-dyn="true" onclick="game.setColorSub(1,true)">彩格1·动</div>
+              <div class="mode-menu-item" data-sub="2" data-dyn="false" onclick="game.setColorSub(2,false)">彩格2·静</div>
+              <div class="mode-menu-item" data-sub="2" data-dyn="true" onclick="game.setColorSub(2,true)">彩格2·动</div>
+              <div class="mode-menu-item" data-sub="3" data-dyn="false" onclick="game.setColorSub(3,false)">彩格3·静</div>
+              <div class="mode-menu-item" data-sub="3" data-dyn="true" onclick="game.setColorSub(3,true)">彩格3·动</div>
+            </div>
+          </div>
+          <button class="mode-btn" data-mode="pattern" id="pattern-mode-btn" onclick="game.setMode('pattern')">图案</button>
           <button class="mode-btn speed-toggle" id="speed-toggle-btn" onclick="game.toggleSpeed()" style="display:none;">转速:0.1</button>
         </div>
       </div>
@@ -2183,6 +2269,8 @@
         this.isCircularMode = false; // 是否在圆形模式
         this.isRotateMode = false;    // 旋转模式（待实现）
         this.isBounceMode = false;    // 弹跳模式（待实现）
+        this.bounceSubMode = 1;       // 混沌动子模式：1=普通混沌动，3=混沌3（碰撞大小互换）
+        this.chaosSub = 0;            // 混沌循环档位：0=未进入，1=动，2=转，3=混沌3（循环 1→2→3→1）
         this.isVariantMode = false;   // 变体模式（2D平面三叉星布局）
         this.isSquareMoveMode = false; // 方形（动）模式
         this.squareMoveDirection = 0; // 0=关, 1=横向, 2=纵向, 3=横纵
@@ -2191,6 +2279,20 @@
         this.isBumpyMode = false; // 凹凸模式
         this.bumpySubMode = 0; // 0=关, 1=静, 2=动
         this.variantNumbers = [];     // 变体模式数字数组
+        this.isPatternMode = false;   // 图案模式（独立视觉布局）
+        this.patternSide = 'left';    // 图案半圆方向：'left'/'right'，每局随机统一
+        this.patternSub = 1;          // 图案子类型：1=图案1
+        this.patternHue = 215;        // 图案A色锚点色相，每局随机
+        // ===== 彩格模式 =====
+        this.isColorMode = false;     // 是否在彩格模式
+        this.colorSub = 0;            // 0=未进, 1=彩格1, 2=彩格2, 3=彩格3
+        this.colorDynamic = false;    // false=静, true=动
+        this._colorAnimId = null;     // 动模式 rAF id
+        this._colorCells = [];        // 每格 {bg, cell, initAngle, col}
+        this._colorAnimStart = 0;
+        this._colorAnimSpeed = 30;    // 动模式转速 度/秒（比原60降一倍，可调）
+        this.COLOR_BG = '#0a0176';    // 整体背景容积色
+        this.COLOR_PALETTE_12 = ['', '#ffd1d1','#fe9e9f','#f85556','#ffa44a','#f3e471','#c2fca7','#80eac6','#5eddf0','#19b0ff','#0d4bea','#0309c3','#3212a5'];
         this.circularRotating = 0; // 0=静, 1=动1(交替), 2=动2(变速) // 圆形模式旋转状态
         // 20种字体
         this.fonts = [
@@ -2307,6 +2409,20 @@
       };
 
       SchulteGridGame.prototype.setMode = function(mode) {
+        // 进入任何非混沌布局时，复位混沌循环按钮（与单按钮循环切换一致：点其它布局即退出）
+        if (mode !== 'chaos' && this.chaosSub) {
+          this.chaosSub = 0;
+          var cbb = document.getElementById('chaos-btn');
+          if (cbb) cbb.textContent = '混沌';
+        }
+        // 离开图案模式：进入任何非图案模式时清除标志（避免误入 pattern 渲染分支）
+        if (mode !== 'pattern' && this.isPatternMode) {
+          this.isPatternMode = false;
+        }
+        // 离开彩格模式：进入任何其它布局时退出彩格（彩格不走 setMode，故此处仅作兜底复位）
+        if (this.isColorMode) {
+          this.exitColorMode();
+        }
         // 混乱模式在圆形模式下特殊处理
         if (mode === 'chaos' && this.isCircularMode) {
           // 圆形模式下切换混乱状态
@@ -2408,6 +2524,72 @@
             }
           }
           this.enterVariantMode();
+          return;
+        }
+
+        // 图案模式下切换偏移/混乱：保持图案渲染，不退出模式，也不重设半边方向
+        if (this.isPatternMode && (mode === 'offset' || mode === 'chaos')) {
+          this.currentMode = mode;
+          var btns2p = document.querySelectorAll('.mode-btn');
+          for (var bi2p = 0; bi2p < btns2p.length; bi2p++) {
+            btns2p[bi2p].classList.remove('active');
+            if (btns2p[bi2p].dataset.mode === mode) {
+              btns2p[bi2p].classList.add('active');
+            }
+          }
+          this.renderGrid();
+          return;
+        }
+
+        // 图案模式（独立视觉布局，不与偏移/混乱/换字/虚无/毁灭等效果组合）
+        if (mode === 'pattern') {
+          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          if (this.isCircularMode) this.exitCircularMode();
+          if (this.isBounceMode) this.exitBounceMode();
+          if (this.isRotateMode) this.exitRotateMode();
+          if (this.isVariantMode) this.exitVariantMode();
+          if (this.isMosaicMode) this.exitMosaicMode();
+          if (this.isSquareMoveMode) this.exitSquareMoveMode();
+          if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+          if (this.isBumpyMode) this.exitBumpyMode();
+          if (this.destroyMode > 0) {
+            this.destroyMode = 0;
+            var dpBtn = document.querySelector('.destroy-toggle');
+            if (dpBtn) {
+              dpBtn.dataset.destroy = 'false';
+              dpBtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
+              dpBtn.textContent = '毁灭';
+            }
+          }
+          // 限制难度 ≤ 9×9（保证数字始终两位）
+          if (this.gridSize > 9) {
+            this.gridSize = 9;
+            var dbtns = document.querySelectorAll('.difficulty-btn');
+            for (var di = 0; di < dbtns.length; di++) {
+              dbtns[di].classList.remove('active');
+              if (parseInt(dbtns[di].dataset.size) === 9) dbtns[di].classList.add('active');
+            }
+          }
+          // 强制数字类型为自然数（图案1 用完整 1..N 序列）。注意字段名是 numberType（非 numType）
+          if (this.numberType && this.numberType !== 'natural') {
+            this.numberType = 'natural';
+            var ntBtn = document.getElementById('numtype-btn');
+            if (ntBtn) ntBtn.textContent = '数字:自然';
+            var ntItems = document.querySelectorAll('.nt-item');
+            for (var ni = 0; ni < ntItems.length; ni++) {
+              ntItems[ni].classList.remove('selected');
+              if (ntItems[ni].dataset.nt === 'natural') ntItems[ni].classList.add('selected');
+            }
+          }
+          this.isPatternMode = true;
+          this.patternSub = 1;
+          this.currentMode = 'pattern';
+          var pbtns = document.querySelectorAll('.mode-btn');
+          for (var pi = 0; pi < pbtns.length; pi++) {
+            pbtns[pi].classList.remove('active');
+            if (pbtns[pi].dataset.mode === 'pattern') pbtns[pi].classList.add('active');
+          }
+          this.reset();
           return;
         }
 
@@ -2533,38 +2715,111 @@
         this.reset();
       };
 
-      SchulteGridGame.prototype.toggleBounceMode = function() {
-        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+      // 混沌类统一入口：单按钮循环切换 1(动) → 2(转) → 3(混沌3：碰撞大小互换) → 1
+      // 混沌下拉：再次点同一项退出，否则切换
+      SchulteGridGame.prototype.setChaosSub = function(sub) {
+        if (this.chaosSub === sub && (this.isBounceMode || this.isRotateMode)) {
+          if (this.isBounceMode) this.exitBounceMode();
+          if (this.isRotateMode) this.exitRotateMode();
+          this.chaosSub = 0;
+          var cb = document.getElementById('chaos-btn');
+          if (cb) { cb.classList.remove('active'); cb.textContent = '混沌 ▾'; }
+          this.reset();
+          return;
+        }
+        this.chaosSub = sub;
+        this._applyChaosSub(sub);
+        var cb2 = document.getElementById('chaos-btn');
+        if (cb2) { cb2.textContent = '混沌' + sub + ' ▾'; }
+        this.closeAllModeMenus();
+        this.reset();
+      };
+
+      // 应用指定混沌子模式
+      SchulteGridGame.prototype._applyChaosSub = function(sub) {
+        // 进入混沌前，退出所有其它布局模式
         if (this.isCircularMode) this.exitCircularMode();
         if (this.isVariantMode) this.exitVariantMode();
         if (this.isSquareMoveMode) this.exitSquareMoveMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
         if (this.isBumpyMode) this.exitBumpyMode();
-        if (this.isRotateMode) {
-          // 当前转 → 切到动
-          this.exitRotateMode();
-          this.enterBounceMode();
-          return;
+        if (this.isMosaicMode) this.exitMosaicMode();
+        if (this.isPatternMode) this.isPatternMode = false;
+        // 退出当前混沌态（bounce / rotate）
+        if (this.isBounceMode) this.exitBounceMode();
+        if (this.isRotateMode) this.exitRotateMode();
+        // 毁灭模式重置
+        if (this.destroyMode > 0) {
+          this.destroyMode = 0;
+          var dbtn = document.querySelector('.destroy-toggle');
+          if (dbtn) {
+            dbtn.dataset.destroy = 'false';
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
+            dbtn.textContent = '毁灭';
+          }
         }
-        if (this.isBounceMode) {
-          // 当前动 → 切到转
-          this.exitBounceMode();
+        if (sub === 2) {
+          // 混沌2：旋转
           this.isRotateMode = true;
-          this.isCircularMode = false;
+          this.isBounceMode = false;
+          this.bounceSubMode = 2;
           this.previousMode = this.currentMode;
           this.currentMode = 'bounce';
           document.getElementById('grid-container').style.display = 'none';
           document.getElementById('circular-container').style.display = 'none';
           document.getElementById('bounce-canvas').style.display = 'block';
-          var btns2 = document.querySelectorAll('.mode-btn');
-          for (var bi2 = 0; bi2 < btns2.length; bi2++) btns2[bi2].classList.remove('active');
-          document.getElementById('bounce-mode-btn').classList.add('active');
           this.currentNumber = this.getNumberStart();
           this._rotateStart();
+        } else {
+          // 混沌1 / 混沌3：弹跳动（混沌3 含碰撞大小互换）
+          this.enterBounceMode(sub);
+        }
+        // 统一刷新按钮高亮与文字
+        var rb = document.querySelectorAll('.mode-btn');
+        for (var ri = 0; ri < rb.length; ri++) rb[ri].classList.remove('active');
+        var cb = document.getElementById('chaos-btn');
+        if (cb) {
+          cb.classList.add('active');
+          cb.textContent = '混沌' + sub;
+        }
+      };
+
+      // ========== 通用模式下拉菜单 ==========
+      // 点击模式按钮切换菜单显隐，并关闭其它所有模式菜单
+      SchulteGridGame.prototype.toggleModeMenu = function(name) {
+        var menu = document.getElementById(name + '-menu');
+        if (!menu) return;
+        var all = document.querySelectorAll('.mode-menu');
+        for (var i = 0; i < all.length; i++) {
+          if (all[i] !== menu) all[i].classList.remove('show');
+        }
+        menu.classList.toggle('show');
+      };
+      // 关闭全部模式菜单（菜单项点击后调用）
+      SchulteGridGame.prototype.closeAllModeMenus = function() {
+        var all = document.querySelectorAll('.mode-menu');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('show');
+      };
+
+      // 马赛克下拉：静/动 两态
+      SchulteGridGame.prototype.setMosaicSub = function(dynamic) {
+        var dyn = !!dynamic;
+        if (this.isMosaicMode && this.mosaicDynamic === dyn) {
+          this.exitMosaicMode();
+          this.reset();
           return;
         }
-        // 首次进入：默认动
-        this.enterBounceMode();
+        if (!this.isMosaicMode) {
+          this.toggleMosaicMode(); // 进入马赛克（静）
+        }
+        this.mosaicDynamic = dyn;
+        var mb = document.getElementById('mosaic-mode-btn');
+        if (mb) { mb.classList.add('active'); mb.textContent = '马赛克' + (dyn ? '·动' : '·静') + ' ▾'; }
+        if (dyn) { this._mosaicAnimateStart(); }
+        else if (this._mosaicAnimId) { cancelAnimationFrame(this._mosaicAnimId); this._mosaicAnimId = null; }
+        this.closeAllModeMenus();
+        this.updateUI();
+        this.updateStartButtonText();
       };
 
       SchulteGridGame.prototype.toggleMosaicMode = function() {
@@ -2579,6 +2834,7 @@
           if (this.isSquareMoveMode) this.exitSquareMoveMode();
           if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
           if (this.isBumpyMode) this.exitBumpyMode();
+          if (this.isPatternMode) this.isPatternMode = false;
           // 毁灭模式重置（修复：毁灭5下进入马赛克需清理 destroyMode，否则残留）
           if (this.destroyMode > 0) {
             this.destroyMode = 0;
@@ -2677,10 +2933,32 @@
       };
 
       // ========== 方形（动）模式 ==========
+      // 方形（动）下拉：横/纵/横纵
+      SchulteGridGame.prototype.setSquareMoveSub = function(dir) {
+        if (this.isSquareMoveMode && this.squareMoveDirection === dir) {
+          this.exitSquareMoveMode();
+          this.reset();
+          return;
+        }
+        if (!this.isSquareMoveMode) {
+          this.enterSquareMoveMode(); // 进横（dir=1）
+        }
+        if (dir !== 1) {
+          this.squareMoveDirection = dir;
+          this.renderSquareMoveGrid();
+        }
+        var sb = document.getElementById('square-move-btn');
+        if (sb) { sb.classList.add('active'); sb.textContent = '方形·' + (dir === 3 ? '横纵' : (dir === 2 ? '纵' : '横')) + ' ▾'; }
+        this.closeAllModeMenus();
+        this.updateUI();
+        this.updateStartButtonText();
+      };
+
       SchulteGridGame.prototype.toggleSquareMoveMode = function() {
         if (!this.isSquareMoveMode) {
           // 关 → 横向
           this.squareMoveDirection = 1;
+          this.isPatternMode = false;
           this.enterSquareMoveMode();
         } else if (this.squareMoveDirection === 1) {
           // 横向 → 纵向
@@ -2775,7 +3053,7 @@
         var btn = document.getElementById('square-move-btn');
         if (btn) {
           btn.classList.remove('active');
-          btn.textContent = '方形（动）';
+          btn.textContent = '方形';
         }
         document.getElementById('square-move-container').style.display = 'none';
         document.getElementById('square-move-container').style.flexShrink = '';
@@ -2795,9 +3073,30 @@
       SchulteGridGame.prototype.VP_COLOR_A = '#da5ac1';
       SchulteGridGame.prototype.VP_COLOR_B = '#e232ae';
 
+      // 视觉差下拉：静/动
+      SchulteGridGame.prototype.setVpSub = function(dynamic) {
+        var dyn = !!dynamic;
+        if (this.isVisualParallaxMode && this.vpSubMode === (dyn ? 2 : 1)) {
+          this.exitVisualParallaxMode();
+          this.reset();
+          return;
+        }
+        if (!this.isVisualParallaxMode) {
+          this.enterVisualParallaxMode(); // 进静（vpSubMode=1）
+        }
+        this.vpSubMode = dyn ? 2 : 1;
+        this.renderVisualParallaxGrid();
+        var vb = document.getElementById('vp-mode-btn');
+        if (vb) { vb.classList.add('active'); vb.textContent = '视差·' + (dyn ? '动' : '静') + ' ▾'; }
+        this.closeAllModeMenus();
+        this.updateUI();
+        this.updateStartButtonText();
+      };
+
       SchulteGridGame.prototype.toggleVisualParallaxMode = function() {
         if (!this.isVisualParallaxMode) {
           this.vpSubMode = 1;
+          this.isPatternMode = false;
           this.enterVisualParallaxMode();
         } else if (this.vpSubMode === 1) {
           this.vpSubMode = 2;
@@ -2837,6 +3136,7 @@
         }
 
         this.isVisualParallaxMode = true;
+        this.vpSubMode = 1;
         this.currentMode = 'normal';
 
         document.getElementById('grid-container').style.display = 'none';
@@ -3077,9 +3377,29 @@
         };
       };
 
+      // 凹凸下拉：静/动
+      SchulteGridGame.prototype.setBumpySub = function(dynamic) {
+        var dyn = !!dynamic;
+        if (this.isBumpyMode && this.bumpySubMode === (dyn ? 2 : 1)) {
+          this.exitBumpyMode();
+          this.reset();
+          return;
+        }
+        if (!this.isBumpyMode) {
+          this.enterBumpyMode(); // 进静（bumpySubMode=1）
+        }
+        if (dyn) { this.bumpySubMode = 2; this.renderBumpyGrid(); }
+        var bb = document.getElementById('bumpy-mode-btn');
+        if (bb) { bb.classList.add('active'); bb.textContent = '凹凸·' + (dyn ? '动' : '静') + ' ▾'; }
+        this.closeAllModeMenus();
+        this.updateUI();
+        this.updateStartButtonText();
+      };
+
       SchulteGridGame.prototype.toggleBumpyMode = function() {
         if (!this.isBumpyMode) {
           this.bumpySubMode = 1;
+          this.isPatternMode = false;
           this.enterBumpyMode();
         } else if (this.bumpySubMode === 1) {
           this.bumpySubMode = 2;
@@ -4316,6 +4636,11 @@
           if (this._bounceAnimId) { cancelAnimationFrame(this._bounceAnimId); this._bounceAnimId = null; }
           this._bounceInit();
           this._bounceRender();
+        } else if (this.isRotateMode) {
+          document.getElementById('bounce-canvas').style.display = 'block';
+          if (this._rotateAnimId) { cancelAnimationFrame(this._rotateAnimId); this._rotateAnimId = null; }
+          // 旋转模式：直接启动旋转动画（init + rAF），每帧绘制白色大圆 + 三条旋转分割线 + 彩色数字球
+          this._rotateStart();
         } else if (this.isVariantMode) {
           document.getElementById('variant-container').style.display = 'flex';
           this.renderVariantGrid();
@@ -4349,6 +4674,17 @@
           document.getElementById('vp-container').style.display = 'block';
           this.generateNumbers();
           this.renderVisualParallaxGrid();
+        } else if (this.isPatternMode) {
+          document.getElementById('grid-container').style.display = 'grid';
+          // 新一局：随机统一半边方向（左/右）+ 随机A锚点色相
+          this.patternSide = Math.random() < 0.5 ? 'left' : 'right';
+          this.patternHue = Math.random() * 360;
+          this.generateNumbers();
+          this.renderGrid();
+        } else if (this.isColorMode) {
+          document.getElementById('grid-container').style.display = 'grid';
+          this.generateNumbers();
+          this.renderGrid();
         } else {
           document.getElementById('grid-container').style.display = 'grid';
           this.generateNumbers();
@@ -4563,6 +4899,18 @@
           return;
         }
 
+        // 彩格模式：独立渲染路径
+        if (this.isColorMode) {
+          this._renderColorGrid();
+          return;
+        }
+
+        // 图案模式：独立渲染路径
+        if (this.isPatternMode) {
+          this._renderPatternGrid(container, cellSize);
+          return;
+        }
+
         // 普通模式：清理散布/毁灭4模式留下的样式
         container.style.display = '';
         container.style.position = '';
@@ -4671,6 +5019,285 @@
           container.classList.remove('destroy-mode-3');
           this._removeDestroyOverlay(container);
         }
+      };
+
+      // 图案模式渲染：每格 = 容积A色背景 + 半圆B色 + 两位数字（压半圆那位=A、另一位=B）
+      // 数字格式化为两位（01, 02, ...）；A=暗+高饱和、B=亮+柔和，色相差129°，每局随机A锚点
+      SchulteGridGame.prototype._renderPatternGrid = function(container, cellSize) {
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.style.gap = '';
+        container.innerHTML = '';
+
+        // 两种色：A=暗+高饱和、B=亮+柔和，色相差129°（近三角、冷暖同区），每局以随机A色相为锚点
+        var hue = (this.patternHue != null) ? this.patternHue : 158;  // 默认取样例深绿 158°
+        var A = 'hsl(' + hue + ',75%,21%)';                  // 容积底色（暗、饱和）
+        var B = 'hsl(' + ((hue + 129) % 360) + ',30%,74%)';  // 半圆（亮、柔和，与A相差129°）
+
+        var side = this.patternSide || 'left'; // 本局统一半边方向
+        var r = 46, cx = 50, cy = 50;
+        // 半圆 path：sweep-flag 0 = 左半圆，1 = 右半圆
+        var halfPath = (side === 'left')
+          ? ('M ' + cx + ' ' + (cy - r) + ' A ' + r + ' ' + r + ' 0 0 0 ' + cx + ' ' + (cy + r) + ' Z')
+          : ('M ' + cx + ' ' + (cy - r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + cx + ' ' + (cy + r) + ' Z');
+
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        for (var i = 0; i < this.numbers.length; i++) {
+          var num = this.numbers[i];
+
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          cell.style.background = A;          // 容积底色 = A（避免透出页面底色）
+          cell.style.border = 'none';
+          cell.style.padding = '0';
+          cell.style.display = 'flex';
+          cell.style.alignItems = 'center';
+          cell.style.justifyContent = 'center';
+
+          var svg = document.createElementNS(SVGNS, 'svg');
+          svg.setAttribute('viewBox', '0 0 100 100');
+          svg.setAttribute('width', '100%');
+          svg.setAttribute('height', '100%');
+          svg.style.display = 'block';
+
+          // 容积：整格 A 色（铺满、圆角）
+          var rect = document.createElementNS(SVGNS, 'rect');
+          rect.setAttribute('x', '0'); rect.setAttribute('y', '0');
+          rect.setAttribute('width', '100'); rect.setAttribute('height', '100');
+          rect.setAttribute('rx', '12');
+          rect.setAttribute('fill', A);
+          svg.appendChild(rect);
+
+          // 半圆：B 色
+          var half = document.createElementNS(SVGNS, 'path');
+          half.setAttribute('d', halfPath);
+          half.setAttribute('fill', B);
+          svg.appendChild(half);
+
+          // 两位数字（补零），按半圆方向决定哪位数字落在 B 半圆（用 A 色填充）
+          var str = ('' + num);
+          if (num < 10) str = '0' + str;        // 01..09
+          // 防御：>=100 保持原样（图案模式限制 ≤81，一般不会触发）
+          var tens = str.charAt(0), ones = str.charAt(1);
+          // 压在半圆(B)上的数字用A；压在另一半(A底色)上的数字用B —— 两位数都形成对比、都清晰
+          var tensFill, onesFill;
+          if (side === 'left') { tensFill = A; onesFill = B; }
+          else { tensFill = B; onesFill = A; }
+
+          var t1 = document.createElementNS(SVGNS, 'text');
+          t1.setAttribute('x', '36'); t1.setAttribute('y', '64');
+          t1.setAttribute('font-size', '40'); t1.setAttribute('font-weight', '700');
+          t1.setAttribute('text-anchor', 'middle');
+          t1.setAttribute('font-family', 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif');
+          t1.setAttribute('fill', tensFill);
+          t1.textContent = tens;
+          svg.appendChild(t1);
+
+          var t2 = document.createElementNS(SVGNS, 'text');
+          t2.setAttribute('x', '64'); t2.setAttribute('y', '64');
+          t2.setAttribute('font-size', '40'); t2.setAttribute('font-weight', '700');
+          t2.setAttribute('text-anchor', 'middle');
+          t2.setAttribute('font-family', 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif');
+          t2.setAttribute('fill', onesFill);
+          t2.textContent = ones;
+          svg.appendChild(t2);
+
+          cell.appendChild(svg);
+
+          cell.onclick = (function(number) {
+            return function() { game.handleClick(number, this); };
+          })(num);
+
+          container.appendChild(cell);
+        }
+      };
+
+      // ========== 彩格模式 ==========
+      // 每行方格色（1-based 颜色序号）；数字色序号 = 13 - 方格色序号（完全镜像）
+      SchulteGridGame.prototype._colorRowColors = function(sub) {
+        if (sub === 1) return [1, 4, 8, 12];
+        if (sub === 2) return [2, 4, 6, 8, 10, 12];
+        var a = []; for (var i = 0; i < 12; i++) a.push(i + 1); return a; // 彩格3：1..12 依次
+      };
+      // 静模式每行旋转角度（仅方格背景旋转，数字始终水平）
+      SchulteGridGame.prototype._colorRowAngles = function(sub) {
+        if (sub === 1) return [0, 90, 180, 360];                            // 彩格1
+        if (sub === 2) return [0, 60, 120, 180, 240, 300];                 // 彩格2（每行+60°）
+        var a = []; for (var i = 0; i < 12; i++) a.push(i * 15); return a; // 彩格3：0,15,...,165
+      };
+      SchulteGridGame.prototype._colorGridSize = function(sub) {
+        return sub === 1 ? 4 : (sub === 2 ? 6 : 12);
+      };
+      SchulteGridGame.prototype._colorBtnText = function() {
+        var sub = this.colorSub || 1;
+        return '彩格' + sub + (this.colorDynamic ? '·动' : '·静') + ' ▾';
+      };
+
+      SchulteGridGame.prototype.enterColorMode = function(sub, dynamic) {
+        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        // 退出所有其它布局模式
+        if (this.isCircularMode) this.exitCircularMode();
+        if (this.isBounceMode) this.exitBounceMode();
+        if (this.isRotateMode) this.exitRotateMode();
+        if (this.isVariantMode) this.exitVariantMode();
+        if (this.isMosaicMode) this.exitMosaicMode();
+        if (this.isSquareMoveMode) this.exitSquareMoveMode();
+        if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+        if (this.isBumpyMode) this.exitBumpyMode();
+        if (this.isPatternMode) this.isPatternMode = false;
+        if (this.destroyMode > 0) {
+          this.destroyMode = 0;
+          var dbtn = document.querySelector('.destroy-toggle');
+          if (dbtn) { dbtn.dataset.destroy = 'false'; dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5'); dbtn.textContent = '毁灭'; }
+        }
+        this.isColorMode = true;
+        this.colorSub = sub;
+        this.colorDynamic = !!dynamic;
+        this.gridSize = this._colorGridSize(sub);
+        this.currentMode = 'normal';
+        // 隐藏其它容器，显示 grid-container
+        document.getElementById('grid-container').style.display = 'none';
+        document.getElementById('circular-container').style.display = 'none';
+        document.getElementById('bounce-canvas').style.display = 'none';
+        document.getElementById('variant-container').style.display = 'none';
+        document.getElementById('mosaic-container').style.display = 'none';
+        document.getElementById('square-move-container').style.display = 'none';
+        document.getElementById('vp-container').style.display = 'none';
+        if (document.getElementById('bumpy-container')) document.getElementById('bumpy-container').style.display = 'none';
+        document.getElementById('grid-container').style.display = 'grid';
+        // 高亮按钮 + 更新文字
+        var rb = document.querySelectorAll('.mode-btn');
+        for (var ri = 0; ri < rb.length; ri++) rb[ri].classList.remove('active');
+        var cb = document.getElementById('color-btn');
+        if (cb) { cb.classList.add('active'); cb.textContent = this._colorBtnText(); }
+        this.generateNumbers();
+        this.reset();
+      };
+
+      SchulteGridGame.prototype.exitColorMode = function() {
+        this.isColorMode = false;
+        this.colorSub = 0;
+        this.colorDynamic = false;
+        if (this._colorAnimId) { cancelAnimationFrame(this._colorAnimId); this._colorAnimId = null; }
+        var cb = document.getElementById('color-btn');
+        if (cb) { cb.classList.remove('active'); cb.textContent = '彩格 ▾'; }
+        document.getElementById('grid-container').style.display = '';
+      };
+
+      // 点击彩格下拉项：再次点同一项则退出彩格，否则切换
+      SchulteGridGame.prototype.setColorSub = function(sub, dynamic) {
+        if (this.isColorMode && this.colorSub === sub && this.colorDynamic === !!dynamic) {
+          this.exitColorMode();
+          this.reset();
+          return;
+        }
+        this.enterColorMode(sub, dynamic);
+      };
+
+      SchulteGridGame.prototype._renderColorGrid = function() {
+        var container = document.getElementById('grid-container');
+        // 彩格：以方块对角线=一个方块宽度排布，旋转后不重叠；整体铺满容器放大
+        var N = this.gridSize;
+        var avail = Math.min(container.clientWidth || 600, container.clientHeight || 600) * 0.98;
+        var gap = Math.max(2, Math.floor(avail / (N * 14)));
+        var cellSide = Math.max((avail - (N - 1) * gap) / N, 14);   // 格子占位宽（=方块对角线）
+        var square = cellSide / Math.SQRT2;                         // 方块边长
+        var off = (cellSide - square) / 2;                          // 方块在格内居中偏移
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + N + ', ' + cellSide + 'px)';
+        container.style.gap = gap + 'px';
+        container.style.background = this.COLOR_BG;
+        container.style.padding = '0';
+        container.style.position = '';
+        container.style.overflow = '';
+        container.style.width = '';
+        container.style.height = '';
+        container.style.borderRadius = '';
+        container.style.boxSizing = '';
+        container.innerHTML = '';
+
+        var sub = this.colorSub;
+        var rowColors = this._colorRowColors(sub);
+        var rowAngles = this._colorRowAngles(sub);
+        var pal = this.COLOR_PALETTE_12;
+        this._colorCells = [];
+
+        for (var i = 0; i < this.numbers.length; i++) {
+          var row = Math.floor(i / this.gridSize);
+          var col = i % this.gridSize;
+          var cIdx = rowColors[row];
+          var numColorIdx = 13 - cIdx;                 // 镜像色
+          var cellColor = pal[cIdx];
+          var numColor = pal[numColorIdx];
+          var angle = rowAngles[i % rowAngles.length];   // 按格子线性序号从第一个开始循环递增（非按行）
+
+          var cell = document.createElement('div');
+          cell.className = 'color-cell';
+          cell.style.width = cellSide + 'px';
+          cell.style.height = cellSide + 'px';
+          cell.style.position = 'relative';
+          cell.style.overflow = 'hidden';
+          cell.style.margin = '0';
+
+          var bg = document.createElement('div');
+          bg.className = 'color-cell-bg';
+          bg.style.position = 'absolute';
+          bg.style.left = off + 'px'; bg.style.top = off + 'px';
+          bg.style.width = square + 'px'; bg.style.height = square + 'px';
+          bg.style.background = cellColor;
+          bg.style.transformOrigin = 'center center';
+          bg.style.transform = 'rotate(' + angle + 'deg)';
+
+          var num = document.createElement('span');
+          num.className = 'color-cell-num';
+          num.textContent = this.numbers[i];
+          num.style.position = 'absolute';
+          num.style.left = '0'; num.style.top = '0';
+          num.style.width = '100%'; num.style.height = '100%';
+          num.style.display = 'flex';
+          num.style.alignItems = 'center';
+          num.style.justifyContent = 'center';
+          num.style.color = numColor;
+          num.style.fontSize = Math.floor(square * 0.5) + 'px';
+          num.style.fontWeight = '700';
+          num.style.fontFamily = 'inherit';
+          num.style.pointerEvents = 'none';   // 数字不拦截点击
+
+          cell.appendChild(bg);
+          cell.appendChild(num);
+          cell.onclick = (function(number, cellEl) {
+            return function() { game.handleClick(number, cellEl); };
+          })(this.numbers[i], cell);
+
+          container.appendChild(cell);
+          this._colorCells.push({ bg: bg, cell: cell, initAngle: angle, col: col, ord: i });
+        }
+
+        // 动模式启动 rAF 错峰自转
+        if (this._colorAnimId) { cancelAnimationFrame(this._colorAnimId); this._colorAnimId = null; }
+        if (this.colorDynamic) {
+          this._colorAnimStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          var self = this;
+          this._colorAnimId = requestAnimationFrame(function() { self._colorAnimate(); });
+        }
+      };
+
+      SchulteGridGame.prototype._colorAnimate = function() {
+        if (!this.isColorMode || !this.colorDynamic) { this._colorAnimId = null; return; }
+        var now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        var speed = this._colorAnimSpeed || 30;       // 度/秒
+        var delayPer45 = (45 / speed) * 1000;          // 错峰：前一格转过45°后后一格启动
+        for (var i = 0; i < this._colorCells.length; i++) {
+          var c = this._colorCells[i];
+          if (c.cell.classList.contains('correct')) continue;  // 已点对的格停转
+          var startTime = this._colorAnimStart + c.col * delayPer45;   // 错峰按列：整列先转，转过45°后下一列开始
+          var angle = (now >= startTime) ? (c.initAngle + (now - startTime) * speed / 1000) : c.initAngle;
+          c.bg.style.transform = 'rotate(' + angle + 'deg)';
+        }
+        var self = this;
+        this._colorAnimId = requestAnimationFrame(function() { self._colorAnimate(); });
       };
 
       // Bridson 泊松盘采样算法：自然随机、均匀覆盖、无重叠
@@ -5343,6 +5970,14 @@
               bpolys[bpi].setAttribute('fill', '#4CAF50');
             }
           }
+        } else if (this.isPatternMode) {
+          // 图案模式：格子内部是不透明 SVG，需直接改 SVG 填充来给变绿反馈
+          var pRect = element.querySelector('rect');
+          var pPath = element.querySelector('path');
+          var pTexts = element.querySelectorAll('text');
+          if (pRect) pRect.setAttribute('fill', '#4CAF50');
+          if (pPath) pPath.setAttribute('fill', '#4CAF50');
+          for (var pti = 0; pti < pTexts.length; pti++) pTexts[pti].setAttribute('fill', '#ffffff');
         } else {
           element.classList.add('correct');
         }
@@ -5475,6 +6110,18 @@
           setTimeout(function() {
             vpEl.classList.remove('wrong');
             vpEl.style.animation = '';
+          }, 400);
+        } else if (this.isPatternMode) {
+          // 图案模式：SVG 不透明，直接改 SVG 填充闪红 + 抖动
+          var pRectW = element.querySelector('rect');
+          var origFillW = pRectW ? pRectW.getAttribute('fill') : '';
+          if (pRectW) pRectW.setAttribute('fill', '#FF5252');
+          element.style.animation = 'shake 0.4s ease';
+          this.playSound('wrong');
+          var selfPW = element;
+          setTimeout(function() {
+            if (pRectW) pRectW.setAttribute('fill', origFillW);
+            selfPW.style.animation = '';
           }, 400);
         } else {
           element.classList.add('wrong');
@@ -6062,7 +6709,7 @@
           this._startSpeedRAF();
           btn.textContent = '圆形（动·变速）';
         } else {
-          btn.textContent = '圆形（静）';
+          btn.textContent = '圆形';
         }
       };
 
@@ -6201,7 +6848,7 @@
         // 渲染圆形网格（静态，无旋转类）
         this.renderCircularGrid();
 
-        document.getElementById('circular-mode-btn').textContent = '圆形（静）';
+        document.getElementById('circular-mode-btn').textContent = '圆形';
 
         // 更新按钮状态
         var btns = document.querySelectorAll('.mode-btn');
@@ -6257,11 +6904,12 @@
         if (diffGroup) diffGroup.style.display = '';
 
         // 重置按钮文字
-        document.getElementById('circular-mode-btn').textContent = '圆形（静）';
+        document.getElementById('circular-mode-btn').textContent = '圆形';
       };
 
       // ========== 跳动模式 ==========
-      SchulteGridGame.prototype.enterBounceMode = function() {
+      SchulteGridGame.prototype.enterBounceMode = function(subMode) {
+        this.bounceSubMode = (subMode === 3) ? 3 : 1;
         // 如果当前在马赛克模式，先退出
         if (this.isMosaicMode) {
           this.exitMosaicMode();
@@ -6309,7 +6957,11 @@
         for (var i = 0; i < btns.length; i++) {
           btns[i].classList.remove('active');
         }
-        document.getElementById('bounce-mode-btn').classList.add('active');
+        var cb = document.getElementById('chaos-btn');
+        if (cb) {
+          cb.classList.add('active');
+          cb.textContent = (this.bounceSubMode === 3 ? '混沌3' : '混沌1');
+        }
 
         this.currentNumber = this.getNumberStart();
         this.reset();
@@ -6322,6 +6974,8 @@
         if (c) { c.style.display = 'none'; }
         var sb = document.getElementById('speed-toggle-btn');
         if (sb) sb.style.display = 'none';
+        var cb = document.getElementById('chaos-btn');
+        if (cb) cb.textContent = '混沌';
       };
 
       SchulteGridGame.prototype.exitBounceMode = function() {
@@ -6331,6 +6985,8 @@
         document.getElementById('grid-container').style.display = '';
         document.getElementById('circular-container').style.display = 'none';
         document.getElementById('variant-container').style.display = 'none';
+        var cb = document.getElementById('chaos-btn');
+        if (cb) cb.textContent = '混沌';
       };
 
       // ========== 变体模式（2D平面三叉星布局） ==========
@@ -6924,28 +7580,32 @@
       SchulteGridGame.prototype._bounceInit = function() {
         var self = this;
         var total = this._bounceGetTotal();
-        var r = this._bounceGetBallRadius();
+        var midR = this._bounceGetBallRadius();                 // 混沌动基础半径（混沌3 的中间值）
+        var rMin = midR * 0.65, rMax = midR * 1.35;            // 混沌3：以 midR=28 为中间值，范围 [18,38]
+        this.bounceRMin = rMin; this.bounceRMax = rMax;
+        var isC3 = (this.bounceSubMode === 3);
         var canvas = document.getElementById('bounce-canvas');
         var W = 600, H = 600;
 
         this._bounceBalls = [];
         for (var i = 1; i <= total; i++) {
+          var br = isC3 ? (rMin + Math.random() * (rMax - rMin)) : midR;  // 混沌3：开局尺寸均匀分布在 [rMin,rMax]
           var x, y, overlapping;
           var attempts = 0;
           do {
             overlapping = false;
-            x = r + Math.random() * (W - 2 * r);
-            y = r + Math.random() * (H - 2 * r);
+            x = br + Math.random() * (W - 2 * br);
+            y = br + Math.random() * (H - 2 * br);
             for (var j = 0; j < self._bounceBalls.length; j++) {
               var b = self._bounceBalls[j];
               var dx = x - b.x, dy = y - b.y;
-              if (Math.sqrt(dx * dx + dy * dy) < r + b.r + 2) { overlapping = true; break; }
+              if (Math.sqrt(dx * dx + dy * dy) < br + b.r + 2) { overlapping = true; break; }
             }
             attempts++;
           } while (overlapping && attempts < 200);
 
           var ratio2 = (i - 1) / total;
-          var pIdx = Math.min(Math.floor(ratio2 * 8), 7);
+          var pIdx = Math.min(Math.floor(ratio2 * 9), 8);
           var palettes = [
             ['#C62828','#E53935','#EF5350','#FF5252','#FF7043','#FF8A80','#D32F2F','#B71C1C'],
             ['#E65100','#F57C00','#FB8C00','#FF9800','#FFA726','#FFB74D','#EF6C00','#BF360C'],
@@ -6954,13 +7614,15 @@
             ['#00838F','#00ACC1','#00BCD4','#26C6DA','#4DD0E1','#0097A7','#006064','#00E5FF'],
             ['#1565C0','#1E88E5','#2196F3','#42A5F5','#64B5F6','#1976D2','#0D47A1','#2979FF'],
             ['#6A1B9A','#8E24AA','#9C27B0','#AB47BC','#CE93D8','#7B1FA2','#4A148C','#E040FB'],
-            ['#AD1457','#D81B60','#E91E63','#EC407A','#F06292','#C2185B','#880E4F','#FF4081']
+            ['#AD1457','#D81B60','#E91E63','#EC407A','#F06292','#C2185B','#880E4F','#FF4081'],
+            ['#1B5E20','#2E7D32','#388E3C','#43A047','#66BB6A','#81C784','#2E7D32','#1B5E20']
           ];
           var palette = palettes[pIdx];
           this._bounceBalls.push({
             num: this.getNumberByIndex(i - 1),
             x: x, y: y,
-            r: r,
+            r: br,
+            targetR: br,
             vx: (Math.random() - 0.5) * 120,
             vy: (Math.random() - 0.5) * 120,
             color: palette[Math.floor(Math.random() * palette.length)],
@@ -6990,6 +7652,9 @@
           if (b.x + b.r > W) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
           if (b.y - b.r < 0) { b.y = b.r; b.vy = Math.abs(b.vy); }
           if (b.y + b.r > H) { b.y = H - b.r; b.vy = -Math.abs(b.vy); }
+          if (self.bounceSubMode === 3 && b.targetR != null) {
+            b.r += (b.targetR - b.r) * 0.2;   // 混沌3：丝滑缓动到目标半径（提速至0.2）
+          }
         }
 
         // 球间碰撞
@@ -7014,6 +7679,17 @@
                 a.vy -= dvn * ny;
                 b2.vx += dvn * nx;
                 b2.vy += dvn * ny;
+                if (self.bounceSubMode === 3) {
+                  // 混沌3：相撞时两球朝彼此半径中点平滑靠拢（小的渐渐变大、大的慢慢变小）
+                  var midR2 = (a.targetR + b2.targetR) / 2;
+                  var EX = 0.5;
+                  a.targetR = a.targetR + (midR2 - a.targetR) * EX;
+                  b2.targetR = b2.targetR + (midR2 - b2.targetR) * EX;
+                  if (a.targetR < self.bounceRMin) a.targetR = self.bounceRMin;
+                  if (a.targetR > self.bounceRMax) a.targetR = self.bounceRMax;
+                  if (b2.targetR < self.bounceRMin) b2.targetR = self.bounceRMin;
+                  if (b2.targetR > self.bounceRMax) b2.targetR = self.bounceRMax;
+                }
               }
             }
           }
@@ -7373,6 +8049,14 @@
           // 颜色选择后300ms内不关闭下拉菜单，避免原生颜色对话框关闭时的合成点击事件误关
           if (Date.now() - (game._bgColorSelectedAt || 0) > 300) {
             bgDropdown.classList.remove('show');
+          }
+        }
+        // 模式下拉菜单：点击菜单外区域关闭
+        var modeMenus = document.querySelectorAll('.mode-menu');
+        for (var mi = 0; mi < modeMenus.length; mi++) {
+          var mw = modeMenus[mi].parentNode;
+          if (modeMenus[mi].classList.contains('show') && mw && !mw.contains(ev.target)) {
+            modeMenus[mi].classList.remove('show');
           }
         }
       });
