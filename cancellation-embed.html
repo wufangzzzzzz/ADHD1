@@ -77,10 +77,10 @@
   .embed-mode .target-number-inline{color:#f44336!important;}
   .embed-mode .game-area{
     --vol:1;
-    flex:1 1 auto;min-height:0;width:calc(100% - calc(320px / var(--vol)));max-width:none;
-    margin:calc(20px / var(--vol)) calc(160px / var(--vol)) calc(30px / var(--vol)) calc(160px / var(--vol));
+    flex:1 1 auto;min-height:0;width:calc(100% - max(16px, 8%));max-width:none;
+    margin:calc(12px / var(--vol)) max(8px, 4%) calc(16px / var(--vol)) max(8px, 4%);
     border-radius:14px;
-    padding:calc(20px / var(--vol));display:flex;flex-direction:column;overflow:hidden;
+    padding:calc(12px / var(--vol));display:flex;flex-direction:column;overflow:hidden;
     border:1px solid rgba(255,255,255,.06);
     box-shadow:0 4px 16px rgba(0,0,0,.2);
   }
