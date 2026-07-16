@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>双人符号迷宫 · 双人对战</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;margin:0;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}
+  #app{height:100vh;display:flex;flex-direction:column;background:#0f1226;color:#eef;}
+
+  .topbar{flex:0 0 auto;height:56px;display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(135deg,#1b1f3b,#2a2f5a);box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:20;}
+  .topbar .title{font-size:17px;font-weight:800;letter-spacing:.5px;}
+  .badge{font-size:11px;font-weight:700;color:#fff;background:#e53935;padding:2px 8px;border-radius:10px;}
+  .topbar .spacer{flex:1;}
+  .btn{border:none;border-radius:10px;padding:9px 16px;font-size:14px;font-weight:700;cursor:pointer;color:#fff;transition:transform .1s,opacity .2s;}
+  .btn:active{transform:scale(.96);}
+  .btn-menu{background:#4550a0;}
+  .btn-flip{background:#5a64c8;}
+  .btn-flip.active{background:#ffb300;color:#1b1f3b;}
+  .btn-start{background:linear-gradient(135deg,#2e7d32,#43a047);}
+  .btn-start:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-start.replay{background:linear-gradient(135deg,#1565c0,#1e88e5);}
+
+  .arena{flex:1 1 auto;display:flex;min-height:0;position:relative;}
+  .board-wrap{flex:1 1 0;min-width:0;position:relative;transition:transform .35s ease;}
+  .board-wrap.flipped{transform:rotate(180deg);}
+  .board-wrap iframe{width:100%;height:100%;border:0;display:block;background:#0f1226;}
+  .board-tag{position:absolute;top:8px;left:10px;z-index:5;font-size:12px;font-weight:800;color:#1b1f3b;background:rgba(255,255,255,.7);padding:3px 10px;border-radius:10px;pointer-events:none;}
+  .board-wrap.flipped .board-tag{display:none;}
+  .divider{flex:0 0 auto;width:2px;background:linear-gradient(#3a3f70,#6c73c0,#3a3f70);position:relative;}
+  .divider .vs{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#ffb300;color:#1b1f3b;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+
+  .winner{position:absolute;top:0;left:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(15,18,38,.55);z-index:15;backdrop-filter:blur(2px);}
+  .winner.show{display:flex;}
+  .winner .wc{background:#fff;color:#1b1f3b;padding:22px 34px;border-radius:18px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5);max-width:80%;}
+  .winner .wc .big{font-size:30px;font-weight:900;margin-bottom:8px;}
+  .winner .wc .sub{font-size:15px;color:#555;margin-bottom:6px;}
+  .winner .wc .cmp{display:flex;gap:24px;justify-content:center;margin:10px 0;flex-wrap:wrap;}
+  .winner .wc .cmp .ci{text-align:center;}
+  .winner .wc .cmp .ci .cl{font-size:12px;color:#888;}
+  .winner .wc .cmp .ci .cv{font-size:20px;font-weight:800;}
+  .winner .wc .again{margin-top:12px;}
+
+  .popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;}
+  .popup-overlay.show{display:flex;}
+  .popup{width:min(420px,92vw);max-height:86vh;overflow:auto;background:#fff;color:#1b1f3b;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+  .popup h3{margin:0 0 16px;font-size:18px;font-weight:800;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:700;color:#555;margin-bottom:7px;}
+  .field select{width:100%;height:42px;border-radius:10px;border:1px solid #d5d8ec;padding:0 12px;font-size:15px;background:#f6f7ff;color:#1b1f3b;}
+  .popup .close-btn{width:100%;margin-top:6px;border:none;border-radius:12px;padding:13px;background:linear-gradient(135deg,#4550a0,#5a64c8);color:#fff;font-size:16px;font-weight:800;cursor:pointer;}
+  .hint{font-size:12px;color:#888;margin-bottom:14px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <button class="btn btn-menu" id="menuBtn">☰ 菜单</button>
+    <span class="title">双人符号迷宫</span>
+    <span class="badge">双人模式</span>
+    <button class="btn btn-flip" id="flipLBtn">⇅ 翻转左</button>
+    <button class="btn btn-flip" id="flipRBtn">⇅ 翻转右</button>
+    <span class="spacer"></span>
+    <button class="btn btn-start" id="startBtn" disabled>开始对战</button>
+  </div>
+  <div class="arena">
+    <div class="board-wrap" id="wrapL">
+      <span class="board-tag">左方</span>
+      <iframe id="boardL" src="symbol-maze-embed.html?embed=1&side=L" allow="autoplay"></iframe>
+    </div>
+    <div class="divider"><span class="vs">VS</span></div>
+    <div class="board-wrap" id="wrapR">
+      <span class="board-tag">右方</span>
+      <iframe id="boardR" src="symbol-maze-embed.html?embed=1&side=R" allow="autoplay"></iframe>
+    </div>
+    <div class="winner" id="winner">
+      <div class="wc">
+        <div class="big" id="winText">🏆 左方胜利！</div>
+        <div class="sub" id="winSub"></div>
+        <div class="cmp" id="winCmp" style="display:none;"></div>
+        <button class="btn btn-start replay again" id="againBtn">再来一局</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup-overlay" id="popup">
+    <div class="popup">
+      <h3>对战设置</h3>
+      <div class="field">
+        <label>符号类型</label>
+        <select id="symbolTypeSel">
+          <option value="math" selected>加减乘除（+ − × ÷）</option>
+          <option value="abcd">ABCD</option>
+          <option value="1234">1234</option>
+        </select>
+      </div>
+      <div class="hint">左右两方使用相同的迷宫路径，从左上角按符号顺序连线到右侧出口；先到达出口的一方获胜。</div>
+      <button class="close-btn" id="closePopup">完成</button>
+    </div>
+  </div>
+</div>
+<script>
+  /* ===== 路径生成（与 embed 页同步） ===== */
+  function generateRandomPath(){
+    var path=[{row:0,col:0}],visited={'0,0':true};
+    var dirs=[{dr:0,dc:1},{dr:1,dc:0},{dr:0,dc:-1},{dr:-1,dc:0}];
+    for(var steps=0;steps<50;steps++){
+      var cur=path[path.length-1];
+      if(cur.col===9&&path.length>=8&&path.length%4===0)break;
+      var valid=[];
+      for(var i=0;i<dirs.length;i++){
+        var d=dirs[i],nr=cur.row+d.dr,nc=cur.col+d.dc;
+        if(nr>=0&&nr<10&&nc>=0&&nc<10&&!visited[nr+','+nc])valid.push({row:nr,col:nc,dir:i});
+      }
+      if(!valid.length)break;
+      var weights=[];
+      for(var i=0;i<valid.length;i++){
+        var m=valid[i],w=1;
+        if(m.col>cur.col)w+=3;
+        if(m.row>cur.row)w+=1;
+        if(m.col===9&&path.length<8)w=.1;
+        weights.push(w);
+      }
+      var total=0;for(var i=0;i<weights.length;i++)total+=weights[i];
+      var rnd=Math.random()*total,cum=0,idx=0;
+      for(var i=0;i<weights.length;i++){cum+=weights[i];if(rnd<=cum){idx=i;break;}}
+      var next=valid[idx];
+      path.push({row:next.row,col:next.col});
+      visited[next.row+','+next.col]=true;
+    }
+    return path;
+  }
+  function validatePath(path){
+    if(path[path.length-1].col!==9)return false;
+    return path.length>=8&&path.length%4===0;
+  }
+  function generateUniquePath(){
+    for(var attempt=0;attempt<30;attempt++){
+      var path=generateRandomPath();
+      if(path&&validatePath(path))return path;
+    }
+    // fallback
+    return [
+      {row:0,col:0},{row:0,col:1},{row:0,col:2},{row:0,col:3},
+      {row:1,col:3},{row:1,col:2},{row:1,col:1},{row:1,col:0},
+      {row:2,col:0},{row:2,col:1},{row:2,col:2},{row:2,col:3},
+      {row:3,col:3},{row:3,col:4},{row:3,col:5},{row:3,col:6},
+      {row:3,col:7},{row:3,col:8},{row:3,col:9},{row:4,col:9}
+    ];
+  }
+
+  /* ===== 状态 ===== */
+  var state={
+    symbolType:'math',
+    flipL:false,flipR:false,
+    started:false,battleOver:false,
+    ready:{L:false,R:false},
+    results:{L:null,R:null},
+    currentPath:null
+  };
+  var boardL=document.getElementById('boardL');
+  var boardR=document.getElementById('boardR');
+  var startBtn=document.getElementById('startBtn');
+  var winner=document.getElementById('winner');
+
+  function postTo(side,msg){var w=(side==='L'?boardL:boardR).contentWindow;if(w)w.postMessage(msg,'*');}
+  function postBoth(msg){postTo('L',msg);postTo('R',msg);}
+
+  /* ===== 下发配置 ===== */
+  function applyConfig(){
+    if(!state.ready.L||!state.ready.R)return;
+    state.currentPath=generateUniquePath();
+    var cfg={
+      cmd:'config',
+      symbolType:state.symbolType,
+      path:state.currentPath
+    };
+    postBoth(cfg);
+    state.started=false;state.battleOver=false;
+    state.results={L:null,R:null};
+    winner.classList.remove('show');
+    startBtn.disabled=false;startBtn.classList.remove('replay');
+    startBtn.textContent='开始对战';
+  }
+
+  function startBattle(){
+    if(!state.ready.L||!state.ready.R)return;
+    state.started=true;state.battleOver=false;
+    state.results={L:null,R:null};
+    winner.classList.remove('show');
+    postBoth({cmd:'start'});
+    startBtn.disabled=true;startBtn.textContent='对战中…';
+  }
+
+  function onDone(side,data){
+    if(state.results[side]!=null)return;
+    state.results[side]=data;
+    var other=side==='L'?'R':'L';
+    var label=side==='L'?'左方':'右方';
+
+    if(!state.battleOver&&state.results[other]==null){
+      state.battleOver=true;
+      document.getElementById('winText').textContent='🏆 '+label+'率先完成！';
+      document.getElementById('winSub').textContent='用时 '+formatTime(data.time)+' · '+data.steps+'步 · 等待对方完成…';
+      document.getElementById('winCmp').style.display='none';
+      winner.classList.add('show');
+      startBtn.disabled=false;startBtn.classList.add('replay');startBtn.textContent='再来一局';
+    }else{
+      var l=state.results.L,r=state.results.R;
+      var winSide=(l.time<=r.time)?'左方':'右方';
+      document.getElementById('winText').textContent='🏆 '+winSide+'胜利！';
+      document.getElementById('winSub').textContent='';
+      var cmp=document.getElementById('winCmp');
+      cmp.style.display='flex';
+      cmp.innerHTML=
+        '<div class="ci"><div class="cl">左方用时</div><div class="cv" style="color:'+(l.time<=r.time?'#4CAF50':'#f44336')+'">'+formatTime(l.time)+'</div></div>'+
+        '<div class="ci"><div class="cl">右方用时</div><div class="cv" style="color:'+(r.time<l.time?'#4CAF50':'#f44336')+'">'+formatTime(r.time)+'</div></div>'+
+        '<div class="ci"><div class="cl">左方步数</div><div class="cv">'+l.steps+'</div></div>'+
+        '<div class="ci"><div class="cl">右方步数</div><div class="cv">'+r.steps+'</div></div>';
+      winner.classList.add('show');
+      startBtn.disabled=false;startBtn.classList.add('replay');startBtn.textContent='再来一局';
+    }
+  }
+
+  function formatTime(secs){var m=Math.floor(secs/60),s=secs%60;return(m<10?'0':'')+m+':'+(s<10?'0':'')+s;}
+
+  /* ===== 消息监听 ===== */
+  window.addEventListener('message',function(ev){
+    var d=ev.data||{};
+    if(d.cmd==='ready'){
+      state.ready[d.side]=true;
+      if(state.ready.L&&state.ready.R){startBtn.disabled=false;applyConfig();}
+    }else if(d.cmd==='done'){
+      onDone(d.side,d);
+    }
+  });
+
+  /* ===== UI 交互 ===== */
+  document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('popup').classList.add('show');});
+  document.getElementById('closePopup').addEventListener('click',function(){document.getElementById('popup').classList.remove('show');applyConfig();});
+  document.getElementById('popup').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+  document.getElementById('symbolTypeSel').addEventListener('change',function(e){state.symbolType=e.target.value;applyConfig();});
+
+  document.getElementById('flipLBtn').addEventListener('click',function(){
+    state.flipL=!state.flipL;
+    document.getElementById('wrapL').classList.toggle('flipped',state.flipL);
+    this.classList.toggle('active',state.flipL);
+  });
+  document.getElementById('flipRBtn').addEventListener('click',function(){
+    state.flipR=!state.flipR;
+    document.getElementById('wrapR').classList.toggle('flipped',state.flipR);
+    this.classList.toggle('active',state.flipR);
+  });
+
+  function resetToIdle(){
+    state.started=false;state.battleOver=false;
+    state.results={L:null,R:null};
+    winner.classList.remove('show');
+    startBtn.disabled=false;startBtn.classList.remove('replay');startBtn.textContent='开始对战';
+    applyConfig();
+  }
+  startBtn.addEventListener('click',function(){
+    if(state.battleOver){resetToIdle();return;}
+    if(!state.started)startBattle();
+  });
+  document.getElementById('againBtn').addEventListener('click',resetToIdle);
+
+  startBtn.disabled=true;
+</script>
+</body>
+</html>

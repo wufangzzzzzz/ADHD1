@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>双人对战 · 色彩管理</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;margin:0;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}
+#app{height:100vh;display:flex;flex-direction:column;background:#0f1226;color:#eef;}
+
+.topbar{flex:0 0 auto;height:56px;display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(135deg,#1b1f3b,#2a2f5a);box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:20;}
+.topbar .title{font-size:17px;font-weight:800;letter-spacing:.5px;}
+.badge{font-size:11px;font-weight:700;color:#fff;background:#e53935;padding:2px 8px;border-radius:10px;}
+.topbar .spacer{flex:1;}
+.btn{border:none;border-radius:10px;padding:9px 16px;font-size:14px;font-weight:700;cursor:pointer;color:#fff;transition:transform .1s,opacity .2s;}
+.btn:active{transform:scale(.96);}
+.btn-menu{background:#4550a0;}
+.btn-flip{background:#5a64c8;}
+.btn-flip.active{background:#ffb300;color:#1b1f3b;}
+.btn-start{background:linear-gradient(135deg,#2e7d32,#43a047);}
+.btn-start:disabled{opacity:.4;cursor:not-allowed;}
+.btn-start.replay{background:linear-gradient(135deg,#1565c0,#1e88e5);}
+
+.arena{flex:1 1 auto;display:flex;min-height:0;position:relative;}
+.board-wrap{flex:1 1 0;min-width:0;position:relative;transition:transform .35s ease;}
+.board-wrap.flipped{transform:rotate(180deg);}
+.board-wrap iframe{width:100%;height:100%;border:0;display:block;background:#0f1226;}
+.board-tag{position:absolute;top:8px;left:10px;z-index:5;font-size:12px;font-weight:800;color:#1b1f3b;background:rgba(255,255,255,.7);padding:3px 10px;border-radius:10px;pointer-events:none;}
+.board-wrap.flipped .board-tag{display:none;}
+.divider{flex:0 0 auto;width:2px;background:linear-gradient(#3a3f70,#6c73c0,#3a3f70);position:relative;}
+.divider .vs{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#ffb300;color:#1b1f3b;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+
+.winner{position:absolute;top:0;left:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(15,18,38,.55);z-index:15;backdrop-filter:blur(2px);}
+.winner.show{display:flex;}
+.winner .wc{background:#fff;color:#1b1f3b;padding:22px 34px;border-radius:18px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5);max-width:80%;}
+.winner .wc .big{font-size:30px;font-weight:900;margin-bottom:8px;}
+.winner .wc .sub{font-size:15px;color:#555;margin-bottom:6px;}
+.winner .wc .cmp{display:flex;gap:24px;justify-content:center;margin:10px 0;flex-wrap:wrap;}
+.winner .wc .cmp .ci{text-align:center;}
+.winner .wc .cmp .ci .cl{font-size:12px;color:#888;}
+.winner .wc .cmp .ci .cv{font-size:20px;font-weight:800;}
+.winner .wc .again{margin-top:12px;}
+
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;}
+.popup-overlay.show{display:flex;}
+.popup{width:min(420px,92vw);max-height:86vh;overflow:auto;background:#fff;color:#1b1f3b;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.popup h3{margin:0 0 16px;font-size:18px;font-weight:800;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:13px;font-weight:700;color:#555;margin-bottom:7px;}
+.shape-grid{display:flex;gap:10px;}
+.shape-opt{flex:1;text-align:center;padding:14px 8px;border:2px solid #d5d8ec;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;background:#f6f7ff;color:#555;}
+.shape-opt:hover{border-color:#5a64c8;}
+.shape-opt.active{background:#4550a0;color:#fff;border-color:#4550a0;}
+.shape-opt svg{display:block;margin:0 auto 6px;}
+.toggle-row{display:flex;align-items:center;gap:12px;}
+.toggle-switch{width:48px;height:26px;border-radius:13px;background:#ccc;position:relative;cursor:pointer;transition:background .2s;}
+.toggle-switch.on{background:#4CAF50;}
+.toggle-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;}
+.toggle-switch.on::after{left:25px;}
+.toggle-label{font-size:14px;color:#555;}
+.popup .close-btn{width:100%;margin-top:6px;border:none;border-radius:12px;padding:13px;background:linear-gradient(135deg,#4550a0,#5a64c8);color:#fff;font-size:16px;font-weight:800;cursor:pointer;}
+.hint-txt{font-size:12px;color:#888;margin-bottom:14px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <button class="btn btn-menu" id="menuBtn">☰ 菜单</button>
+    <span class="title">双人对战 · 色彩管理</span>
+    <span class="badge">双人模式</span>
+    <button class="btn btn-flip" id="flipLBtn">⇅ 翻转左</button>
+    <button class="btn btn-flip" id="flipRBtn">⇅ 翻转右</button>
+    <span class="spacer"></span>
+    <button class="btn btn-start" id="startBtn" disabled>开始对战</button>
+  </div>
+  <div class="arena">
+    <div class="board-wrap" id="wrapL">
+      <span class="board-tag">左方</span>
+      <iframe id="boardL" src="color-sort-embed.html?embed=1&side=L" allow="autoplay"></iframe>
+    </div>
+    <div class="divider"><span class="vs">VS</span></div>
+    <div class="board-wrap" id="wrapR">
+      <span class="board-tag">右方</span>
+      <iframe id="boardR" src="color-sort-embed.html?embed=1&side=R" allow="autoplay"></iframe>
+    </div>
+    <div class="winner" id="winner">
+      <div class="wc">
+        <div class="big" id="winText">🏆 左方胜利！</div>
+        <div class="sub" id="winSub"></div>
+        <div class="cmp" id="winCmp" style="display:none;"></div>
+        <button class="btn btn-start replay again" id="againBtn">再来一局</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup-overlay" id="popup">
+    <div class="popup">
+      <h3>对战设置</h3>
+      <div class="field">
+        <label>图形形状</label>
+        <div class="shape-grid" id="shapeGrid">
+          <div class="shape-opt active" data-shape="triangle">
+            <svg width="28" height="28"><polygon points="14,3 25,24 3,24" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            三角形
+          </div>
+          <div class="shape-opt" data-shape="circle">
+            <svg width="28" height="28"><circle cx="14" cy="14" r="11" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            圆形
+          </div>
+          <div class="shape-opt" data-shape="square">
+            <svg width="28" height="28"><rect x="3" y="3" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            方形
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>对称玩法</label>
+        <div class="toggle-row">
+          <div class="toggle-switch" id="symmetryToggle"></div>
+          <span class="toggle-label" id="symmetryLabel">关闭（照抄示例图案）</span>
+        </div>
+      </div>
+      <div class="hint-txt">左右两方使用相同的示例图案，选择颜色后点击空白图形填充；先全部填完的一方获胜。对称玩法下需左右镜像填充。</div>
+      <button class="close-btn" id="closePopup">完成</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ===== 图案生成（与 embed 页同步） ===== */
+var COLORS=['#00BCD4','#FFEB3B','#8BC34A','#F44336','#9C27B0'];
+var LAYOUT=[1,2,3,4];
+var CIRCLE_LAYOUT=[1,2,3,2,1];
+var SQUARE_LAYOUT=[5,5,5,5,5];
+
+function getLayout(shape){
+  if(shape==='circle')return CIRCLE_LAYOUT;
+  if(shape==='square')return SQUARE_LAYOUT;
+  return LAYOUT;
+}
+
+function generatePattern(shape){
+  var layout=getLayout(shape);
+  var colors=[];
+  if(shape==='circle'){
+    var randomSingle=Math.floor(Math.random()*5);
+    for(var i=0;i<5;i++){
+      if(i===randomSingle){colors.push(i);}
+      else{colors.push(i);colors.push(i);}
+    }
+  }else if(shape==='square'){
+    for(var i=0;i<5;i++){for(var j=0;j<5;j++){colors.push(i);}}
+  }else{
+    for(var i=0;i<5;i++){colors.push(i);colors.push(i);}
+  }
+  for(var i=colors.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var temp=colors[i];colors[i]=colors[j];colors[j]=temp;
+  }
+  var pattern=[];
+  var idx=0;
+  for(var row=0;row<layout.length;row++){
+    var rowData=[];
+    for(var col=0;col<layout[row];col++){
+      rowData.push(colors[idx]);
+      idx++;
+    }
+    pattern.push(rowData);
+  }
+  return pattern;
+}
+
+/* ===== 状态 ===== */
+var state={
+  shape:'triangle',
+  symmetry:false,
+  flipL:false,flipR:false,
+  started:false,battleOver:false,
+  ready:{L:false,R:false},
+  results:{L:null,R:null},
+  currentPattern:null
+};
+var boardL=document.getElementById('boardL');
+var boardR=document.getElementById('boardR');
+var startBtn=document.getElementById('startBtn');
+var winner=document.getElementById('winner');
+
+function postTo(side,msg){var w=(side==='L'?boardL:boardR).contentWindow;if(w)w.postMessage(msg,'*');}
+function postBoth(msg){postTo('L',msg);postTo('R',msg);}
+
+/* ===== 下发配置 ===== */
+function applyConfig(){
+  if(!state.ready.L||!state.ready.R)return;
+  state.currentPattern=generatePattern(state.shape);
+  var cfg={
+    cmd:'config',
+    samplePattern:state.currentPattern,
+    shape:state.shape,
+    symmetry:state.symmetry
+  };
+  postBoth(cfg);
+  state.started=false;state.battleOver=false;
+  state.results={L:null,R:null};
+  winner.classList.remove('show');
+  startBtn.disabled=false;startBtn.classList.remove('replay');
+  startBtn.textContent='开始对战';
+}
+
+function startBattle(){
+  if(!state.ready.L||!state.ready.R)return;
+  state.started=true;state.battleOver=false;
+  state.results={L:null,R:null};
+  winner.classList.remove('show');
+  postBoth({cmd:'start'});
+  startBtn.disabled=true;startBtn.textContent='对战中…';
+}
+
+function onDone(side,data){
+  if(state.results[side]!=null)return;
+  state.results[side]=data;
+  var other=side==='L'?'R':'L';
+  var label=side==='L'?'左方':'右方';
+
+  if(!state.battleOver&&state.results[other]==null){
+    state.battleOver=true;
+    document.getElementById('winText').textContent='🏆 '+label+'率先完成！';
+    document.getElementById('winSub').textContent='用时 '+formatTime(data.time)+' · '+data.errors+'次错误 · 等待对方完成…';
+    document.getElementById('winCmp').style.display='none';
+    winner.classList.add('show');
+    startBtn.disabled=false;startBtn.classList.add('replay');startBtn.textContent='再来一局';
+  }else{
+    var l=state.results.L,r=state.results.R;
+    var winSide=(l.time<=r.time)?'左方':'右方';
+    document.getElementById('winText').textContent='🏆 '+winSide+'胜利！';
+    document.getElementById('winSub').textContent='';
+    var cmp=document.getElementById('winCmp');
+    cmp.style.display='flex';
+    cmp.innerHTML=
+      '<div class="ci"><div class="cl">左方用时</div><div class="cv" style="color:'+(l.time<=r.time?'#4CAF50':'#f44336')+'">'+formatTime(l.time)+'</div></div>'+
+      '<div class="ci"><div class="cl">右方用时</div><div class="cv" style="color:'+(r.time<l.time?'#4CAF50':'#f44336')+'">'+formatTime(r.time)+'</div></div>'+
+      '<div class="ci"><div class="cl">左方错误</div><div class="cv">'+l.errors+'</div></div>'+
+      '<div class="ci"><div class="cl">右方错误</div><div class="cv">'+r.errors+'</div></div>';
+    winner.classList.add('show');
+    startBtn.disabled=false;startBtn.classList.add('replay');startBtn.textContent='再来一局';
+  }
+}
+
+function formatTime(secs){
+  var t=parseFloat(secs);
+  if(t<60)return t.toFixed(1)+'s';
+  var m=Math.floor(t/60),s=(t%60).toFixed(0);
+  return m+':'+(s<10?'0':'')+s;
+}
+
+/* ===== 消息监听 ===== */
+window.addEventListener('message',function(ev){
+  var d=ev.data||{};
+  if(d.cmd==='ready'){
+    state.ready[d.side]=true;
+    if(state.ready.L&&state.ready.R){startBtn.disabled=false;applyConfig();}
+  }else if(d.cmd==='done'){
+    onDone(d.side,d);
+  }
+});
+
+/* ===== UI 交互 ===== */
+document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('popup').classList.add('show');});
+document.getElementById('closePopup').addEventListener('click',function(){document.getElementById('popup').classList.remove('show');applyConfig();});
+document.getElementById('popup').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+
+document.getElementById('shapeGrid').addEventListener('click',function(e){
+  var opt=e.target.closest('.shape-opt');
+  if(!opt)return;
+  document.querySelectorAll('.shape-opt').forEach(function(x){x.classList.remove('active');});
+  opt.classList.add('active');
+  state.shape=opt.dataset.shape;
+  applyConfig();
+});
+
+document.getElementById('symmetryToggle').addEventListener('click',function(){
+  state.symmetry=!state.symmetry;
+  this.classList.toggle('on',state.symmetry);
+  document.getElementById('symmetryLabel').textContent=state.symmetry?'开启（左右镜像填充）':'关闭（照抄示例图案）';
+  applyConfig();
+});
+
+document.getElementById('flipLBtn').addEventListener('click',function(){
+  state.flipL=!state.flipL;
+  document.getElementById('wrapL').classList.toggle('flipped',state.flipL);
+  this.classList.toggle('active',state.flipL);
+});
+document.getElementById('flipRBtn').addEventListener('click',function(){
+  state.flipR=!state.flipR;
+  document.getElementById('wrapR').classList.toggle('flipped',state.flipR);
+  this.classList.toggle('active',state.flipR);
+});
+
+function resetToIdle(){
+  state.started=false;state.battleOver=false;
+  state.results={L:null,R:null};
+  winner.classList.remove('show');
+  startBtn.disabled=false;startBtn.classList.remove('replay');startBtn.textContent='开始对战';
+  applyConfig();
+}
+startBtn.addEventListener('click',function(){
+  if(state.battleOver){resetToIdle();return;}
+  if(!state.started)startBattle();
+});
+document.getElementById('againBtn').addEventListener('click',resetToIdle);
+
+startBtn.disabled=true;
+</script>
+</body>
+</html>

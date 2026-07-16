@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>色彩管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+html,body{touch-action:manipulation;overscroll-behavior:none;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+  min-height:100vh;min-height:100dvh;
+  padding:15px;color:white;
+}
+.container{max-width:700px;margin:0 auto;}
+.top-section{text-align:center;margin-bottom:20px;}
+.back-btn{display:inline-block;background:rgba(255,255,255,.2);color:white;padding:8px 18px;border-radius:20px;text-decoration:none;font-size:14px;margin-bottom:15px;transition:all .2s;}
+.back-btn:hover{background:rgba(255,255,255,.3);}
+.title-area{margin-bottom:15px;text-align:center;}
+h1{font-size:36px;font-weight:800;margin-bottom:10px;background:linear-gradient(135deg,#fff 0%,#FFD700 50%,#fff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:0 2px 10px rgba(255,215,0,.3);letter-spacing:4px;}
+.subtitle{color:#FFD700;font-size:12px;padding:6px 16px;background:rgba(0,0,0,.2);border-radius:20px;display:inline-block;}
+.btn-row{display:flex;gap:15px;justify-content:center;margin-bottom:5px;}
+.btn{padding:12px 35px;border:none;border-radius:25px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 3px 10px rgba(0,0,0,.2);}
+.btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,0,0,.3);}
+.btn:active{transform:translateY(0);}
+.btn-reset{background:linear-gradient(135deg,#FF9800,#FFB74D);color:white;}
+.btn-symmetry{background:linear-gradient(135deg,#9C27B0,#BA68C8);color:white;}
+.btn-symmetry.active{background:linear-gradient(135deg,#E91E63,#F48FB1);box-shadow:0 0 15px rgba(233,30,99,.5);}
+.btn-next{background:linear-gradient(135deg,#4CAF50,#66BB6A);color:white;}
+.shape-selector{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.9);padding:8px 12px;border-radius:25px;}
+.shape-option{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;transition:all .2s;border:2px solid transparent;}
+.shape-option:hover{background:rgba(0,0,0,.05);}
+.shape-option.selected{border-color:#FF9800;background:rgba(255,152,0,.15);}
+.shape-option svg{pointer-events:none;}
+.game-area{background:white;border-radius:15px;padding:35px 40px;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+.color-palette{display:flex;justify-content:center;gap:20px;margin-bottom:25px;}
+.color-option{cursor:pointer;transition:transform .2s;}
+.color-option:hover{transform:scale(1.15);}
+.color-option.selected svg polygon,.color-option.selected svg circle,.color-option.selected svg rect{stroke-width:3;stroke:#333;}
+.triangles-container{display:flex;justify-content:center;align-items:flex-start;gap:50px;}
+.triangle-box{text-align:center;}
+.triangle-box h3{color:#333;font-size:15px;margin-bottom:10px;}
+.triangle-svg{display:block;margin:0 auto;}
+.triangle-svg .tri{cursor:pointer;transition:opacity .2s;}
+.triangle-svg .tri:hover{opacity:.7;}
+.fill-title{color:#E91E63;}
+.hint{text-align:center;color:#666;font-size:14px;margin-top:20px;}
+.result{text-align:center;margin-top:15px;padding:15px;border-radius:10px;font-size:16px;font-weight:bold;}
+.result.success{background:#4CAF50;color:white;}
+.result.error{background:#f44336;color:white;}
+.progress{text-align:center;color:#666;font-size:13px;margin-top:10px;}
+.timer{text-align:center;color:#FF9800;font-size:16px;font-weight:bold;margin-top:8px;}
+.win-animation{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);justify-content:center;align-items:center;z-index:10000;flex-direction:column;}
+.win-text{font-size:48px;font-weight:bold;color:white;text-shadow:0 0 20px #FFD700,0 0 40px #FFD700;animation:bounceIn .5s ease;}
+@keyframes bounceIn{0%{transform:scale(0);opacity:0;}50%{transform:scale(1.2);}100%{transform:scale(1);opacity:1;}}
+@keyframes confetti{0%{transform:translateY(-100vh) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+@media (max-width:500px){.triangles-container{gap:30px;}.color-palette{gap:12px;}}
+.print-btn{background:#27ae60;color:#fff;border:none;padding:8px 14px;font-size:clamp(12px,1.8vw,15px);border-radius:8px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.1);white-space:nowrap;}
+.print-btn:hover{background:#1e8449;}
+
+/* ===== 嵌入模式 ===== */
+html.embed-mode,body.embed-mode{height:100%;overflow:hidden;}
+body.embed-mode{
+  padding:0;background:#0f1226;
+  display:flex;flex-direction:column;
+  min-height:0;
+}
+.embed-mode .container{max-width:none;width:100%;flex:1 1 auto;min-height:0;margin:0;display:flex;flex-direction:column;}
+.embed-mode .top-section{display:none!important;}
+.embed-mode .game-area{
+  flex:0 1 auto;min-height:0;
+  margin:auto;border-radius:12px;padding:16px 24px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+.embed-mode .color-palette{margin-bottom:12px;gap:14px;flex-shrink:0;width:100%;justify-content:center;}
+.embed-mode .color-option{transform:scale(.85);}
+.embed-mode .triangles-container{flex:0 0 auto;min-height:0;gap:20px;align-items:center;justify-content:center;width:100%;}
+.embed-mode .triangle-box h3{color:#333;font-size:13px;margin-bottom:6px;}
+.embed-mode .triangle-svg{max-width:100%;max-height:100%;}
+.embed-mode .triangle-svg[width]{width:auto;height:auto;max-width:100%;max-height:100%;}
+.embed-mode .hint{margin-top:8px;font-size:12px;flex-shrink:0;width:100%;text-align:center;}
+.embed-mode .progress{margin-top:4px;font-size:12px;flex-shrink:0;width:100%;text-align:center;}
+.embed-mode .timer{margin-top:4px;font-size:14px;flex-shrink:0;width:100%;text-align:center;}
+.embed-mode .result{margin-top:8px;padding:8px;font-size:14px;flex-shrink:0;width:100%;text-align:center;}
+.embed-mode .win-animation{display:none!important;}
+
+@media print{
+  .no-print,.back-btn,.modal,.modal-overlay,.overlay,.win-overlay,.message,.result-card,.completion-modal,.success-modal{display:none!important;}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  html,body{background:#fff!important;overflow:visible!important;height:auto!important;}
+  body{display:block!important;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top-section">
+    <a href="index.html" class="back-btn">← 返回主页</a>
+    <div class="title-area">
+      <h1>色彩管理</h1>
+      <p class="subtitle">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-reset" onclick="resetUserPattern()">重置</button>
+      <button class="btn btn-symmetry" id="symmetryBtn" onclick="toggleSymmetry()">对称玩法</button>
+      <button class="print-btn no-print" onclick="window.print()">打印</button>
+      <div class="shape-selector">
+        <div class="shape-option selected" data-shape="triangle" onclick="selectShape('triangle')">
+          <svg width="24" height="24"><polygon points="12,2 22,20 2,20" fill="#fff" stroke="#333" stroke-width="1"/></svg>
+        </div>
+        <div class="shape-option" data-shape="circle" onclick="selectShape('circle')">
+          <svg width="24" height="24"><circle cx="12" cy="12" r="9" fill="#fff" stroke="#333" stroke-width="1"/></svg>
+        </div>
+        <div class="shape-option" data-shape="square" onclick="selectShape('square')">
+          <svg width="24" height="24"><rect x="3" y="3" width="18" height="18" fill="#fff" stroke="#333" stroke-width="1"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="game-area">
+    <div class="color-palette" id="colorPalette"></div>
+    <div class="triangles-container">
+      <div class="triangle-box">
+        <h3>示例</h3>
+        <svg id="sampleTriangle" class="triangle-svg"></svg>
+      </div>
+      <div class="triangle-box">
+        <h3 id="fillTitle" class="fill-title">请填充</h3>
+        <svg id="userTriangle" class="triangle-svg"></svg>
+      </div>
+    </div>
+    <div class="hint" id="hint">选择顶部颜色后点击空白三角形填充</div>
+    <div class="result" id="result" style="display:none;"></div>
+    <div class="progress" id="progress">已填充: 0 / 10</div>
+    <div class="timer" id="timer">用时: 00:00</div>
+  </div>
+</div>
+<div id="winAnimation" class="win-animation" style="display:none;">
+  <div class="confetti"></div>
+  <div class="win-text">太棒了！</div>
+</div>
+<script>
+document.addEventListener('contextmenu',function(e){e.preventDefault();});
+document.addEventListener('dragstart',function(e){e.preventDefault();});
+document.addEventListener('selectstart',function(e){e.preventDefault();});
+document.addEventListener('copy',function(e){e.preventDefault();});
+document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'||e.key==='u'||e.key==='U'))e.preventDefault();});
+
+/* ===== 嵌入模式 ===== */
+var isEmbed=false,embedSide='L',gameRunning=false,embedSamplePattern=null,embedShape='triangle',embedSymmetry=false;
+(function setupEmbed(){
+  var params=new URLSearchParams(location.search);
+  if(!params.has('embed'))return;
+  isEmbed=true;
+  embedSide=params.get('side')||'L';
+  document.documentElement.classList.add('embed-mode');
+  document.body.classList.add('embed-mode');
+
+  window.addEventListener('message',function(ev){
+    var d=ev.data||{};
+    if(d.cmd==='config'){
+      embedSamplePattern=d.samplePattern||null;
+      embedShape=d.shape||'triangle';
+      embedSymmetry=!!d.symmetry;
+      selectedShape=embedShape;
+      symmetryMode=embedSymmetry;
+      gameRunning=false;
+      loadEmbedPattern();
+      document.getElementById('hint').textContent='等待开始…';
+    }else if(d.cmd==='start'){
+      initAudio();
+      gameRunning=true;
+      startTimer();timerStarted=true;
+      document.getElementById('hint').textContent=symmetryMode?'对称玩法：请左右对称填充':'选择顶部颜色后点击空白图形填充';
+    }else if(d.cmd==='reset'){
+      gameRunning=false;
+      stopTimer();
+      timerStarted=false;
+      elapsedSeconds=0;
+      updateTimerDisplay();
+      if(embedSamplePattern){loadEmbedPattern();}
+      document.getElementById('hint').textContent='等待开始…';
+    }
+  });
+  window.addEventListener('resize',function(){
+    if(samplePattern.length){drawTriangle('sampleTriangle',samplePattern,false);drawTriangle('userTriangle',userPattern,true);}
+  });
+  try{window.parent.postMessage({cmd:'ready',side:embedSide},'*');}catch(e){}
+})();
+
+function loadEmbedPattern(){
+  if(!embedSamplePattern)return;
+  samplePattern=[];
+  userPattern=[];
+  for(var r=0;r<embedSamplePattern.length;r++){
+    var rowData=[],rowUser=[];
+    for(var c=0;c<embedSamplePattern[r].length;c++){
+      rowData.push(embedSamplePattern[r][c]);
+      rowUser.push(-1);
+    }
+    samplePattern.push(rowData);
+    userPattern.push(rowUser);
+  }
+  var layout=getCurrentLayout();
+  totalCells=layout.reduce(function(a,b){return a+b;},0);
+  selectedColor=null;
+  wrongAttempts=0;
+  document.querySelectorAll('.color-option').forEach(function(el){el.classList.remove('selected');});
+  document.getElementById('result').style.display='none';
+  document.getElementById('fillTitle').textContent=symmetryMode?'请左右对称填充':'请填充';
+  renderPalette();
+  drawTriangle('sampleTriangle',samplePattern,false);
+  drawTriangle('userTriangle',userPattern,true);
+  updateProgress();
+  stopTimer();
+  timerStarted=false;
+  elapsedSeconds=0;
+  updateTimerDisplay();
+}
+
+var audioCtx=null;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();}
+function playFillSound(){initAudio();var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=800;o.type='sine';g.gain.setValueAtTime(.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+.1);o.start();o.stop(audioCtx.currentTime+.1);}
+function playError(){initAudio();var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=200;o.type='square';g.gain.setValueAtTime(.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+.2);o.start();o.stop(audioCtx.currentTime+.2);}
+function playSuccess(){initAudio();var notes=[523,659,784,1047];notes.forEach(function(freq,idx){setTimeout(function(){var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+.3);o.start();o.stop(audioCtx.currentTime+.3);},idx*150);});}
+
+var COLORS=['#00BCD4','#FFEB3B','#8BC34A','#F44336','#9C27B0'];
+var currentLevel=1;
+var selectedColor=null;
+var selectedShape='triangle';
+var symmetryMode=false;
+var samplePattern=[];
+var userPattern=[];
+var totalCells=10;
+var timerInterval=null;
+var startTime=null;
+var elapsedSeconds=0;
+var timerStarted=false;
+var wrongAttempts=0;
+
+var LAYOUT=[1,2,3,4];
+var CIRCLE_LAYOUT=[1,2,3,2,1];
+var SQUARE_LAYOUT=[5,5,5,5,5];
+
+function getCurrentLayout(){
+  if(selectedShape==='circle')return CIRCLE_LAYOUT;
+  if(selectedShape==='square')return SQUARE_LAYOUT;
+  return LAYOUT;
+}
+
+function generatePattern(level){
+  samplePattern=[];
+  userPattern=[];
+  var layout=getCurrentLayout();
+  var layoutTotal=layout.reduce(function(a,b){return a+b;},0);
+  totalCells=layoutTotal;
+  var colors=[];
+  if(selectedShape==='circle'){
+    var randomSingle=Math.floor(Math.random()*5);
+    for(var i=0;i<5;i++){
+      if(i===randomSingle){colors.push(i);}
+      else{colors.push(i);colors.push(i);}
+    }
+  }else if(selectedShape==='square'){
+    for(var i=0;i<5;i++){for(var j=0;j<5;j++){colors.push(i);}}
+  }else{
+    for(var i=0;i<5;i++){colors.push(i);colors.push(i);}
+  }
+  for(var i=colors.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var temp=colors[i];colors[i]=colors[j];colors[j]=temp;
+  }
+  var colorIndex=0;
+  for(var row=0;row<layout.length;row++){
+    var rowData=[],rowUser=[];
+    for(var col=0;col<layout[row];col++){
+      rowData.push(colors[colorIndex]);
+      rowUser.push(-1);
+      colorIndex++;
+    }
+    samplePattern.push(rowData);
+    userPattern.push(rowUser);
+  }
+}
+
+function renderPalette(){
+  var palette=document.getElementById('colorPalette');
+  palette.innerHTML='';
+  var size=40;
+  for(var i=0;i<COLORS.length;i++){
+    var div=document.createElement('div');
+    div.className='color-option';
+    div.dataset.index=i;
+    div.style.width=size+'px';
+    div.style.height=size+'px';
+    var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('width',size);
+    svg.setAttribute('height',size);
+    svg.style.display='block';
+    var shape;
+    if(selectedShape==='circle'){
+      shape=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      shape.setAttribute('cx',size/2);
+      shape.setAttribute('cy',size/2);
+      shape.setAttribute('r',size/2-3);
+    }else if(selectedShape==='square'){
+      shape=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      shape.setAttribute('x',3);shape.setAttribute('y',3);
+      shape.setAttribute('width',size-6);shape.setAttribute('height',size-6);
+    }else{
+      shape=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      var triHeight=size*0.866;
+      shape.setAttribute('points',(size/2)+','+2+' 2,'+(triHeight+2)+' '+(size-2)+','+(triHeight+2));
+    }
+    shape.setAttribute('fill',COLORS[i]);
+    shape.setAttribute('stroke','rgba(0,0,0,0.2)');
+    shape.setAttribute('stroke-width','1');
+    svg.appendChild(shape);
+    div.appendChild(svg);
+    div.onclick=function(){selectColor(parseInt(this.dataset.index));};
+    palette.appendChild(div);
+  }
+}
+
+function selectColor(index){
+  selectedColor=index;
+  document.querySelectorAll('.color-option').forEach(function(el,i){el.classList.toggle('selected',i===index);});
+}
+
+function selectShape(shape){
+  if(selectedShape===shape)return;
+  selectedShape=shape;
+  document.querySelectorAll('.shape-option').forEach(function(el){el.classList.toggle('selected',el.dataset.shape===shape);});
+  renderPalette();
+  stopTimer();timerStarted=false;elapsedSeconds=0;updateTimerDisplay();
+  startLevel();
+}
+
+function toggleSymmetry(){
+  symmetryMode=!symmetryMode;
+  var btn=document.getElementById('symmetryBtn');
+  btn.classList.toggle('active',symmetryMode);
+  btn.textContent=symmetryMode?'对称玩法 ✓':'对称玩法';
+  document.getElementById('fillTitle').textContent=symmetryMode?'请左右对称填充':'请填充';
+  if(symmetryMode){document.getElementById('hint').textContent='对称玩法：请左右对称填充';}
+  else{document.getElementById('hint').textContent='选择顶部颜色后点击空白图形填充';}
+}
+
+function getMirrorColor(row,col){
+  var layout=getCurrentLayout();
+  var rowCols=layout[row];
+  var mirrorCol=rowCols-1-col;
+  return samplePattern[row][mirrorCol];
+}
+
+function startTimer(){
+  if(timerInterval)clearInterval(timerInterval);
+  startTime=Date.now();
+  elapsedSeconds=0;
+  updateTimerDisplay();
+  timerInterval=setInterval(function(){
+    elapsedSeconds=Math.floor((Date.now()-startTime)/1000);
+    updateTimerDisplay();
+  },1000);
+}
+function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}}
+function updateTimerDisplay(){
+  var minutes=Math.floor(elapsedSeconds/60);
+  var seconds=elapsedSeconds%60;
+  document.getElementById('timer').textContent='用时: '+(minutes<10?'0':'')+minutes+':'+(seconds<10?'0':'')+seconds;
+}
+
+function drawTriangle(svgId,pattern,isUser){
+  var svg=document.getElementById(svgId);
+  svg.innerHTML='';
+  var shapeSize=isEmbed?58:55;
+  var gap=3;
+  var layout=getCurrentLayout();
+  var rows=pattern.length;
+  var maxCols=Math.max.apply(null,layout);
+
+  if(selectedShape==='square'){
+    var svgWidth=maxCols*shapeSize+(maxCols-1)*gap+10;
+    var svgHeight=rows*shapeSize+(rows-1)*gap+10;
+    svg.setAttribute('width',svgWidth);svg.setAttribute('height',svgHeight);
+    svg.setAttribute('viewBox','0 0 '+svgWidth+' '+svgHeight);
+    for(var row=0;row<pattern.length;row++){
+      var rowData=pattern[row];
+      var y=5+row*(shapeSize+gap);
+      for(var col=0;col<rowData.length;col++){
+        var colorIndex=rowData[col];
+        var x=5+col*(shapeSize+gap);
+        var sh=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        sh.setAttribute('x',x+2);sh.setAttribute('y',y+2);
+        sh.setAttribute('width',shapeSize-4);sh.setAttribute('height',shapeSize-4);
+        sh.setAttribute('fill',colorIndex>=0?COLORS[colorIndex]:'#f5f5f5');
+        sh.setAttribute('stroke',colorIndex>=0?'#333':'#999');
+        sh.setAttribute('stroke-width','1.5');
+        if(isUser&&colorIndex<0){sh.classList.add('tri');sh.dataset.row=row;sh.dataset.col=col;sh.onclick=function(){fillCell(parseInt(this.dataset.row),parseInt(this.dataset.col));};}
+        svg.appendChild(sh);
+      }
+    }
+  }else if(selectedShape==='circle'){
+    var svgWidth2=3*shapeSize+2*gap+10;
+    var svgHeight2=5*shapeSize+4*gap+10;
+    svg.setAttribute('width',svgWidth2);svg.setAttribute('height',svgHeight2);
+    svg.setAttribute('viewBox','0 0 '+svgWidth2+' '+svgHeight2);
+    for(var row2=0;row2<pattern.length;row2++){
+      var rowData2=pattern[row2];
+      var rowWidth=rowData2.length*shapeSize+(rowData2.length-1)*gap;
+      var centerX=svgWidth2/2;
+      var startX=centerX-rowWidth/2;
+      var y2=5+row2*(shapeSize+gap);
+      for(var col2=0;col2<rowData2.length;col2++){
+        var ci2=rowData2[col2];
+        var x2=startX+col2*(shapeSize+gap);
+        var sh2=document.createElementNS('http://www.w3.org/2000/svg','circle');
+        sh2.setAttribute('cx',x2+shapeSize/2);sh2.setAttribute('cy',y2+shapeSize/2);
+        sh2.setAttribute('r',shapeSize/2-2);
+        sh2.setAttribute('fill',ci2>=0?COLORS[ci2]:'#f5f5f5');
+        sh2.setAttribute('stroke',ci2>=0?'#333':'#999');
+        sh2.setAttribute('stroke-width','1.5');
+        if(isUser&&ci2<0){sh2.classList.add('tri');sh2.dataset.row=row2;sh2.dataset.col=col2;sh2.onclick=function(){fillCell(parseInt(this.dataset.row),parseInt(this.dataset.col));};}
+        svg.appendChild(sh2);
+      }
+    }
+  }else{
+    var triWidth=55;
+    if(isEmbed)triWidth=62;
+    var triHeight=triWidth*0.866;
+    var svgW=maxCols*triWidth+(maxCols-1)*gap+10;
+    var svgH=rows*triHeight+10;
+    svg.setAttribute('width',svgW);svg.setAttribute('height',svgH);
+    svg.setAttribute('viewBox','0 0 '+svgW+' '+svgH);
+    for(var row3=0;row3<pattern.length;row3++){
+      var rowData3=pattern[row3];
+      var rowW=rowData3.length*triWidth+(rowData3.length-1)*gap;
+      var sx=(svgW-rowW)/2;
+      var y3=5+row3*triHeight;
+      for(var col3=0;col3<rowData3.length;col3++){
+        var ci3=rowData3[col3];
+        var x3=sx+col3*(triWidth+gap);
+        var sh3=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+        sh3.setAttribute('points',(x3+triWidth/2)+','+y3+' '+x3+','+(y3+triHeight)+' '+(x3+triWidth)+','+(y3+triHeight));
+        sh3.setAttribute('fill',ci3>=0?COLORS[ci3]:'#f5f5f5');
+        sh3.setAttribute('stroke',ci3>=0?'#333':'#999');
+        sh3.setAttribute('stroke-width','1.5');
+        if(isUser&&ci3<0){sh3.classList.add('tri');sh3.dataset.row=row3;sh3.dataset.col=col3;sh3.onclick=function(){fillCell(parseInt(this.dataset.row),parseInt(this.dataset.col));};}
+        svg.appendChild(sh3);
+      }
+    }
+  }
+}
+
+function fillCell(row,col){
+  if(isEmbed&&!gameRunning)return;
+  if(selectedColor===null){
+    document.getElementById('hint').textContent='请先选择颜色';
+    return;
+  }
+  var expectedColor;
+  if(symmetryMode){expectedColor=getMirrorColor(row,col);}
+  else{expectedColor=samplePattern[row][col];}
+
+  if(selectedColor!==expectedColor){
+    playError();
+    wrongAttempts++;
+    document.getElementById('hint').textContent='颜色不对，请选择正确的颜色！';
+    setTimeout(function(){
+      document.getElementById('hint').textContent=symmetryMode?'对称玩法：请左右对称填充':'选择顶部颜色后点击空白图形填充';
+    },1500);
+    return;
+  }
+
+  userPattern[row][col]=selectedColor;
+  playFillSound();
+  if(!timerStarted){startTimer();timerStarted=true;}
+  drawTriangle('userTriangle',userPattern,true);
+  updateProgress();
+  checkWin();
+}
+
+function updateProgress(){
+  var filled=0;
+  for(var row=0;row<userPattern.length;row++){
+    for(var col=0;col<userPattern[row].length;col++){
+      if(userPattern[row][col]>=0)filled++;
+    }
+  }
+  document.getElementById('progress').textContent='已填充: '+filled+' / '+totalCells;
+}
+
+function checkWin(){
+  var filled=0,correct=0;
+  for(var row=0;row<samplePattern.length;row++){
+    for(var col=0;col<samplePattern[row].length;col++){
+      if(userPattern[row][col]>=0){
+        filled++;
+        var expectedColor;
+        if(symmetryMode){expectedColor=getMirrorColor(row,col);}
+        else{expectedColor=samplePattern[row][col];}
+        if(userPattern[row][col]===expectedColor)correct++;
+      }
+    }
+  }
+  if(filled===totalCells&&correct===totalCells){
+    stopTimer();
+    gameRunning=false;
+    var actualTime=(Date.now()-startTime)/1000;
+    if(isEmbed){
+      playSuccess();
+      var result=document.getElementById('result');
+      result.textContent='完成！用时 '+formatTime(actualTime);
+      result.className='result success';
+      result.style.display='block';
+      document.getElementById('hint').textContent='已完成！';
+      try{window.parent.postMessage({cmd:'done',side:embedSide,time:actualTime,errors:wrongAttempts},'*');}catch(e){}
+    }else{
+      var result2=document.getElementById('result');
+      result2.textContent='太棒了！用时 '+formatTime(actualTime);
+      result2.className='result success';
+      result2.style.display='block';
+      playSuccess();
+      showWinAnimation();
+      setTimeout(function(){resetUserPattern();},2000);
+    }
+  }
+}
+
+function formatTime(secs){
+  var m=Math.floor(secs/60),s=Math.floor(secs%60);
+  return(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+}
+
+function showWinAnimation(){
+  var anim=document.getElementById('winAnimation');
+  anim.style.display='flex';
+  anim.querySelector('.win-text').style.animation='bounceIn 0.5s ease';
+  setTimeout(function(){anim.style.display='none';},2000);
+}
+
+function resetUserPattern(){
+  currentLevel++;
+  startLevel();
+}
+
+function startLevel(){
+  selectedColor=null;
+  document.querySelectorAll('.color-option').forEach(function(el){el.classList.remove('selected');});
+  document.getElementById('result').style.display='none';
+  document.getElementById('hint').textContent='选择顶部颜色后点击空白图形填充';
+  generatePattern(currentLevel);
+  drawTriangle('sampleTriangle',samplePattern,false);
+  drawTriangle('userTriangle',userPattern,true);
+  updateProgress();
+  stopTimer();timerStarted=false;elapsedSeconds=0;updateTimerDisplay();
+}
+
+if(!isEmbed){
+  renderPalette();
+  startLevel();
+}
+</script>
+</body>
+</html>

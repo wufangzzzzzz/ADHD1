@@ -394,6 +394,7 @@ justify-content: center;
       <button class="tab-btn" data-tab="visual" onclick="switchTab('visual')">视觉训练</button>
       <button class="tab-btn" data-tab="audio" onclick="switchTab('audio')">听觉训练</button>
       <button class="tab-btn" data-tab="behavior" onclick="switchTab('behavior')">行为训练</button>
+      <button class="tab-btn" data-tab="dual" onclick="switchTab('dual')">双人对战</button>
     </div>
 
     <!-- 游戏选择卡片 -->
@@ -1910,6 +1911,160 @@ justify-content: center;
         </div>
         <div class="card-footer">
           <span class="difficulty">模式：双侧描摹 + 3D魔方</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 双人对战：双人舒尔特 -->
+      <div class="game-card" data-category="dual" onclick="location.href='dual-schulte.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #FF3B30 0%, #FF9800 50%, #34C759 100%);">
+          <span class="card-icon">⚔️</span>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">双人舒尔特 <span style="background:#FF3B30;color:#fff;font-size:0.68em;padding:2px 9px;border-radius:10px;vertical-align:middle;margin-left:6px;font-weight:800;">双人模式</span></h2>
+          <p class="card-desc">左右两块屏幕同步开战，各点自己的舒尔特方格，谁先点完谁胜利。支持左右板块翻转，平板面对面共用一台。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#ffe5e0;color:#c0392b;">左右分屏</span>
+            <span class="feature-tag" style="background:#e0f7e9;color:#1b7a3d;">独立计时</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">可翻转</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">模式：双人实时对战</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 双人对战：双人划消训练 -->
+      <div class="game-card" data-category="dual" onclick="location.href='dual-cancellation.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #1565C0 0%, #0D47A1 50%, #0097A7 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <g stroke="#fff" stroke-width="1.5" opacity="0.6">
+              <line x1="20" y1="16" x2="100" y2="16"/>
+              <line x1="20" y1="32" x2="100" y2="32"/>
+              <line x1="20" y1="48" x2="100" y2="48"/>
+              <line x1="20" y1="64" x2="100" y2="64"/>
+              <line x1="20" y1="16" x2="20" y2="64"/>
+              <line x1="36" y1="16" x2="36" y2="64"/>
+              <line x1="52" y1="16" x2="52" y2="64"/>
+              <line x1="68" y1="16" x2="68" y2="64"/>
+              <line x1="84" y1="16" x2="84" y2="64"/>
+              <line x1="100" y1="16" x2="100" y2="64"/>
+            </g>
+            <text x="28" y="30" text-anchor="middle" font-size="12" fill="#FFEB3B" font-weight="700">3</text>
+            <text x="44" y="30" text-anchor="middle" font-size="12" fill="#4CAF50" font-weight="700">7</text>
+            <g fill="none" stroke="#FF5722" stroke-width="3">
+              <line x1="56" y1="28" x2="68" y2="16"/>
+              <line x1="56" y1="16" x2="68" y2="28"/>
+            </g>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">双人划消训练 <span style="background:#FF3B30;color:#fff;font-size:0.68em;padding:2px 9px;border-radius:10px;vertical-align:middle;margin-left:6px;font-weight:800;">双人模式</span></h2>
+          <p class="card-desc">左右两人在相同网格中各自划消目标数字/字母/汉字，先完成所有目标的获胜。支持三种目标类型、彩色模式、自定义行列和5档容积。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565C0;">划消训练</span>
+            <span class="feature-tag" style="background:#e0f7fa;color:#00838F;">3种文字</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">5档容积</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">模式：数字/字母/汉字划消</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 双人对战：双人符号迷宫 -->
+      <div class="game-card" data-category="dual" onclick="location.href='dual-symbol-maze.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #6A1B9A 0%, #4A148C 50%, #E91E63 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <g fill="none" stroke="#fff" stroke-width="1.2" opacity="0.5">
+              <line x1="16" y1="16" x2="104" y2="16"/>
+              <line x1="16" y1="32" x2="104" y2="32"/>
+              <line x1="16" y1="48" x2="104" y2="48"/>
+              <line x1="16" y1="64" x2="104" y2="64"/>
+              <line x1="16" y1="16" x2="16" y2="64"/>
+              <line x1="38" y1="16" x2="38" y2="64"/>
+              <line x1="60" y1="16" x2="60" y2="64"/>
+              <line x1="82" y1="16" x2="82" y2="64"/>
+              <line x1="104" y1="16" x2="104" y2="64"/>
+            </g>
+            <text x="27" y="30" text-anchor="middle" font-size="11" fill="#FFD700" font-weight="800">+</text>
+            <text x="71" y="46" text-anchor="middle" font-size="11" fill="#00E676" font-weight="800">÷</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">双人符号迷宫 <span style="background:#FF3B30;color:#fff;font-size:0.68em;padding:2px 9px;border-radius:10px;vertical-align:middle;margin-left:6px;font-weight:800;">双人模式</span></h2>
+          <p class="card-desc">10×10 网格迷宫中按符号序列前进，每次只能踏入下一种符号，左右两人同一迷宫中竞赛先到出口。支持数学/字母/数字三种符号类型。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#ede7f6;color:#6a1b9a;">符号迷宫</span>
+            <span class="feature-tag" style="background:#fce4ec;color:#ad1457;">3种符号</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">路径规划</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">固定：10×10·3种符号类型</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 双人对战：双人经典迷宫 -->
+      <div class="game-card" data-category="dual" onclick="location.href='dual-maze.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 50%, #FFB300 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <rect x="10" y="10" width="100" height="60" rx="8" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.4"/>
+            <g stroke="#fff" stroke-width="1" opacity="0.3">
+              <line x1="30" y1="18" x2="30" y2="40"/>
+              <line x1="50" y1="30" x2="70" y2="30"/>
+              <line x1="50" y1="50" x2="50" y2="62"/>
+              <line x1="70" y1="18" x2="70" y2="50"/>
+              <line x1="90" y1="40" x2="90" y2="62"/>
+            </g>
+            <path d="M16,40 L30,40 L30,18 L50,18 L50,30 L70,30 L70,50 L90,50 L90,62 L104,62" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="16" cy="40" r="5" fill="#4CAF50"/>
+            <circle cx="104" cy="62" r="5" fill="#FF9800"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">双人经典迷宫 <span style="background:#FF3B30;color:#fff;font-size:0.68em;padding:2px 9px;border-radius:10px;vertical-align:middle;margin-left:6px;font-weight:800;">双人模式</span></h2>
+          <p class="card-desc">左右两人同走一个迷宫，各自从绿色起点拖拽到金色终点，先到达的获胜。5档难度从简单8×8到极限80×80，支持拖拽/点击/键盘操作。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">经典迷宫</span>
+            <span class="feature-tag" style="background:#fff8e1;color:#f57f17;">5档难度</span>
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565C0;">拖拽/键盘</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：5档（8×8～80×80）</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
+      <!-- 双人对战：双人色彩管理 -->
+      <div class="game-card" data-category="dual" onclick="location.href='dual-color-sort.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #E91E63 0%, #9C27B0 50%, #00BCD4 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <rect x="16" y="12" width="40" height="40" rx="6" fill="#FF3B30"/>
+            <rect x="64" y="12" width="40" height="40" rx="6" fill="none" stroke="#ccc" stroke-width="2" stroke-dasharray="4 2"/>
+            <text x="36" y="38" text-anchor="middle" font-size="10" fill="#fff">样本</text>
+            <text x="84" y="38" text-anchor="middle" font-size="10" fill="#ccc">目标</text>
+            <circle cx="36" cy="62" r="5" fill="#34C759"/>
+            <circle cx="52" cy="62" r="5" fill="#007AFF"/>
+            <circle cx="68" cy="62" r="5" fill="#FF9800"/>
+            <circle cx="84" cy="62" r="5" fill="#9C27B0"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">双人色彩管理 <span style="background:#FF3B30;color:#fff;font-size:0.68em;padding:2px 9px;border-radius:10px;vertical-align:middle;margin-left:6px;font-weight:800;">双人模式</span></h2>
+          <p class="card-desc">看左侧样本图案，在右侧空白图形中填出完全相同配色。左右两人同步竞技，先正确完成所有格子的获胜。三种形状（三角/圆/方）可选，支持对称模式。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#fce4ec;color:#ad1457;">色彩管理</span>
+            <span class="feature-tag" style="background:#ede7f6;color:#6a1b9a;">3种形状</span>
+            <span class="feature-tag" style="background:#e0f7fa;color:#00838F;">对称玩法</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">模式：三角/圆/方·5色配色</span>
           <button class="play-btn">开始游戏 →</button>
         </div>
       </div>

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>双人舒尔特 · 双人对战</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+  #app { height: 100vh; display: flex; flex-direction: column; background: #0f1226; color: #eef; }
+
+  /* 顶部条 */
+  .topbar {
+    flex: 0 0 auto; height: 56px; display: flex; align-items: center; gap: 12px;
+    padding: 0 14px; background: linear-gradient(135deg, #1b1f3b, #2a2f5a);
+    box-shadow: 0 2px 10px rgba(0,0,0,.35); z-index: 20;
+  }
+  .topbar .title { font-size: 17px; font-weight: 800; letter-spacing: .5px; }
+  .badge {
+    font-size: 11px; font-weight: 700; color: #fff; background: #e53935;
+    padding: 2px 8px; border-radius: 10px;
+  }
+  .topbar .spacer { flex: 1; }
+  .btn {
+    border: none; border-radius: 10px; padding: 9px 16px; font-size: 14px; font-weight: 700;
+    cursor: pointer; color: #fff; transition: transform .1s, opacity .2s;
+  }
+  .btn:active { transform: scale(.96); }
+  .btn-menu { background: #4550a0; }
+  .btn-flip { background: #5a64c8; }
+  .btn-flip.active { background: #ffb300; color: #1b1f3b; }
+  .btn-start { background: linear-gradient(135deg, #2e7d32, #43a047); }
+  .btn-start:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-start.replay { background: linear-gradient(135deg, #1565c0, #1e88e5); }
+
+  /* 对战区 */
+  .arena { flex: 1 1 auto; display: flex; min-height: 0; position: relative; }
+  .board-wrap {
+    flex: 1 1 0; min-width: 0; position: relative; transition: transform .35s ease;
+  }
+  .board-wrap.flipped { transform: rotate(180deg); }
+  .board-wrap iframe { width: 100%; height: 100%; border: 0; display: block; background: #fafaff; }
+  .board-tag {
+    position: absolute; top: 8px; left: 10px; z-index: 5; font-size: 12px; font-weight: 800;
+    color: #1b1f3b; background: rgba(255,255,255,.7); padding: 3px 10px; border-radius: 10px;
+    pointer-events: none;
+  }
+  .board-wrap.flipped .board-tag { display: none; }
+  .divider {
+    flex: 0 0 auto; width: 2px; background: linear-gradient(#3a3f70, #6c73c0, #3a3f70);
+    position: relative;
+  }
+  .divider .vs {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 34px; height: 34px; border-radius: 50%; background: #ffb300; color: #1b1f3b;
+    display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  }
+
+  /* 胜利横幅 */
+  .winner {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: none;
+    align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    background: rgba(15,18,38,.55); z-index: 15; backdrop-filter: blur(2px);
+  }
+  .winner.show { display: flex; }
+  .winner .wc {
+    background: #fff; color: #1b1f3b; padding: 22px 34px; border-radius: 18px; text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,.5); max-width: 80%;
+  }
+  .winner .wc .big { font-size: 30px; font-weight: 900; margin-bottom: 8px; }
+  .winner .wc .sub { font-size: 15px; color: #555; }
+  .winner .wc .again { margin-top: 16px; }
+
+  /* 弹出式菜单 */
+  .popup-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .popup-overlay.show { display: flex; }
+  .popup {
+    width: min(420px, 92vw); max-height: 86vh; overflow: auto; background: #fff; color: #1b1f3b;
+    border-radius: 18px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .popup h3 { margin: 0 0 16px; font-size: 18px; font-weight: 800; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; color: #555; margin-bottom: 7px; }
+  .field select {
+    width: 100%; height: 42px; border-radius: 10px; border: 1px solid #d5d8ec;
+    padding: 0 12px; font-size: 15px; background: #f6f7ff; color: #1b1f3b;
+  }
+  .field.toggle-row { display: flex; gap: 14px; }
+  .field.toggle-row .tg { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+  .field.toggle-row input { width: 20px; height: 20px; accent-color: #4550a0; }
+  .popup .close-btn {
+    width: 100%; margin-top: 6px; border: none; border-radius: 12px; padding: 13px;
+    background: linear-gradient(135deg, #4550a0, #5a64c8); color: #fff; font-size: 16px; font-weight: 800;
+    cursor: pointer;
+  }
+  .hint { font-size: 12px; color: #888; margin-top: -6px; margin-bottom: 14px; line-height: 1.5; }
+  .fx-line { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .fx-label { font-size: 13px; font-weight: 700; color: #555; white-space: nowrap; }
+  .fx-sp { margin-left: 8px; }
+  .fx-line select { flex: 1; min-width: 110px; height: 38px; border-radius: 10px; border: 1px solid #d5d8ec; padding: 0 10px; font-size: 14px; background: #f6f7ff; color: #1b1f3b; }
+  .range-hint { margin: 2px 0 12px; padding: 8px 12px; border-radius: 10px; background: #eef2ff; border: 1px dashed #9aa6ff; color: #2a2f66; font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <button class="btn btn-menu" id="menuBtn">☰ 菜单</button>
+    <span class="title">双人舒尔特</span>
+    <span class="badge">双人模式</span>
+    <button class="btn btn-flip" id="flipLBtn">⇅ 翻转左</button>
+    <button class="btn btn-flip" id="flipRBtn">⇅ 翻转右</button>
+    <span class="spacer"></span>
+    <button class="btn btn-start" id="startBtn" disabled>开始对战</button>
+  </div>
+
+  <div class="arena">
+    <div class="board-wrap" id="wrapL">
+      <span class="board-tag">左方</span>
+      <iframe id="boardL" src="schulte-single-embed.html?embed=1&side=L" allow="autoplay"></iframe>
+    </div>
+    <div class="divider"><span class="vs">VS</span></div>
+    <div class="board-wrap" id="wrapR">
+      <span class="board-tag">右方</span>
+      <iframe id="boardR" src="schulte-single-embed.html?embed=1&side=R" allow="autoplay"></iframe>
+    </div>
+
+    <div class="winner" id="winner">
+      <div class="wc">
+        <div class="big" id="winText">🏆 左方胜利！</div>
+        <div class="sub" id="winSub"></div>
+        <button class="btn btn-start replay again" id="againBtn">再来一局</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹出式菜单 -->
+  <div class="popup-overlay" id="popup">
+    <div class="popup">
+      <h3>对战设置</h3>
+      <div class="field">
+        <label>难度（每方格子数 = 难度²）</label>
+        <select id="diffSel">
+          <option value="3">入门 3×3</option>
+          <option value="4" selected>初级 4×4</option>
+          <option value="5">中级 5×5</option>
+          <option value="6">高级 6×6</option>
+          <option value="7">专家 7×7</option>
+          <option value="10">极限 10×10</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>模式</label>
+        <select id="modeSel">
+          <option value="normal" selected>普通</option>
+          <option value="variant">变体</option>
+          <option value="circular">圆形</option>
+          <option value="chaos">混沌</option>
+          <option value="mosaic">马赛克</option>
+          <option value="square">方形（动）</option>
+          <option value="parallax">视觉差</option>
+          <option value="bumpy">凹凸</option>
+          <option value="color">彩格</option>
+          <option value="pattern">图案</option>
+        </select>
+      </div>
+      <div class="field" id="subField">
+        <label>子模式</label>
+        <select id="subSel"></select>
+      </div>
+      <div class="hint">左右两方使用各自随机的数字序列，互不干扰；先点完 1…N 的一方获胜。</div>
+      <div class="field">
+        <label>数字效果（叠加在布局上）</label>
+        <div class="fx-line">
+          <span class="fx-label">偏移 / 混乱</span>
+          <select id="fxSwing">
+            <option value="none">无</option>
+            <option value="offset">偏移</option>
+            <option value="chaos">混乱（数字摆动）</option>
+          </select>
+        </div>
+        <div class="fx-line">
+          <label class="tg"><input type="checkbox" id="fxFont"> 换字</label>
+          <label class="tg"><input type="checkbox" id="fxVoid"> 虚无</label>
+          <label class="tg"><input type="checkbox" id="fxVoid2"> 虚无2</label>
+        </div>
+        <div class="fx-line">
+          <span class="fx-label">毁灭</span>
+          <select id="fxDestroy">
+            <option value="0">关</option>
+            <option value="1">毁灭1</option>
+            <option value="2">毁灭2</option>
+            <option value="3">毁灭3</option>
+            <option value="4">毁灭4</option>
+            <option value="5">毁灭5</option>
+          </select>
+          <span class="fx-label fx-sp">数字类型</span>
+          <select id="fxNum">
+            <option value="natural">自然数</option>
+            <option value="odd">奇数</option>
+            <option value="even">偶数</option>
+          </select>
+        </div>
+        <div class="range-hint" id="rangeHint"></div>
+        <div class="fx-line">
+          <span class="fx-label">背景</span>
+          <select id="fxBg">
+            <option value="">默认</option>
+            <option value="#ff4444">红</option>
+            <option value="#ff8800">橙</option>
+            <option value="#ffcc00">黄</option>
+            <option value="#44dd44">绿</option>
+            <option value="#00cccc">青</option>
+            <option value="#0099ff">蓝</option>
+            <option value="#aa44ff">紫</option>
+            <option value="#ffffff">白</option>
+            <option value="#222222">黑</option>
+          </select>
+          <span class="fx-label fx-sp">条纹</span>
+          <select id="fxBgType">
+            <option value="default">默认</option>
+            <option value="stripe-diagonal">斜条纹</option>
+            <option value="stripe-horizontal">横条纹</option>
+            <option value="stripe-vertical">竖条纹</option>
+            <option value="grid-pattern">网格纹</option>
+          </select>
+        </div>
+      </div>
+      <button class="close-btn" id="closePopup">完成</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var MODE_LABELS = {
+    normal: '普通', variant: '变体', circular: '圆形', chaos: '混沌',
+    mosaic: '马赛克', square: '方形（动）', parallax: '视觉差',
+    bumpy: '凹凸', color: '彩格', pattern: '图案'
+  };
+  var SUB_OPTIONS = {
+    normal:   [],
+    variant:  [],
+    circular: [{ v: 1, t: '静' }, { v: 2, t: '动' }],
+    chaos:    [{ v: 1, t: '混沌1·动' }, { v: 2, t: '混沌2·转' }, { v: 3, t: '混沌3·大小互换' }],
+    mosaic:   [{ v: 1, t: '静' }, { v: 2, t: '动' }],
+    square:   [{ v: 1, t: '横' }, { v: 2, t: '纵' }, { v: 3, t: '横纵' }],
+    parallax: [{ v: 1, t: '静' }, { v: 2, t: '动' }],
+    bumpy:    [{ v: 1, t: '静' }, { v: 2, t: '动' }],
+    color:    [
+      { v: 1, t: '彩格1·静' }, { v: 2, t: '彩格1·动' },
+      { v: 3, t: '彩格2·静' }, { v: 4, t: '彩格2·动' },
+      { v: 5, t: '彩格3·静' }, { v: 6, t: '彩格3·动' }
+    ],
+    pattern:  []
+  };
+  // 彩格子模式索引 → (类型 cSub, 动静 cDyn)
+  var COLOR_SUB_MAP = {
+    1: { cSub: 1, cDyn: false }, 2: { cSub: 1, cDyn: true },
+    3: { cSub: 2, cDyn: false }, 4: { cSub: 2, cDyn: true },
+    5: { cSub: 3, cDyn: false }, 6: { cSub: 3, cDyn: true }
+  };
+
+  var state = {
+    mode: 'normal',
+    sub: 1,
+    difficulty: 4,
+    flipL: false,
+    flipR: false,
+    effects: {
+      offset: false, chaos: false, font: false, void: false, void2: false,
+      destroy: false, destroyLevel: 1,
+      numType: 'natural', bgColor: '', bgType: 'default'
+    },
+    started: false,
+    battleOver: false,
+    ready: { L: false, R: false },
+    results: { L: null, R: null },
+    startTime: 0
+  };
+
+  var boardL = document.getElementById('boardL');
+  var boardR = document.getElementById('boardR');
+  var startBtn = document.getElementById('startBtn');
+  var winner = document.getElementById('winner');
+
+  function postTo(side, msg) {
+    var w = (side === 'L' ? boardL : boardR).contentWindow;
+    if (w) w.postMessage(msg, '*');
+  }
+  function postBoth(msg) { postTo('L', msg); postTo('R', msg); }
+
+  function generateOrder(n, numType) {
+    var total = n * n;
+    var arr = [];
+    // 按数字类型生成序列：自然数 1..total；奇数 1,3,..,2*total-1；偶数 2,4,..,2*total
+    if (numType === 'odd') {
+      for (var i = 1; i <= total; i++) arr.push(2 * i - 1);
+    } else if (numType === 'even') {
+      for (var i = 1; i <= total; i++) arr.push(2 * i);
+    } else {
+      for (var i = 1; i <= total; i++) arr.push(i);
+    }
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  // 在设置面板实时标注「数字从几到几」，随难度/数字类型更新
+  function updateRangeHint() {
+    var el = document.getElementById('rangeHint');
+    if (!el) return;
+    var gs = state.difficulty;
+    var total = gs * gs;
+    var nt = state.effects.numType;
+    var txt;
+    if (nt === 'odd') {
+      txt = '奇数范围：1 – ' + (2 * total - 1) + '（共 ' + total + ' 格）';
+    } else if (nt === 'even') {
+      txt = '偶数范围：2 – ' + (2 * total) + '（共 ' + total + ' 格）';
+    } else {
+      txt = '自然数范围：1 – ' + total + '（共 ' + total + ' 格）';
+    }
+    el.textContent = txt;
+  }
+
+  function buildSubOptions() {
+    var sel = document.getElementById('subSel');
+    var opts = SUB_OPTIONS[state.mode] || [];
+    sel.innerHTML = '';
+    if (opts.length === 0) {
+      document.getElementById('subField').style.display = 'none';
+      state.sub = 1;
+      return;
+    }
+    document.getElementById('subField').style.display = '';
+    opts.forEach(function (o) {
+      var el = document.createElement('option');
+      el.value = o.v; el.textContent = o.t;
+      if (o.v === state.sub) el.selected = true;
+      sel.appendChild(el);
+    });
+    // 若当前 sub 不在选项里，取第一个
+    var vals = opts.map(function (o) { return o.v; });
+    if (vals.indexOf(state.sub) === -1) state.sub = opts[0].v;
+  }
+
+  function collectEffects() {
+    var fx = state.effects;
+    var swing = document.getElementById('fxSwing').value;
+    fx.offset = (swing === 'offset');
+    fx.chaos = (swing === 'chaos');
+    fx.font = document.getElementById('fxFont').checked;
+    fx.void = document.getElementById('fxVoid').checked;
+    fx.void2 = document.getElementById('fxVoid2').checked;
+    fx.destroy = (document.getElementById('fxDestroy').value !== '0');
+    fx.destroyLevel = parseInt(document.getElementById('fxDestroy').value, 10) || 1;
+    fx.numType = document.getElementById('fxNum').value;
+    fx.bgColor = document.getElementById('fxBg').value;
+    fx.bgType = document.getElementById('fxBgType').value;
+  }
+
+  function applyConfig() {
+    updateRangeHint();
+    if (!state.ready.L || !state.ready.R) return;
+    collectEffects();
+    var orderL = generateOrder(state.difficulty, state.effects.numType);
+    var orderR = generateOrder(state.difficulty, state.effects.numType);
+    var baseMsg = {
+      cmd: 'config',
+      mode: state.mode,
+      sub: state.sub,
+      difficulty: state.difficulty,
+      effects: state.effects
+    };
+    // 彩格模式需要「类型 + 动静」两个参数，由子模式索引解码下发
+    if (state.mode === 'color') {
+      var combo = COLOR_SUB_MAP[state.sub] || { cSub: 1, cDyn: false };
+      baseMsg.cSub = combo.cSub;
+      baseMsg.cDyn = combo.cDyn;
+    }
+    postTo('L', Object.assign({}, baseMsg, { order: orderL }));
+    postTo('R', Object.assign({}, baseMsg, { order: orderR }));
+    // 复位对战状态
+    state.started = false;
+    state.battleOver = false;
+    state.results = { L: null, R: null };
+    winner.classList.remove('show');
+    startBtn.disabled = false;
+    startBtn.classList.remove('replay');
+    startBtn.textContent = '开始对战';
+  }
+
+  function startBattle() {
+    if (!state.ready.L || !state.ready.R) return;
+    state.started = true;
+    state.battleOver = false;
+    state.results = { L: null, R: null };
+    state.startTime = Date.now();
+    winner.classList.remove('show');
+    postBoth({ cmd: 'start' });
+    startBtn.disabled = true;
+    startBtn.textContent = '对战中…';
+  }
+
+  function onDone(side, time) {
+    if (state.results[side] != null) return;
+    state.results[side] = time;
+    var other = (side === 'L' ? 'R' : 'L');
+    if (!state.battleOver && state.results[other] == null) {
+      // 第一完成者
+      state.battleOver = true;
+      var label = (side === 'L' ? '左方' : '右方');
+      document.getElementById('winText').textContent = '🏆 ' + label + '率先完成！';
+      document.getElementById('winSub').textContent = '用时 ' + time + ' 秒 · 等待对方完成…';
+      winner.classList.add('show');
+      startBtn.disabled = false;
+      startBtn.classList.add('replay');
+      startBtn.textContent = '再来一局';
+    } else {
+      // 双方都完成，出终局对比
+      var lt = state.results.L, rt = state.results.R;
+      var winSide = (lt <= rt) ? '左方' : '右方';
+      document.getElementById('winText').textContent = '🏆 ' + winSide + '胜利！';
+      document.getElementById('winSub').textContent = '左方 ' + lt + ' 秒 ｜ 右方 ' + rt + ' 秒';
+      winner.classList.add('show');
+      startBtn.disabled = false;
+      startBtn.classList.add('replay');
+      startBtn.textContent = '再来一局';
+    }
+  }
+
+  // 接收 iframe 消息
+  window.addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (d.cmd === 'ready') {
+      state.ready[d.side] = true;
+      if (state.ready.L && state.ready.R) {
+        startBtn.disabled = false;
+        applyConfig();
+      }
+    } else if (d.cmd === 'done') {
+      onDone(d.side, d.time);
+    }
+  });
+
+  // 菜单交互
+  document.getElementById('menuBtn').addEventListener('click', function () {
+    document.getElementById('popup').classList.add('show');
+  });
+  document.getElementById('closePopup').addEventListener('click', function () {
+    document.getElementById('popup').classList.remove('show');
+    applyConfig();
+  });
+  document.getElementById('popup').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+  document.getElementById('diffSel').addEventListener('change', function (e) {
+    state.difficulty = parseInt(e.target.value, 10);
+    applyConfig();
+  });
+  document.getElementById('modeSel').addEventListener('change', function (e) {
+    state.mode = e.target.value;
+    buildSubOptions();
+    applyConfig();
+  });
+  document.getElementById('subSel').addEventListener('change', function (e) {
+    state.sub = parseInt(e.target.value, 10);
+    applyConfig();
+  });
+  // 翻转按钮（顶栏常显）
+  document.getElementById('flipLBtn').addEventListener('click', function () {
+    state.flipL = !state.flipL;
+    document.getElementById('wrapL').classList.toggle('flipped', state.flipL);
+    this.classList.toggle('active', state.flipL);
+  });
+  document.getElementById('flipRBtn').addEventListener('click', function () {
+    state.flipR = !state.flipR;
+    document.getElementById('wrapR').classList.toggle('flipped', state.flipR);
+    this.classList.toggle('active', state.flipR);
+  });
+
+  // 效果控件变更 → 重新下发配置（刷新棋盘为待开始状态）
+  ['fxSwing', 'fxFont', 'fxVoid', 'fxVoid2', 'fxDestroy', 'fxNum', 'fxBg', 'fxBgType'].forEach(function (id) {
+    var el = document.getElementById(id);
+    el.addEventListener('change', applyConfig);
+  });
+
+  // 对战结束不自动开下一局：复位到待开始状态，等用户点「开始对战」
+  function resetToIdle() {
+    state.started = false;
+    state.battleOver = false;
+    state.results = { L: null, R: null };
+    winner.classList.remove('show');
+    startBtn.disabled = false;
+    startBtn.classList.remove('replay');
+    startBtn.textContent = '开始对战';
+    applyConfig();
+  }
+
+  startBtn.addEventListener('click', function () {
+    if (state.battleOver) { resetToIdle(); return; }
+    if (!state.started) startBattle();
+  });
+  document.getElementById('againBtn').addEventListener('click', function () {
+    resetToIdle();
+  });
+
+  // 初始化子模式选项
+  buildSubOptions();
+  updateRangeHint();
+  startBtn.disabled = true; // 等两 iframe ready
+</script>
+</body>
+</html>
