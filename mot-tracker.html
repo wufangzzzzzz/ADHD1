@@ -216,8 +216,10 @@ body{
 
 .canvas-wrap{
   position:relative;
-  width:520px;
-  height:520px;
+  flex:1 1 auto;
+  min-height:0;
+  max-width:min(100%, 620px);
+  aspect-ratio:1 / 1;
   background:rgba(45,43,85,0.03);
   border-radius:20px;
   border:1px solid rgba(45,43,85,0.08);
@@ -321,6 +323,57 @@ canvas{display:block;width:100%;height:100%;}
 .timer-badge.show{display:flex;}
 .timer-badge.big{font-size:22px;padding:7px 20px;min-width:56px;}
 .timer-badge.urgent{background:linear-gradient(135deg,#FF073A,#FF5E0E);box-shadow:0 4px 14px rgba(255,7,58,0.35);}
+
+/* 竖屏：工具栏置顶、游戏区占满下方且更大（隐藏滚动条，控件永不被裁切） */
+@media (orientation: portrait){
+  .container{
+    flex-direction:column;
+    height:100dvh;
+    gap:8px;
+    padding:8px;
+  }
+  .left-panel{
+    width:100%;
+    min-width:0;
+    max-height:46vh;
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px 10px;
+    padding:8px 10px;
+    overflow-y:auto;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+  }
+  .left-panel::-webkit-scrollbar{display:none;}
+  .panel-title{
+    width:100%;
+    border-bottom:none;
+    padding-bottom:4px;
+    margin-bottom:0;
+    font-size:13px;
+  }
+  .diff-btns{flex:0 0 auto;}
+  .color-row{padding:2px 0;}
+  .color-picker{width:30px;height:24px;}
+  .pattern-select{width:100px;height:26px;}
+  .config-desc, .rules-box{display:none;}
+  .speed-row{margin:4px 0;padding:4px 8px;flex:1 1 150px;}
+  .start-btn{width:auto;flex:0 0 auto;padding:10px 20px;}
+  .right-panel{
+    flex:1;
+    min-height:0;
+    justify-content:flex-start;
+    gap:8px;
+    padding:4px 0;
+  }
+  .game-title{font-size:18px;}
+  .canvas-wrap{
+    flex:0 0 auto;
+    width:min(92vw, 54vh);
+    max-width:100%;
+  }
+}
 </style>
 </head>
 <body>
@@ -343,6 +396,14 @@ canvas{display:block;width:100%;height:100%;}
       <button class="diff-btn" data-size="small">小</button>
       <button class="diff-btn active" data-size="medium">中</button>
       <button class="diff-btn" data-size="large">大</button>
+    </div>
+
+    <div class="diff-label">目标球数量</div>
+    <div class="diff-btns" id="targetPanel">
+      <button class="diff-btn" data-target="1">1</button>
+      <button class="diff-btn active" data-target="2">2</button>
+      <button class="diff-btn" data-target="3">3</button>
+      <button class="diff-btn" data-target="4">4</button>
     </div>
 
     <div class="color-row">
@@ -386,7 +447,7 @@ canvas{display:block;width:100%;height:100%;}
       <p><b>操作方式：</b>观察橙色标记→点击开始追踪→球停止后点击识别目标球→全部选中进入下一轮。</p>
       <p><b>计分规则：</b>正确识别数/K。加权分 = 正确率 × (1 + K/N)。共10轮。</p>
       <p><b>难度差异：</b></p>
-      <p>初级：6球2目标，慢速8秒<br>中级：8球3目标，中速12秒<br>高级：10球4目标，快速15秒</p>
+      <p>目标球数量可在上方「目标球数量」自选 1~4 个。<br>初级：6球，慢速8秒<br>中级：8球，中速12秒<br>高级：10球，快速15秒</p>
     </div>
 
     <button class="start-btn" id="startBtn" onclick="onStartBtn()">开始训练</button>
@@ -422,7 +483,7 @@ canvas{display:block;width:100%;height:100%;}
       <canvas id="gameCanvas"></canvas>
     </div>
 
-    <div class="hint-text" id="hintText">点击左侧「开始训练」</div>
+    <div class="hint-text" id="hintText"></div>
   </div>
 </div>
 
@@ -436,6 +497,7 @@ const DIFFICULTY = {
 // 球大小：独立三档，用户自选，不随难度变化
 const BALL_SIZE = { small:18, medium:26, large:34 };
 function getBallSize(){ return BALL_SIZE[state.ballSizeTier]; }
+function getK(){ return state.targetCount; }
 
 // 训练中可随时停止：集中管理 setTimeout，停止时一并清除，避免残留计时器继续推进游戏
 let pendingTimers = [];
@@ -460,7 +522,8 @@ let state = {
   speedMultiplier:1.0,
   selectDeadline:0,
   bgColor:'#EFEFF4',
-  bgPattern:'solid'
+  bgPattern:'solid',
+  targetCount: 2
 };
 
 const canvas = document.getElementById('gameCanvas');
@@ -500,11 +563,18 @@ function resizeCanvas(){
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
+// 容器尺寸变化(如结果卡出现/布局重排)时自动同步画布缓冲并重绘，避免拉伸错位
+if(window.ResizeObserver){
+  new ResizeObserver(()=>{
+    resizeCanvas();
+    try { if(state && state.phase && state.phase !== 'idle' && state.phase !== 'tracking') drawBalls(); } catch(e){}
+  }).observe(wrap);
+}
 
 function updateConfigDesc(){
   const cfg = DIFFICULTY[state.level];
   document.getElementById('cfgN').textContent = cfg.N;
-  document.getElementById('cfgK').textContent = cfg.K;
+  document.getElementById('cfgK').textContent = getK();
   document.getElementById('cfgDur').textContent = (cfg.duration/1000)+'s';
   document.getElementById('cfgSpeed').textContent = cfg.label;
   const sizeLabel = {small:'小',medium:'中',large:'大'}[state.ballSizeTier];
@@ -553,7 +623,7 @@ function initBalls(){
     const j = Math.floor(Math.random() * (i+1));
     [indices[i],indices[j]] = [indices[j],indices[i]];
   }
-  for(let i = 0; i < cfg.K; i++){
+  for(let i = 0; i < getK(); i++){
     state.balls[indices[i]].isTarget = true;
     state.targets.push(indices[i]);
   }
@@ -631,19 +701,6 @@ function showCountdown(cb){
   tick();
 }
 
-function drawGrid(){
-  const W = canvas.width / 2;
-  const H = canvas.height / 2;
-  ctx.strokeStyle = 'rgba(45,43,85,0.04)';
-  ctx.lineWidth = 1;
-  for(let x = 0; x < W; x += 40){
-    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
-  }
-  for(let y = 0; y < H; y += 40){
-    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
-  }
-}
-
 // 颜色明暗调整（hex -> rgb 元组），用于球体立体渐变 & 背景纹理对比色
 function shiftRgb(hex, percent){
   hex = (hex || '#9E9DB0').replace('#','');
@@ -660,6 +717,26 @@ function shiftRgb(hex, percent){
 function shadeColor(hex, percent){
   const c = shiftRgb(hex, percent);
   return 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+}
+
+// 光圈：在球外画一圈柔光环，用于标识"正确答案/目标球"（替代虚线）
+function drawHalo(x, y, radius, color){
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 7, 0, Math.PI*2);
+  ctx.stroke();
+  // 外层淡光圈，增强光晕感
+  ctx.globalAlpha = 0.4;
+  ctx.lineWidth = 7;
+  ctx.shadowBlur = 26;
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 14, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // 背景容积：填充用户选定颜色 + 按所选纹理绘制与背景协调的半透明图案
@@ -809,7 +886,7 @@ function animate(){
   if(elapsed >= cfg.duration){
     state.phase = 'selecting';
     state.selectDeadline = Date.now() + 5000;
-    hintText.textContent = '点击识别目标球！（需选'+cfg.K+'个）';
+    hintText.textContent = '点击识别目标球！（需选'+getK()+'个）';
     hintText.style.color = '';
     drawBalls();
     state.animId = requestAnimationFrame(animate);
@@ -825,7 +902,6 @@ function drawBalls(){
   ctx.clearRect(0,0,W,H);
 
   drawBackground();
-  drawGrid();
 
   const r = getBallSize();
   // 数字仅在答题阶段（selecting / reveal / result）显示；答题前（marking / tracking）不显示
@@ -872,6 +948,13 @@ function drawBalls(){
       ctx.fillText(i+1, b.x, b.y);
     }
 
+    // 目标球标识：reveal/result 阶段用光圈(非虚线)标出正确答案
+    // 绿圈=已选中的目标(答对)，橙圈=漏选的目标
+    if((state.phase === 'reveal' || state.phase === 'result') && b.isTarget){
+      const hc = state.selected.has(i) ? '#32CD32' : '#FF5E0E';
+      drawHalo(b.x, b.y, r, hc);
+    }
+
     // 结果标记
     if(state.phase === 'result'){
       if(b.isTarget && state.selected.has(i)){
@@ -879,27 +962,12 @@ function drawBalls(){
         ctx.font = `bold ${r*1.1}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText('✓', b.x, b.y + r*0.55);
-      } else if(b.isTarget && !state.selected.has(i)){
-        ctx.strokeStyle = '#FF5E0E';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4,3]);
-        ctx.beginPath();ctx.arc(b.x,b.y,r+4,0,Math.PI*2);ctx.stroke();
-        ctx.setLineDash([]);
       } else if(!b.isTarget && state.selected.has(i)){
         ctx.fillStyle = '#FF073A';
         ctx.font = `bold ${r*1.1}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText('✗', b.x, b.y + r*0.55);
       }
-    }
-
-    // reveal 阶段：漏选的目标球画虚线圈
-    if(state.phase === 'reveal' && b.isTarget && !state.selected.has(i)){
-      ctx.strokeStyle = '#FF5E0E';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4,3]);
-      ctx.beginPath();ctx.arc(b.x,b.y,r+4,0,Math.PI*2);ctx.stroke();
-      ctx.setLineDash([]);
     }
   });
   updateTimerBadge();
@@ -932,7 +1000,7 @@ canvas.addEventListener('click',e=>{
     drawBalls();
   }
 
-  if(state.selected.size >= cfg.K){
+  if(state.selected.size >= getK()){
     evaluateRound();
   }
 });
@@ -947,9 +1015,9 @@ function evaluateRound(){
   });
   state.totalCorrect += correct;
   state.totalRounds++;
-  state.totalScore += correct / cfg.K * (1 + cfg.K / cfg.N);
+  state.totalScore += correct / getK() * (1 + getK() / cfg.N);
   drawBalls();
-  hintText.textContent = '正确识别 ' + correct + '/' + cfg.K + ' 个目标球';
+  hintText.textContent = '正确识别 ' + correct + '/' + getK() + ' 个目标球';
   hintText.style.color = '';
   updateUI();
 
@@ -965,7 +1033,7 @@ function endGame(){
   state.gameStarted = false;
   startBtn.disabled = false;
   startBtn.textContent = '开始训练';
-  const acc = state.totalRounds > 0 ? Math.round(state.totalCorrect / (state.totalRounds * DIFFICULTY[state.level].K) * 100) : 0;
+  const acc = state.totalRounds > 0 ? Math.round(state.totalCorrect / (state.totalRounds * getK()) * 100) : 0;
   document.getElementById('rRounds').textContent = state.totalRounds;
   document.getElementById('rAcc').textContent = acc + '%';
   document.getElementById('rScore').textContent = Math.round(state.totalScore * 100) / 100;
@@ -1002,7 +1070,7 @@ function restartGame(){
 function updateUI(){
   document.getElementById('roundNum').textContent = state.round;
   document.getElementById('scoreVal').textContent = Math.round(state.totalScore * 100) / 100;
-  const acc = state.totalRounds > 0 ? Math.round(state.totalCorrect/(state.totalRounds*DIFFICULTY[state.level].K)*100)+'%' : '-';
+  const acc = state.totalRounds > 0 ? Math.round(state.totalCorrect/(state.totalRounds*getK())*100)+'%' : '-';
   document.getElementById('accVal').textContent = acc;
   // Progress bar
   const pct = state.round > 0 ? Math.min(100, Math.round(state.round / 10 * 100)) : 0;
@@ -1026,7 +1094,7 @@ document.getElementById('diffPanel').addEventListener('click',e=>{
   resultCard.classList.remove('show');
   startBtn.disabled = false;
   startBtn.textContent = '开始训练';
-  hintText.textContent = '点击左侧「开始训练」';
+  hintText.textContent = '';
   updateConfigDesc();
   updateUI();
   drawBalls();
@@ -1049,6 +1117,16 @@ document.getElementById('diffPanel').addEventListener('click',e=>{
 	  if(state.phase === 'idle') drawBalls();
 	});
 
+	// 目标球数量 1~4：独立于难度，随时可改；进行中下一轮生效
+	document.getElementById('targetPanel').addEventListener('click',e=>{
+	  if(!e.target.classList.contains('diff-btn')) return;
+	  document.querySelectorAll('#targetPanel .diff-btn').forEach(b=>b.classList.remove('active'));
+	  e.target.classList.add('active');
+	  state.targetCount = parseInt(e.target.dataset.target, 10);
+	  updateConfigDesc();
+	  if(state.phase === 'idle') drawBalls();
+	});
+
 	// 背景颜色 / 纹理自定义（即时重绘）
 	document.getElementById('bgColorPicker').addEventListener('input',e=>{
 	  state.bgColor = e.target.value;
@@ -1061,6 +1139,7 @@ document.getElementById('diffPanel').addEventListener('click',e=>{
 
 updateConfigDesc();
 updateUI();
+drawBalls();
 </script>
 </body>
 </html>

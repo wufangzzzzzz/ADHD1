@@ -17,7 +17,8 @@
     
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh; min-height: 100dvh;
+      height: 100vh; height: 100dvh;
+      overflow: hidden;
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
       display: flex;
       flex-direction: column;
@@ -52,15 +53,15 @@
     
     .mode-bar {
       display: flex;
-      gap: 8px;
+      gap: 5px;
       justify-content: center;
       margin-bottom: 10px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
     }
     
     .mode-btn {
-      padding: 8px 16px;
-      font-size: 12px;
+      padding: 5px 11px;
+      font-size: 11px;
       font-weight: bold;
       border: 2px solid rgba(255,255,255,0.3);
       border-radius: 20px;
@@ -82,8 +83,8 @@
     }
     
     .template-select {
-      padding: 8px 12px;
-      font-size: 12px;
+      padding: 5px 10px;
+      font-size: 11px;
       font-weight: bold;
       border: 2px solid rgba(255,255,255,0.3);
       border-radius: 20px;
@@ -101,6 +102,32 @@
     .template-select:focus {
       border-color: #4FC3F7;
     }
+    
+    .dim-sep {
+      color: rgba(255,255,255,0.75);
+      font-size: 11px;
+      font-weight: bold;
+      align-self: center;
+    }
+    
+    .dim-input {
+      width: 42px;
+      padding: 5px 2px;
+      font-size: 11px;
+      font-weight: bold;
+      text-align: center;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+    
+    .dim-input:focus { border-color: #4FC3F7; }
+    
+    .dim-input::-webkit-outer-spin-button,
+    .dim-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     
     .template-select option {
       background: #1a1a2e;
@@ -145,13 +172,19 @@
       padding-right: 8px;
       max-width: 720px;
       width: 100%;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
       box-sizing: border-box;
     }
     
     .orient-btn {
-      padding: 8px 16px;
-      font-size: 12px;
+      padding: 5px 11px;
+      font-size: 11px;
       font-weight: bold;
       border: 2px solid rgba(255,255,255,0.3);
       border-radius: 20px;
@@ -168,8 +201,8 @@
     }
 
     .colorful-btn {
-      padding: 8px 16px;
-      font-size: 12px;
+      padding: 5px 11px;
+      font-size: 11px;
       font-weight: bold;
       border: 2px solid rgba(255,255,255,0.3);
       border-radius: 20px;
@@ -187,14 +220,14 @@
 
     .tc-sep {
       color: rgba(255,255,255,0.6);
-      font-size: 12px;
+      font-size: 11px;
       align-self: center;
       margin: 0 2px;
     }
 
     .tc-select {
-      padding: 7px 14px;
-      font-size: 12px;
+      padding: 5px 10px;
+      font-size: 11px;
       font-weight: bold;
       border: 2px solid rgba(255,255,255,0.3);
       border-radius: 20px;
@@ -237,8 +270,6 @@
       display: grid;
       gap: 4px;
       margin: 0 auto;
-      max-width: 100%;
-      width: fit-content;
     }
     
     .cell {
@@ -246,7 +277,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: var(--cell-fs, 20px);
       font-weight: bold;
       color: #333;
       cursor: pointer;
@@ -254,8 +285,6 @@
       background: transparent;
       padding: 0 2px;
       box-sizing: border-box;
-      min-width: 28px;
-      max-width: 32px;
     }
     
     .cell:active {
@@ -292,7 +321,7 @@
     }
     
     .cell .letter {
-      font-size: 22px;
+      font-size: var(--cell-fs, 22px);
       color: #333;
     }
     
@@ -505,11 +534,23 @@
     <button class="orient-btn active" id="orientH" onclick="setOrientation('horizontal')">横版</button>
     <button class="orient-btn" id="orientV" onclick="setOrientation('vertical')">竖版</button>
     <button class="colorful-btn" id="colorfulBtn" onclick="toggleColorful()">彩色</button>
+    <span class="dim-sep">行</span>
+    <input class="dim-input" id="rowInput" type="number" min="4" max="40" value="12" onchange="applyCustomDims()">
+    <span class="dim-sep">列</span>
+    <input class="dim-input" id="colInput" type="number" min="4" max="40" value="20" onchange="applyCustomDims()">
     <span class="tc-sep">找</span>
     <select class="tc-select" id="targetCountSelect" onchange="setTargetCount(parseInt(this.value, 10))">
       <option value="1">1个</option>
       <option value="2">2个</option>
       <option value="3">3个</option>
+    </select>
+    <span class="tc-sep">字号</span>
+    <select class="tc-select" id="fontSizeSelect" onchange="setFontSize(this.value)">
+      <option value="auto">自动</option>
+      <option value="16">16</option>
+      <option value="20" selected>20</option>
+      <option value="24">24</option>
+      <option value="28">28</option>
     </select>
   </div>
 
@@ -582,11 +623,14 @@
     
     var ROWS = 12;
     var COLS = 20;
+    var baseRows = 12;   // 当前模式默认行（用于还原改之前基准容积）
+    var baseCols = 20;   // 当前模式默认列
     var orientation = 'horizontal';
     var mode = 'number';
     var grid = [];
     var targetValues = [];
     var multiCount = 1;
+    var fontMode = 20;   // 字号：20=固定像素；'auto'=随格子缩放
     var targetCells = [];
     var foundCount = 0;
     var wrongCount = 0;
@@ -705,15 +749,16 @@
     function setOrientation(o) {
       orientation = o;
       if (o === 'horizontal') {
-        ROWS = 12;
-        COLS = 20;
+        ROWS = 12; COLS = 20;
+        baseRows = 12; baseCols = 20;
       } else {
-        ROWS = 20;
-        COLS = 18;
+        ROWS = 20; COLS = 18;
+        baseRows = 20; baseCols = 18;
       }
       document.getElementById('orientH').classList.toggle('active', o === 'horizontal');
       document.getElementById('orientV').classList.toggle('active', o === 'vertical');
-      document.getElementById('grid').style.gridTemplateColumns = 'repeat(' + COLS + ', 1fr)';
+      document.getElementById('rowInput').value = ROWS;
+      document.getElementById('colInput').value = COLS;
       resetGame();
       initGrid();
     }
@@ -825,6 +870,7 @@
         cell.onclick = function() { cellClick(this); };
         container.appendChild(cell);
       }
+      fitGrid();
     }
     
     function selectTarget() {
@@ -988,11 +1034,80 @@
       initGrid();
     }
 
+    // 字号模式：auto随格子缩放，数字为固定像素（超大密度时钳到格子内防溢出）
+    function setFontSize(v) {
+      fontMode = (v === 'auto') ? 'auto' : parseInt(v, 10);
+      fitGrid();
+    }
+
+    // 自适应：默认12×20/20×18严格还原改之前32px基准(居中不撑满)；
+    // 行列变少→放大撑满；行列变多→缩小不超出边界；字号固定(数字20/字母22)不变
+    var BASE_CELL = 32;   // 改之前默认容积
+    var MAX_CELL  = 64;   // 缩小网格撑满时上限，避免过大
+    var MIN_CELL  = 10;   // 极端大网格下限，确保完整装入游戏区不裁切
+    function fitGrid() {
+      var ga = document.querySelector('.game-area');
+      var gridEl = document.getElementById('grid');
+      if (!ga || !gridEl) return;
+      var cs = getComputedStyle(ga);
+      var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      var controls = ga.querySelector('.controls');
+      var controlsH = controls ? controls.offsetHeight : 0;
+      var availW = ga.clientWidth - padX;
+      var availH = ga.clientHeight - padY - controlsH - 12;
+      if (availW <= 0 || availH <= 0) return;
+      var gap = 4;
+      var cw = (availW - (COLS - 1) * gap) / COLS;
+      var ch = (availH - (ROWS - 1) * gap) / ROWS;
+      var cell = Math.floor(Math.min(cw, ch));
+      if (ROWS >= baseRows && COLS >= baseCols) {
+        // 默认或更大的网格：上限32px，还原改之前居中不撑满的观感
+        if (cell > BASE_CELL) cell = BASE_CELL;
+      } else {
+        // 行列变少的网格：放大撑满，上限64px
+        if (cell > MAX_CELL) cell = MAX_CELL;
+      }
+      if (cell < MIN_CELL) cell = MIN_CELL;
+      gridEl.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + cell + 'px)';
+      gridEl.style.gridTemplateRows = 'repeat(' + ROWS + ', ' + cell + 'px)';
+      gridEl.style.gap = gap + 'px';
+      gridEl.style.width = (COLS * cell + (COLS - 1) * gap) + 'px';
+      gridEl.style.height = (ROWS * cell + (ROWS - 1) * gap) + 'px';
+      // 字号：自动→随格子缩放；固定→选定像素（超大密度钳到格子内防溢出）
+      var fs;
+      if (fontMode === 'auto') {
+        fs = Math.round(cell * 0.5);
+        if (fs < 7) fs = 7;
+        if (fs > 30) fs = 30;
+      } else {
+        fs = fontMode;
+        var maxFs = Math.floor(cell * 0.95);
+        if (fs > maxFs) fs = maxFs;
+      }
+      gridEl.style.setProperty('--cell-fs', fs + 'px');
+    }
+
+    // 应用自定义行/列（输入框变更时调用）
+    function applyCustomDims() {
+      var rIn = document.getElementById('rowInput');
+      var cIn = document.getElementById('colInput');
+      var r = parseInt(rIn.value, 10);
+      var c = parseInt(cIn.value, 10);
+      if (isNaN(r)) r = ROWS;
+      if (isNaN(c)) c = COLS;
+      ROWS = Math.max(4, Math.min(40, r));
+      COLS = Math.max(4, Math.min(40, c));
+      rIn.value = ROWS;
+      cIn.value = COLS;
+      resetGame();
+      initGrid();
+    }
+
     // 初始化网格（用于预览）
     function initGrid() {
       var container = document.getElementById('grid');
       container.innerHTML = '';
-      container.style.gridTemplateColumns = 'repeat(' + COLS + ', 1fr)';
       grid = [];
       
       // 彩色模式：预生成均匀颜色池
@@ -1052,12 +1167,15 @@
           container.appendChild(cell);
         }
       }
+      fitGrid();
     }
     
     // 页面加载完成后初始化
     window.addEventListener('load', function() {
       initGrid();
     });
+    window.addEventListener('resize', fitGrid);
+    window.addEventListener('orientationchange', fitGrid);
   </script>
 </body>
 </html>

@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>视觉训练 · 方格连线</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
+    background: #eef1f6;
+    color: #1f2430;
+    line-height: 1.5;
+    padding: 12px;
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+  }
+
+  /* 顶栏 */
+  .topbar {
+    flex: none;
+    width: 100%; max-width: 1080px; margin: 0 auto 10px;
+    display: flex; align-items: center; gap: 12px;
+    background: #ffffff; border-radius: 14px; padding: 10px 18px;
+    box-shadow: 0 2px 10px rgba(20,30,60,0.06);
+  }
+  .topbar .back-btn {
+    border: 1px solid #d4d9e2; background: #f6f8fb; color: #33405a;
+    padding: 7px 16px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .topbar .back-btn:active { transform: scale(0.97); }
+  .topbar h1 { font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+  .topbar .help-btn {
+    margin-left: auto; border: 1px solid #d4d9e2; background: #f6f8fb; color: #33405a;
+    padding: 7px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .topbar .help-btn:active { transform: scale(0.97); }
+
+  .shell {
+    width: 100%; max-width: 1080px; margin: 0 auto;
+    flex: 1; min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; gap: 12px; align-items: stretch;
+  }
+  .main { flex: 1; min-height: 0; display: flex; gap: 10px; align-items: stretch; }
+  .side { width: 210px; flex: none; display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+  .stage { flex: 1; min-width: 0; min-height: 0; position: relative; }
+
+  .toolbar {
+    width: 210px; flex: none; align-self: flex-start;
+    background: #ffffff; border-radius: 12px; padding: 10px 12px;
+    box-shadow: 0 2px 10px rgba(20,30,60,0.06);
+  }
+  .sec { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+  .sec-title { font-size: 12px; font-weight: 800; color: #475069; margin: 6px 0 4px; }
+  .sec-title:first-child { margin-top: 0; }
+
+  .diff-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .diff-btn {
+    flex: 1 1 auto; min-width: 0;
+    border: 1px solid #d4d9e2; background: #f6f8fb; color: #33405a;
+    padding: 5px 2px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+    text-align: center; white-space: nowrap;
+  }
+  .diff-btn.active { background: #2f6bff; border-color: #2f6bff; color: #fff; box-shadow: 0 3px 10px rgba(47,107,255,0.3); }
+  .diff-btn:active { transform: scale(0.97); }
+
+  .btn-row { display: flex; gap: 6px; margin-top: 8px; }
+  .act-btn {
+    flex: 1 1 0; min-width: 0; padding: 7px 4px; border-radius: 9px; font-size: 12px; font-weight: 700;
+    border: 1px solid #d4d9e2; background: #f6f8fb; color: #33405a; cursor: pointer;
+  }
+  .act-btn:active { transform: scale(0.97); }
+  .act-btn.hint { background: #fff7e6; border-color: #f3d28a; color: #9a6a00; }
+  .act-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .start-btn {
+    width: 100%; margin-top: 8px; padding: 9px; border: none; border-radius: 10px;
+    background: #2f6bff; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(47,107,255,0.32);
+  }
+  .start-btn.stopping { background: #ef4444; box-shadow: 0 4px 14px rgba(239,68,68,0.32); }
+  .start-btn:active { transform: scale(0.98); }
+
+  .hud { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11px; }
+  .hud .line { display: flex; gap: 3px; color: #5b6478; }
+  .hud .line b { color: #1f2430; font-weight: 800; }
+  .status { margin-top: 6px; font-size: 11.5px; color: #2f6bff; font-weight: 700; min-height: 16px; }
+
+  /* 游戏区：绝对定位直接充满 .stage，彻底绕开 flex 子项百分比高度在首帧解析为 0 的坑 */
+  .game-area {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    background: #ffffff; border-radius: 14px; padding: 10px;
+    box-shadow: 0 2px 10px rgba(20,30,60,0.06);
+  }
+  /* 绝对定位充满 game-area（显式 100% 覆盖 canvas 内在尺寸 300×150，否则替换元素不会拉伸 → 容积变小） */
+  #board { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; }
+
+  /* 训练结果（弹出菜单内显示，避免结果卡片改变侧栏布局挤压游戏区） */
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .stat {
+    flex: 1 1 30%; min-width: 90px; background: #fff; border-radius: 10px; padding: 8px 10px; border: 1px solid #e6eaf1;
+  }
+  .stat .k { font-size: 12px; color: #8a93a6; }
+  .stat .v { font-size: 20px; font-weight: 800; color: #1f2430; }
+  .interp { font-size: 13px; color: #475069; line-height: 1.8; }
+  .interp b { color: #2f6bff; }
+
+  .print-title { display: none; }
+
+  /* 玩法弹窗 */
+  .modal-mask {
+    display: none; position: fixed; inset: 0; background: rgba(15,20,35,0.45);
+    z-index: 50; align-items: flex-start; justify-content: center; padding: 4vh 16px;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 16px; max-width: 480px; width: 100%;
+    max-height: 92vh; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid #eef1f6; position: sticky; top: 0; background: #fff;
+  }
+  .modal-head span { font-size: 16px; font-weight: 800; color: #1f2430; }
+  .modal-close {
+    border: none; background: #f0f2f7; color: #475069; width: 30px; height: 30px;
+    border-radius: 8px; font-size: 15px; cursor: pointer;
+  }
+  .modal-body { padding: 16px 18px 22px; }
+  .guide-text { font-size: 13px; color: #5b6478; line-height: 1.8; }
+  .guide-text b { color: #1f2430; }
+  .guide-text .m { color: #c0392b; font-weight: 700; }
+  .guide-text .hint { color: #b8860b; font-weight: 700; }
+  .guide-text ol { margin: 6px 0 6px 18px; }
+  .guide-text li { margin: 3px 0; }
+
+  @media (orientation: portrait) {
+    .main { flex-direction: column; gap: 6px; }
+    .side { width: 100%; flex: none; }
+    .toolbar {
+      width: 100%; flex: none;
+      display: flex; flex-direction: row; flex-wrap: wrap; align-items: center;
+      gap: 5px 10px; padding: 8px 10px;
+    }
+    .sec { flex-direction: row; align-items: center; gap: 4px 8px; flex: 0 0 auto; }
+    .sec-title { width: auto; margin: 0; font-size: 11px; }
+    .diff-row { flex: 0 0 auto; gap: 4px; }
+    .diff-btn { font-size: 10px; padding: 4px 6px; flex: 0 0 auto; }
+    .btn-row { margin-top: 0; flex: 0 0 auto; }
+    .act-btn { font-size: 11px; padding: 6px 10px; flex: 0 0 auto; }
+    .start-btn { width: auto; margin-top: 0; flex: 0 0 auto; font-size: 12px; padding: 7px 14px; }
+    .hud { margin-top: 0; flex: 0 0 auto; font-size: 10px; gap: 2px 8px; }
+    .status { margin-top: 0; flex: 0 0 auto; font-size: 10px; }
+  }
+
+  /* 打印：只保留游戏区，隐藏顶栏/侧栏/弹窗，并显示标题 */
+  @media print {
+    html, body { height: auto; overflow: visible; }
+    body { padding: 0; background: #fff; }
+    .topbar, .side, .modal-mask { display: none !important; }
+    .shell { max-width: none; display: block; }
+    .main { display: block; }
+    /* 游戏区保持正方形并居中，避免打印时 canvas 盒子变成扁矩形被拉伸 */
+    .stage {
+      position: relative;
+      width: min(94vw, 90vh);
+      height: min(94vw, 90vh);
+      margin: 0 auto;
+    }
+    .print-title { display: block; text-align: center; font-size: 22px; font-weight: 800; color: #1f2430; margin: 14px 0 4px; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="back-btn" onclick="location.href='index.html'">返回</button>
+    <h1>视觉训练 · 一笔走完</h1>
+    <button class="help-btn" id="print-btn" style="margin-left:auto;">🖨 打印</button>
+    <button class="help-btn" id="help-btn">📖 玩法</button>
+  </div>
+
+  <div class="print-title">一笔走完 · <span id="print-diff"></span></div>
+
+  <div class="shell">
+    <div class="main">
+      <div class="side">
+        <div class="toolbar">
+          <div class="sec">
+            <div class="sec-title">难度（棋盘尺寸）</div>
+            <div class="diff-row" id="diff-row">
+              <button class="diff-btn active" data-diff="入门">入门 6×6</button>
+              <button class="diff-btn" data-diff="中级">中级 7×7</button>
+              <button class="diff-btn" data-diff="专家">专家 8×8</button>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="act-btn" id="undo-btn">↶ 撤销</button>
+            <button class="act-btn" id="reset-btn">↺ 重置</button>
+            <button class="act-btn hint" id="hint-btn">💡 起点</button>
+          </div>
+
+          <button class="start-btn" id="start-btn">开始训练</button>
+
+          <div class="hud">
+            <div class="line"><span>已走</span><b id="hud-prog">0 / 0</b></div>
+            <div class="line"><span>重试</span><b id="hud-retry">0</b></div>
+            <div class="line"><span>用时</span><b id="hud-time">0.0s</b></div>
+          </div>
+          <div class="status" id="status">点「开始训练」开始</div>
+        </div>
+
+        <!-- 训练结果改为弹出菜单展示，避免侧栏变化挤压游戏区 -->
+      </div>
+
+      <div class="stage">
+        <div class="game-area">
+          <canvas id="board"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 玩法弹窗 -->
+  <div class="modal-mask" id="help-mask">
+    <div class="modal" id="help-modal">
+      <div class="modal-head">
+        <span>玩法说明</span>
+        <button class="modal-close" id="help-close">✕</button>
+      </div>
+      <div class="modal-body guide-text">
+        <b>一笔走完</b>是一道<b>空间规划</b>视觉训练：在固定尺寸的方格盘（6×6 / 7×7 / 8×8）里，<b>部分位置是空缺的</b>，剩下的立体方块组成一个连通区域。从<b>贴着边缘</b>的绿色起点出发，通过<b>上下左右相邻移动</b>，把<b>每一个立体方块都走一遍</b>，且<b>不能重复走同一个方块</b>，最后不回到起点。<br><br>
+        <b>怎么玩</b>：<br>
+        <ol>
+          <li>绿色高亮、中央带「起」字的就是<b>起点</b>（它贴着棋盘边缘）。</li>
+          <li>点（或拖）到与它<b>相邻的方块</b>就走过去，该方块会变成绿色，连线也会自动画出来。</li>
+          <li>继续走，直到所有方块都被连完 —— 即<b>过关</b>。</li>
+        </ol>
+        <span class="m">关键规则</span>：只能走相邻的方块（上下左右，不能斜走），每个方块只能走一次。如果走到某块后<b>周围没路可走了但还有方块没走到</b>（走入死路），点「↺ 重置」重走这一局（计一次重试），或用「↶ 撤销」退一步自救。<br><br>
+        <span class="hint">提示</span>：开局先扫一眼整盘，心里规划一条覆盖全部方块的路线，再落笔。走的时候优先处理那些「犄角」方块，能减少走入死路。
+      </div>
+    </div>
+  </div>
+
+  <!-- 训练结果弹窗 -->
+  <div class="modal-mask" id="result-mask">
+    <div class="modal" id="result-modal">
+      <div class="modal-head">
+        <span>训练结果</span>
+        <button class="modal-close" id="result-close">✕</button>
+      </div>
+      <div class="modal-body guide-text">
+        <div class="stats" id="result-stats"></div>
+        <div class="interp" id="result-interp"></div>
+        <div class="btn-row">
+          <button class="act-btn" id="result-again">↻ 再来一局</button>
+          <button class="act-btn hint" id="result-close2">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ===== 难度配置（固定棋盘边长 N + 填充比例，保证可解）=====
+    var DIFFS = {
+      "入门": { n: 6, fill: 0.64 },
+      "中级": { n: 7, fill: 0.62 },
+      "专家": { n: 8, fill: 0.60 }
+    };
+
+    var COL = {
+      holeBase: "#e6e9f0",
+      holeShade: "rgba(150,162,186,0.30)",
+      panel: "#f4f6fa",
+      top1: "#ffd49b", top2: "#ff9d3d", side: "#e07a1c",           // 未访问方块（橙：原起点色）
+      vTop1: "#9be7a8", vTop2: "#3ec46d", vSide: "#1f9e4a",          // 已访问方块（绿）
+      sTop1: "#9be7a8", sTop2: "#3ec46d", sSide: "#1f9e4a",          // 起点方块（绿：与已访问同色）
+      path: "#0e7a36",                                              // 路径连线（深绿）
+      numStart: "#ffffff",
+      curRing: "#ff5a1f"
+    };
+
+    // ===== 状态 =====
+    var state = {
+      difficulty: "入门",
+      running: false,
+      finished: false,
+      n: 6,
+      cells: [],          // 全尺寸 N×N：{r,c,num,filled,visited}
+      start: -1,
+      path: [],
+      current: -1,
+      dragging: false,
+      startTime: 0,
+      retries: 0,
+      undos: 0,
+      total: 0
+    };
+
+    // ===== 工具 =====
+    function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+    function idx(r, c) { return r * state.n + c; }
+    function inBounds(r, c) { return r >= 0 && r < state.n && c >= 0 && c < state.n; }
+    function isEdgeN(r, c, n) { return r === 0 || c === 0 || r === n - 1 || c === n - 1; }
+    function adjacent(a, b) {
+      var ra = Math.floor(a / state.n), ca = a % state.n;
+      var rb = Math.floor(b / state.n), cb = b % state.n;
+      return (Math.abs(ra - rb) + Math.abs(ca - cb)) === 1;
+    }
+    function shuffleArr(arr) {
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      }
+      return arr;
+    }
+
+    // ===== 关卡生成：保证可解的连通方块群 + 贴边起点 =====
+    function generatePuzzle(N, fillRatio) {
+      var target = Math.max(N, Math.round(N * N * fillRatio));
+      // 主生成：随机自避走线 + 多候选质量评分，挑「铺得开+弯得多」的那条（蜿蜒蛇形），路径本身即一笔画解
+      var walkRes = generateWalk(N, target);
+      if (walkRes) return { filled: walkRes.filled, path: walkRes.path, start: walkRes.start };
+      // 兜底：贪心蛇形
+      var snake = generateSnake(N, target);
+      return { filled: snake.filled, path: snake.path, start: snake.start };
+    }
+
+    // 自避走线（蜿蜒蛇形）：从贴边起点出发做一条不回头、不重复的长路径，路径本身即一笔画解
+    function freeDeg(N, visited, r, c) {
+      var dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]], n = 0;
+      for (var d = 0; d < 4; d++) {
+        var nr = r + dirs[d][0], nc = c + dirs[d][1];
+        if (nr < 0 || nc < 0 || nr >= N || nc >= N) continue;
+        if (!visited[nr + "," + nc]) n++;
+      }
+      return n;
+    }
+
+    // 纯随机自避走线（回溯 DFS）：从起点出发做一条不回头、不重复的长路径；
+    // 每步随机选向 + 回溯，保证能拉满目标长度；蜿蜒形态由外层多候选质量评分挑选。
+    function walkDFS(N, target, r, c, visited, path, steps) {
+      if (path.length >= target) return true;
+      if (steps.n > 300000) return false;
+      steps.n++;
+      var dirs = shuffleArr([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+      for (var d = 0; d < 4; d++) {
+        var nr = r + dirs[d][0], nc = c + dirs[d][1];
+        if (nr < 0 || nc < 0 || nr >= N || nc >= N) continue;
+        if (visited[nr + "," + nc]) continue;
+        visited[nr + "," + nc] = true; path.push([nr, nc]);
+        if (walkDFS(N, target, nr, nc, visited, path, steps)) return true;
+        delete visited[nr + "," + nc]; path.pop();
+      }
+      return false;
+    }
+
+    function pathToFilled(path) {
+      var f = {};
+      for (var i = 0; i < path.length; i++) f[path[i][0] + "," + path[i][1]] = true;
+      return f;
+    }
+
+    // 路径质量评分：覆盖的行数 + 列数（铺得开）+ 拐弯次数（蜿蜒），用于多候选里挑最美观的一条
+    function pathQuality(N, path) {
+      var rows = {}, cols = {}, turns = 0, dir = null;
+      for (var i = 0; i < path.length; i++) {
+        rows[path[i][0]] = 1; cols[path[i][1]] = 1;
+        if (i > 0) {
+          var nd = (path[i][0] - path[i - 1][0]) + "," + (path[i][1] - path[i - 1][1]);
+          if (dir && nd !== dir) turns++;
+          dir = nd;
+        }
+      }
+      return Object.keys(rows).length + Object.keys(cols).length + turns * 0.5;
+    }
+
+    // 生成自避走线：从贴边起点出发尝试 K 条候选，用「覆盖行数+列数+拐弯次数」评分挑最优，
+    // 让路径蜿蜒铺开（而不是贴边螺旋或窄带楼梯）。路径本身就是一笔画解，起点天然贴边且为端点。
+    function generateWalk(N, target) {
+      var K = (N <= 6) ? 60 : (N === 7 ? 80 : 100);
+      var edgeCells = [];
+      for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) if (isEdgeN(r, c, N)) edgeCells.push([r, c]);
+      var best = null, bestQ = -1;
+      for (var attempt = 0; attempt < K; attempt++) {
+        var s = edgeCells[rint(0, edgeCells.length - 1)];
+        var visited = {}; visited[s[0] + "," + s[1]] = true;
+        var path = [s];
+        if (walkDFS(N, target, s[0], s[1], visited, path, { n: 0 }) && path.length === target) {
+          var q = pathQuality(N, path);
+          if (q > bestQ) { bestQ = q; best = { start: s, path: path.slice(), filled: pathToFilled(path) }; }
+        }
+      }
+      return best;  // 几乎总能凑满；极端情况返回 null 交给 generateSnake 兜底
+    }
+
+    function generateSnake(N, target) {
+      var edges = [];
+      for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) if (isEdgeN(r, c, N)) edges.push([r, c]);
+      var s = edges[rint(0, edges.length - 1)];
+      var filled = {}; filled[s[0] + "," + s[1]] = true;
+      var path = [s];
+      var guard = 0;
+      while (path.length < target && guard < 4000) {
+        guard++;
+        var cur = path[path.length - 1];
+        var dirs = shuffleArr([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+        var moved = false;
+        for (var d = 0; d < 4; d++) {
+          var nr = cur[0] + dirs[d][0], nc = cur[1] + dirs[d][1];
+          if (nr < 0 || nc < 0 || nr >= N || nc >= N) continue;
+          var k = nr + "," + nc;
+          if (filled[k]) continue;
+          filled[k] = true; path.push([nr, nc]); moved = true; break;
+        }
+        if (!moved) break;
+      }
+      return { filled: filled, path: path, start: s };
+    }
+
+    function setupPuzzle() {
+      var cfg = DIFFS[state.difficulty];
+      var N = cfg.n;
+      state.n = N;
+      var puzzle = generatePuzzle(N, cfg.fill);
+      state.cells = [];
+      for (var r = 0; r < N; r++) {
+        for (var c = 0; c < N; c++) {
+          var k = r + "," + c;
+          var filled = !!puzzle.filled[k];
+          state.cells.push({
+            r: r, c: c,
+            filled: filled,
+            visited: false
+          });
+        }
+      }
+      state.start = idx(puzzle.start[0], puzzle.start[1]);
+      state.path = [state.start];
+      state.cells[state.start].visited = true;
+      state.current = state.start;
+      state.total = Object.keys(puzzle.filled).length;
+    }
+
+    // ===== Canvas 渲染 =====
+    var canvas = document.getElementById("board");
+    var ctx = canvas.getContext("2d");
+    var cssW = 0, cssH = 0, dpr = 1, cellSize = 40, offX = 0, offY = 0;
+
+    function resizeCanvas() {
+      var rect = canvas.getBoundingClientRect();
+      cssW = rect.width; cssH = rect.height;
+      if (cssW <= 2 || cssH <= 2) return;   // 尺寸未就绪，等 ResizeObserver / rAF 轮询再次触发
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      computeLayout();
+      draw();
+    }
+
+    function computeLayout() {
+      var n = state.n;
+      var avail = Math.min(cssW, cssH) * 0.94;
+      cellSize = avail / n;
+      var gridW = cellSize * n;
+      offX = (cssW - gridW) / 2;
+      offY = (cssH - gridW) / 2;
+    }
+
+    function cellXY(i) {
+      var r = Math.floor(i / state.n), c = i % state.n;
+      return { x: offX + c * cellSize, y: offY + r * cellSize };
+    }
+    function cellCenter(i) {
+      var p = cellXY(i);
+      return { x: p.x + cellSize / 2, y: p.y + cellSize / 2 };
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawBlock(px, py, size, thick, top1, top2, baseCol) {
+      // 侧面（厚度）+ 投影
+      ctx.save();
+      ctx.shadowColor = "rgba(25,35,60,0.32)";
+      ctx.shadowBlur = size * 0.18;
+      ctx.shadowOffsetX = size * 0.04;
+      ctx.shadowOffsetY = size * 0.11;
+      roundRect(px, py + thick, size, size, size * 0.22);
+      ctx.fillStyle = baseCol;
+      ctx.fill();
+      ctx.restore();
+      // 顶面
+      roundRect(px, py, size, size, size * 0.22);
+      var g = ctx.createLinearGradient(px, py, px + size, py + size);
+      g.addColorStop(0, top1);
+      g.addColorStop(1, top2);
+      ctx.fillStyle = g;
+      ctx.fill();
+      // 顶面高光内描边（增加体积感）
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = Math.max(1, size * 0.04);
+      roundRect(px + size * 0.09, py + size * 0.09, size * 0.82, size * 0.82, size * 0.18);
+      ctx.stroke();
+    }
+
+    function drawHole(px, py, size) {
+      roundRect(px, py, size, size, size * 0.22);
+      ctx.fillStyle = COL.holeBase;
+      ctx.fill();
+      var g = ctx.createLinearGradient(px, py, px, py + size);
+      g.addColorStop(0, COL.holeShade);
+      g.addColorStop(0.5, "rgba(200,208,222,0)");
+      g.addColorStop(1, COL.holeShade);
+      roundRect(px, py, size, size, size * 0.22);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+
+    function draw() {
+      if (!state.cells.length || cssW <= 0) return;
+      ctx.clearRect(0, 0, cssW, cssH);
+      var n = state.n;
+      var pad = cellSize * 0.13;
+      var holeSize = cellSize - 2 * pad;
+      var blockSize = cellSize * 0.72;
+      var thick = blockSize * 0.16;
+
+      // 棋盘底托
+      var panelPad = cellSize * 0.30;
+      roundRect(offX - panelPad, offY - panelPad, cellSize * n + panelPad * 2, cellSize * n + panelPad * 2, cellSize * 0.4);
+      ctx.fillStyle = COL.panel;
+      ctx.fill();
+
+      // 空缺 / 方块
+      for (var i = 0; i < state.cells.length; i++) {
+        var cl = state.cells[i];
+        var p = cellXY(i);
+        if (!cl.filled) {
+          drawHole(p.x + pad, p.y + pad, holeSize);
+          continue;
+        }
+        var bx = p.x + (cellSize - blockSize) / 2;
+        var by = p.y + (cellSize - blockSize) / 2;
+        if (i === state.start) {
+          drawBlock(bx, by, blockSize, thick, COL.sTop1, COL.sTop2, COL.sSide);
+        } else if (cl.visited) {
+          drawBlock(bx, by, blockSize, thick, COL.vTop1, COL.vTop2, COL.vSide);
+        } else {
+          drawBlock(bx, by, blockSize, thick, COL.top1, COL.top2, COL.side);
+        }
+        // 方块无数字（按需求去除干扰项）
+      }
+
+      // 路径连线（覆盖在方块之上）
+      if (state.path.length > 1) {
+        ctx.beginPath();
+        for (var k = 0; k < state.path.length; k++) {
+          var ctr = cellCenter(state.path[k]);
+          if (k === 0) ctx.moveTo(ctr.x, ctr.y); else ctx.lineTo(ctr.x, ctr.y);
+        }
+        ctx.lineWidth = blockSize * 0.20;
+        ctx.strokeStyle = COL.path;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      // 当前格描边
+      if (state.current >= 0) {
+        var pc = cellXY(state.current);
+        var cbx = pc.x + (cellSize - blockSize) / 2;
+        var cby = pc.y + (cellSize - blockSize) / 2;
+        ctx.lineWidth = Math.max(2, blockSize * 0.07);
+        ctx.strokeStyle = COL.curRing;
+        roundRect(cbx, cby, blockSize, blockSize, blockSize * 0.22);
+        ctx.stroke();
+      }
+
+      // 起点标记「起」（居中、放大、细体）
+      if (state.start >= 0) {
+        var ps = cellXY(state.start);
+        var sbx = ps.x + (cellSize - blockSize) / 2;
+        var sby = ps.y + (cellSize - blockSize) / 2;
+        ctx.fillStyle = COL.numStart;
+        ctx.font = "500 " + Math.round(blockSize * 0.42) + "px PingFang SC, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("起", sbx + blockSize / 2, sby + blockSize / 2);
+      }
+    }
+
+    // ===== 交互 =====
+    function pickCell(x, y) {
+      var c = Math.floor((x - offX) / cellSize);
+      var r = Math.floor((y - offY) / cellSize);
+      if (!inBounds(r, c)) return -1;
+      return idx(r, c);
+    }
+
+    function advanceTo(to) {
+      if (to < 0) return false;
+      if (!state.cells[to].filled) return false;
+      if (state.cells[to].visited) return false;
+      if (!adjacent(state.current, to)) return false;
+      state.path.push(to);
+      state.cells[to].visited = true;
+      state.current = to;
+      playBeep(660, 0.08, "sine");
+      updateHud();
+      checkState();
+      draw();
+      return true;
+    }
+
+    function checkState() {
+      if (state.path.length >= state.total) {
+        finish(true);
+        return;
+      }
+      var dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      var cr = Math.floor(state.current / state.n), cc = state.current % state.n;
+      var hasMove = false;
+      for (var d = 0; d < 4; d++) {
+        var nr = cr + dirs[d][0], nc = cc + dirs[d][1];
+        if (inBounds(nr, nc) && state.cells[idx(nr, nc)].filled && !state.cells[idx(nr, nc)].visited) { hasMove = true; break; }
+      }
+      if (!hasMove) {
+        statusEl.textContent = "⚠ 走入死路！用「↶ 撤销」退一步，或「↺ 重置」重走（计重试）";
+      }
+    }
+
+    function getXY(e) {
+      var rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    canvas.addEventListener("pointerdown", function (e) {
+      initAudio();
+      if (!state.running || state.finished) return;
+      var xy = getXY(e);
+      var ci = pickCell(xy.x, xy.y);
+      if (ci < 0) return;
+      canvas.setPointerCapture(e.pointerId);
+      if (ci === state.current) {
+        state.dragging = true;
+      } else if (state.cells[ci].filled && adjacent(state.current, ci) && !state.cells[ci].visited) {
+        advanceTo(ci);
+        state.dragging = true;
+      }
+    });
+
+    canvas.addEventListener("pointermove", function (e) {
+      if (!state.dragging || !state.running || state.finished) return;
+      var xy = getXY(e);
+      var ci = pickCell(xy.x, xy.y);
+      if (ci >= 0 && state.cells[ci].filled && adjacent(state.current, ci) && !state.cells[ci].visited) {
+        advanceTo(ci);
+      }
+    });
+
+    function endDrag() { state.dragging = false; draw(); }
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+
+    // ===== 音效 =====
+    var audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    }
+    function playBeep(freq, dur, type) {
+      if (!audioCtx) return;
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = type || "sine";
+      o.frequency.value = freq;
+      o.connect(g); g.connect(audioCtx.destination);
+      var t = audioCtx.currentTime;
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+
+    // ===== DOM =====
+    var startBtn = document.getElementById("start-btn");
+    var statusEl = document.getElementById("status");
+    var hudProg = document.getElementById("hud-prog");
+    var hudRetry = document.getElementById("hud-retry");
+    var hudTime = document.getElementById("hud-time");
+    var resultMask = document.getElementById("result-mask");
+    var resultStats = document.getElementById("result-stats");
+    var resultInterp = document.getElementById("result-interp");
+    var helpBtn = document.getElementById("help-btn");
+    var helpMask = document.getElementById("help-mask");
+    var helpClose = document.getElementById("help-close");
+    var undoBtn = document.getElementById("undo-btn");
+    var resetBtn = document.getElementById("reset-btn");
+    var hintBtn = document.getElementById("hint-btn");
+
+    function updateHud() {
+      hudProg.textContent = state.path.length + " / " + state.total;
+      hudRetry.textContent = state.retries;
+      undoBtn.disabled = state.path.length <= 1;
+      resetBtn.disabled = state.path.length <= 1;
+    }
+
+    var timerId = null;
+    function tickTimer() {
+      if (!state.running || state.finished) return;
+      var t = (performance.now() - state.startTime) / 1000;
+      hudTime.textContent = t.toFixed(1) + "s";
+    }
+
+    function loadPreview() {
+      setupPuzzle();
+      state.running = false;
+      state.finished = false;
+      state.retries = 0;
+      state.undos = 0;
+      computeLayout();
+      updateHud();
+      draw();
+    }
+
+    function startGame() {
+      initAudio();
+      // 仅当已有「未开始过的预览棋盘」时复用；否则（上一局已结束/已走过）重新生成新局
+      var freshPreview = (state.start >= 0 && state.path.length <= 1 && !state.finished && !state.running);
+      if (!freshPreview) loadPreview();
+      state.running = true;
+      state.startTime = performance.now();
+      startBtn.textContent = "停止训练";
+      startBtn.classList.add("stopping");
+      resultMask.classList.remove("show");   // 隐藏训练结果弹窗（若有）
+      hudTime.textContent = "0.0s";
+      statusEl.textContent = "从绿色起点出发，相邻走遍所有立体方块";
+      if (timerId) clearInterval(timerId);
+      timerId = setInterval(tickTimer, 100);
+    }
+
+    function undoStep() {
+      if (!state.running || state.finished) return;
+      if (state.path.length <= 1) return;
+      var last = state.path.pop();
+      state.cells[last].visited = false;
+      state.current = state.path[state.path.length - 1];
+      state.undos++;
+      playBeep(440, 0.06, "sine");
+      updateHud();
+      statusEl.textContent = "已退一步";
+      draw();
+    }
+
+    function resetGrid() {
+      if (!state.running) return;
+      state.retries++;
+      state.path = [state.start];
+      for (var i = 0; i < state.cells.length; i++) state.cells[i].visited = false;
+      state.cells[state.start].visited = true;
+      state.current = state.start;
+      updateHud();
+      statusEl.textContent = "已重置本局，从起点重新走（重试 +1）";
+      draw();
+    }
+
+    function finish(success) {
+      state.running = false;
+      state.finished = true;
+      if (timerId) clearInterval(timerId);
+      startBtn.textContent = "开始训练";
+      startBtn.classList.remove("stopping");
+      var t = (performance.now() - state.startTime) / 1000;
+      hudTime.textContent = t.toFixed(1) + "s";
+      showResult(success, t);
+    }
+
+    function showResult(success, t) {
+      var oneShot = state.retries === 0;
+      resultStats.innerHTML =
+        '<div class="stat"><div class="k">完成</div><div class="v">' + (success ? "是" : "否") + '</div></div>' +
+        '<div class="stat"><div class="k">用时</div><div class="v">' + t.toFixed(1) + 's</div></div>' +
+        '<div class="stat"><div class="k">方块数</div><div class="v">' + state.total + '</div></div>' +
+        '<div class="stat"><div class="k">重试</div><div class="v">' + state.retries + '</div></div>' +
+        '<div class="stat"><div class="k">撤销</div><div class="v">' + state.undos + '</div></div>' +
+        '<div class="stat"><div class="k">一次通关</div><div class="v">' + (oneShot ? "是" : "否") + '</div></div>';
+
+      var msg;
+      if (!success) {
+        msg = "<b>未完成</b>：本次在 " + t.toFixed(1) + "s 内走了 " + state.path.length + "/" + state.total +
+          " 块。建议先从<b>入门</b>档练习，落笔前先用视线扫一遍整盘、规划覆盖全部方块的路线。";
+      } else if (oneShot && t < 30) {
+        msg = "<b>优秀</b>：一次成图、几乎无犹豫，说明你的<b>空间预演</b>与<b>全局规划</b>能力很强，能在落笔前看清整盘走法。";
+      } else if (oneShot) {
+        msg = "<b>良好</b>：一次通关、没有走入死路。若想更快，可在动手前先规划路线，优先处理那些「犄角」方块。";
+      } else if (state.retries <= 2) {
+        msg = "<b>中等</b>：能完成但有过 " + state.retries + " 次死路重试。多留意「犄角」块，优先把它串入路径，能大幅减少走进死角。";
+      } else {
+        msg = "<b>需加强</b>：重试 " + state.retries + " 次才走通，常因局部贪心走入死路。建议先在脑中<b>整体规划</b>一条覆盖全块的路线，再落笔。";
+      }
+      resultInterp.innerHTML = msg;
+      resultMask.classList.add("show");
+      statusEl.textContent = success ? "✓ 全部连完！" : "训练结束";
+    }
+
+    // ===== 事件 =====
+    startBtn.addEventListener("click", function () {
+      if (state.running) finish(false); else startGame();
+    });
+    undoBtn.addEventListener("click", undoStep);
+    resetBtn.addEventListener("click", resetGrid);
+
+    hintBtn.addEventListener("click", function () {
+      if (!state.running) return;
+      statusEl.textContent = "💡 绿色「起」块是贴边起点，从它出发相邻走到所有立体方块";
+    });
+
+    document.getElementById("diff-row").addEventListener("click", function (e) {
+      var b = e.target.closest(".diff-btn");
+      if (!b) return;
+      if (state.running) return;
+      state.difficulty = b.dataset.diff;
+      var all = this.querySelectorAll(".diff-btn");
+      for (var i = 0; i < all.length; i++) all[i].classList.remove("active");
+      b.classList.add("active");
+      resultMask.classList.remove("show");
+      loadPreview();
+      statusEl.textContent = "点「开始训练」开始";
+    });
+
+    helpBtn.addEventListener("click", function () { helpMask.classList.add("show"); });
+    helpClose.addEventListener("click", function () { helpMask.classList.remove("show"); });
+    helpMask.addEventListener("click", function (e) { if (e.target === helpMask) helpMask.classList.remove("show"); });
+
+    // 训练结果弹窗
+    var resultClose = document.getElementById("result-close");
+    var resultAgain = document.getElementById("result-again");
+    var resultClose2 = document.getElementById("result-close2");
+    var printBtn = document.getElementById("print-btn");
+    resultClose.addEventListener("click", function () { resultMask.classList.remove("show"); });
+    resultClose2.addEventListener("click", function () { resultMask.classList.remove("show"); });
+    resultMask.addEventListener("click", function (e) { if (e.target === resultMask) resultMask.classList.remove("show"); });
+    resultAgain.addEventListener("click", function () { resultMask.classList.remove("show"); startGame(); });
+    printBtn.addEventListener("click", function () {
+      document.getElementById("print-diff").textContent = state.difficulty + " · " + state.n + "×" + state.n;
+      window.print();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
+
+    // 打印前：打印样式已生效、游戏区为正方形盒子，重设 canvas 缓冲并重绘，避免棋盘被拉伸；打印后恢复屏幕
+    window.addEventListener("beforeprint", function () { resizeCanvas(); });
+    window.addEventListener("afterprint", function () { setTimeout(resizeCanvas, 0); });
+
+    // 容器尺寸就绪（含首帧延迟）后自动重绘，根治初始空白
+    if (typeof ResizeObserver !== "undefined") {
+      var ro = new ResizeObserver(function () { resizeCanvas(); });
+      ro.observe(canvas.parentElement);
+    }
+
+    // rAF 轮询保底：前一帧容器高度若为 0，持续检测直到有有效尺寸再绘制
+    function pollSize(attempt) {
+      attempt = attempt || 0;
+      var rect = canvas.getBoundingClientRect();
+      if (rect.width > 2 && rect.height > 2) { resizeCanvas(); return; }
+      // canvas 已改 100% 充满 game-area，仅等待容器尺寸就绪，不再强制固定 px（否则会覆盖 100% 让容积变小）
+      if (attempt < 120) requestAnimationFrame(function () { pollSize(attempt + 1); });
+    }
+
+    // 初始化：展示一局静态预览
+    requestAnimationFrame(function () {
+      try {
+        setupPuzzle();
+        computeLayout();
+        updateHud();
+        resizeCanvas();
+        pollSize();
+        statusEl.textContent = "点「开始训练」开始";
+      } catch (err) {
+        statusEl.textContent = "初始化出错：" + (err && err.message ? err.message : err);
+        console.error(err);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

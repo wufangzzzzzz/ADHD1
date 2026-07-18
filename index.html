@@ -1236,6 +1236,43 @@ justify-content: center;
         </div>
       </div>
 
+      <!-- 新增游戏：一笔走完 -->
+      <div class="game-card" data-category="visual" onclick="location.href='one-stroke.html'">
+        <div class="card-image" style="background: linear-gradient(135deg, #2f6bff 0%, #00C2FF 100%);">
+          <svg viewBox="0 0 120 80" width="120" height="80">
+            <g fill="white" opacity="0.92">
+              <rect x="16" y="14" width="16" height="16" rx="3"/>
+              <rect x="38" y="14" width="16" height="16" rx="3"/>
+              <rect x="60" y="14" width="16" height="16" rx="3"/>
+              <rect x="82" y="14" width="16" height="16" rx="3"/>
+              <rect x="16" y="36" width="16" height="16" rx="3" fill="#3ec46d"/>
+              <rect x="38" y="36" width="16" height="16" rx="3"/>
+              <rect x="60" y="36" width="16" height="16" rx="3"/>
+              <rect x="82" y="36" width="16" height="16" rx="3"/>
+              <rect x="16" y="58" width="16" height="16" rx="3"/>
+              <rect x="38" y="58" width="16" height="16" rx="3"/>
+              <rect x="60" y="58" width="16" height="16" rx="3"/>
+              <rect x="82" y="58" width="16" height="16" rx="3"/>
+            </g>
+            <path d="M44 44 L66 44 L66 66" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+            <text x="60" y="78" text-anchor="middle" fill="white" font-size="8" opacity="0.6">走遍每格不重复</text>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">一笔走完</h2>
+          <p class="card-desc">固定尺寸的方格盘（6×6 / 7×7 / 8×8）里部分位置空缺，从贴边的绿色立体方块起点出发，相邻移动走遍所有方块、不重复不回原点。锻炼空间规划与专注力。</p>
+          <div class="card-features">
+            <span class="feature-tag" style="background:#e3f2fd;color:#1565c0;">空间规划</span>
+            <span class="feature-tag" style="background:#fff3e0;color:#e65100;">抗干扰</span>
+            <span class="feature-tag" style="background:#e8f5e9;color:#2e7d32;">路径预演</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="difficulty">难度：入门 6×6 / 中级 7×7 / 专家 8×8</span>
+          <button class="play-btn">开始游戏 →</button>
+        </div>
+      </div>
+
       <!-- 听觉训练游戏：复读机训练 -->
       <div class="game-card" data-category="audio" onclick="location.href='audio-repeat.html'">
         <div class="card-image" style="background: linear-gradient(135deg, #00BFFF 0%, #1E90FF 100%);">

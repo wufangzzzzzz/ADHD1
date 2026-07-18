@@ -5202,7 +5202,12 @@
         var container = document.getElementById('grid-container');
         // 彩格：以方块对角线=一个方块宽度排布，旋转后不重叠；整体铺满容器放大
         var N = this.gridSize;
-        var avail = Math.min(container.clientWidth || 600, container.clientHeight || 600) * 0.98;
+        // 关键修复：grid-container 自身高度是「内容驱动」的，渲染瞬间（尚未塞入格子）clientHeight=0，
+        // 用自身尺寸算 avail 会落到保底最小值 → 棋盘缩成 62×62。改测稳定父容器 .game-container（flex 高度，不依赖内容）。
+        var box = container.parentElement || container;
+        var gw = box.clientWidth || container.clientWidth || 600;
+        var gh = box.clientHeight || container.clientHeight || 600;
+        var avail = Math.min(gw, gh) * 0.98;
         var gap = Math.max(2, Math.floor(avail / (N * 14)));
         var cellSide = Math.max((avail - (N - 1) * gap) / N, 14);   // 格子占位宽（=方块对角线）
         var square = cellSide / Math.SQRT2;                         // 方块边长
