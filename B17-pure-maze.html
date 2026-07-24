@@ -89,9 +89,9 @@ canvas{touch-action:none; background:var(--bg); border-radius:10px; border:1px s
     <div>步数 <b id="stepVal">0</b></div>
     <div>最优 <b id="bestVal">–</b></div>
   </div>
-  <div class="hint" id="hint">点「新迷宫」开始，从绿色起点按住拖到金色终点</div>
+  <div class="hint" id="hint">按住绿色起点拖动画线，沿通路走到金色终点</div>
   <div class="maze-wrap" id="mazeWrap">
-    <canvas id="maze"></canvas>
+    <canvas id="maze" style="touch-action:none;cursor:crosshair"></canvas>
   </div>
 </div>
 <div class="result-card no-print" id="resultCard">
@@ -124,6 +124,7 @@ let timerStarted=false;
 let cs=20;
 let audioCtx=null;
 let isDrawing=false;
+let drawX=0, drawY=0;  // 当前指针位置（用于实时"笔画"预览）
 
 function initAudio(){
   if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
@@ -241,22 +242,55 @@ function draw(){
       if(c===N-1&&grid[r][c].E){ ctx.beginPath(); ctx.moveTo(x+cs,y); ctx.lineTo(x+cs,y+cs); ctx.stroke(); }
     }
   }
-  // 手绘轨迹线
+  // 手绘轨迹线（加阴影效果，更像笔触）
   if(trail.length>1){
-    ctx.strokeStyle=col.line;
-    ctx.lineWidth=Math.max(2,cs*0.18);
+    // 阴影层
+    ctx.strokeStyle='rgba(21,101,192,0.15)';
+    ctx.lineWidth=Math.max(3,cs*0.28);
     ctx.lineJoin='round'; ctx.lineCap='round';
     ctx.beginPath();
     trail.forEach((p,i)=>{
-      const x=p.c*cs+cs/2, y=p.r*cs+cs/2;
+      var x=p.c*cs+cs/2, y=p.r*cs+cs/2;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // 实线层
+    ctx.strokeStyle=col.line;
+    ctx.lineWidth=Math.max(2,cs*0.2);
+    ctx.beginPath();
+    trail.forEach((p,i)=>{
+      var x=p.c*cs+cs/2, y=p.r*cs+cs/2;
       if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     });
     ctx.stroke();
   }
-  ctx.fillStyle=col.start;
-  { const x=start.c*cs,y=start.r*cs; ctx.beginPath(); ctx.arc(x+cs/2,y+cs/2,cs*0.28,0,7); ctx.fill(); }
-  ctx.fillStyle=col.end;
-  { const x=end.c*cs,y=end.r*cs; ctx.beginPath(); ctx.arc(x+cs/2,y+cs/2,cs*0.28,0,7); ctx.fill(); }
+  // 实时"笔画"预览：从最后一个轨迹点到当前指针位置画半透明连线
+  if(isDrawing && trail.length>0){
+    var h=head();
+    ctx.strokeStyle='rgba(21,101,192,0.4)';
+    ctx.lineWidth=Math.max(2,cs*0.2);
+    ctx.lineCap='round';
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(h.c*cs+cs/2, h.r*cs+cs/2);
+    ctx.lineTo(drawX, drawY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 指针位置画个小圆点
+    ctx.fillStyle='rgba(21,101,192,0.5)';
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, Math.max(3,cs*0.12), 0, 7);
+    ctx.fill();
+  }
+  // 起点/终点（始终最后画，白底大圆+彩色实心，绝不被轨迹覆盖）
+  ctx.save();
+  { var x=start.c*cs+cs/2,y=start.r*cs+cs/2;
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,cs*0.35,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=col.start; ctx.beginPath(); ctx.arc(x,y,cs*0.28,0,Math.PI*2); ctx.fill(); }
+  { var x=end.c*cs+cs/2,y=end.r*cs+cs/2;
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,cs*0.35,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=col.end; ctx.beginPath(); ctx.arc(x,y,cs*0.28,0,Math.PI*2); ctx.fill(); }
+  ctx.restore();
 }
 
 function head(){ return trail[trail.length-1]; }
@@ -387,38 +421,54 @@ function cellFromEvent(e){
   if(r<0||r>=N||c<0||c>=N) return null;
   return {r,c};
 }
+function canvasXY(e){
+  var rect=canvas.getBoundingClientRect();
+  var cx=e.offsetX, cy=e.offsetY;
+  if((cx===undefined||cy===undefined)&&e.touches&&e.touches[0]){ cx=e.touches[0].clientX-rect.left; cy=e.touches[0].clientY-rect.top; }
+  if(cx===undefined||cy===undefined) return null;
+  return { x:cx*canvas.width/rect.width, y:cy*canvas.height/rect.height };
+}
 function pointerDown(e){
   initAudio();
   if(!running||finished) return;
-  const cell=cellFromEvent(e); if(!cell) return;
-  const h=head();
-  if(cell.r===h.r&&cell.c===h.c){ isDrawing=true; return; }
-  // 在相邻且通路处起笔：直接迈一步并开始画线
-  if(Math.abs(cell.r-h.r)+Math.abs(cell.c-h.c)===1 && canPass(h,cell)){
-    isDrawing=true; stepForward(cell.r,cell.c); return;
-  }
+  e.preventDefault();
+  var p=canvasXY(e); if(!p) return;
+  var col=Math.floor(p.x/cs), row=Math.floor(p.y/cs);
+  if(row<0||row>=N||col<0||col>=N) return;
+  isDrawing=true; drawX=p.x; drawY=p.y;
+  var h=head();
+  if(col===h.c&&row===h.r){ draw(); return; }
+  if(Math.abs(col-h.c)+Math.abs(row-h.r)===1 && canPass(h,{r:row,c:col})){ stepForward(row,col); }
+  draw();
 }
 function pointerMove(e){
   if(!isDrawing||!running||finished) return;
-  const cell=cellFromEvent(e); if(!cell) return;
-  const h=head();
-  if(cell.r===h.r&&cell.c===h.c) return;
-  // 回退到上一格
-  if(trail.length>=2){
-    const prev=trail[trail.length-2];
-    if(cell.r===prev.r&&cell.c===prev.c){ stepBack(); return; }
-  }
-  // 沿相邻通路前进
-  if(Math.abs(cell.r-h.r)+Math.abs(cell.c-h.c)===1 && canPass(h,cell)){
-    stepForward(cell.r,cell.c);
-  }
+  e.preventDefault();
+  var p=canvasXY(e); if(!p) return;
+  drawX=p.x; drawY=p.y;
+  var col=Math.floor(p.x/cs), row=Math.floor(p.y/cs);
+  if(row<0||row>=N||col<0||col>=N){ draw(); return; }
+  var h=head();
+  if(row===h.r&&col===h.c){ draw(); return; }
+  if(trail.length>=2){ var prev=trail[trail.length-2]; if(row===prev.r&&col===prev.c){ stepBack(); draw(); return; } }
+  if(Math.abs(row-h.r)+Math.abs(col-h.c)===1 && canPass(h,{r:row,c:col})){ stepForward(row,col); }
+  draw();
 }
-function pointerUp(){ isDrawing=false; }
+function pointerUp(){ isDrawing=false; draw(); }
 
-canvas.addEventListener('pointerdown',pointerDown);
+canvas.addEventListener('pointerdown',function(e){
+  canvas.setPointerCapture(e.pointerId);  // 手指/笔移出canvas也能继续画
+  pointerDown(e);
+});
 canvas.addEventListener('pointermove',pointerMove);
-window.addEventListener('pointerup',pointerUp);
-canvas.addEventListener('pointercancel',pointerUp);
+canvas.addEventListener('pointerup',function(e){
+  canvas.releasePointerCapture(e.pointerId);
+  pointerUp();
+});
+canvas.addEventListener('pointercancel',function(e){
+  canvas.releasePointerCapture(e.pointerId);
+  pointerUp();
+});
 
 window.addEventListener('keydown',(e)=>{
   if(!running) return;

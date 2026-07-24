@@ -511,6 +511,7 @@
   // 从 _audioGen 重新捕获 gen，禁止使用外部传入的旧 gen 值。
   function _stopAudio() {
     _stopFlag = true;
+    _ttsStopKeepAlive();
     if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     _audioGen++;
@@ -561,10 +562,30 @@
   }
 
   // ===== SpeechSynthesis 降级 =====
+  var _ttsResumeTimer = null;
+  function _ttsKeepAlive() {
+    // Chrome bug: speechSynthesis 超时自动停止。用定时器周期性 resume 保活。
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      window.speechSynthesis.resume();
+    }
+  }
+  function _ttsStartKeepAlive() {
+    _ttsStopKeepAlive();
+    _ttsResumeTimer = setInterval(_ttsKeepAlive, 3000);
+  }
+  function _ttsStopKeepAlive() {
+    if (_ttsResumeTimer) { clearInterval(_ttsResumeTimer); _ttsResumeTimer = null; }
+  }
+
   function speakFallback(text, callback, rate, gen) {
     if (_stopFlag) { if (callback) setTimeout(callback, 50); return; }
     if (!window.speechSynthesis) { if (callback) setTimeout(callback, 50); return; }
-    window.speechSynthesis.cancel();
+
+    // Chrome bug: 必须 resume + 延迟 cancel，否则连续发音会卡死
+    window.speechSynthesis.resume();
+    setTimeout(function() {
+      window.speechSynthesis.cancel();
+    }, 10);
 
     if (!selectedVoice) {
       selectBestVoice();
@@ -583,14 +604,38 @@
       }
     }
 
+    // Chrome bug 兜底：onend 有时不触发，加超时检测
+    var calledBack = false;
+    var timeoutId = null;
+    function doCallback() {
+      if (calledBack) return;
+      calledBack = true;
+      _ttsStopKeepAlive();
+      if (timeoutId) clearTimeout(timeoutId);
+      if (callback && gen === _audioGen) setTimeout(callback, 50);
+    }
+
     var utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
-    utterance.rate = rate || 1.0;
+    utterance.rate = rate || 0.95;
     utterance.volume = 1.0;
     if (selectedVoice) utterance.voice = selectedVoice;
 
-    utterance.onend = function() { if (callback && gen === _audioGen) setTimeout(callback, 50); };
-    utterance.onerror = function() { if (callback && gen === _audioGen) setTimeout(callback, 50); };
+    utterance.onend = function() { doCallback(); };
+    utterance.onerror = function(e) {
+      // Chrome 在某些情况下报 "interrupted" 错误（属于正常流程），不阻塞
+      if (e.error === 'interrupted' || e.error === 'canceled') {
+        doCallback();
+      } else {
+        doCallback();
+      }
+    };
+
+    // 超时兜底：文本长度 × 300ms/字 + 5 秒缓冲
+    var maxMs = Math.max(5000, text.length * 300 + 5000);
+    timeoutId = setTimeout(doCallback, maxMs);
+
+    _ttsStartKeepAlive();
     window.speechSynthesis.speak(utterance);
   }
 
