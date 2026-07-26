@@ -558,11 +558,10 @@
         animation: swing 2s ease-in-out infinite;
       }
 
-      /* 变体模式SVG文字混乱摆动 */
+      /* 变体模式SVG文字混乱摆动（与毁灭5/圆形一致用 view-box + JS 显式中心点，避开 Safari 对 <text> 的 fill-box 计算差异）*/
       .variant-text.chaos-mode {
         animation: variantSwing 2s ease-in-out infinite;
-        transform-box: fill-box;
-        transform-origin: center;
+        transform-box: view-box;
       }
       @keyframes variantSwing {
         0% { transform: rotate(var(--start-angle, 0deg)); }
@@ -8162,13 +8161,16 @@
             var ang = angles[Math.floor(Math.random() * angles.length)];
             txt.setAttribute('transform', 'rotate(' + ang + ' ' + b4.cx + ' ' + b4.cy + ')');
           }
-          // 混乱模式：动态摆动
+          // 混乱模式：动态摆动（标准对齐普通模式：角度池一致 + 各自绕自身中心旋转）
           else if (self.currentMode === 'chaos') {
             txt.classList.add('chaos-mode');
-            var cAngles = [15, 30, 45, -15, -30, -45];
+            // 角度幅度与普通模式一致（[25,30,45,75]×±1），不再用变体原本较小的 [15,30,45]
+            var cAngles = [25, 30, 45, 75, -25, -30, -45, -75];
             var cAng = cAngles[Math.floor(Math.random() * cAngles.length)];
             txt.style.setProperty('--start-angle', cAng + 'deg');
             txt.style.setProperty('--end-angle', (-cAng) + 'deg');
+            // 用 view-box 坐标系，把旋转原点显式设为该数字自身的中心（Safari 安全，同毁灭5/圆形做法）
+            txt.style.transformOrigin = b4.cx + 'px ' + b4.cy + 'px';
           }
 
           // 换字模式：随机字体
