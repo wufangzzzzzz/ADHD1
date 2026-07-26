@@ -52,10 +52,18 @@ canvas{background:#fff; touch-action:none; max-width:100%; max-height:100%;}
 <div class="app">
   <div class="topbar no-print">
     <button class="back-btn" onclick="location.href='index.html'">返回</button>
-    <div class="title">斯特鲁普 · 刺激材料生成器</div>
+    <div class="title">斯特鲁普生成器</div>
   </div>
 
   <div class="controls no-print">
+    <div class="ctrl-group">
+      <div class="ctrl-label">训练模式</div>
+      <div class="ctrl-row" id="modeRow">
+        <button class="opt active" data-mode="word">文字色</button>
+        <button class="opt" data-mode="size">大小</button>
+      </div>
+    </div>
+
     <div class="ctrl-group">
       <div class="ctrl-label">阅读规则</div>
       <div class="ctrl-row" id="ruleRow">
@@ -89,8 +97,8 @@ canvas{background:#fff; touch-action:none; max-width:100%; max-height:100%;}
       <div class="ctrl-label">颜色数 / 汉字数</div>
       <div class="ctrl-row">
         <input class="num-input" id="colorCount" type="number" min="2" max="8" value="4" title="颜色种类">
-        <span style="font-size:12px;color:var(--muted);align-self:center;">/</span>
-        <input class="num-input" id="wordCount" type="number" min="2" max="8" value="4" title="汉字种类">
+        <span id="wordSep" style="font-size:12px;color:var(--muted);align-self:center;">/</span>
+        <span id="wordWrap"><input class="num-input" id="wordCount" type="number" min="2" max="8" value="4" title="汉字种类"></span>
       </div>
     </div>
 
@@ -106,7 +114,7 @@ canvas{background:#fff; touch-action:none; max-width:100%; max-height:100%;}
       <div class="ctrl-label">操作</div>
       <div class="ctrl-row">
         <button class="btn" id="genBtn">生成 / 重排</button>
-        <button class="print-btn" onclick="window.print()">打印</button>
+        <button class="print-btn" onclick="doPrint()">打印</button>
       </div>
     </div>
 
@@ -125,6 +133,12 @@ const RULES=[
   {name:'先读文字，再读颜色', desc:'每个词先念含义、再念墨色（如绿字写"红"→"红、绿"）。'},
   {name:'先读颜色，后读文字', desc:'每个词先念墨色、再念含义（如绿字写"红"→"绿、红"）。'}
 ];
+// 大小模式（数字·大小）的三条阅读规则
+const SIZE_RULES=[
+  {name:'读大的数字', desc:'每个格子一大一小两个数字，念出较大的那个（大字固定在一侧）。'},
+  {name:'大小切换·读大字', desc:'两个数字左右来回互换大小，始终念出当前较大的那个。'},
+  {name:'按颜色读数字', desc:'顶部提示一个颜色，每个格子两个数字颜色不同，念出与该颜色相同的数字。'}
+];
 // 颜色池（白底高对比，名称与汉字池对应）
 const COLORS=[
   {name:'红',hex:'#e53935'},
@@ -140,8 +154,9 @@ const WORDS=['红','绿','蓝','紫','橙','青','粉','棕'];
 
 const cv=document.getElementById('cv');
 const wrap=document.querySelector('.preview-wrap');
-let state={rule:0, rows:6, cols:8, colorCount:4, wordCount:4, orient:'portrait'};
+let state={mode:'word', rule:0, rows:6, cols:8, colorCount:4, wordCount:4, orient:'portrait', sizePrompt:null, swapT:0, printStatic:false};
 let matrix=[];
+let swapRAF=null, swapStart=0, swapDir=1;
 
 function ri(n){return Math.floor(Math.random()*n);}
 
@@ -167,6 +182,28 @@ function genMatrix(){
   }
 }
 
+// 大小模式：每个格子两个数字（1-9，互不相同），一大一小，两色不同（规则③用）
+function genSizeMatrix(){
+  const cols=COLORS.slice(0,state.colorCount);
+  state.sizePrompt=ri(cols.length);                // 顶部提示颜色（取自当前颜色池）
+  const otherColor = c => (c + 1 + ri(cols.length-1)) % cols.length; // 取一个不同的颜色下标
+  matrix=[];
+  for(let r=0;r<state.rows;r++){
+    const row=[];
+    for(let c=0;c<state.cols;c++){
+      let d1=ri(9)+1, d2=ri(9)+1;
+      while(d2===d1) d2=ri(9)+1;                 // 两个数字不同
+      const bigLeft=Math.random()<0.5;            // 大字在左/右（规则②打印时左右交替）
+      // 规则③要求：每个格子必须含一个与提示色相同的数字（另一个用不同颜色）
+      let ci1, ci2;
+      if(Math.random()<0.5){ ci1=state.sizePrompt; ci2=otherColor(state.sizePrompt); }
+      else { ci2=state.sizePrompt; ci1=otherColor(state.sizePrompt); }
+      row.push({d1, d2, bigLeft, colorIdx1:ci1, colorIdx2:ci2});
+    }
+    matrix.push(row);
+  }
+}
+
 function draw(){
   const W = state.orient==='landscape' ? 1414 : 1000;
   const H = state.orient==='landscape' ? 1000 : 1414;
@@ -177,36 +214,110 @@ function draw(){
 
   const pad=40;
   const headerH=H*0.085;
+  const ruleName = state.mode==='size' ? SIZE_RULES[state.rule].name : RULES[state.rule].name;
+  let ruleDesc  = state.mode==='size' ? SIZE_RULES[state.rule].desc : RULES[state.rule].desc;
+  if(state.mode==='size' && state.rule===2){
+    ruleDesc = '顶部提示颜色「'+COLORS[state.sizePrompt].name+'」，念出与该颜色相同的数字。';
+  }
   // 顶部标注（打印件自带说明）
   ctx.fillStyle='#222222';
   ctx.textBaseline='middle';
   const fs=H*0.026;
   ctx.font='bold '+fs+'px "PingFang SC","Microsoft YaHei",sans-serif';
   ctx.textAlign='left';
-  ctx.fillText('规则：'+RULES[state.rule].name, pad, pad+headerH*0.33);
-  ctx.textAlign='center';
-  ctx.fillText('规格 '+state.rows+'×'+state.cols, W/2, pad+headerH*0.33);
+  ctx.fillText('规则：'+ruleName, pad, pad+headerH*0.33);
   ctx.textAlign='right';
-  ctx.fillText('颜色'+state.colorCount+'　汉字'+state.wordCount, W-pad, pad+headerH*0.33);
+  ctx.fillText('规格 '+state.rows+'×'+state.cols+'　颜色'+state.colorCount+(state.mode==='size'?'':'　汉字'+state.wordCount), W-pad, pad+headerH*0.33);
   ctx.textAlign='left';
   ctx.font='normal '+(fs*0.8)+'px "PingFang SC","Microsoft YaHei",sans-serif';
-  ctx.fillStyle='#666666';
-  ctx.fillText(RULES[state.rule].desc, pad, pad+headerH*0.72);
+  const descY=pad+headerH*0.72;
+  if(state.mode==='size' && state.rule===2){
+    // 规则③：提示颜色名用对应颜色书写
+    const cn=COLORS[state.sizePrompt].name;
+    const pre='顶部提示颜色「';
+    const suf='」，念出与该颜色相同的数字。';
+    ctx.fillStyle='#666666';
+    ctx.fillText(pre, pad, descY);
+    const w1=ctx.measureText(pre).width;
+    ctx.fillStyle=COLORS[state.sizePrompt].hex;
+    ctx.fillText(cn, pad+w1, descY);
+    const w2=ctx.measureText(cn).width;
+    ctx.fillStyle='#666666';
+    ctx.fillText(suf, pad+w1+w2, descY);
+  } else {
+    ctx.fillStyle='#666666';
+    ctx.fillText(ruleDesc, pad, descY);
+  }
 
   // 网格
   const gx=pad, gy=pad+headerH;
   const gw=W-2*pad, gh=H-pad-gy;
   const cw=gw/state.cols, ch=gh/state.rows;
-  const wordFs=Math.min(cw,ch)*0.52;
-  ctx.font='bold '+wordFs+'px "PingFang SC","Microsoft YaHei",sans-serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  for(let r=0;r<state.rows;r++){
-    for(let c=0;c<state.cols;c++){
-      const cell=matrix[r][c];
-      const cx=gx+cw*(c+0.5), cy=gy+ch*(r+0.5);
-      ctx.fillStyle=cell.ink;
-      ctx.fillText(cell.w, cx, cy);
+
+  if(state.mode==='size'){
+    // 画方格：每个单元格画细边框
+    ctx.strokeStyle='#d8dce6';
+    ctx.lineWidth=Math.max(1, W*0.0012);
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        ctx.strokeRect(gx+cw*c, gy+ch*r, cw, ch);
+      }
+    }
+    // 大小模式：每格两个数字（一大一小），间距=2个空格
+    const FF='"PingFang SC","Microsoft YaHei",sans-serif';
+    const baseMin=Math.min(cw,ch);
+    const bigFs=baseMin*0.46;
+    const smallFs=baseMin*0.24;
+    ctx.font='bold '+smallFs+'px '+FF;
+    const gap=0.5*ctx.measureText(' ').width;        // 两数字间距更近（约0.5空格）
+    ctx.font='bold '+bigFs+'px '+FF; const rbW=ctx.measureText('9').width;
+    ctx.font='bold '+smallFs+'px '+FF; const rsW=ctx.measureText('9').width;
+    const laneHalf=gap/2 + rbW/4 + rsW/4;             // 左右两路中心到列中心的距离
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        const cell=matrix[r][c];
+        const cx=gx+cw*(c+0.5), cy=gy+ch*(r+0.5);
+        if(state.rule===1 && !state.printStatic){
+          // 规则②动画：左右两路固定，大小互相平滑过渡（缓动）
+          const t=state.swapT==null?0:state.swapT;
+          const sL=bigFs*(1-t)+smallFs*t;
+          const sR=smallFs*(1-t)+bigFs*t;
+          ctx.fillStyle='#222222';
+          ctx.font='bold '+sL+'px '+FF; ctx.fillText(cell.d1, cx-laneHalf, cy);
+          ctx.font='bold '+sR+'px '+FF; ctx.fillText(cell.d2, cx+laneHalf, cy);
+        } else {
+          // 规则① / 规则②静态打印 / 规则③：大字在左路、小字在右路
+          let bigLeft;
+          if(state.rule===0) bigLeft=true;
+          else bigLeft=cell.bigLeft;
+          const bigD=bigLeft?cell.d1:cell.d2;
+          const smallD=bigLeft?cell.d2:cell.d1;
+          if(state.rule===2){
+            const bigCol=bigLeft?COLORS[cell.colorIdx1].hex:COLORS[cell.colorIdx2].hex;
+            const smallCol=bigLeft?COLORS[cell.colorIdx2].hex:COLORS[cell.colorIdx1].hex;
+            ctx.fillStyle=bigCol; ctx.font='bold '+bigFs+'px '+FF; ctx.fillText(bigD, cx-laneHalf, cy);
+            ctx.fillStyle=smallCol; ctx.font='bold '+smallFs+'px '+FF; ctx.fillText(smallD, cx+laneHalf, cy);
+          } else {
+            ctx.fillStyle='#222222';
+            ctx.font='bold '+bigFs+'px '+FF; ctx.fillText(bigD, cx-laneHalf, cy);
+            ctx.font='bold '+smallFs+'px '+FF; ctx.fillText(smallD, cx+laneHalf, cy);
+          }
+        }
+      }
+    }
+  } else {
+    // 文字色模式（原有）
+    const wordFs=Math.min(cw,ch)*0.52;
+    ctx.font='bold '+wordFs+'px "PingFang SC","Microsoft YaHei",sans-serif';
+    for(let r=0;r<state.rows;r++){
+      for(let c=0;c<state.cols;c++){
+        const cell=matrix[r][c];
+        const cx=gx+cw*(c+0.5), cy=gy+ch*(r+0.5);
+        ctx.fillStyle=cell.ink;
+        ctx.fillText(cell.w, cx, cy);
+      }
     }
   }
 }
@@ -222,8 +333,75 @@ function resize(){
 }
 
 function updateRuleNote(){
-  document.getElementById('ruleNote').textContent='四种规则说明 — ①读文字：'+RULES[0].desc+' ②读颜色：'+RULES[1].desc+' ③先文后色：'+RULES[2].desc+' ④先色后文：'+RULES[3].desc;
+  if(state.mode==='size'){
+    const r=SIZE_RULES;
+    document.getElementById('ruleNote').textContent='大小模式规则 — ①'+r[0].name+'：'+r[0].desc+' ②'+r[1].name+'：'+r[1].desc+' ③'+r[2].name+'：'+r[2].desc;
+  } else {
+    document.getElementById('ruleNote').textContent='四种规则说明 — ①读文字：'+RULES[0].desc+' ②读颜色：'+RULES[1].desc+' ③先文后色：'+RULES[2].desc+' ④先色后文：'+RULES[3].desc;
+  }
 }
+
+// 依据当前模式生成对应矩阵并重绘
+function regenerate(){
+  if(state.mode==='size') genSizeMatrix(); else genMatrix();
+  draw(); resize();
+}
+
+// 按当前模式重建「阅读规则」按钮
+function rebuildRuleRow(){
+  const row=document.getElementById('ruleRow');
+  row.innerHTML='';
+  const arr = state.mode==='size' ? SIZE_RULES : RULES;
+  arr.forEach((rl,i)=>{
+    const b=document.createElement('button');
+    b.className='opt'+(i===state.rule?' active':'');
+    b.dataset.rule=i;
+    b.textContent=rl.name;
+    row.appendChild(b);
+  });
+}
+
+// 规则②屏幕动画：左右两路大小平滑互换（requestAnimationFrame + 缓动）
+const SWAP_DUR=1200, SWAP_HOLD=360;   // 变换速度慢一倍
+function easeInOutCubic(t){ return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
+function startSwapAnim(){
+  stopSwapAnim();
+  state.swapT=0; swapDir=1; swapStart=performance.now();
+  swapRAF=requestAnimationFrame(swapFrame);
+}
+function swapFrame(now){
+  if(!(state.mode==='size' && state.rule===1 && !state.printStatic)){ swapRAF=null; return; }
+  const el=now-swapStart;
+  if(el<SWAP_DUR){
+    state.swapT = swapDir===1 ? easeInOutCubic(el/SWAP_DUR) : 1-easeInOutCubic(el/SWAP_DUR);
+    draw();
+    swapRAF=requestAnimationFrame(swapFrame);
+  } else if(el<SWAP_DUR+SWAP_HOLD){
+    state.swapT = swapDir===1?1:0;
+    draw();
+    swapRAF=requestAnimationFrame(swapFrame);
+  } else {
+    swapDir=-swapDir; swapStart=now;
+    swapRAF=requestAnimationFrame(swapFrame);
+  }
+}
+function stopSwapAnim(){
+  if(swapRAF){ cancelAnimationFrame(swapRAF); swapRAF=null; }
+}
+
+// 打印：规则②先渲染静态「左右交替」帧，再调起打印，打印后恢复
+function doPrint(){
+  if(state.mode==='size' && state.rule===1){
+    state.printStatic=true;
+    draw();
+  }
+  window.print();
+}
+window.addEventListener('afterprint',()=>{
+  state.printStatic=false;
+  if(state.mode==='size' && state.rule===1){ startSwapAnim(); }
+  else { draw(); }
+});
 
 // 事件
 document.getElementById('ruleRow').addEventListener('click',e=>{
@@ -231,7 +409,24 @@ document.getElementById('ruleRow').addEventListener('click',e=>{
   document.querySelectorAll('#ruleRow .opt').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   state.rule=+b.dataset.rule;
-  updateRuleNote(); draw();
+  stopSwapAnim();
+  if(state.mode==='size' && state.rule===1) startSwapAnim();
+  updateRuleNote(); draw(); resize();
+});
+document.getElementById('modeRow').addEventListener('click',e=>{
+  const b=e.target.closest('.opt'); if(!b) return;
+  document.querySelectorAll('#modeRow .opt').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  state.mode=b.dataset.mode;
+  stopSwapAnim();
+  state.rule=0;
+  rebuildRuleRow();
+  const hideWord = state.mode==='size';
+  document.getElementById('wordWrap').style.display = hideWord ? 'none' : '';
+  document.getElementById('wordSep').style.display  = hideWord ? 'none' : '';
+  updateRuleNote();
+  regenerate();
+  if(state.mode==='size' && state.rule===1) startSwapAnim();
 });
 document.getElementById('sizeRow').addEventListener('click',e=>{
   const b=e.target.closest('.opt'); if(!b) return;
@@ -243,23 +438,23 @@ document.getElementById('sizeRow').addEventListener('click',e=>{
   }
   document.getElementById('customGroup').style.display='none';
   state.rows=+b.dataset.r; state.cols=+b.dataset.c;
-  genMatrix(); draw(); resize();
+  regenerate();
 });
 document.getElementById('customGroup').addEventListener('change',()=>{
   const r=Math.max(1,Math.min(20, +document.getElementById('rowsInput').value||6));
   const c=Math.max(1,Math.min(20, +document.getElementById('colsInput').value||8));
   state.rows=r; state.cols=c;
-  genMatrix(); draw(); resize();
+  regenerate();
 });
 document.getElementById('colorCount').addEventListener('change',e=>{
   state.colorCount=Math.max(2,Math.min(8, +e.target.value||4));
   e.target.value=state.colorCount;
-  genMatrix(); draw(); resize();
+  regenerate();
 });
 document.getElementById('wordCount').addEventListener('change',e=>{
   state.wordCount=Math.max(2,Math.min(8, +e.target.value||4));
   e.target.value=state.wordCount;
-  genMatrix(); draw(); resize();
+  regenerate();
 });
 document.getElementById('orientRow').addEventListener('click',e=>{
   const b=e.target.closest('.opt'); if(!b) return;
@@ -269,11 +464,12 @@ document.getElementById('orientRow').addEventListener('click',e=>{
   document.getElementById('pageStyle').textContent='@page{size:'+state.orient+';margin:8mm;}';
   draw(); resize();
 });
-document.getElementById('genBtn').addEventListener('click',()=>{ genMatrix(); draw(); resize(); });
+document.getElementById('genBtn').addEventListener('click',()=>{ regenerate(); });
 window.addEventListener('resize',resize);
 
 // 初始化
 updateRuleNote();
+rebuildRuleRow();
 genMatrix();
 draw();
 resize();

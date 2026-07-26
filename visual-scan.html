@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>视觉扫描专注力训练</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+    html,body { touch-action:manipulation; overscroll-behavior:none; }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Microsoft YaHei',sans-serif;
+      background:#f4f8f5;
+      min-height:100vh; min-height:100dvh;
+      display:flex; flex-direction:column; align-items:center;
+      padding:12px;
+      color:#333;
+    }
+    .app { width:100%; max-width:1300px; background:#fff; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(135deg,#2ba89e 0%,#3fc5bb 100%); color:#fff; padding:16px 20px; text-align:center; position:relative; }
+    .header h1 { font-size:clamp(1.2rem,5vw,1.5rem); font-weight:700; margin-bottom:6px; }
+    .header p { font-size:clamp(0.78rem,3vw,0.88rem); opacity:0.95; line-height:1.5; }
+    .back-btn { position:absolute; top:12px; left:12px; z-index:10; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; padding:5px 12px; border-radius:8px; font-size:13px; cursor:pointer; transition:all .2s; text-decoration:none; }
+    .back-btn:hover { background:rgba(255,255,255,0.28); }
+
+    .toolbar { padding:12px 16px; background:#f8faf9; border-bottom:1px solid #eef2f0; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .tool-group { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .tool-btn { border:none; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+    .tool-btn.primary { background:#2ba89e; color:#fff; }
+    .tool-btn.primary:hover { background:#248f86; }
+    .tool-btn.secondary { background:#e8f5f3; color:#2ba89e; }
+    .tool-btn.secondary:hover { background:#d5efeb; }
+    .tool-btn.print { background:#4a90a4; color:#fff; }
+    .tool-btn.print:hover { background:#3b7a8c; }
+    .tool-btn.mode { background:#fff3e0; color:#e67e22; border:1px solid #f3d9b1; }
+    .tool-btn.mode:hover { background:#ffe9cc; }
+    .tool-btn.mode.active { background:#e67e22; color:#fff; border-color:#e67e22; }
+    .status { font-size:14px; color:#555; font-weight:600; }
+    .status span { color:#2ba89e; font-weight:700; }
+    .status .done { color:#27ae60; }
+
+    /* 默认（竖屏/窄屏）：上下堆叠 */
+    .play-row { display:flex; flex-direction:column; gap:16px; padding:14px 16px; align-items:stretch; }
+    .main-col { display:flex; flex-direction:column; align-items:center; }
+    .targets-col { display:flex; flex-direction:column; }
+
+    .section-title { font-size:15px; font-weight:700; color:#2ba89e; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .section-title::before { content:''; width:4px; height:16px; background:#2ba89e; border-radius:2px; }
+
+    .main-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; width:min(100%, 72vh); aspect-ratio:1; margin:0 auto 4px; }
+    .main-cell {
+      background:#fff; border:1px solid #dfe8e6; border-radius:5px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:clamp(12px,3.2vw,18px); font-weight:700; color:#34495e;
+      cursor:pointer; transition:background .12s, border-color .12s; position:relative;
+    }
+    .main-cell:hover { background:#f0faf9; }
+    .main-cell:active { transform:scale(0.96); }
+    .main-cell.selected { background:#d5f5f0; border-color:#2ba89e; }
+    .main-cell.selected::after {
+      content:''; position:absolute; inset:3px; border:2px solid #2ba89e; border-radius:50%;
+    }
+    .main-cell.correct { background:#d4edda; border-color:#27ae60; color:#1e8449; }
+    .main-cell.correct::after { border-color:#27ae60; }
+    .main-cell.locked { cursor:default; }
+    .main-cell.locked:hover { background:#d4edda; }
+    .main-cell.wrong { animation:wrongShake .4s ease; }
+    @keyframes wrongShake {
+      0%,100%{ transform:translateX(0); background:#f8d7da; border-color:#e74c3c; }
+      20%{ transform:translateX(-4px); }
+      40%{ transform:translateX(4px); }
+      60%{ transform:translateX(-3px); background:#f8d7da; border-color:#e74c3c; }
+      80%{ transform:translateX(3px); }
+    }
+
+    .targets-wrap { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; }
+    .target-box { background:#fafcfb; border:1px solid #e3ecea; border-radius:10px; padding:10px; display:flex; flex-direction:column; align-items:center; transition:all .2s; }
+    .target-box.done { background:#eafaf1; border-color:#27ae60; }
+    .target-label { font-size:12px; color:#7f8c8d; margin-bottom:6px; font-weight:600; text-align:center; }
+    .target-box.done .target-label { color:#1e8449; font-weight:700; }
+    .target-grid { display:grid; gap:2px; }
+    .target-cell { background:#fff; border:1px solid #d0e0dd; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:clamp(11px,2.8vw,14px); font-weight:700; color:#2c3e50; aspect-ratio:1; }
+    .target-cell.empty { background:transparent; border-color:transparent; }
+    .target-cell.core { background:#e8f6f4; border-color:#2ba89e; }
+
+    .result-bar { margin-top:14px; padding:12px 16px; border-radius:10px; font-size:14px; font-weight:600; text-align:center; display:none; }
+    .result-bar.success { background:#d4edda; color:#1e8449; display:block; }
+    .result-bar.fail { background:#f8d7da; color:#c0392b; display:block; }
+    .result-bar.info { background:#e8f4f8; color:#2471a3; display:block; }
+
+    .footer-note { text-align:center; font-size:12px; color:#95a5a6; padding:10px 16px 16px; }
+
+    /* 电脑 / 平板 横屏：改为左右布局 */
+    @media (orientation: landscape) and (min-width: 640px) {
+      .play-row { flex-direction:row; align-items:flex-start; }
+      .main-col { flex:1 1 auto; align-items:center; }
+      .targets-col { flex:0 0 auto; width:clamp(260px, 34%, 440px); }
+      .main-grid { width:min(100%, 74vh); margin:0; }
+      .targets-wrap { grid-template-columns:repeat(2,1fr); }
+    }
+
+    /* 打印 */
+    @media print {
+      @page { margin:8mm; size:auto; }
+      .no-print, .back-btn, .toolbar, .result-bar, .footer-note { display:none !important; }
+      * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      html,body { background:#fff !important; overflow:visible !important; height:auto !important; padding:0; }
+      body { display:block !important; }
+      .app { box-shadow:none; border-radius:0; max-width:190mm; margin:0 auto; }
+      .header { background:#fff !important; color:#222 !important; padding:8px 0 12px; border-bottom:1px solid #ddd; }
+      .header h1 { color:#222; }
+      .header p { color:#555; }
+      .play-row { flex-direction:column !important; padding:10px 0; }
+      .main-grid { width:min(100%,160mm); gap:2px; }
+      .main-cell { border:1px solid #bbb; font-size:13px; }
+      .main-cell.selected::after { border:1.5px solid #2ba89e; }
+      .targets-wrap { width:160mm; gap:8px; grid-template-columns:repeat(3,1fr) !important; }
+      .target-box { border:1px solid #ccc; }
+      .target-cell { border:1px solid #aaa; font-size:12px; }
+      .target-cell.core { background:#e8f6f4; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <a class="back-btn no-print" href="index.html">返回大厅</a>
+      <h1>视觉扫描</h1>
+      <p id="headerDesc">在大表格里逐个找出下方的异形数字块，点中一个数字即自动判定对错，集齐一个块即显示「对了」</p>
+    </div>
+
+    <div class="toolbar no-print">
+      <div class="tool-group">
+        <button class="tool-btn mode active" id="btnMono" onclick="setMode('mono')">黑白</button>
+        <button class="tool-btn mode" id="btnColor" onclick="setMode('color')">彩色</button>
+        <button class="tool-btn primary" onclick="newGame()">重新生成</button>
+        <button class="tool-btn secondary" onclick="showAnswer()">查看答案</button>
+        <button class="tool-btn print" onclick="window.print()">打印</button>
+        <button class="tool-btn secondary" id="soundBtn" onclick="toggleSound()">音效：开</button>
+      </div>
+      <div class="status">已找到目标 <span id="foundCount" class="done">0</span> / <span id="totalTargets">0</span>　·　已圈 <span id="selCount">0</span> 个数字</div>
+    </div>
+
+    <div class="play-row">
+      <div class="main-col">
+        <div class="section-title">大表格（10 × 10）</div>
+        <div class="main-grid" id="mainGrid"></div>
+      </div>
+
+      <div class="targets-col">
+        <div class="section-title">异形目标块</div>
+        <div class="targets-wrap" id="targetsWrap"></div>
+        <div class="result-bar" id="resultBar"></div>
+      </div>
+    </div>
+
+    <div class="footer-note no-print" id="footerNote">提示：左边大表里藏着 6 个异形数字块，点和下方形状、数字完全一致的格子即可；点错会有红框抖动提示。集齐一个整块，对应目标卡会显示「对了」。无「提交答案」，随点随判。</div>
+  </div>
+
+<script>
+  const ROWS=10, COLS=10, TARGET_COUNT=6;
+
+  /* ===== 异形块库（按多连块规律：四连块→五连块→六连块，每局随机抽 6 个） ===== */
+  const BASE_SHAPES=[
+    // —— 四连块（tetromino）——
+    {name:'直线',   cells:[[0,0],[0,1],[0,2],[0,3]]},
+    {name:'方块',   cells:[[0,0],[0,1],[1,0],[1,1]]},
+    {name:'S形',    cells:[[0,1],[0,2],[1,0],[1,1]]},
+    {name:'Z形',    cells:[[0,0],[0,1],[1,1],[1,2]]},
+    {name:'小L',    cells:[[0,0],[1,0],[2,0],[2,1]]},
+    {name:'小T',    cells:[[0,0],[0,1],[0,2],[1,1]]},
+    // —— 五连块（pentomino）——
+    {name:'十字',   cells:[[0,1],[1,0],[1,1],[1,2],[2,1]]},
+    {name:'大L',    cells:[[0,0],[1,0],[2,0],[2,1],[2,2]]},
+    {name:'大T',    cells:[[0,0],[1,0],[1,1],[1,2],[2,0]]},
+    {name:'大V',    cells:[[0,0],[1,0],[2,0],[2,1],[2,2]]},
+    {name:'U形',    cells:[[0,0],[0,2],[1,0],[1,1],[1,2]]},
+    {name:'W形',    cells:[[0,0],[0,1],[1,1],[2,1],[2,2]]},
+    {name:'Y形',    cells:[[0,1],[1,1],[2,1],[2,0],[3,1]]},
+    {name:'F形',    cells:[[0,1],[0,2],[1,0],[1,1],[2,1]]},
+    {name:'斜Z',    cells:[[0,0],[1,0],[1,1],[2,1],[2,2]]},
+    {name:'菱形',   cells:[[0,0],[0,1],[1,1],[2,0],[2,1]]},
+    {name:'右T',    cells:[[0,0],[0,1],[0,2],[1,2],[2,2]]},
+    // —— 六连块（hexomino）——
+    {name:'大阶梯', cells:[[0,0],[0,1],[0,2],[1,0],[1,1],[2,0]]}
+  ];
+
+  // 彩色模式调色板（对比度足够，白底可读；不含过深的藏青，避免看着像黑字）
+  const PALETTE=['#e74c3c','#2980b9','#27ae60','#e67e22','#8e44ad','#16a085','#d81b60','#6c5ce7'];
+
+  let gridData=[];          // 10x10 数字
+  let gridColor=[];         // 10x10 颜色索引（仅彩色模式有意义）
+  let targetPlacements=[];  // {id, name, colorIdx, r0, c0, cells:[[r,c]...], numbers:[...]}
+  let cellToTarget={};      // "r,c" -> target id
+  let selected=new Set();   // "r,c" 已圈（仅正确格）
+  let completedTargets=new Set();
+  let targetBoxEls={};      // id -> box element
+  let soundOn=true;
+  let audioCtx=null;
+  let gameMode='mono';      // 'mono' 黑白 | 'color' 彩色
+
+  function rand(n){ return Math.floor(Math.random()*n); }
+  function randNum(){ return rand(100); } // 0-99
+
+  function cloneCells(cells){ return cells.map(c=>[c[0],c[1]]); }
+
+  function shapeBounds(cells){
+    let minR=Infinity,minC=Infinity,maxR=-Infinity,maxC=-Infinity;
+    for(const [r,c] of cells){ minR=Math.min(minR,r); minC=Math.min(minC,c); maxR=Math.max(maxR,r); maxC=Math.max(maxC,c); }
+    return {minR,minC,maxR,maxC};
+  }
+
+  function normalize(cells){
+    const {minR,minC}=shapeBounds(cells);
+    return cells.map(([r,c])=>[r-minR,c-minC]);
+  }
+
+  function rotate90(cells){
+    const {minR,minC,maxR,maxC}=shapeBounds(cells);
+    return normalize(cells.map(([r,c])=>[maxC-c+minC, r-minR]));
+  }
+  function flipH(cells){ const {minC,maxC}=shapeBounds(cells); return normalize(cells.map(([r,c])=>[r,maxC-c])); }
+  function flipV(cells){ const {minR,maxR}=shapeBounds(cells); return normalize(cells.map(([r,c])=>[maxR-r,c])); }
+
+  function randomTransform(cells){
+    let out=cloneCells(cells);
+    const rot=rand(4);
+    for(let i=0;i<rot;i++) out=rotate90(out);
+    if(rand(2)) out=flipH(out);
+    if(rand(2)) out=flipV(out);
+    return out;
+  }
+
+  function canPlace(gridMask, r0, c0, cells){
+    for(const [r,c] of cells){
+      const rr=r0+r, cc=c0+c;
+      if(rr<0||rr>=ROWS||cc<0||cc>=COLS) return false;
+      if(gridMask[rr][cc]) return false;
+    }
+    return true;
+  }
+
+  function placeShape(gridMask, cells){
+    const {maxR,maxC}=shapeBounds(cells);
+    for(let attempt=0; attempt<400; attempt++){
+      const r0=rand(ROWS-maxR);
+      const c0=rand(COLS-maxC);
+      if(canPlace(gridMask,r0,c0,cells)){
+        for(const [r,c] of cells) gridMask[r0+r][c0+c]=true;
+        return {r0,c0,cells:cloneCells(cells)};
+      }
+    }
+    return null;
+  }
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){ const j=rand(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    return arr;
+  }
+
+  // 从形状库中随机抽 TARGET_COUNT 个不同形状
+  function pickShapeIndices(n){
+    const idxs=shuffle([...Array(BASE_SHAPES.length).keys()]);
+    return idxs.slice(0,n);
+  }
+
+  function generateTargets(){
+    const mask=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+    const placements=[];
+    const chosen=pickShapeIndices(TARGET_COUNT);
+    // 颜色：尽量给每个目标不同颜色
+    const colorOrder=shuffle([...Array(PALETTE.length).keys()]);
+    chosen.forEach((realIdx, k)=>{
+      let placed=null, tcells=null;
+      for(let t=0;t<60;t++){
+        tcells=randomTransform(BASE_SHAPES[realIdx].cells);
+        placed=placeShape(mask, tcells);
+        if(placed) break;
+      }
+      if(!placed) return null; // 生成失败
+      placements.push({
+        id:k,
+        name:BASE_SHAPES[realIdx].name,
+        colorIdx: colorOrder[k % PALETTE.length],
+        r0:placed.r0,
+        c0:placed.c0,
+        cells:placed.cells
+      });
+    });
+    if(placements.length<TARGET_COUNT) return null;
+    return placements;
+  }
+
+  function newGame(){
+    completedTargets=new Set();
+    selected.clear();
+    cellToTarget={};
+    targetBoxEls={};
+    document.getElementById('resultBar').className='result-bar';
+    document.getElementById('resultBar').textContent='';
+
+    let tries=0;
+    do{
+      targetPlacements=generateTargets();
+      tries++;
+    }while(!targetPlacements && tries<40);
+
+    // 填充数字 + 颜色
+    gridData=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+    gridColor=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+    for(const p of targetPlacements){
+      p.numbers=[];
+      p.colors=[];
+      for(const [r,c] of p.cells){
+        const rr=p.r0+r, cc=p.c0+c;
+        const n=randNum();
+        const ci=rand(PALETTE.length);
+        gridData[rr][cc]=n;
+        gridColor[rr][cc]=ci;              // 目标格：每个数字各自的随机色（与下方卡片逐格对应）
+        p.numbers.push(n);
+        p.colors.push(ci);
+        cellToTarget[rr+','+cc]=p.id;
+      }
+    }
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        if(gridData[r][c]===null){
+          gridData[r][c]=randNum();
+          gridColor[r][c]=rand(PALETTE.length); // 干扰格：随机彩色
+        }
+      }
+    }
+
+    renderMainGrid();
+    renderTargets();
+    updateStatus();
+  }
+
+  function renderMainGrid(){
+    const g=document.getElementById('mainGrid');
+    g.innerHTML='';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const d=document.createElement('div');
+        d.className='main-cell';
+        d.dataset.r=r; d.dataset.c=c;
+        d.textContent=gridData[r][c];
+        if(gameMode==='color' && gridColor[r][c]>=0) d.style.color=PALETTE[gridColor[r][c]];
+        d.onclick=()=>toggleCell(r,c);
+        g.appendChild(d);
+      }
+    }
+  }
+
+  function toggleCell(r,c){
+    const key=r+','+c;
+    const tid=cellToTarget[key];
+    const el=document.querySelector(`.main-cell[data-r="${r}"][data-c="${c}"]`);
+
+    // 已完成的目标格：锁定，不可再点
+    if(tid!==undefined && completedTargets.has(tid)) return;
+
+    // 干扰格（不在任何未完成目标内）：点错
+    if(tid===undefined){
+      flashWrong(el);
+      playWrong();
+      return;
+    }
+
+    // 正确格
+    if(selected.has(key)){
+      selected.delete(key);
+      el.classList.remove('selected');
+    }else{
+      selected.add(key);
+      el.classList.add('selected');
+      playCorrect();
+    }
+    updateStatus();
+    checkTargetComplete(tid);
+  }
+
+  function flashWrong(el){
+    el.classList.remove('wrong');
+    void el.offsetWidth; // 重启动画
+    el.classList.add('wrong');
+    setTimeout(()=>el.classList.remove('wrong'), 420);
+  }
+
+  function checkTargetComplete(tid){
+    if(completedTargets.has(tid)) return;
+    const t=targetPlacements.find(p=>p.id===tid);
+    const all=t.cells.every(([r,c])=> selected.has((t.r0+r)+','+(t.c0+c)));
+    if(!all) return;
+
+    completedTargets.add(tid);
+    t.cells.forEach(([r,c])=>{
+      const rr=t.r0+r, cc=t.c0+c;
+      const e=document.querySelector(`.main-cell[data-r="${rr}"][data-c="${cc}"]`);
+      e.classList.remove('selected');
+      e.classList.add('correct','locked');
+    });
+    markTargetBoxDone(tid);
+    playComplete();
+    updateStatus();
+
+    if(completedTargets.size===targetPlacements.length) allDone();
+  }
+
+  function markTargetBoxDone(tid){
+    const box=targetBoxEls[tid];
+    if(!box) return;
+    box.classList.add('done');
+    const label=box.querySelector('.target-label');
+    label.textContent='目标 '+(tid+1)+' · 对了 ✓';
+  }
+
+  function allDone(){
+    const bar=document.getElementById('resultBar');
+    bar.className='result-bar success';
+    bar.textContent='全部找对！所有异形块都集齐了，太棒了！';
+  }
+
+  function updateStatus(){
+    document.getElementById('foundCount').textContent=completedTargets.size;
+    document.getElementById('totalTargets').textContent=targetPlacements.length;
+    document.getElementById('selCount').textContent=selected.size;
+  }
+
+  function renderTargets(){
+    const wrap=document.getElementById('targetsWrap');
+    wrap.innerHTML='';
+    targetBoxEls={};
+    targetPlacements.forEach((p)=>{
+      const {maxR,maxC}=shapeBounds(p.cells);
+      const box=document.createElement('div');
+      box.className='target-box';
+      box.dataset.tid=p.id;
+      const label=document.createElement('div');
+      label.className='target-label';
+      label.textContent='目标 '+(p.id+1)+'（'+p.name+'）';
+      const grid=document.createElement('div');
+      grid.className='target-grid';
+      grid.style.gridTemplateColumns=`repeat(${maxC+1}, 30px)`;
+      grid.style.gridTemplateRows=`repeat(${maxR+1}, 30px)`;
+
+      const map={};
+      const colmap={};
+      p.cells.forEach(([r,c],i)=>{ map[r+','+c]=p.numbers[i]; colmap[r+','+c]=p.colors[i]; });
+
+      for(let r=0;r<=maxR;r++){
+        for(let c=0;c<=maxC;c++){
+          const cell=document.createElement('div');
+          const val=map[r+','+c];
+          const ci=colmap[r+','+c];
+          if(val!==undefined){
+            cell.className='target-cell core';
+            cell.textContent=val;
+            if(gameMode==='color'){
+              cell.style.color=PALETTE[ci];        // 逐格对应上表该数字的随机色
+              cell.style.borderColor=PALETTE[ci];
+            }
+          }else{
+            cell.className='target-cell empty';
+          }
+          grid.appendChild(cell);
+        }
+      }
+      // 彩色模式下不再给整块统一描边/标签色（每块内含多种颜色，逐格对应更直观）
+      box.appendChild(label);
+      box.appendChild(grid);
+      wrap.appendChild(box);
+      targetBoxEls[p.id]=box;
+    });
+  }
+
+  function showAnswer(){
+    const cells=[...document.querySelectorAll('.main-cell')];
+    cells.forEach(el=>{
+      const r=+el.dataset.r, c=+el.dataset.c;
+      const tid=cellToTarget[r+','+c];
+      el.classList.remove('selected','correct','wrong','locked');
+      if(tid!==undefined){
+        el.classList.add('correct','locked');
+        if(!completedTargets.has(tid)){
+          completedTargets.add(tid);
+          markTargetBoxDone(tid);
+        }
+      }
+    });
+    selected.clear();
+    updateStatus();
+    const bar=document.getElementById('resultBar');
+    bar.className='result-bar info';
+    bar.textContent='答案已显示，绿色格子即为所有目标数字。';
+  }
+
+  /* ===== 彩色 / 黑白 模式切换 ===== */
+  function setMode(mode){
+    if(gameMode===mode) return;
+    gameMode = mode;
+    document.getElementById('btnMono').classList.toggle('active', mode==='mono');
+    document.getElementById('btnColor').classList.toggle('active', mode==='color');
+    updateModeUI();
+    newGame();
+  }
+  function updateModeUI(){
+    const colorOn = (gameMode==='color');
+    document.getElementById('headerDesc').textContent = colorOn
+      ? '彩色模式：大表里每个数字都是随机彩色，下方目标卡里每个数字也用完全相同的颜色，对照颜色 + 形状即可快速定位。集齐一个块即显示「对了」。'
+      : '在大表格里逐个找出下方的异形数字块，点中一个数字即自动判定对错，集齐一个块即显示「对了」';
+    document.getElementById('footerNote').textContent = colorOn
+      ? '彩色提示：左边大表里藏着 6 个带颜色的数字块，点和下方形状、数字、颜色都一致的格子；点错会有红框抖动。集齐一个整块，对应目标卡变绿并显示「对了」。'
+      : '提示：左边大表里藏着 6 个异形数字块，点和下方形状、数字完全一致的格子即可；点错会有红框抖动提示。集齐一个整块，对应目标卡会显示「对了」。无「提交答案」，随点随判。';
+  }
+
+  /* ===== 音效（Web Audio 实时合成，无需音频文件） ===== */
+  function getAudio(){
+    if(!audioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(AC) audioCtx=new AC();
+    }
+    if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function beep(freq, dur, type='sine', vol=0.18){
+    if(!soundOn) return;
+    const ac=getAudio();
+    if(!ac) return;
+    const o=ac.createOscillator();
+    const g=ac.createGain();
+    o.type=type; o.frequency.value=freq;
+    o.connect(g); g.connect(ac.destination);
+    const t=ac.currentTime;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    o.start(t);
+    o.stop(t+dur+0.02);
+  }
+  // 点对：清脆短音
+  function playCorrect(){ beep(720, 0.10, 'sine', 0.16); }
+  // 点错：低沉嗡鸣
+  function playWrong(){ beep(160, 0.22, 'square', 0.20); }
+  // 集齐一个块：上行三连音
+  function playComplete(){
+    beep(660,0.10,'sine',0.18);
+    setTimeout(()=>beep(880,0.10,'sine',0.18), 100);
+    setTimeout(()=>beep(1175,0.18,'sine',0.18), 210);
+  }
+  function toggleSound(){
+    soundOn=!soundOn;
+    document.getElementById('soundBtn').textContent='音效：'+(soundOn?'开':'关');
+    if(soundOn) getAudio();
+  }
+
+  updateModeUI();
+  newGame();
+</script>
+</body>
+</html>

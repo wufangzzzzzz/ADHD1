@@ -757,6 +757,15 @@
       .vp-cell.wrong .vp-circle-top {
         background: #FF5252 !important;
       }
+      /* 视差·新1：格子本身即数字载体，正确/错误直接作用于格子背景（带 !important 以覆盖内联底色/字色） */
+      .vp-new1-cell.correct {
+        background: #4CAF50 !important;
+        color: #ffffff !important;
+      }
+      .vp-new1-cell.wrong {
+        background: #FF5252 !important;
+        color: #ffffff !important;
+      }
       @keyframes vp-spin-cw {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
@@ -2831,6 +2840,7 @@
         if (this.isBumpyMode) this.exitBumpyMode();
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isPatternMode) this.isPatternMode = false;
+        if (this.isColorMode) this.exitColorMode();
         // 退出当前混沌态（bounce / rotate）
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
@@ -2921,6 +2931,7 @@
           if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
           if (this.isBumpyMode) this.exitBumpyMode();
           if (this.isPatternMode) this.isPatternMode = false;
+          if (this.isColorMode) this.exitColorMode();
           // 毁灭模式重置（修复：毁灭5下进入马赛克需清理 destroyMode，否则残留）
           if (this.destroyMode > 0) {
             this.destroyMode = 0;
@@ -3081,6 +3092,8 @@
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
         if (this.isBumpyMode) this.exitBumpyMode();
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
         // 若之前处于方形·变换 / 方形·色彩 子模式，先干净退出
         if (this.isSquareMoveMode) {
           if (this.squareMoveDirection === 4) this.exitSquareTransformMode();
@@ -3182,6 +3195,8 @@
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
         if (this.isBumpyMode) this.exitBumpyMode();
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
         if (this.destroyMode > 0) { this.destroyMode = 0; var d2 = document.querySelector('.destroy-toggle'); if (d2) { d2.dataset.destroy = 'false'; d2.classList.remove('active','state1','state2','state3','state4','state5'); d2.textContent = '毁灭'; } }
         if (this.voidMode > 0) { this.voidMode = 0; var v2 = document.querySelector('.void-toggle'); if (v2) { v2.classList.remove('active'); v2.dataset.void = 'false'; v2.textContent = '虚无'; } }
 
@@ -3298,6 +3313,8 @@
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
         if (this.isBumpyMode) this.exitBumpyMode();
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
         if (this.isSquareMoveMode) {
           if (this.squareMoveDirection === 4) this.exitSquareTransformMode();
           else if (this.squareMoveDirection === 5) { /* 同项退出由 setSquareMoveSub 处理 */ }
@@ -3627,6 +3644,8 @@
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isSquareMoveMode) this.exitSquareMoveMode();
         if (this.isBumpyMode) this.exitBumpyMode();
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
           var dbtn = document.querySelector('.destroy-toggle');
@@ -3837,6 +3856,7 @@
             var color = isA ? A : B;
             var number = this.numbers[numIdx++];
             var cell = document.createElement('div');
+            cell.className = 'vp-cell vp-new1-cell';
             cell.style.position = 'relative';
             cell.style.width = cellSize + 'px';
             cell.style.height = cellSize + 'px';
@@ -4062,6 +4082,8 @@
         if (this.isMosaicMode) this.exitMosaicMode();
         if (this.isSquareMoveMode) this.exitSquareMoveMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
 
         this.isBumpyMode = true;
         this.currentMode = 'normal';
@@ -4218,6 +4240,8 @@
         }
         if (this.squareMoveDirection === 4) {
           this.renderSquareTransformGrid();
+        } else if (this.squareMoveDirection === 5) {
+          this.renderSquareColorGrid();
         } else if (this.squareMoveDirection === 2) {
           this._renderSquareMoveVertical();
         } else if (this.squareMoveDirection === 3) {
@@ -5914,6 +5938,10 @@
           num.style.fontWeight = '700';
           num.style.fontFamily = 'inherit';
           num.style.pointerEvents = 'none';   // 数字不拦截点击
+          // 彩格模式：数字加白色描边（仅本模式，不影响其它模式）
+          var strokeW = Math.max(1.5, Math.round(square * 0.04));
+          num.style.webkitTextStroke = strokeW + 'px #ffffff';
+          num.style.paintOrder = 'stroke fill';
 
           cell.appendChild(bg);
           cell.appendChild(num);
@@ -6806,7 +6834,13 @@
         } else if (this.isVariantMode) {
           difficultyStr = '变体模式 (' + total + '个' + ntLabel + ')';
         } else if (this.isSquareMoveMode) {
-          difficultyStr = (this.squareMoveDirection === 3 ? '方形（横纵）' : (this.squareMoveDirection === 2 ? '方形（纵）' : '方形（横）')) + '(' + total + '个' + ntLabel + ')';
+          var smLabel;
+          if (this.squareMoveDirection === 4) smLabel = '方形（变换）';
+          else if (this.squareMoveDirection === 5) smLabel = '方形（色彩）';
+          else if (this.squareMoveDirection === 3) smLabel = '方形（横纵）';
+          else if (this.squareMoveDirection === 2) smLabel = '方形（纵）';
+          else smLabel = '方形（横）';
+          difficultyStr = smLabel + '(' + total + '个' + ntLabel + ')';
         } else if (this.isVisualParallaxMode) {
           difficultyStr = '视差' + (this.vpSubMode === 3 ? '·新1' : (this.vpSubMode === 2 ? '（动）' : '（静）')) + ' (' + total + '个' + ntLabel + ')';
         } else if (this.isBumpyMode) {
@@ -7473,6 +7507,8 @@
         if (this.isBumpyMode) {
           this.exitBumpyMode();
         }
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
         // 毁灭4模式切换到圆形时，重置毁灭状态，避免切回方形时DOM不匹配
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
@@ -7590,6 +7626,9 @@
         if (this.isBumpyMode) {
           this.exitBumpyMode();
         }
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
+        if (this.isRotateMode) this.exitRotateMode();
         this.isBounceMode = true;
         this.isCircularMode = false;
         this.previousMode = this.currentMode;
@@ -7771,6 +7810,9 @@
         if (this.isRotateMode) {
           this.exitRotateMode();
         }
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
+        if (this.isCircularMode) this.exitCircularMode();
         // 毁灭模式重置
         if (this.destroyMode > 0) {
           this.destroyMode = 0;
