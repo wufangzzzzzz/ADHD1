@@ -853,24 +853,27 @@ const DIFF_CONFIG = {
   'easy-easy':   {isi:1500, goRatio:0.80, window:1200, total:30, label:'初级·简单'},
   'easy-medium': {isi:1200, goRatio:0.75, window:1000, total:40, label:'初级·中等'},
   'easy-hard':   {isi:1000, goRatio:0.70, window:800,  total:40, label:'初级·困难'},
-  'medium-easy': {isi:900,  goRatio:0.70, window:700,  total:50, label:'中级·简单'},
-  'medium-medium':{isi:800, goRatio:0.65, window:600,  total:50, label:'中级·中等'},
-  'medium-hard': {isi:700,  goRatio:0.60, window:500,  total:60, label:'中级·困难'},
-  'hard-easy':   {isi:600,  goRatio:0.60, window:450,  total:60, label:'高级·简单'},
-  'hard-medium': {isi:500,  goRatio:0.55, window:400,  total:80, label:'高级·中等'},
-  'hard-hard':   {isi:400,  goRatio:0.50, window:350,  total:100,label:'高级·困难'},
+  'medium-easy': {isi:900,  goRatio:0.70, window:800,  total:50, label:'中级·简单'},
+  'medium-medium':{isi:800, goRatio:0.65, window:700,  total:50, label:'中级·中等'},
+  'medium-hard': {isi:700,  goRatio:0.60, window:600,  total:60, label:'中级·困难'},
+  'hard-easy':   {isi:600,  goRatio:0.60, window:550,  total:60, label:'高级·简单'},
+  'hard-medium': {isi:500,  goRatio:0.55, window:500,  total:80, label:'高级·中等'},
+  'hard-hard':   {isi:400,  goRatio:0.50, window:450,  total:100,label:'高级·困难'},
 };
+
+// 宽限期：绿块窗口到期后仍亮在屏幕上，这段时间内点击仍算命中（避免“还亮着却点不动”）
+const GRACE_MS = 150;
 
 const ADULT_DIFF = {
   'easy-easy':   {isi:900,  goRatio:0.70, window:700,  total:50, label:'初级·简单'},
   'easy-medium': {isi:800,  goRatio:0.65, window:600,  total:50, label:'初级·中等'},
   'easy-hard':   {isi:700,  goRatio:0.60, window:500,  total:60, label:'初级·困难'},
-  'medium-easy': {isi:600,  goRatio:0.60, window:450,  total:60, label:'中级·简单'},
-  'medium-medium':{isi:500, goRatio:0.55, window:400,  total:80, label:'中级·中等'},
-  'medium-hard': {isi:400,  goRatio:0.50, window:350,  total:100,label:'中级·困难'},
-  'hard-easy':   {isi:350,  goRatio:0.50, window:300,  total:100,label:'高级·简单'},
-  'hard-medium': {isi:300,  goRatio:0.45, window:250,  total:120,label:'高级·中等'},
-  'hard-hard':   {isi:250,  goRatio:0.40, window:200,  total:150,label:'高级·困难'},
+  'medium-easy': {isi:600,  goRatio:0.60, window:550,  total:60, label:'中级·简单'},
+  'medium-medium':{isi:500, goRatio:0.55, window:500,  total:80, label:'中级·中等'},
+  'medium-hard': {isi:400,  goRatio:0.50, window:450,  total:100,label:'中级·困难'},
+  'hard-easy':   {isi:350,  goRatio:0.50, window:400,  total:100,label:'高级·简单'},
+  'hard-medium': {isi:300,  goRatio:0.45, window:350,  total:120,label:'高级·中等'},
+  'hard-hard':   {isi:250,  goRatio:0.40, window:300,  total:150,label:'高级·困难'},
 };
 
 const CPT_CONFIG = {
@@ -901,7 +904,9 @@ let state = {
   score: 0,
   stimulusTimer: null,
   windowTimer: null,
+  graceTimer: null,
   trialStartTime: 0,
+  accepting: false,
   dotType: null,
   shape: 'circle',
   responded: false,
@@ -1181,6 +1186,7 @@ function runTrial(){
   // 清除旧定时器，防止重复元素
   clearTimeout(state.stimulusTimer);
   clearTimeout(state.windowTimer);
+  clearTimeout(state.graceTimer);
   if(state.currentTrial>=state.trials.length){
     endGame();
     return;
@@ -1202,15 +1208,23 @@ function runTrial(){
     shape.id='current-shape';
     document.getElementById('stimulus-content').appendChild(shape);
     state.trialStartTime=performance.now();
+    state.accepting=true;
     playBeep(500,0.05,0.08);
     state.windowTimer=setTimeout(()=>{
       if(!state.responded){
         if(dotType==='go'){
-          flashBorder('miss');
-          playBeep(200,0.2,0.15);
+          // 窗口到期但未点：进入宽限期，绿块仍亮着，期间点击仍算命中
+          state.graceTimer=setTimeout(()=>{
+            if(!state.responded){
+              flashBorder('miss');
+              playBeep(200,0.2,0.15);
+              nextTrial();
+            }
+          },GRACE_MS);
+        } else {
+          // No-Go 忍住不点 = 抑制成功，不闪烁
+          nextTrial();
         }
-        // No-Go 忍住不点 = 抑制成功，不闪烁
-        nextTrial();
       }
     },cfg.window);
   },cfg.isi);
@@ -1229,6 +1243,7 @@ function runCPTTrial(){
     charEl.textContent=trial.char;
     document.getElementById('stimulus-content').appendChild(charEl);
     state.trialStartTime=performance.now();
+    state.accepting=true;
     playBeep(500,0.04,0.06);
     state.windowTimer=setTimeout(()=>{
       document.getElementById('stimulus-content').innerHTML='';
@@ -1247,9 +1262,10 @@ function runCPTTrial(){
 }
 
 function handleClick(){
-  if(!state.running || state.responded || !state.trialStartTime) return;
+  if(!state.running || state.responded || !state.accepting) return;
   state.responded=true;
   clearTimeout(state.windowTimer);
+  clearTimeout(state.graceTimer);
   const rt=performance.now()-state.trialStartTime;
   if(state.dotType==='go'){
     state.score+=10;
@@ -1281,6 +1297,8 @@ function recordTrial(type,rt){
 function nextTrial(){
   state.currentTrial++;
   state.trialStartTime=0;
+  state.accepting=false;
+  document.getElementById('stimulus-content').innerHTML='';
   const total=state.trials.length;
   document.getElementById('progress-fill').style.width=(state.currentTrial/total*100)+'%';
   document.getElementById('trial-info').textContent=`${state.currentTrial} / ${total}`;
@@ -1289,6 +1307,8 @@ function nextTrial(){
 
 function resetToIdle(){
   state.running=false;
+  state.accepting=false;
+  clearTimeout(state.graceTimer);
   const btn=document.getElementById('start-btn');
   btn.textContent='开始训练';
   btn.classList.remove('stop-mode');
@@ -1305,6 +1325,7 @@ function resetToIdle(){
 function stopGame(){
   clearTimeout(state.stimulusTimer);
   clearTimeout(state.windowTimer);
+  clearTimeout(state.graceTimer);
   endGame();
 }
 
@@ -1317,6 +1338,7 @@ function endGame(){
   document.getElementById('hint-bar').style.opacity='0.3';
   clearTimeout(state.stimulusTimer);
   clearTimeout(state.windowTimer);
+  clearTimeout(state.graceTimer);
   // 完成提示音
   if(audioCtx){
     playBeep(523,0.15,0.12);

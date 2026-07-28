@@ -2196,7 +2196,13 @@
               <div class="mode-menu-item" data-sub="3" data-dyn="true" onclick="game.setColorSub(3,true)">彩格3·动</div>
             </div>
           </div>
-          <button class="mode-btn" data-mode="pattern" id="pattern-mode-btn" onclick="game.setMode('pattern')">图案</button>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="pattern" id="pattern-mode-btn" onclick="game.toggleModeMenu('pattern')">图案 ▾</button>
+            <div class="mode-menu" id="pattern-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item" data-sub="1" onclick="game.setPatternSub(1)">图案1·半圆</div>
+              <div class="mode-menu-item" data-sub="2" onclick="game.setPatternSub(2)">图案2·三角密铺</div>
+            </div>
+          </div>
           <button class="mode-btn speed-toggle" id="speed-toggle-btn" onclick="game.toggleSpeed()" style="display:none;">转速:0.1</button>
         </div>
       </div>
@@ -2676,12 +2682,15 @@
             }
           }
           this.isPatternMode = true;
-          this.patternSub = 1;
+          if (!this.patternSub) this.patternSub = 1;
           this.currentMode = 'pattern';
-          var pbtns = document.querySelectorAll('.mode-btn');
-          for (var pi = 0; pi < pbtns.length; pi++) {
-            pbtns[pi].classList.remove('active');
-            if (pbtns[pi].dataset.mode === 'pattern') pbtns[pi].classList.add('active');
+          var allModeBtns = document.querySelectorAll('.mode-btn');
+          for (var ami = 0; ami < allModeBtns.length; ami++) allModeBtns[ami].classList.remove('active');
+          var pbtn = document.getElementById('pattern-mode-btn');
+          if (pbtn) { pbtn.classList.add('active'); pbtn.textContent = '图案' + this.patternSub + ' ▾'; }
+          var pmitems = document.querySelectorAll('#pattern-menu .mode-menu-item');
+          for (var pmi = 0; pmi < pmitems.length; pmi++) {
+            pmitems[pmi].classList.toggle('selected', parseInt(pmitems[pmi].dataset.sub) === this.patternSub);
           }
           this.reset();
           return;
@@ -2894,6 +2903,30 @@
       SchulteGridGame.prototype.closeAllModeMenus = function() {
         var all = document.querySelectorAll('.mode-menu');
         for (var i = 0; i < all.length; i++) all[i].classList.remove('show');
+      };
+
+      // 图案下拉：切换子类型
+      SchulteGridGame.prototype.setPatternSub = function(sub) {
+        sub = parseInt(sub) || 1;
+        if (this.isPatternMode && this.patternSub === sub) {
+          this.closeAllModeMenus();
+          return;
+        }
+        if (!this.isPatternMode) {
+          this.setMode('pattern');
+          return;
+        }
+        this.patternSub = sub;
+        var pbtn = document.getElementById('pattern-mode-btn');
+        if (pbtn) { pbtn.classList.add('active'); pbtn.textContent = '图案' + sub + ' ▾'; }
+        var pmitems = document.querySelectorAll('#pattern-menu .mode-menu-item');
+        for (var pmi = 0; pmi < pmitems.length; pmi++) {
+          pmitems[pmi].classList.toggle('selected', parseInt(pmitems[pmi].dataset.sub) === sub);
+        }
+        this.closeAllModeMenus();
+        this.renderGrid();
+        this.updateUI();
+        this.updateStartButtonText();
       };
 
       // 马赛克下拉：静/动 两态
@@ -3453,11 +3486,11 @@
             cell.style.background = 'transparent';
             cell.style.border = 'none';
             cell.style.borderRadius = '0';
-            cell.style.color = '#23282e';
+            cell.style.color = '#ffffff';
             cell.style.fontSize = fontSize + 'px';
-            cell.style.fontWeight = '800';
+            cell.style.fontFamily = "'Source Han Sans SC','Source Han Sans','Noto Sans CJK SC','思源黑体',sans-serif";
+            cell.style.fontWeight = '400';
             cell.style.zIndex = '3';
-            cell.style.textShadow = '-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff';
             (function(self, n, el) {
               cell.onclick = function() { self.handleClick(n, el); };
             })(this, num, cell);
@@ -5692,6 +5725,10 @@
       // 图案模式渲染：每格 = 容积A色背景 + 半圆B色 + 两位数字（压半圆那位=A、另一位=B）
       // 数字格式化为两位（01, 02, ...）；A=暗+高饱和、B=亮+柔和，色相差129°，每局随机A锚点
       SchulteGridGame.prototype._renderPatternGrid = function(container, cellSize) {
+        if (this.patternSub === 2) {
+          this._renderTrianglePatternGrid(container, cellSize);
+          return;
+        }
         container.style.display = 'grid';
         container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
         container.style.gap = '';
@@ -5780,6 +5817,108 @@
 
           container.appendChild(cell);
         }
+      };
+
+      // 图案2：三角密铺（按参考图规律：黑底、红黄青三色三角、每格一个数字）
+      SchulteGridGame.prototype._renderTrianglePatternGrid = function(container, cellSize) {
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+        container.style.background = '#1a1a1a';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.gridTemplateColumns = '';
+        container.style.gridTemplateRows = '';
+        container.style.gap = '';
+        container.innerHTML = '';
+
+        var n = this.gridSize;
+        var side = cellSize;
+        var h = side * Math.sqrt(3) / 2;
+        var width = n * side;
+        var height = n * h;
+
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        var svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('viewBox', '0 0 ' + width.toFixed(2) + ' ' + height.toFixed(2));
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', 'auto');
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svg.style.display = 'block';
+
+        // 参考图主色：红、黄、青，黑底黑线
+        var colors = ['#F44336', '#FDD835', '#00BCD4'];
+        var bgStroke = '#1a1a1a';
+
+        var idx = 0;
+        for (var row = 0; row < n; row++) {
+          var pointingUp = (row % 2 === 0);
+          for (var col = 0; col < n; col++) {
+            var x = col * side;
+            var y = row * h;
+            var num = this.numbers[idx];
+
+            var pts;
+            if (pointingUp) {
+              pts = (x + side / 2).toFixed(2) + ',' + y.toFixed(2) + ' ' +
+                    x.toFixed(2) + ',' + (y + h).toFixed(2) + ' ' +
+                    (x + side).toFixed(2) + ',' + (y + h).toFixed(2);
+            } else {
+              pts = x.toFixed(2) + ',' + y.toFixed(2) + ' ' +
+                    (x + side).toFixed(2) + ',' + y.toFixed(2) + ' ' +
+                    (x + side / 2).toFixed(2) + ',' + (y + h).toFixed(2);
+            }
+
+            // 颜色规律：沿行列对角线循环三色，与参考图相近
+            var colorIdx = ((row + col) % 3 + 3) % 3;
+            var fill = colors[colorIdx];
+
+            var g = document.createElementNS(SVGNS, 'g');
+            g.setAttribute('class', 'pattern-tri-group');
+            g.setAttribute('data-number', num);
+            g.style.cursor = 'pointer';
+
+            var poly = document.createElementNS(SVGNS, 'polygon');
+            poly.setAttribute('class', 'pattern-tri-poly');
+            poly.setAttribute('points', pts);
+            poly.setAttribute('fill', fill);
+            poly.setAttribute('stroke', bgStroke);
+            poly.setAttribute('stroke-width', '2');
+            poly.setAttribute('stroke-linejoin', 'round');
+            g.appendChild(poly);
+
+            var cx = x + side / 2;
+            var cy = y + h / 2;
+            // 视觉上让数字在三角重心附近
+            if (pointingUp) cy += side * 0.06;
+            else cy -= side * 0.06;
+
+            var txt = document.createElementNS(SVGNS, 'text');
+            txt.setAttribute('class', 'pattern-tri-text');
+            txt.setAttribute('x', cx.toFixed(2));
+            txt.setAttribute('y', cy.toFixed(2));
+            txt.setAttribute('text-anchor', 'middle');
+            txt.setAttribute('dominant-baseline', 'central');
+            txt.setAttribute('font-size', Math.floor(side * 0.42));
+            txt.setAttribute('font-weight', '700');
+            txt.setAttribute('fill', '#ffffff');
+            txt.setAttribute('stroke', '#1a1a1a');
+            txt.setAttribute('stroke-width', '0.6');
+            txt.setAttribute('paint-order', 'stroke');
+            txt.textContent = num;
+            g.appendChild(txt);
+
+            var self = this;
+            g.addEventListener('click', (function(number, el) {
+              return function() { self.handleClick(number, el); };
+            })(num, g));
+
+            svg.appendChild(g);
+            idx++;
+          }
+        }
+
+        container.appendChild(svg);
       };
 
       // ========== 彩格模式 ==========
@@ -6651,9 +6790,11 @@
           // 图案模式：格子内部是不透明 SVG，需直接改 SVG 填充来给变绿反馈
           var pRect = element.querySelector('rect');
           var pPath = element.querySelector('path');
+          var pPoly = element.querySelector('polygon');
           var pTexts = element.querySelectorAll('text');
           if (pRect) pRect.setAttribute('fill', '#4CAF50');
           if (pPath) pPath.setAttribute('fill', '#4CAF50');
+          if (pPoly) pPoly.setAttribute('fill', '#4CAF50');
           for (var pti = 0; pti < pTexts.length; pti++) pTexts[pti].setAttribute('fill', '#ffffff');
         } else {
           element.classList.add('correct');
@@ -6791,13 +6932,17 @@
         } else if (this.isPatternMode) {
           // 图案模式：SVG 不透明，直接改 SVG 填充闪红 + 抖动
           var pRectW = element.querySelector('rect');
+          var pPolyW = element.querySelector('polygon');
           var origFillW = pRectW ? pRectW.getAttribute('fill') : '';
+          var origPolyFillW = pPolyW ? pPolyW.getAttribute('fill') : '';
           if (pRectW) pRectW.setAttribute('fill', '#FF5252');
+          if (pPolyW) pPolyW.setAttribute('fill', '#FF5252');
           element.style.animation = 'shake 0.4s ease';
           this.playSound('wrong');
           var selfPW = element;
           setTimeout(function() {
             if (pRectW) pRectW.setAttribute('fill', origFillW);
+            if (pPolyW) pPolyW.setAttribute('fill', origPolyFillW);
             selfPW.style.animation = '';
           }, 400);
         } else {
