@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>专注力测评系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#f4f8f5; --card:#fff; --ink:#2c3e50; --sub:#6a7178;
+  --line:#e8edf0; --teal:#2ba89e; --blue:#6a9bcc; --red:#d97757; --green:#788c5d; --purple:#8b7cb6; --amber:#c4a35a;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px;min-height:100vh;}
+.btn{display:inline-block;border:none;cursor:pointer;font-size:16px;font-weight:600;border-radius:12px;padding:14px 22px;transition:.18s;font-family:inherit;}
+.btn-teal{background:var(--teal);color:#fff;}
+.btn-teal:hover{background:#249a90;}
+.btn-ghost{background:#eef4f1;color:var(--teal);}
+.btn-ghost:hover{background:#e2efe9;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.center{text-align:center;}
+.hidden{display:none!important;}
+
+/* 落地页 */
+.hero{background:linear-gradient(135deg,var(--teal),var(--blue));color:#fff;border-radius:18px;padding:42px 24px;margin-bottom:26px;text-align:center;box-shadow:0 6px 22px rgba(43,168,158,.22);}
+.hero h1{font-size:26px;margin-bottom:10px;font-weight:700;letter-spacing:1px;}
+.hero p{opacity:.92;font-size:14px;}
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;}
+.choose .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:30px 18px;text-align:center;cursor:pointer;transition:.18s;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.choose .card:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.08);border-color:var(--teal);}
+.choose .card .t{font-size:20px;font-weight:700;margin-bottom:6px;}
+.choose .card .d{font-size:13px;color:var(--sub);}
+.note{font-size:13px;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:22px;line-height:1.8;}
+.note b{color:var(--teal);}
+
+/* 表单 */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.topbar .back{cursor:pointer;color:var(--sub);font-size:14px;background:none;border:none;font-family:inherit;}
+.topbar .back:hover{color:var(--teal);}
+.progress{height:8px;background:#e4ece8;border-radius:6px;overflow:hidden;margin-bottom:6px;}
+.progress>i{display:block;height:100%;width:0;background:var(--teal);transition:width .25s;}
+.progress-tip{font-size:12px;color:var(--sub);text-align:right;margin-bottom:18px;}
+.form-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 18px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.info-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px;}
+.info-row label{font-size:13px;color:var(--sub);display:block;margin-bottom:4px;}
+.info-row input,.info-row select{flex:1;min-width:120px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit;background:#fbfdfc;}
+.dim-title{font-size:18px;font-weight:700;margin:22px 0 4px;padding-left:10px;border-left:4px solid var(--teal);}
+.dim-sub{font-size:13px;color:var(--sub);margin-bottom:10px;}
+.q{background:#fbfdfc;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+.q .qt{font-size:15px;margin-bottom:10px;line-height:1.6;}
+.q .opts{display:flex;gap:8px;flex-wrap:wrap;}
+.opt{flex:1;min-width:90px;text-align:center;padding:9px 6px;border:1px solid var(--line);border-radius:9px;cursor:pointer;font-size:14px;background:#fff;transition:.15s;user-select:none;}
+.opt:hover{border-color:var(--teal);}
+.opt.on{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:600;}
+.warn{border-color:var(--red)!important;background:#fff6f3;}
+
+/* 报告 */
+.report-header{background:linear-gradient(135deg,var(--teal),var(--blue));color:#fff;border-radius:16px;padding:30px 22px;margin-bottom:20px;text-align:center;box-shadow:0 6px 20px rgba(43,168,158,.2);}
+.report-header h1{font-size:23px;margin-bottom:6px;}
+.report-header p{opacity:.92;font-size:14px;}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.sec h2{font-size:20px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--line);}
+.sec h3{font-size:16px;color:var(--sub);margin:16px 0 8px;}
+.tb{width:100%;border-collapse:collapse;margin:6px 0;font-size:14px;}
+.tb th,.tb td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);}
+.tb th{background:#f6f9f8;font-weight:600;color:var(--sub);}
+.tb tr:last-child td{border-bottom:none;}
+.tag{display:inline-block;padding:2px 11px;border-radius:12px;font-size:12px;font-weight:700;}
+.tr{background:#fdeaea;color:var(--red);}
+.ty{background:#fdf3e6;color:var(--amber);}
+.tg{background:#e9f3ea;color:var(--green);}
+canvas{width:100%!important;display:block;margin:14px auto;}
+.sb{background:#f7faf9;border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;margin:12px 0;font-size:14px;line-height:1.7;}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+.pc{background:#f7faf9;border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+.pc .wk{font-weight:700;color:var(--teal);font-size:15px;}
+.pc .fc{color:var(--red);font-size:13px;margin:3px 0;}
+.pc .dc{font-size:13px;color:var(--sub);}
+.tip-box{background:#eef6f4;border-left:4px solid var(--teal);padding:13px 16px;border-radius:8px;margin:14px 0;font-size:14px;line-height:1.8;}
+.ref-note{font-size:13px;color:var(--sub);background:#fff8f1;border-left:3px solid var(--amber);padding:11px 15px;border-radius:8px;margin:12px 0;line-height:1.8;}
+.ref-item{background:#f8fafb;border:1px solid var(--line);border-radius:8px;padding:11px 15px;margin:8px 0;font-size:13px;color:#445;line-height:1.7;}
+.ref-item .rn{font-weight:700;color:var(--teal);margin-right:4px;}
+.ref-item .rj{color:#9aa;font-size:12px;margin-left:6px;}
+.gl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0;}
+.gi{background:#f7faf9;padding:9px 13px;border-radius:8px;font-size:14px;border-left:3px solid var(--blue);}
+.gi.a{border-left-color:var(--red);}
+.gi.b{border-left-color:var(--green);}
+.gi.t{border-left-color:var(--purple);}
+.lib-h{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;margin:14px 0;}
+.lib-h>div{background:#f7faf9;padding:9px 10px;font-size:13px;border-left:3px solid var(--blue);}
+.lib-h .a{border-left-color:var(--red);}
+.lib-h .b{border-left-color:var(--green);}
+.lib-h .t{border-left-color:var(--purple);}
+.actions{display:flex;gap:12px;justify-content:center;margin:24px 0 8px;flex-wrap:wrap;}
+.sig{text-align:center;color:#aab;font-size:12px;padding:18px 0 4px;}
+a.link{color:var(--teal);text-decoration:underline;}
+@media(max-width:560px){.choose,.pg,.gl,.lib-h{grid-template-columns:1fr;}.lib-h{grid-template-columns:1fr 1fr;}.hero{padding:30px 18px;}}
+@media print{.wrap{max-width:100%;padding:0 8px;}.sec,.report-header{box-shadow:none;break-inside:avoid;}.actions{display:none;}.no-print{display:none;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 落地页 -->
+  <section id="landing">
+    <div class="hero">
+      <h1>专注力测评系统</h1>
+      <p>基于可观测困难行为的三维度测评 · 听觉 / 视觉 / 行为</p>
+    </div>
+    <div class="choose">
+      <div class="card" onclick="start('adult')">
+        <div class="t">成人版</div>
+        <div class="d">13岁及以上 · 80题自填<br>约15分钟</div>
+      </div>
+      <div class="card" onclick="start('kids')">
+        <div class="t">儿童版</div>
+        <div class="d">4-12岁 · 家长代填<br>80题约15分钟</div>
+      </div>
+    </div>
+    <div class="note">
+      <b>测评说明：</b>本测评从听觉、视觉、行为三个维度评估专注力表现。每题按「经常 / 偶尔 / 基本没有」三种频率作答，得分率越低代表困扰越少、状态越好。报告含三维度总览、子维度分析、12周训练方案与游戏推荐，供能力训练参考（非临床诊断）。
+    </div>
+  </section>
+
+  <!-- 表单页 -->
+  <section id="formView" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="goLanding()">← 返回</button>
+      <span id="formType" style="font-weight:600;"></span>
+    </div>
+    <div class="progress"><i id="progBar"></i></div>
+    <div class="progress-tip"><span id="progTxt">0 / 80</span> 题已作答</div>
+    <div id="infoArea"></div>
+    <div class="note" id="formHint" style="margin-top:14px;"></div>
+    <div id="questions"></div>
+    <div class="actions">
+      <button class="btn btn-teal" id="submitBtn" onclick="submit()">提交并生成报告</button>
+    </div>
+  </section>
+
+  <!-- 报告页 -->
+  <section id="reportView" class="hidden"></section>
+
+</div>
+
+<script>
+/* ============ 问卷结构（原题来自《专注力测评_详细问卷与SOP分析手册》2026-07-29 精细版） ============ */
+const SURVEY = {
+  adult: {
+    typeLabel: '成人精细版',
+    info: [
+      {id:'name', label:'姓名', ph:'如：张三'},
+      {id:'age', label:'年龄', ph:'如：28'},
+      {id:'date', label:'测评日期', ph:'如：2026-07-29'}
+    ],
+    groups: [
+      {dim:'A', dimName:'听觉注意力', subdims:[
+        {sub:'A1', name:'听觉分辨与理解', items:[
+          '在嘈杂环境中听清对话内容',
+          '记住听到的一串数字或信息',
+          '分辨相似的语音或音调',
+          '长时间听讲或会议时保持专注',
+          '听完后准确复述要点',
+          '理解复杂的口头指令',
+          '辨别声音的来源方向',
+          '跟读陌生或专业词汇',
+          '听出说话者的语调变化和情绪',
+          '多任务处理时的听觉注意力',
+          '电话中听清对方表述',
+          '在多人同时说话时锁定目标声音'
+        ]},
+        {sub:'A2', name:'听觉记忆与高阶处理', items:[
+          '听讲座时抓住逻辑主线',
+          '听完一段话后做准确摘要',
+          '分辨外语或方言的细微发音差异',
+          '听觉信息延迟回忆(隔天)',
+          '听播客或有声书保持专注',
+          '边听边记笔记的能力',
+          '在背景音乐下高效工作',
+          '听出对方言外之意',
+          '快速处理听觉警告信号',
+          '理解含有数据的口头报告',
+          '参与线上语音会议不跑神',
+          '听辨语速变化并适应',
+          '长时间听觉输入不疲劳'
+        ]}
+      ]},
+      {dim:'V', dimName:'视觉注意力', subdims:[
+        {sub:'V1', name:'视觉分辨与空间感知', items:[
+          '快速扫描并定位关键信息',
+          '区分相似文字或符号',
+          '阅读时保持行序不跳行',
+          '准确抄写或录入信息',
+          '记住看到的数据图表',
+          '辨别方向和空间方位',
+          '整理和归类视觉信息',
+          '在复杂图表中发现细节差异',
+          '手眼协调完成精细操作',
+          '长时间屏幕工作不疲劳',
+          '在密集文字中找出特定词汇',
+          '区分颜色或灰度细微差异',
+          '按逻辑顺序排列视觉元素',
+          '记住看过的页面布局'
+        ]},
+        {sub:'V2', name:'视觉记忆与综合处理', items:[
+          '识别图形旋转或翻转后的形态',
+          '视觉搜索效率(如找东西)',
+          '区分主体信息和背景噪音',
+          '阅读图表提取关键数据',
+          '书写排版整齐规范',
+          '在人群中识别目标人物',
+          '视觉工作记忆保持',
+          '判断物体间距和大小关系',
+          '视觉信息转化为语言描述',
+          '区分不同字体同一内容',
+          '在迷宫中规划路径',
+          '视觉疲劳后的恢复速度',
+          '多窗口多任务时的视觉管理',
+          '发现两幅图的细微差异'
+        ]}
+      ]},
+      {dim:'B', dimName:'行为表现', subdims:[
+        {sub:'B1', name:'执行功能与自控', items:[
+          '长时间保持静坐专注工作',
+          '按计划有序推进任务',
+          '控制不经思考的冲动决定',
+          '整理和规划工作空间',
+          '遵守流程和规则',
+          '独立完成复杂任务',
+          '按时交付工作成果',
+          '在不同任务间切换时快速进入状态',
+          '管理时间安排优先级',
+          '排除干扰保持深度专注',
+          '在等待时保持耐心',
+          '团队协作时兼顾他人进度',
+          '犯了错误主动纠正'
+        ]},
+        {sub:'B2', name:'情绪管理与持久力', items:[
+          '接受批评时情绪管理',
+          '在需要安静的场合保持安静',
+          '重要任务不拖延',
+          '用完的东西放回原位',
+          '不在不合适的场合随意发言',
+          '会议中不打断别人',
+          '重要物品和文件不遗失',
+          '发现问题后主动修正',
+          '长期项目坚持到底不半途而废',
+          '适应日程或环境的变化',
+          '合理表达需求和边界',
+          '遵守约定和承诺',
+          '能够延迟满足等待更大回报',
+          '面对失败和挫折后较快恢复'
+        ]}
+      ]}
+    ]
+  },
+  kids: {
+    typeLabel: '儿童精细版',
+    info: [
+      {id:'name', label:'孩子姓名', ph:'如：小明'},
+      {id:'age', label:'年龄', ph:'如：9'},
+      {id:'submitter', label:'家长姓名', ph:'如：家长姓名'},
+      {id:'date', label:'测评日期', ph:'如：2026-07-29'}
+    ],
+    groups: [
+      {dim:'A', dimName:'听觉注意力', subdims:[
+        {sub:'A1', name:'听觉接收与分辨', items:[
+          '听指令完成简单任务',
+          '听短故事后回答问题',
+          '在嘈杂环境中听清对话',
+          '记住听到的数字序列(3-5个)',
+          '分辨相似发音',
+          '课堂听讲保持专注5分钟以上',
+          '听完后复述3个要点',
+          '辨别声音来源方向',
+          '跟读新学词语',
+          '理解两步及以上口头指令'
+        ]},
+        {sub:'A2', name:'听觉记忆与整合', items:[
+          '听辨节奏变化',
+          '听完问题后作出恰当回应',
+          '辨别语气中的情绪',
+          '同时听和做笔记',
+          '听觉记忆保持到第二天'
+        ]},
+        {sub:'A3', name:'听觉高阶处理', items:[
+          '分辨中文声调差异',
+          '听完一段话后概括主旨',
+          '在集体讨论中听懂轮流发言',
+          '理解含有条件关系的口语',
+          '分辨语速快慢并适应'
+        ]}
+      ]},
+      {dim:'V', dimName:'视觉注意力', subdims:[
+        {sub:'V1', name:'视觉搜索与分辨', items:[
+          '在一堆图形中快速找到指定图形',
+          '区分相似汉字(如大太犬)',
+          '阅读时不跳行不串行',
+          '抄写黑板内容不出错',
+          '记住看过的图片细节',
+          '辨别图形旋转后的方向',
+          '按顺序排列散乱的图片',
+          '在复杂背景中找到指定物品'
+        ]},
+        {sub:'V2', name:'视觉空间与手眼协调', items:[
+          '手眼协调完成精细操作',
+          '在书架上找到指定书本',
+          '区分左右镜像图形',
+          '阅读时逐字指读不跳字',
+          '凭记忆画出看过的简单图形',
+          '区分颜色深浅差异',
+          '按大小顺序排列物品',
+          '在迷宫中找到路径'
+        ]},
+        {sub:'V3', name:'视觉记忆与细节', items:[
+          '记住文字在页面的位置',
+          '区分不同字体同一个字',
+          '拼图时找到正确位置',
+          '阅读时眼睛不疲劳',
+          '写字不出格不出线',
+          '临摹简单图形',
+          '区分相近数字(6和9)',
+          '按图示搭积木或拼乐高'
+        ]},
+        {sub:'V4', name:'视觉综合处理', items:[
+          '发现两幅图的5处不同',
+          '在人群中找到指定的人',
+          '记住路标和方向',
+          '书写时字间距均匀',
+          '识别表情和肢体语言',
+          '完成视觉搜索任务',
+          '区分主体和背景',
+          '视觉信息转化为口头描述'
+        ]}
+      ]},
+      {dim:'B', dimName:'行为表现', subdims:[
+        {sub:'B1', name:'任务执行与条理', items:[
+          '在座位上安静坐着完成10分钟任务',
+          '按老师要求的顺序完成任务',
+          '控制不经思考的冲动行为',
+          '自己整理书包和文具',
+          '遵守课堂举手发言规则',
+          '独立完成家庭作业',
+          '在规定时间内完成任务',
+          '课堂活动转换时快速适应',
+          '把自己的物品放回原位'
+        ]},
+        {sub:'B2', name:'冲动控制与社交', items:[
+          '课堂上保持专注不被窗外吸引',
+          '排队等待不插队',
+          '小组活动时与他人合作',
+          '做错事主动承认',
+          '听到否定回应后情绪稳定',
+          '在需要安静时保持安静',
+          '开始做作业时不拖延',
+          '东西用完放回原处',
+          '不在教室随意走动',
+          '轮流发言不打断别人'
+        ]},
+        {sub:'B3', name:'坚持度与适应性', items:[
+          '重要物品不遗失',
+          '作业写错了主动修改',
+          '长时间任务坚持到底',
+          '从一个活动过渡到另一个时配合',
+          '合理表达需求不哭闹',
+          '遵守游戏规则',
+          '能等待奖励延迟满足',
+          '正确应对失败和挫折',
+          '根据场合调整行为'
+        ]}
+      ]}
+    ]
+  }
+};
+
+/* ============ 等级判定（与计划4 tag() 一字不差） ============ */
+function tagInfo(rate){
+  if(rate>=70) return {label:'重点关注', cls:'tr'};
+  if(rate>=50) return {label:'中度关注', cls:'ty'};
+  if(rate>=30) return {label:'轻度关注', cls:'tg'};
+  if(rate>=1)  return {label:'状态良好', cls:'tg'};
+  return {label:'无明显专注力失调迹象', cls:'tg'};
+}
+const r1 = x => Math.round(x*10)/10;
+
+/* ============ 游戏库（与计划4 完全一致，已去除 emoji 前缀） ============ */
+const VG = ["视觉追踪","舒尔特方格","符号迷宫","多目标追踪","Dual N-back","彩色连线","数字专注力"];
+const AG = ["G1 听词行动","G2 数字回音壁","G3 声波搜索","G4 指令解码器","复读机训练","听动乐园"];
+const BG = ["B1 红灯绿灯","B2 西蒙说","B3 规则跳跳","B4 冲突色","B5 灯语任务","B6 双手协调"];
+const TG = ["视觉追踪·文字版","古诗连线","部件拼字","加工速度训练","汉字补型","词语补型","读写纠错"];
+const OF_ADULT = ["时间锁（延迟满足·15-20min）"];
+const OF_KIDS  = ["时间银行（延迟满足·15-20min）","G7故事侦探儿童版（绘本故事·听觉理解·~10min）"];
+
+const STAGES_ADULT = [
+  {wk:'第1-3周·基础激活', fc:'视觉追踪+基础听觉+冲动抑制', dc:'视觉追踪、舒尔特方格、G1听词行动、B1红灯绿灯。每周5次×15-20min'},
+  {wk:'第4-6周·能力强化', fc:'视觉分辨+听觉记忆+认知灵活', dc:'符号迷宫、彩色连线、G2数字回音壁、B3规则跳跳'},
+  {wk:'第7-9周·综合进阶', fc:'双通道整合+执行功能+工作记忆', dc:'Dual N-back、多目标追踪、G4指令解码器、B4冲突色'},
+  {wk:'第10-12周·巩固泛化', fc:'延迟满足+日常迁移', dc:'时间锁（线下）、B2西蒙说、B6双手协调'}
+];
+const STAGES_KIDS = [
+  {wk:'第1-3周·基础激活', fc:'视觉追踪+听觉基础+文字游戏入门', dc:'视觉追踪、舒尔特方格、G1听词行动、B1红灯绿灯、古诗连线。每周5次×15-20min'},
+  {wk:'第4-6周·能力强化', fc:'视觉分辨+听觉记忆+部件拼字', dc:'符号迷宫、彩色连线、G2数字回音壁、B3规则跳跳、部件拼字'},
+  {wk:'第7-9周·综合进阶', fc:'双通道整合+执行功能+读写练习', dc:'Dual N-back、多目标追踪、G4指令解码器、B4冲突色、汉字补型/词语补型'},
+  {wk:'第10-12周·巩固泛化', fc:'延迟满足+听觉理解+日常迁移', dc:'时间银行（线下）、G7故事侦探儿童版、B2西蒙说、读写纠错、视觉追踪·文字版'}
+];
+
+const REFS = [
+  ['视觉注意','Valdois et al. (2024). EVASION VAS训练RCT, 453名儿童，显著改善阅读流畅性。','Reading Research Quarterly, DOI:10.1002/rrq.576'],
+  ['认知训练Meta','Westwood et al. (2023). CCT对ADHD注意力不集中有适度但显著改善。','Molecular Psychiatry, DOI:10.1038/s41380-023-02000-7'],
+  ['执行功能','GBI Meta-analysis (2025). 20项RCT, 1376名被试, CCT改善执行功能(SMD=0.42).','PMC12751576'],
+  ['视觉闭合','Germano et al. (2014). 阅读障碍儿童存在视觉闭合与图形恒常性双重缺陷。','Frontiers in Psychology, 5:1169, DOI:10.3389/fpsyg.2014.01169'],
+  ['数字疗法·中国','鲍梦依等 (2025). 系统梳理DD四大技术路线，中国儿童ADHD患病率约7.2%。','中国现代应用药学, DOI:10.13748/j.cnki.issn1007-7693.20252057']
+];
+const REF_NOTE = '上述文献表明游戏化认知训练（CCT）的近迁移效果可靠，但远迁移（学业成绩、日常功能）证据有限（UK NICE指南NG87定位CCT为辅助手段）。本报告训练建议定位于能力训练工具，不作为临床治疗替代方案。';
+const TRAIN_NOTE = '北大六院认知训练方案为每天20分钟、每3个月评估调整一次（王久菊/王玉凤团队，2024）；短频次（15-20分钟/天）+自适应难度调节是文献一致指向的效果增强关键变量（MDPI系统综述，2026）。';
+
+/* ============ 状态 ============ */
+let CUR = null;       // 'adult' | 'kids'
+let QLIST = [];       // 扁平题列表
+
+/* ============ 视图切换 ============ */
+function goLanding(){
+  document.getElementById('landing').classList.remove('hidden');
+  document.getElementById('formView').classList.add('hidden');
+  document.getElementById('reportView').classList.add('hidden');
+  window.scrollTo(0,0);
+}
+function start(type){
+  CUR = type;
+  QLIST = [];
+  const cfg = SURVEY[type];
+  document.getElementById('formType').textContent = (type==='adult'?'成人版':'儿童版') + ' · ' + cfg.typeLabel;
+  document.getElementById('formHint').innerHTML = (type==='adult'
+    ? '请针对每一项，选择<b>你</b>在该项上出现困难的频率：<b>经常</b>（高频、明显影响日常生活）／<b>偶尔</b>（时有出现）／<b>基本没有</b>（极少或从未）。得分率越低代表困扰越少、状态越好。'
+    : '请<b>家长</b>根据孩子的实际表现，选择孩子在该项上出现困难的频率：<b>经常</b>（高频、明显影响）／<b>偶尔</b>（时有出现）／<b>基本没有</b>（极少或从未）。');
+  // 基本信息
+  let infoHtml = '<div class="form-card"><div class="dim-title" style="margin-top:0;">基本信息</div>';
+  infoHtml += '<div class="info-row">';
+  cfg.info.forEach(f=>{
+    if(f.sel){
+      infoHtml += '<div><label>'+f.label+'</label><select id="inf_'+f.id+'">'+f.sel.map(o=>'<option>'+o+'</option>').join('')+'</select></div>';
+    } else {
+      infoHtml += '<div><label>'+f.label+'</label><input id="inf_'+f.id+'" placeholder="'+(f.ph||'')+'"></div>';
+    }
+  });
+  infoHtml += '</div></div>';
+  document.getElementById('infoArea').innerHTML = infoHtml;
+  // 题目
+  let qi = 0;
+  let qHtml = '';
+  cfg.groups.forEach(g=>{
+    qHtml += '<div class="dim-title">'+g.dimName+'</div>';
+    g.subdims.forEach(sd=>{
+      qHtml += '<div class="dim-sub">'+sd.name+'</div>';
+      sd.items.forEach(txt=>{
+        const idx = qi++;
+        QLIST.push({idx, dim:g.dim, sub:sd.sub, subName:sd.name, text:txt});
+        qHtml += '<div class="q" id="q_'+idx+'"><div class="qt">'+(idx+1)+'. '+txt+'</div>'
+              + '<div class="opts">'
+              + '<div class="opt" onclick="pick('+idx+',2,this)">经常</div>'
+              + '<div class="opt" onclick="pick('+idx+',1,this)">偶尔</div>'
+              + '<div class="opt" onclick="pick('+idx+',0,this)">基本没有</div>'
+              + '</div></div>';
+      });
+    });
+  });
+  document.getElementById('questions').innerHTML = qHtml;
+  updateProgress();
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('reportView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+function pick(idx, val, el){
+  const q = QLIST[idx];
+  q.val = val;
+  const opts = el.parentNode.children;
+  for(const o of opts) o.classList.remove('on');
+  el.classList.add('on');
+  document.getElementById('q_'+idx).classList.remove('warn');
+  updateProgress();
+}
+function updateProgress(){
+  const done = QLIST.filter(q=>q.val!==undefined).length;
+  document.getElementById('progBar').style.width = (done/QLIST.length*100)+'%';
+  document.getElementById('progTxt').textContent = done + ' / ' + QLIST.length;
+}
+
+/* ============ 算分 + 生成报告数据 ============ */
+function buildData(){
+  const cfg = SURVEY[CUR];
+  const info = {};
+  cfg.info.forEach(f=>{ info[f.id] = (document.getElementById('inf_'+f.id).value||'').trim(); });
+  const name = info.name || (CUR==='adult'?'测评者':'孩子');
+
+  // 按维度、子维度聚合
+  const dims = ['A','V','B'];
+  const agg = {}; // dim -> {sum, count, subs:{sub:{sum,count,name}}}
+  dims.forEach(d=> agg[d] = {sum:0, count:0, subs:{}});
+  QLIST.forEach(q=>{
+    if(q.val===undefined) return;
+    const a = agg[q.dim];
+    a.sum += q.val; a.count++;
+    if(!a.subs[q.sub]) a.subs[q.sub] = {sum:0, count:0, name:q.subName};
+    a.subs[q.sub].sum += q.val; a.subs[q.sub].count++;
+  });
+
+  function dimRate(d){ const a=agg[d]; return a.count? r1(a.sum/(a.count*2)*100):0; }
+  function groups(d){ const a=agg[d]; return Object.keys(a.subs).map(k=>{const s=a.subs[k]; return r1(s.count? s.sum/(s.count*2)*100:0);}); }
+  function labels(d){ const a=agg[d]; return Object.keys(a.subs).map(k=>a.subs[k].name); }
+
+  const A=dimRate('A'), V=dimRate('V'), B=dimRate('B');
+  const total = r1((agg.A.sum+agg.V.sum+agg.B.sum)/((agg.A.count+agg.V.count+agg.B.count)*2)*100);
+
+  // 训练曲线：以基线为起点，按阶段递减（计划4 样本亦为下降轨迹，代表训练后得分率改善）
+  const proj = r => [1,0.92,0.84,0.77,0.70].map(f=> Math.max(0, r1(r*f)));
+  const train = [proj(A), proj(V), proj(B)];
+
+  const d = {
+    name, type: cfg.typeLabel,
+    age: info.age||'', submitter: info.submitter||'',
+    A_rate:A, V_rate:V, B_rate:B, total_rate:total,
+    A_score: agg.A.sum+'/'+agg.A.count*2, V_score: agg.V.sum+'/'+agg.V.count*2, B_score: agg.B.sum+'/'+agg.B.count*2,
+    total_score: (agg.A.sum+agg.V.sum+agg.B.sum)+'/'+(agg.A.count+agg.V.count+agg.B.count)*2,
+    A_groups: groups('A'), V_groups: groups('V'), B_groups: groups('B'),
+    A_labels: labels('A'), V_labels: labels('V'), B_labels: labels('B'),
+    train
+  };
+  const nar = narrative(d);
+  d.conclusion = nar.conclusion; d.strength = nar.strength; d.weakness = nar.weakness; d.path = nar.path;
+  return d;
+}
+
+function narrative(d){
+  const A=d.A_rate, V=d.V_rate, B=d.B_rate, T=d.total_rate;
+  const dims=[['听觉',A],['视觉',V],['行为',B]].sort((x,y)=>y[1]-x[1]);
+  const w=dims[0], m=dims[1], s=dims[2];
+  let profile;
+  if(T<30) profile='三维度状态整体良好，专注力困扰较少';
+  else if(w[1]>=70) profile=w[0]+'维度为重点关注（'+w[1]+'%），是主要短板';
+  else if(w[1]>=50) profile=w[0]+'维度中度关注（'+w[1]+'%），'+m[0]+'维度'+m[1]+'%、'+s[0]+'维度'+s[1]+'%';
+  else profile='整体以轻度困扰为主，'+w[0]+'维度略高（'+w[1]+'%）';
+  return {
+    conclusion: '<b>'+profile+'</b>——'+s[0]+'维度相对最优（'+s[1]+'%），'+w[0]+'维度需重点提升。',
+    strength: '你的'+s[0]+'注意力相对最优（'+s[1]+'%·'+tagInfo(s[1]).label+'），信息接收与处理效率较好，是后续训练的稳固基础。',
+    weakness: '你的'+w[0]+'注意力最弱（'+w[1]+'%·'+tagInfo(w[1]).label+'），建议在训练方案中作为主攻方向优先安排。',
+    path: w[0]+'强化 → '+m[0]+'巩固 → '+s[0]+'整合'
+  };
+}
+
+/* ============ 提交 ============ */
+function submit(){
+  const unanswered = QLIST.filter(q=>q.val===undefined);
+  if(unanswered.length){
+    unanswered.forEach(q=> document.getElementById('q_'+q.idx).classList.add('warn'));
+    const first = unanswered[0].idx;
+    document.getElementById('q_'+first).scrollIntoView({behavior:'smooth', block:'center'});
+    alert('还有 '+unanswered.length+' 题未作答，请全部作答后再提交。');
+    return;
+  }
+  const d = buildData();
+  renderReport(d);
+}
+
+/* ============ 报告渲染 ============ */
+function todayStr(){
+  const n=new Date();
+  return n.getFullYear()+'年'+(n.getMonth()+1)+'月'+n.getDate()+'日';
+}
+function subAnalysis(dimName, labels, values){
+  const mx=Math.max(...values), mn=Math.min(...values);
+  const im=values.indexOf(mx), inm=values.indexOf(mn);
+  if(im===inm) return '';
+  return '<div class="sb"><b>'+dimName+'分析：</b>困扰最大：'+labels[im]+'（'+values[im]+'%）; 相对较好：'+labels[inm]+'（'+values[inm]+'%）。</div>';
+}
+function renderReport(d){
+  const date = todayStr();
+  const tg=(r)=>tagInfo(r);
+  const dimRow=(cn,dim)=>{ const r=d[dim+'_rate'], lv=tg(r); return '<tr><td>'+cn+'</td><td>'+d[dim+'_score']+'</td><td>'+r+'%</td><td><span class="tag '+lv.cls+'">'+lv.label+'</span></td></tr>'; };
+  const tr=tg(d.total_rate);
+
+  // 子标题（空字段优雅处理）
+  const subParts = [];
+  if(CUR==='adult'){
+    subParts.push((d.name||'测评者')+'（成人）');
+    if(d.age) subParts.push(d.age+'岁');
+  } else {
+    subParts.push((d.name||'孩子') + (d.age? '（'+d.age+'岁）':''));
+    if(d.submitter) subParts.push('提交人：'+d.submitter);
+  }
+  subParts.push('测评日期：'+date);
+  const sub = subParts.join('｜');
+
+  let html = '';
+  html += '<div class="report-header"><h1>专注力测评分析报告</h1><p>'+sub+'</p></div>';
+
+  // 阅读提示
+  html += '<div class="ref-note" style="text-align:center;background:#eef6f4;border-left:4px solid var(--teal);">'
+        + '<b>阅读提示：</b>百分比越低代表问题越少——分数统计的是困扰出现频率，<b>0分=完全无困扰</b>，满分=所有项目都「经常」出现。请根据自身情况合理看待各项得分。</div>';
+
+  // 一、三维度总览
+  html += '<div class="sec"><h2>一、三维度总览</h2>'
+        + '<table class="tb"><tr><th>维度</th><th>得分</th><th>得分率</th><th>等级</th></tr>'
+        + dimRow('听觉注意力','A') + dimRow('视觉注意力','V') + dimRow('行为表现','B')
+        + '<tr style="background:#f6f9f8;font-weight:bold"><td>综合</td><td>'+d.total_score+'</td><td>'+d.total_rate+'%</td><td><span class="tag '+tr.cls+'">'+tr.label+'</span></td></tr>'
+        + '</table><canvas id="barChart" height="320"></canvas></div>';
+
+  // 二/三/四 子维度
+  const dims=[['A','听觉'],['V','视觉'],['B','行为']];
+  const secNo={A:'二',V:'三',B:'四'};
+  dims.forEach(([k,cn])=>{
+    const r=d[k+'_rate'], lv=tg(r);
+    html += '<div class="sec"><h2>'+secNo[k]+'、'+cn+'子维度分析（'+r+'% · '+lv.label+'）</h2>'
+          + '<canvas id="'+k+'Chart" height="320"></canvas>'
+          + subAnalysis(cn+'子维度', d[k+'_labels'], d[k+'_groups'])
+          + '</div>';
+  });
+
+  // 五、雷达
+  html += '<div class="sec"><h2>五、子维度全景雷达</h2>'
+        + '<canvas id="radarChart" height="420"></canvas></div>';
+
+  // 六、综合评分
+  const refMean = r1((d.A_rate+d.V_rate+d.B_rate)/3);
+  html += '<div class="sec"><h2>六、综合评分</h2>'
+        + '<canvas id="scoreChart" height="320"></canvas>'
+        + '<div class="sb"><b>综合评分解读：</b>听觉 '+d.A_rate+'%、视觉 '+d.V_rate+'%、行为 '+d.B_rate+'%，加权综合 <b>'+d.total_rate+'%（'+tr.label+'）</b>。综合评分反映三维度协调水平，得分率越低代表困扰越少、状态越好。柱状图中虚线为三维度均值参考线，低于虚线说明优于自身平均水平。最弱维度为<b style="color:var(--red)">'+weakDim(d)+'</b>，第八板块训练方案将以此为重点定制。</div></div>';
+
+  // 七、12周训练方案
+  const stages = CUR==='adult'?STAGES_ADULT:STAGES_KIDS;
+  html += '<div class="sec"><h2>七、12周训练方案</h2>'
+        + '<canvas id="trainChart" height="340"></canvas>'
+        + '<div class="pg">'+stages.map(s=>'<div class="pc"><div class="wk">'+s.wk+'</div><div class="fc">'+s.fc+'</div><div class="dc">'+s.dc+'</div></div>').join('')+'</div>'
+        + '<div class="ref-note"><b>训练节奏参考：</b>'+TRAIN_NOTE+'</div></div>';
+
+  // 八、游戏推荐
+  html += gameGuide(d);
+
+  // 九、科学依据
+  html += '<div class="sec"><h2>九、科学依据</h2>'
+        + '<p style="font-size:14px;color:var(--sub);margin-bottom:14px;">本测评维度设计与训练建议参考以下经独立核验的学术研究与机构实践：</p>'
+        + REFS.map(r=>'<div class="ref-item"><span class="rn">【'+r[0]+'】</span>'+r[1]+'<span class="rj">'+r[2]+'</span></div>').join('')
+        + '<div class="ref-note">'+REF_NOTE+'</div></div>';
+
+  // 十、总结
+  html += '<div class="sec"><h2>十、总结</h2><div class="sb">'
+        + '<p>'+d.conclusion+'</p>'
+        + '<p>'+d.strength+'</p>'
+        + '<p>'+d.weakness+'</p>'
+        + '<p><b>干预路径：</b>'+d.path+'</p>'
+        + (d.total_rate===0 ? '<p style="color:var(--blue);">你状态正常，可以玩玩<a class="link" href="index.html">舒尔特方格</a>很有趣。</p>' : '')
+        + '</div></div>';
+
+  const signer = CUR==='adult' ? '专注力搭子' : '读写障碍力老师';
+  html += '<div class="sig">'+signer+' | '+date+' | 专注力测评分析报告</div>';
+  html += '<div class="actions no-print"><button class="btn btn-ghost" onclick="window.print()">打印 / 保存为PDF</button>'
+        + '<button class="btn btn-teal" onclick="goLanding()">重新测评</button></div>';
+
+  const rv = document.getElementById('reportView');
+  rv.innerHTML = html;
+  document.getElementById('formView').classList.add('hidden');
+  rv.classList.remove('hidden');
+  window.scrollTo(0,0);
+
+  // 绘制图表
+  drawBar('barChart', ['听觉注意力','视觉注意力','行为表现'], [d.A_rate,d.V_rate,d.B_rate], ['#d97757','#6a9bcc','#788c5d'], {zones:true});
+  drawBar('AChart', d.A_labels, d.A_groups, SUB_COLORS, {zones:true});
+  drawBar('VChart', d.V_labels, d.V_groups, SUB_COLORS, {zones:true});
+  drawBar('BChart', d.B_labels, d.B_groups, SUB_COLORS, {zones:true});
+  drawRadar('radarChart', d.name, d.A_labels.concat(d.V_labels, d.B_labels), d.A_groups.concat(d.V_groups, d.B_groups));
+  drawBar('scoreChart', ['听觉','视觉','行为','综合'], [d.A_rate,d.V_rate,d.B_rate,d.total_rate], ['#d97757','#6a9bcc','#788c5d','#8b7cb6'], {zones:true, meanLine:refMean});
+  drawLine('trainChart', ['基线','第3周','第6周','第9周','第12周'], [
+    {name:'听觉',color:'#d97757',data:d.train[0]},
+    {name:'视觉',color:'#6a9bcc',data:d.train[1]},
+    {name:'行为',color:'#788c5d',data:d.train[2]}
+  ]);
+}
+function weakDim(d){
+  const arr=[['听觉',d.A_rate],['视觉',d.V_rate],['行为',d.B_rate]].sort((x,y)=>y[1]-x[1]);
+  return arr[0][0]+'注意力（'+arr[0][1]+'%）';
+}
+function gameGuide(d){
+  const a=d.A_rate, v=d.V_rate, b=d.B_rate;
+  const dims=[['听觉',a],['视觉',v],['行为',b]].sort((x,y)=>y[1]-x[1]);
+  const w=dims[0], m=dims[1], s=dims[2];
+  const OF = CUR==='adult'?OF_ADULT:OF_KIDS;
+  const isAdult = CUR==='adult';
+  const libCount = VG.length+AG.length+BG.length+(isAdult?0:TG.length)+OF.length;
+
+  // 七天计划（完全沿用计划4 逻辑）
+  let plan;
+  if(w[0]==='听觉'){
+    plan=[
+      ['周一','主力', 'G1 听词行动 8-10min → '+VG[0]+' 5min → G2 数字回音壁 5-8min → G3 声波搜索 5min','23-28min'],
+      ['周二','辅助', VG[0]+' 5-8min → G4 指令解码器 5min → '+VG[2]+' 5-8min → '+BG[0]+' 5min','20-26min'],
+      ['周三','主力', 'G1 听词行动 8-10min → '+VG[5]+' 5min → 复读机训练 5-8min → G3 声波搜索 5min','23-28min'],
+      ['周四','辅助', VG[1]+' 5min → G2 数字回音壁 5-8min → '+VG[3]+' 5-8min → '+BG[1]+' 5min','20-26min'],
+      ['周五','主力', '听动乐园 8-10min → '+VG[6]+' 5min → G4 指令解码器 5-8min → G2 数字回音壁 5min','23-28min'],
+      ['周六','辅助', VG[4]+' 5-8min → G1 听词行动 5min → '+VG[0]+' 5-8min → '+BG[2]+' 5min','20-26min'],
+      ['周日','线下', OF[0],'15-20min']
+    ];
+  } else if(w[0]==='视觉'){
+    plan=[
+      ['周一','主力', VG[0]+' 8-10min → '+AG[0]+' 5min → '+VG[2]+' 5-8min → '+VG[5]+' 5min','23-28min'],
+      ['周二','辅助', AG[0]+' 5-8min → '+VG[0]+' 5min → '+AG[1]+' 5-8min → '+BG[0]+' 5min','20-26min'],
+      ['周三','主力', VG[1]+' 8-10min → '+AG[2]+' 5min → '+VG[3]+' 5-8min → '+VG[4]+' 5min','23-28min'],
+      ['周四','辅助', AG[3]+' 5-8min → '+VG[2]+' 5min → '+AG[4]+' 5-8min → '+BG[1]+' 5min','20-26min'],
+      ['周五','主力', VG[5]+' 8-10min → '+AG[5]+' 5min → '+VG[0]+' 5-8min → '+VG[3]+' 5min','23-28min'],
+      ['周六','辅助', AG[0]+' 5-8min → '+VG[6]+' 5min → '+AG[1]+' 5-8min → '+BG[2]+' 5min','20-26min'],
+      ['周日','线下', OF[0],'15-20min']
+    ];
+  } else {
+    plan=[
+      ['周一','主力', BG[0]+' 5-8min → '+VG[1]+' 5min → '+BG[1]+' 5-8min → '+AG[0]+' 5min','20-26min'],
+      ['周二','辅助', VG[0]+' 5-8min → '+BG[0]+' 5min → '+VG[3]+' 5-8min → '+AG[0]+' 5min','20-26min'],
+      ['周三','主力', BG[2]+' 5-8min → '+VG[2]+' 5min → '+BG[3]+' 5-8min → '+AG[1]+' 5min','20-26min'],
+      ['周四','辅助', VG[0]+' 5-8min → '+BG[1]+' 5min → '+VG[4]+' 5-8min → '+AG[2]+' 5min','20-26min'],
+      ['周五','主力', BG[3]+' 5-8min → '+VG[5]+' 5min → '+BG[4]+' 5-8min → '+AG[3]+' 5min','20-26min'],
+      ['周六','辅助', VG[6]+' 5-8min → '+BG[2]+' 5min → '+AG[0]+' 5-8min → '+BG[5]+' 5min','20-26min'],
+      ['周日','线下', OF[0],'15-20min']
+    ];
+  }
+
+  let rows='';
+  plan.forEach(p=>{
+    const tc = p[1]==='主力'?'#6a9bcc':(p[1]==='辅助'?'#788c5d':'#8b7cb6');
+    rows += '<tr><td style="font-weight:bold;padding:7px 6px;">'+p[0]+'</td><td style="color:'+tc+';font-weight:bold;padding:7px 6px;">'+p[1]+'日</td><td style="font-size:14px;line-height:1.55;padding:7px 6px;">'+p[2]+'</td><td style="padding:7px 6px;">'+p[3]+'</td></tr>';
+  });
+
+  let h = '<div class="sec"><h2>八、游戏推荐方案</h2>'
+    + '<div style="max-width:720px;margin:0 auto;">'
+    + '<p style="margin-bottom:8px;">基于你的测评结果——<b style="color:var(--red)">'+w[0]+'注意力 '+w[1]+'%（最弱）</b>→ '+m[0]+' '+m[1]+'% → '+s[0]+' '+s[1]+'%（相对较好），从'+libCount+'款功能游戏库中按你的短板优先级定制方案如下。</p>'
+    + '<div class="tip-box">'
+    + '<b>使用规则</b><br>'
+    + '• 每次训练选 <b>4款游戏</b>，依序完成，总时长 <b>20-30分钟</b><br>'
+    + '• 每款5-10分钟，游戏间休息 <b>1-2分钟</b>，游戏内选成人模式/高级难度<br>'
+    + '• 完整训练周期：<b>12周（3个月）</b>，每3周为一个阶段，难度自然递增<br>'
+    + '• 每周7天循环执行，周日为线下训练日'
+    + '</div>'
+    + '<h3>七天训练计划（每周循环 × 12周）</h3>'
+    + '<table class="tb" style="table-layout:fixed;word-break:break-all;"><tr style="background:#f6f9f8;"><th style="width:7%;">日期</th><th style="width:9%;">类型</th><th style="text-align:left;">训练流程（游戏 → 时长）</th><th style="width:13%;">当日总时长</th></tr>'+rows+'</table>';
+
+  // 游戏库总览
+  h += '<div class="lib-h">'
+    + '<div>视觉7款<br>每日交替使用<br>每周每款≥1次</div>'
+    + (isAdult? '' : '<div class="t">文字游戏7款<br>额外推荐·读写专项<br>搭配视觉训练</div>')
+    + '<div class="a">听觉6款<br>主力日3款+辅助日1款<br>全覆盖轮换</div>'
+    + '<div class="b">行为6款<br>每周轮换<br>每天1款不重复</div>'
+    + '</div>';
+
+  h += '<h3>完整游戏库</h3>';
+  h += '<h4>视觉训练（7款）</h4><div class="gl">'+VG.map(g=>'<div class="gi">'+g+'</div>').join('')+'</div>';
+  if(!isAdult){
+    h += '<h4>额外文字游戏（7款·读写专项·儿童专属）</h4><div class="gl">'+TG.map(g=>'<div class="gi t">'+g+'</div>').join('')+'</div>';
+  }
+  h += '<h4>听觉训练（6款）</h4><div class="gl">'+AG.map(g=>'<div class="gi a">'+g+'</div>').join('')+'</div>';
+  h += '<h4>行为训练（6款）</h4><div class="gl">'+BG.map(g=>'<div class="gi b">'+g+'</div>').join('')+'</div>';
+  h += '<h4>线下训练（'+(isAdult?'成人专属':'2款')+'）</h4><div class="gl">'+OF.map(g=>'<div class="gi" style="font-size:14px;">'+g+'</div>').join('')+'</div>';
+  h += '</div></div>';
+  return h;
+}
+
+/* ============ Canvas 图表（替代 ECharts，无外部依赖） ============ */
+const FONT = '"PingFang SC","Microsoft YaHei",sans-serif';
+const SUB_COLORS = ["#6a9bcc","#8b7cb6","#a0b890","#d97757","#c97b84","#6caaaa","#b8956c","#788c5d","#c4a35a"];
+function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+function roundRect(ctx,x,y,w,h,r){ if(h<0){y+=h;h=-h;} r=Math.min(r,w/2,h/2); ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function setup(cv,cssH){ const dpr=window.devicePixelRatio||1; const cssW=cv.clientWidth||640; cv.width=Math.round(cssW*dpr); cv.height=Math.round(cssH*dpr); cv.style.height=cssH+'px'; const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cssW,cssH); return {ctx,w:cssW,h:cssH}; }
+function wrapText(ctx,text,x,y,maxW,lh){ const chars=text.split(''); let line='',yy=y; for(const ch of chars){ if(ctx.measureText(line+ch).width>maxW && line){ ctx.fillText(line,x,yy); line=ch; yy+=lh; } else line+=ch; } ctx.fillText(line,x,yy); return yy; }
+
+function drawBar(id,labels,values,colors,opt){
+  opt=opt||{}; const cv=document.getElementById(id); if(!cv) return;
+  const {ctx,w,h}=setup(cv, parseInt(cv.getAttribute('height'))||320);
+  const padL=44,padR=14,padT=34,padB=48; const plotW=w-padL-padR, plotH=h-padT-padB; const yMax=110;
+  if(opt.zones){
+    const zones=[[70,110,'#d97757','重点关注'],[50,70,'#c4a35a','中度'],[30,50,'#788c5d','轻度'],[0,30,'#6a9bcc','良好']];
+    zones.forEach(z=>{ const y0=padT+plotH*(1-z[1]/yMax), y1=padT+plotH*(1-z[0]/yMax);
+      ctx.fillStyle=hexA(z[2],0.06); ctx.fillRect(padL,y0,plotW,y1-y0);
+      ctx.fillStyle=hexA(z[2],0.5); ctx.font='10px '+FONT; ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(z[3],w-padR-2,(y0+y1)/2); });
+  }
+  ctx.strokeStyle='#e3e7ec'; ctx.fillStyle='#9aa3ad'; ctx.font='11px '+FONT; ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let v=0;v<=100;v+=20){ const y=padT+plotH*(1-v/yMax); ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+plotW,y); ctx.stroke(); ctx.fillText(v+'%',padL-6,y); }
+  const n=values.length, slot=plotW/n, bw=Math.min(54,slot*0.56);
+  for(let i=0;i<n;i++){ const v=values[i]; const x=padL+slot*i+(slot-bw)/2; const bh=plotH*(v/yMax); const y=padT+plotH-bh;
+    ctx.fillStyle=colors[i%colors.length]; roundRect(ctx,x,y,bw,bh,5); ctx.fill();
+    ctx.fillStyle='#2d2d2d'; ctx.font='bold 14px '+FONT; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(v+'%',x+bw/2,y-4);
+    ctx.fillStyle='#555'; ctx.font='12px '+FONT; ctx.textAlign='center'; ctx.textBaseline='top'; wrapText(ctx,labels[i],padL+slot*i+slot/2,padT+plotH+8,slot-4,14);
+  }
+  if(opt.meanLine!=null){ const y=padT+plotH*(1-opt.meanLine/yMax); ctx.strokeStyle='#999'; ctx.setLineDash([5,4]); ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+plotW,y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#888'; ctx.font='11px '+FONT; ctx.textAlign='right'; ctx.textBaseline='bottom'; ctx.fillText('参考均值 '+opt.meanLine+'%',w-padR,y-2); }
+}
+
+function drawLine(id,weeks,series){
+  const cv=document.getElementById(id); if(!cv) return;
+  const {ctx,w,h}=setup(cv, parseInt(cv.getAttribute('height'))||340);
+  const padL=44,padR=14,padT=34,padB=42; const plotW=w-padL-padR, plotH=h-padT-padB; const yMin=20,yMax=95;
+  const X=i=> padL+plotW*(i/(weeks.length-1));
+  const Y=v=> padT+plotH*(1-(v-yMin)/(yMax-yMin));
+  ctx.strokeStyle='#e3e7ec'; ctx.fillStyle='#9aa3ad'; ctx.font='11px '+FONT; ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let v=yMin;v<=yMax;v+=15){ const y=Y(v); ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+plotW,y); ctx.stroke(); ctx.fillText(v+'%',padL-6,y); }
+  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.font='13px '+FONT;
+  weeks.forEach((wk,i)=> ctx.fillText(wk,X(i),padT+plotH+8));
+  series.forEach(s=>{ ctx.fillStyle=hexA(s.color,0.08); ctx.beginPath(); ctx.moveTo(X(0),Y(s.data[0])); s.data.forEach((v,i)=> ctx.lineTo(X(i),Y(v))); ctx.lineTo(X(s.data.length-1),padT+plotH); ctx.lineTo(X(0),padT+plotH); ctx.closePath(); ctx.fill(); });
+  series.forEach(s=>{
+    ctx.strokeStyle=s.color; ctx.lineWidth=2.6; ctx.beginPath(); s.data.forEach((v,i)=>{ const x=X(i),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+    s.data.forEach((v,i)=>{ const x=X(i),y=Y(v); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,4.5,0,7); ctx.fill(); ctx.strokeStyle=s.color; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle=s.color; ctx.font='bold 10px '+FONT; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(v+'%',x,y-7); });
+  });
+  // 图例
+  let lx=padL, ly=12; ctx.font='12px '+FONT; ctx.textAlign='left'; ctx.textBaseline='middle';
+  series.forEach(s=>{ ctx.fillStyle=s.color; ctx.fillRect(lx,ly-5,10,10); ctx.fillStyle='#555'; ctx.fillText(s.name,lx+14,ly); lx+=ctx.measureText(s.name).width+36; });
+}
+
+function drawRadar(id,name,labels,values){
+  const cv=document.getElementById(id); if(!cv) return;
+  const {ctx,w,h}=setup(cv, parseInt(cv.getAttribute('height'))||420);
+  const cx=w/2, cy=h/2+6, R=Math.min(w,h)/2-58; const n=labels.length; const yMax=100;
+  // 网格环
+  ctx.strokeStyle='#e6eaee'; ctx.fillStyle='#bbb'; ctx.font='9px '+FONT;
+  [20,40,60,80,100].forEach(g=>{ ctx.beginPath(); for(let i=0;i<=n;i++){ const a=-Math.PI/2+i*2*Math.PI/n; const rr=R*g/100; const x=cx+rr*Math.cos(a), y=cy+rr*Math.sin(a); i?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.closePath(); ctx.stroke(); if(g%40===0){ ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(g+'%',cx+3,cy-R*g/100);} });
+  // 数据多边形
+  const pts=values.map((v,i)=>{ const a=-Math.PI/2+i*2*Math.PI/n; const rr=R*v/yMax; return [cx+rr*Math.cos(a), cy+rr*Math.sin(a)]; });
+  ctx.fillStyle=hexA('#d97757',0.18); ctx.strokeStyle='#d97757'; ctx.lineWidth=2; ctx.beginPath(); pts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill(); ctx.stroke();
+  pts.forEach(p=>{ ctx.fillStyle='#d97757'; ctx.beginPath(); ctx.arc(p[0],p[1],3,0,7); ctx.fill(); });
+  // 轴 + 标签
+  ctx.font='11px '+FONT;
+  labels.forEach((lb,i)=>{ const a=-Math.PI/2+i*2*Math.PI/n; const x=cx+R*Math.cos(a), y=cy+R*Math.sin(a);
+    ctx.strokeStyle='#eef1f4'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x,y); ctx.stroke();
+    const lx=cx+(R+16)*Math.cos(a), ly=cy+(R+16)*Math.sin(a);
+    ctx.fillStyle='#555'; const cosA=Math.cos(a); ctx.textAlign = cosA>0.3?'left':(cosA<-0.3?'right':'center'); ctx.textBaseline='middle';
+    ctx.fillText(lb, lx, ly);
+  });
+  ctx.fillStyle='#2c3e50'; ctx.font='bold 15px '+FONT; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(name+' · 子维度全景', cx, 8);
+}
+</script>
+</body>
+</html>
