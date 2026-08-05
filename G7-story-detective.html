@@ -500,8 +500,8 @@ const state = {
 };
 
 // ===== 音频 =====
-let audioCtx = null, audioBuffer = null, source = null;
-let isPlaying = false, pauseAt = 0, startAt = 0, dur = 0;
+let audioEl = null;
+let isPlaying = false, pauseAt = 0, dur = 0;
 let raf = null;
 
 // ===== DOM =====
@@ -532,9 +532,18 @@ function showPhase(name){
 // ===== 加载故事 =====
 async function loadStories(){
   try{
-    const r = await fetch('public/story-db.json?'+Date.now());
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    state.stories = await r.json();
+    // 优先使用已注入的全局数据；否则动态加载故事库（兼容 file:// 双击与 http 部署，规避 fetch 的 CORS 限制）
+    if(!window.STORY_DB){
+      await new Promise(function(res, rej){
+        var s = document.createElement('script');
+        s.src = 'public/story-db.js';
+        s.onload = function(){ res(); };
+        s.onerror = function(){ rej(new Error('story-db.js 加载失败')); };
+        document.head.appendChild(s);
+      });
+    }
+    if(!window.STORY_DB) throw new Error('STORY_DB 为空');
+    state.stories = window.STORY_DB;
     renderLevels();
   }catch(e){
     console.error('Load error:', e);
@@ -559,6 +568,7 @@ function renderLevels(){
       if(lv) showStories(lv);
     };
   });
+  window.__g7Rendered = true; // 标记难度列表已渲染，供预载结束后判断是否需补渲染
 }
 
 // ===== 故事选择 =====
@@ -614,7 +624,7 @@ function startStory(story){
 
   // Load and auto-play
   loadAudio(story.week).then(()=>{
-    if(audioBuffer && typeof audioBuffer.duration === 'number') playAudio();
+    if(audioEl && dur > 0) playAudio();
   }).catch(()=>{
     dom.storyHint.textContent = '⚠️ 音频加载失败，可点击 ▶ 重试';
   });
@@ -623,60 +633,58 @@ function startStory(story){
 // ===== 音频 =====
 async function loadAudio(week){
   const url = 'public/audio/story_'+String(week).padStart(2,'0')+'.mp3';
-  try{
-    const r = await fetch(url);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    audioBuffer = await r.arrayBuffer();
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const buf = await audioCtx.decodeAudioData(audioBuffer);
-    audioBuffer = buf;
-    dur = buf.duration;
-    dom.timeTotal.textContent = fmt(dur);
-    pauseAt = 0; isPlaying = false;
-    dom.btnPlay.textContent = '▶';
-    dom.btnShowReview.disabled = false;
-  }catch(e){
-    console.error('Audio:', e);
-    audioBuffer = null;
-    dom.storyHint.textContent = '⚠️ 音频加载失败，可直接查看答案';
-    dom.btnShowReview.disabled = false;
-  }
+  // 用 <audio> 媒体元素加载真实 mp3：兼容 file:// 双击与 http 部署，无需 fetch/decodeAudioData
+  if(audioEl){ try{ audioEl.pause(); }catch(e){} audioEl = null; }
+  audioEl = new Audio();
+  audioEl.preload = 'auto';
+  audioEl.src = url;
+  pauseAt = 0; isPlaying = false;
+  return new Promise(function(resolve, reject){
+    audioEl.addEventListener('loadedmetadata', function(){
+      dur = audioEl.duration || 0;
+      dom.timeTotal.textContent = fmt(dur);
+      dom.btnPlay.textContent = '▶';
+      dom.btnShowReview.disabled = false;
+      resolve();
+    });
+    audioEl.addEventListener('error', function(){
+      dom.storyHint.textContent = '⚠️ 音频加载失败，可直接查看答案';
+      dom.btnShowReview.disabled = false;
+      audioEl = null;
+      reject(new Error('audio load failed'));
+    });
+    audioEl.addEventListener('ended', onAudioEnded);
+    try { audioEl.load(); } catch (e) { reject(e); }
+  });
 }
 
 function fmt(s){ if(!s||isNaN(s)) return '0:00'; const m=Math.floor(s/60), sec=Math.floor(s%60); return m+':'+String(sec).padStart(2,'0'); }
 
+function onAudioEnded(){
+  if(!isPlaying) return;
+  isPlaying = false;
+  dom.btnPlay.textContent = '▶';
+  dom.listening.classList.add('hidden');
+  dom.progressFill.style.width = '100%';
+  dom.timeCur.textContent = fmt(dur);
+  dom.storyHint.textContent = '✅ 播放完毕，点击"查看答案"回顾问题！';
+}
+
 function playAudio(){
-  if(!audioBuffer || !audioCtx) return;
-  if(audioCtx.state === 'suspended') audioCtx.resume();
+  if(!audioEl) return;
   if(isPlaying) { pauseAudio(); return; }
-  const buf = audioBuffer;
-  source = audioCtx.createBufferSource();
-  source.buffer = buf;
-  source.connect(audioCtx.destination);
-  const off = pauseAt || 0;
-  source.start(0, off);
-  startAt = audioCtx.currentTime - off;
+  const p = audioEl.play();
+  if(p && p.catch) p.catch(function(){}); // 自动播放策略兜底
   isPlaying = true;
   dom.btnPlay.textContent = '⏸';
   dom.listening.classList.remove('hidden');
   dom.storyHint.textContent = '🔊 正在播放，请仔细听...';
 
-  source.onended = ()=>{
-    if(isPlaying){
-      isPlaying = false;
-      dom.btnPlay.textContent = '▶';
-      dom.listening.classList.add('hidden');
-      dom.progressFill.style.width = '100%';
-      dom.timeCur.textContent = fmt(dur);
-      dom.storyHint.textContent = '✅ 播放完毕，点击"查看答案"回顾问题！';
-    }
-  };
-
   if(raf) cancelAnimationFrame(raf);
   function upd(){
     if(!isPlaying) return;
-    const elapsed = audioCtx.currentTime - startAt;
-    const pct = Math.min(elapsed/dur*100, 100);
+    const elapsed = audioEl.currentTime;
+    const pct = dur ? Math.min(elapsed/dur*100, 100) : 0;
     dom.progressFill.style.width = pct+'%';
     dom.timeCur.textContent = fmt(elapsed);
     raf = requestAnimationFrame(upd);
@@ -685,18 +693,18 @@ function playAudio(){
 }
 
 function pauseAudio(){
-  if(!isPlaying || !source) return;
-  try{ const el = audioCtx.currentTime - startAt; pauseAt = Math.min(el, dur); source.stop(); }catch(e){}
-  source = null; isPlaying = false;
+  if(!isPlaying || !audioEl) return;
+  try{ pauseAt = audioEl.currentTime; audioEl.pause(); }catch(e){}
+  isPlaying = false;
   dom.btnPlay.textContent = '▶';
   dom.listening.classList.add('hidden');
   if(raf) cancelAnimationFrame(raf);
 }
 
 function resetAudioState(){
-  if(source) try{ source.stop(); }catch(e){}
-  source = null; isPlaying = false;
-  pauseAt = 0; startAt = 0;
+  if(audioEl) try{ audioEl.pause(); }catch(e){}
+  isPlaying = false;
+  pauseAt = 0;
   if(raf) cancelAnimationFrame(raf); raf = null;
   dom.btnPlay.textContent = '▶';
   dom.listening.classList.add('hidden');
@@ -747,9 +755,10 @@ dom.btnBackToStories.onclick = ()=>{
 let isDragging = false;
 
 function seekAudio(pct){
-  if(!audioBuffer || !audioCtx || !dur) return;
+  if(!audioEl || !dur) return;
   const clamped = Math.max(0, Math.min(pct, 1));
   pauseAt = clamped * dur;
+  if(audioEl) audioEl.currentTime = pauseAt;
   dom.progressFill.style.width = (clamped * 100)+'%';
   dom.timeCur.textContent = fmt(pauseAt);
 }
@@ -772,39 +781,22 @@ document.addEventListener('mouseup', (e)=>{
   const rect = dom.progressTrack.getBoundingClientRect();
   const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
   seekAudio(pct);
-  // Resume playback at new position
-  if(pauseAt < dur){
-    if(source) try{ source.stop(); }catch(e){}
-    source = null; isPlaying = false;
-    const buf = audioBuffer;
-    source = audioCtx.createBufferSource();
-    source.buffer = buf;
-    source.connect(audioCtx.destination);
-    source.start(0, pauseAt);
-    startAt = audioCtx.currentTime - pauseAt;
+  // Resume playback at new position（媒体元素：seek 后直接续播）
+  if(pauseAt < dur && audioEl){
+    const p = audioEl.play();
+    if(p && p.catch) p.catch(function(){});
     isPlaying = true;
     dom.btnPlay.textContent = '⏸';
     dom.listening.classList.remove('hidden');
-    source.onended = ()=>{
-      if(isPlaying){
-        isPlaying = false;
-        dom.btnPlay.textContent = '▶';
-        dom.listening.classList.add('hidden');
-        dom.progressFill.style.width = '100%';
-        dom.timeCur.textContent = fmt(dur);
-        dom.storyHint.textContent = '✅ 播放完毕，点击"查看答案"回顾问题！';
-      }
-    };
     if(raf) cancelAnimationFrame(raf);
-    function upd2(){
+    (function upd2(){
       if(!isPlaying) return;
-      const elapsed = audioCtx.currentTime - startAt;
-      const pct2 = Math.min(elapsed/dur*100, 100);
+      const elapsed = audioEl.currentTime;
+      const pct2 = dur ? Math.min(elapsed/dur*100, 100) : 0;
       dom.progressFill.style.width = pct2+'%';
       dom.timeCur.textContent = fmt(elapsed);
       raf = requestAnimationFrame(upd2);
-    }
-    upd2();
+    })();
   }
 });
 
@@ -829,38 +821,21 @@ document.addEventListener('touchend', (e)=>{
   const rect = dom.progressTrack.getBoundingClientRect();
   const pct = Math.max(0, Math.min(1, (e.changedTouches[0].clientX - rect.left) / rect.width));
   seekAudio(pct);
-  if(pauseAt < dur){
-    if(source) try{ source.stop(); }catch(e){}
-    source = null; isPlaying = false;
-    const buf = audioBuffer;
-    source = audioCtx.createBufferSource();
-    source.buffer = buf;
-    source.connect(audioCtx.destination);
-    source.start(0, pauseAt);
-    startAt = audioCtx.currentTime - pauseAt;
+  if(pauseAt < dur && audioEl){
+    const p = audioEl.play();
+    if(p && p.catch) p.catch(function(){});
     isPlaying = true;
     dom.btnPlay.textContent = '⏸';
     dom.listening.classList.remove('hidden');
-    source.onended = ()=>{
-      if(isPlaying){
-        isPlaying = false;
-        dom.btnPlay.textContent = '▶';
-        dom.listening.classList.add('hidden');
-        dom.progressFill.style.width = '100%';
-        dom.timeCur.textContent = fmt(dur);
-        dom.storyHint.textContent = '✅ 播放完毕，点击"查看答案"回顾问题！';
-      }
-    };
     if(raf) cancelAnimationFrame(raf);
-    function upd3(){
+    (function upd3(){
       if(!isPlaying) return;
-      const elapsed = audioCtx.currentTime - startAt;
-      const pct3 = Math.min(elapsed/dur*100, 100);
+      const elapsed = audioEl.currentTime;
+      const pct3 = dur ? Math.min(elapsed/dur*100, 100) : 0;
       dom.progressFill.style.width = pct3+'%';
       dom.timeCur.textContent = fmt(elapsed);
       raf = requestAnimationFrame(upd3);
-    }
-    upd3();
+    })();
   }
 });
 
@@ -892,24 +867,26 @@ function preloadAllAudio() {
   function loadOne(idx) {
     if (idx > total) {
       document.getElementById('loadingOverlay').style.display = 'none';
-      loadStories();
+      // 仅在难度列表尚未渲染时才重新载入故事库，避免预载结束后覆盖用户当前所在界面
+      if (!window.__g7Rendered) {
+        loadStories();
+      }
       return;
     }
     var url = 'public/audio/story_' + String(idx).padStart(2, '0') + '.mp3';
-    fetch(url).then(function(r) {
-      if (!r.ok) throw new Error('fail');
-      return r.blob();
-    }).then(function() {
+    // 用 <audio> 媒体元素预热，兼容 file:// 双击与 http 部署，无 CORS 限制
+    var a = new Audio();
+    a.preload = 'auto';
+    a.src = url;
+    function step(){
       loaded++;
       loadBar.style.width = Math.round(loaded / total * 100) + '%';
       loadText.textContent = loaded + ' / ' + total;
       loadOne(idx + 1);
-    }).catch(function() {
-      loaded++;
-      loadBar.style.width = Math.round(loaded / total * 100) + '%';
-      loadText.textContent = loaded + ' / ' + total;
-      loadOne(idx + 1);
-    });
+    }
+    a.addEventListener('loadeddata', step);
+    a.addEventListener('error', step);
+    try { a.load(); } catch (e) { step(); }
   }
   loadOne(1);
 }

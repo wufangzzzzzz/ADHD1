@@ -1308,6 +1308,12 @@
         -webkit-user-select: none;
         transition: none;            /* 持续旋转时不叠加缓动，避免卡顿 */
       }
+      /* 图案3：3D 蒲公英画布（填满游戏区，无滚动条） */
+      .pattern3-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
 
       .grid-cell {
         background: #fff;
@@ -2274,6 +2280,15 @@
             <div class="mode-menu" id="pattern-menu" onclick="event.stopPropagation()">
               <div class="mode-menu-item" data-sub="1" onclick="game.setPatternSub(1)">图案1·半圆</div>
               <div class="mode-menu-item" data-sub="2" onclick="game.setPatternSub(2)">图案2·旋转</div>
+              <div class="mode-menu-item" data-sub="3" onclick="game.setPatternSub(3)">图案3·蒲公英</div>
+              <div class="mode-menu-item" data-sub="4" onclick="game.setPatternSub(4)">图案4·碎片</div>
+              <div class="mode-menu-item" data-sub="5" data-color="1" onclick="game.setPatternSub(5,1)">图案5-1·星璇</div>
+              <div class="mode-menu-item" data-sub="5" data-color="2" onclick="game.setPatternSub(5,2)">图案5-2</div>
+              <div class="mode-menu-item" data-sub="5" data-color="3" onclick="game.setPatternSub(5,3)">图案5-3</div>
+              <div class="mode-menu-item" data-sub="6" data-color="1" onclick="game.setPatternSub(6,1)">图案6-1·嵌套旋转</div>
+              <div class="mode-menu-item" data-sub="6" data-color="2" onclick="game.setPatternSub(6,2)">图案6-2·球载数</div>
+              <div class="mode-menu-item" data-sub="6" data-color="3" onclick="game.setPatternSub(6,3)">图案6-3·随机形变</div>
+              <div class="mode-menu-item" data-sub="7" onclick="game.setPatternSub(7)">图案7·六边盘</div>
             </div>
           </div>
           <button class="mode-btn speed-toggle" id="speed-toggle-btn" onclick="game.toggleSpeed()" style="display:none;">转速:0.1</button>
@@ -2453,6 +2468,7 @@
         this.isPatternMode = false;   // 图案模式（独立视觉布局）
         this.patternSide = 'left';    // 图案半圆方向：'left'/'right'，每局随机统一
         this.patternSub = 1;          // 图案子类型：1=图案1
+        this.patternColor = 1;        // 图案5 颜色方案：1=紫粉 2=绿黄 3=蓝红
         this.patternHue = 215;        // 图案A色锚点色相，每局随机
         // ===== 彩格模式 =====
         this.isColorMode = false;     // 是否在彩格模式
@@ -2589,7 +2605,29 @@
         }
         // 离开图案模式：进入任何非图案模式时清除标志（避免误入 pattern 渲染分支）
         if (mode !== 'pattern' && this.isPatternMode) {
+          this._stopP3();   // 停掉蒲公英动画
           this.isPatternMode = false;
+          // 退回普通等模式时，还原进入图案前用户原本的难度与数字类型（修复：难度被静默压到9×9且不还原）
+          if (this._savedGridSize != null) {
+            this.gridSize = this._savedGridSize;
+            this._savedGridSize = null;
+            var rsd = document.querySelectorAll('.difficulty-btn');
+            for (var rsi = 0; rsi < rsd.length; rsi++) {
+              rsd[rsi].classList.remove('active');
+              if (parseInt(rsd[rsi].dataset.size) === this.gridSize) rsd[rsi].classList.add('active');
+            }
+          }
+          if (this._savedNumberType != null) {
+            this.numberType = this._savedNumberType;
+            this._savedNumberType = null;
+            var rnt = document.getElementById('numtype-btn');
+            if (rnt) rnt.textContent = '数字:' + (this.numberType === 'natural' ? '自然' : this.numberType === 'odd' ? '奇数' : '偶数');
+            var rnti = document.querySelectorAll('.nt-item');
+            for (var rnj = 0; rnj < rnti.length; rnj++) {
+              rnti[rnj].classList.remove('selected');
+              if (rnti[rnj].dataset.nt === this.numberType) rnti[rnj].classList.add('selected');
+            }
+          }
         }
         // 离开彩格模式：进入任何其它布局时退出彩格（彩格不走 setMode，故此处仅作兜底复位）
         if (this.isColorMode) {
@@ -2733,6 +2771,9 @@
               dpBtn.textContent = '毁灭';
             }
           }
+          // 进入图案模式：先记住用户原本的难度与数字类型，退回普通模式时还原
+          if (this._savedGridSize == null) this._savedGridSize = this.gridSize;
+          if (this._savedNumberType == null) this._savedNumberType = this.numberType;
           // 限制难度 ≤ 9×9（保证数字始终两位）
           if (this.gridSize > 9) {
             this.gridSize = 9;
@@ -2978,22 +3019,29 @@
       };
 
       // 图案下拉：切换子类型
-      SchulteGridGame.prototype.setPatternSub = function(sub) {
+      SchulteGridGame.prototype.setPatternSub = function(sub, color) {
         sub = parseInt(sub) || 1;
-        if (this.isPatternMode && this.patternSub === sub) {
+        var targetColor = (color !== undefined && color !== null) ? (parseInt(color) || 1) : (this.patternColor || 1);
+        if (this.isPatternMode && this.patternSub === sub && this.patternColor === targetColor) {
           this.closeAllModeMenus();
           return;
         }
+        this.patternColor = targetColor;
         if (!this.isPatternMode) {
           this.setMode('pattern');   // 进入图案模式（默认 sub=1 并渲染一次）
         }
         // 非图案模式进入、或图案模式内切换子类型：都落到这里统一设置并渲染
         this.patternSub = sub;
         var pbtn = document.getElementById('pattern-mode-btn');
-        if (pbtn) { pbtn.classList.add('active'); pbtn.textContent = '图案' + sub + ' ▾'; }
+        if (pbtn) {
+          pbtn.classList.add('active');
+          pbtn.textContent = ((sub === 5 || sub === 6) ? ('图案' + sub + '-' + this.patternColor) : ('图案' + sub)) + ' ▾';
+        }
         var pmitems = document.querySelectorAll('#pattern-menu .mode-menu-item');
         for (var pmi = 0; pmi < pmitems.length; pmi++) {
-          pmitems[pmi].classList.toggle('selected', parseInt(pmitems[pmi].dataset.sub) === sub);
+          var msub = parseInt(pmitems[pmi].dataset.sub);
+          var mcol = parseInt(pmitems[pmi].dataset.color) || 1;
+          pmitems[pmi].classList.toggle('selected', msub === sub && mcol === this.patternColor);
         }
         this.closeAllModeMenus();
         this.renderGrid();
@@ -4102,13 +4150,8 @@
       // idx 决定 C 所在角（循环出现）：0=右下 1=左下 2=右上 3=左上。坐标均为全局，渲染无需 translate。
       SchulteGridGame.prototype._bumpyGeom = function(idx) {
         var O = 8, A1S = 84;
-        // C 边长随难度放大：入门/初级/中级=基准(0.6)；高级+15% 专家+25% 极限+30%
-        var csScale = 1.0;
-        var gs = this.gridSize;
-        if (gs === 6) csScale = 1.15;        // 高级
-        else if (gs === 7) csScale = 1.25;  // 专家
-        else if (gs === 10) csScale = 1.30; // 极限
-        var CS = 50.4 * csScale; // = 0.6 * 84 * 难度系数（仍 < A1 边长 84）
+        // C 边长：各难度统一用 0.80 * A1，不再按难度放大（保证 B1/B2 始终可见）
+        var CS = 67.2; // = 0.80 * 84
         var L = O, H = O + A1S;         // A1 左上=8, 右下=92
         var configs = [
           // 0: C 右下角，主对角线 (8,8)->(92,92)
@@ -4316,8 +4359,8 @@
             // 字号：高级/专家(grid 6/7)=30px；极限(grid 10)=在 30px 基础上再放大 30% → 39px；
             //       入门/初级/中级按 C 块比例
             var numFont;
-            if (gridSize === 10) numFont = 39;                    // 极限：30 × 1.30
-            else if (gridSize === 6 || gridSize === 7) numFont = 30; // 高级/专家
+            if (gridSize === 10) numFont = 42;                    // 极限
+            else if (gridSize === 6 || gridSize === 7) numFont = 34; // 高级/专家(从30提到34)
             else numFont = Math.max(10, Math.floor((geom.cSide / 100) * cellSize * 0.64));
             txt.setAttribute('font-size', numFont);
             txt.setAttribute('font-weight', 'bold');
@@ -5383,6 +5426,7 @@
         this.currentNumber = this.getNumberStart();
         this.isPlaying = false;
         this.stopTimer();
+        this._stopP3();   // 任何重开先停掉蒲公英动画，避免残留 rAF
 
         // 先隐藏所有容器
         document.getElementById('grid-container').style.display = 'none';
@@ -5515,6 +5559,15 @@
         // 图案2：点击开始游戏后，所有数字在各自基准角度基础上缓慢持续顺时针旋转
         if (this.isPatternMode && this.patternSub === 2) {
           this._p2Spin();
+        }
+
+        // 图案6-3 随机模式：每局开局重掷形状(圆/六边形)与配色(10套随机一套)，并重渲染
+        if (this.isPatternMode && this.patternSub === 6 && this.patternColor === 3) {
+          this._p6ShapeRand = (Math.random() < 0.5 ? 'circle' : 'hex');
+          this._p6PaletteIdx = Math.floor(Math.random() * this._P6_PALETTES.length);
+          var gc6 = document.getElementById('grid-container');
+          this._stopP6();
+          this._renderPatternGrid6(gc6);
         }
 
         this.initAudio();
@@ -5699,6 +5752,8 @@
 
       SchulteGridGame.prototype.renderGrid = function() {
         var container = document.getElementById('grid-container');
+        // 离开图案3（含切到普通/彩格/毁灭等任何非图案3模式）时，务必停掉蒲公英动画与后台 rAF，避免隐藏卡顿
+        if (!this.isPatternMode || (this.patternSub !== 3 && this.patternSub !== 4)) { this._stopP3(); this._stopP4(); }
         // 先清理可能残留的特殊模式 class，避免影响显示
         container.classList.remove('destroy-mode-4', 'destroy-mode-5');
         // 恢复 game-container 默认宽度（毁灭5会放大）。必须在 calculateCellSize 之前执行，
@@ -5734,6 +5789,15 @@
 
         // 图案模式：独立渲染路径（按子模式分流）
         if (this.isPatternMode) {
+          if (this.patternSub !== 3) this._stopP3();   // 离开图案3 时停掉蒲公英动画并复原容器
+          if (this.patternSub !== 4) this._stopP4();   // 离开图案4 时停掉切片并复原容器
+          if (this.patternSub !== 5) this._stopP5();   // 离开图案5 时停掉星璇动画并复原容器
+          if (this.patternSub !== 6) this._stopP6();   // 离开图案6 时停掉嵌套旋转动画并复原容器
+          if (this.patternSub === 7) { this._renderPatternGrid7(container); return; }
+          if (this.patternSub === 6) { this._renderPatternGrid6(container); return; }
+          if (this.patternSub === 5) { this._renderPatternGrid5(container); return; }
+          if (this.patternSub === 4) { this._renderPatternGrid4(container); return; }
+          if (this.patternSub === 3) { this._renderPatternGrid3(container); return; }
           if (this.patternSub === 2) this._renderPatternGrid2(container, cellSize);
           else this._renderPatternGrid(container, cellSize);
           return;
@@ -5980,6 +6044,1230 @@
           }
         }
       };
+
+      // 图案3：3D 蒲公英（canvas 实时绘制）
+      //   天空蓝渐变背景（上深→下浅）；容积底部中心 A → 画面中心 B 纤细白线；
+      //   B 散出更细白线连到每个数字；整团绕竖直轴缓慢旋转（从后往前）；
+      //   点中当前数字 → 该数字与连线向上飘到顶边淡出消失。
+      SchulteGridGame.prototype._renderPatternGrid3 = function(container) {
+        this._stopP3();
+        // 蓝色渐变「容积」区域：居中、限高，上下留白，避免顶到顶部时间显示与底部开始按钮
+        container.style.position = 'absolute';
+        container.style.left = '50%'; container.style.top = '50%';
+        container.style.right = 'auto'; container.style.bottom = 'auto';
+        container.style.width = '100%'; container.style.maxWidth = '500px';
+        container.style.height = '62%'; container.style.maxHeight = '480px';
+        container.style.transform = 'translate(-50%, -50%)';
+        container.style.display = 'block';
+        container.style.gridTemplateColumns = '';
+        container.style.gap = '';
+        container.style.padding = '0';
+        container.style.marginTop = '0';
+        container.style.borderRadius = '0';
+        container.style.boxShadow = 'none';
+        container.style.background = 'linear-gradient(to bottom, #0748a6 0%, #7bcdfd 100%)';
+        container.innerHTML = '';
+
+        var canvas = document.createElement('canvas');
+        canvas.className = 'pattern3-canvas';
+        canvas.style.display = 'block';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        container.appendChild(canvas);
+        this._p3Canvas = canvas;
+
+        var N = this.numbers.length;
+        var seeds = [];
+        var golden = Math.PI * (3 - Math.sqrt(5));   // 黄金角，球面均匀分布
+        for (var i = 0; i < N; i++) {
+          var y = 1 - (i + 0.5) / N * 2;             // 1 → -1
+          var radius = Math.sqrt(Math.max(0, 1 - y * y));
+          var theta = golden * i;
+          seeds.push({
+            num: this.numbers[i],
+            ux: Math.cos(theta) * radius,
+            uy: y,
+            uz: Math.sin(theta) * radius,
+            gone: false, floating: false, floatT: 0, alpha: 1, wrongT: 0,
+            sx: 0, sy: 0, size: 14, phase: Math.random() * Math.PI * 2
+          });
+        }
+        this._p3 = { seeds: seeds, rot: 0, raf: null, last: null,
+                     W: 0, H: 0, dpr: 1, B: { x: 0, y: 0 }, A: { x: 0, y: 0 }, R: 0, finishing: false,
+                     t: 0, gust: 0, gustTarget: 0, gustHold: 0, gustTimer: 2.5 };
+        this._p3Finishing = false;
+
+        var self = this;
+        canvas.addEventListener('click', function(e) {
+          if (!self.isPlaying) return;
+          var rect = canvas.getBoundingClientRect();
+          self._p3Click(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        // 尺寸只在初始化与窗口变化时测量一次；绘制循环内不再每帧读布局（防卡顿）
+        this._p3Measure();
+        this._p3ResizeHandler = function() { if (self._p3) self._p3Measure(); };
+        window.addEventListener('resize', this._p3ResizeHandler);
+        this._p3Frame();
+      };
+
+      SchulteGridGame.prototype._p3Frame = function() {
+        var self = this;
+        var p3 = this._p3;
+        if (!p3) return;
+        function frame(ts) {
+          if (!self._p3 || self._p3.raf == null) return;
+          if (p3.last == null) p3.last = ts;
+          var dt = (ts - p3.last) / 1000; p3.last = ts;
+          if (dt > 0.1) dt = 0.1;
+          p3.rot += dt * 0.12;           // 更慢约 52 秒/圈
+          self._p3Draw(dt);
+          p3.raf = requestAnimationFrame(frame);
+        }
+        p3.raf = requestAnimationFrame(frame);
+      };
+
+      SchulteGridGame.prototype._p3Measure = function() {
+        var p3 = this._p3; if (!p3 || !this._p3Canvas) return;
+        var canvas = this._p3Canvas;
+        var dpr = window.devicePixelRatio || 1;
+        var w = Math.max(1, canvas.clientWidth);
+        var h = Math.max(1, canvas.clientHeight);
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+        }
+        p3.W = w; p3.H = h; p3.dpr = dpr;
+      };
+
+      SchulteGridGame.prototype._p3Draw = function(dt) {
+        var p3 = this._p3;
+        var canvas = this._p3Canvas;
+        if (!p3 || !canvas) return;
+        p3.t += dt;
+        // 几何尺寸已缓存（在 _p3Measure 中按容器尺寸计算，避免每帧读布局造成卡顿）
+        var w = p3.W, h = p3.H, dpr = p3.dpr;
+        if (!w || !h) return;
+        var ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        var R = Math.min(w, h) * 0.22;            // 蒲公英半径
+
+        // ★ 阵风（风=偶尔轻轻吹偏一下，不是循环摆动）：
+        //   隔一段随机时间，B 点（连同整团蒲公英：绒丝+数字）缓慢向随机一侧偏移一点，
+        //   维持一小段时间后慢慢回正，再隔随机时间出现下一次。A 点固定不动。
+        p3.gustTimer -= dt;
+        if (p3.gustTimer <= 0) {
+          p3.gustTarget = (Math.random() < 0.5 ? -1 : 1) * R * (0.12 + Math.random() * 0.10); // 随机方向、随机幅度（轻微）
+          p3.gustHold = 1.2 + Math.random() * 1.0;   // 本次偏移维持约 1.2~2.2s
+          p3.gustTimer = 3.5 + Math.random() * 4;    // 下次出现的随机间隔 3.5~7.5s
+        }
+        p3.gustHold -= dt;
+        if (p3.gustHold <= 0) p3.gustTarget = 0;     // 维持时间到，开始回正
+        p3.gust += (p3.gustTarget - p3.gust) * Math.min(1, dt * 1.2);  // 缓慢趋近 / 回正（慢慢）
+
+        var B = { x: w / 2 + p3.gust, y: h * 0.55 }; // 蒲公英头：随阵风缓慢偏移，整团（绒丝+数字）一起跟着偏
+        var A = { x: w / 2, y: h - 2 };               // 茎底支点 A 固定不动
+        p3.B = B; p3.A = A; p3.R = R;
+
+        // A → B 纤细白线：A 固定、B 偏移，茎随之斜向一侧（像被风吹偏）；A 点不画白点
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+        // B 点白圆保留（蒲公英中心）；A 点不要白点，只留一根线
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.arc(B.x, B.y, 3, 0, Math.PI * 2); ctx.fill();
+
+        var cosr = Math.cos(p3.rot), sinr = Math.sin(p3.rot);
+        var focal = R * 3.2;
+        var baseSize = Math.min(w, h) * 0.05;
+
+        for (var i = 0; i < p3.seeds.length; i++) {
+          var s = p3.seeds[i];
+          if (s.gone) continue;
+          var x0 = s.ux * R, y0 = s.uy * R, z0 = s.uz * R;
+          var xr = x0 * cosr - z0 * sinr;          // 绕竖直轴(Y)旋转
+          var zr = x0 * sinr + z0 * cosr;
+          var yr = y0;
+          var persp = focal / (focal - zr);
+          var sx = B.x + xr * persp;
+          var sy = B.y + yr * persp;
+          var depth = (zr + R) / (2 * R);          // 0(后)→1(前)
+          var size = baseSize * (0.5 + 0.5 * depth);
+          var alpha = (0.4 + 0.6 * depth) * s.alpha;
+          // 整团左右摆动已由 B.x（含 sway）统一带动，这里只需记录屏幕坐标即可
+          s.sx = sx; s.sy = sy; s.size = size;
+
+          if (s.floating) {
+            s.floatT += dt;
+            var ft = s.floatT / 0.85;
+            if (ft >= 1) { s.gone = true; continue; }
+            sy -= ft * h * 0.5;                     // 向上飘向顶边
+            alpha *= (1 - ft);
+          }
+          var drawColor = 'rgba(255,255,255,' + alpha.toFixed(3) + ')';
+          if (s.wrongT > 0) {
+            s.wrongT -= dt; if (s.wrongT < 0) s.wrongT = 0;
+            drawColor = 'rgba(255,90,90,' + alpha.toFixed(3) + ')';
+          }
+
+          // B → 种子 更细白线（绒丝），轻轻向下弯曲一点
+          ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 * alpha).toFixed(3) + ')';
+          ctx.lineWidth = 1;
+          var mx = (B.x + sx) / 2;
+          var my = (B.y + sy) / 2 + Math.abs(sx - B.x) * 0.15 + 5;  // 控制点下移 → 绒丝向下轻垂
+          ctx.beginPath(); ctx.moveTo(B.x, B.y); ctx.quadraticCurveTo(mx, my, sx, sy); ctx.stroke();
+
+          // 数字（白色，无描边）
+          ctx.font = '700 ' + size.toFixed(1) + 'px "Source Han Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = drawColor;
+          ctx.fillText(s.num, sx, sy);
+        }
+      };
+
+      SchulteGridGame.prototype._p3Click = function(x, y) {
+        if (!this.isPlaying || !this._p3) return;
+        var best = null, bestD = 1e9;
+        for (var i = 0; i < this._p3.seeds.length; i++) {
+          var s = this._p3.seeds[i];
+          if (s.gone) continue;
+          var dx = x - s.sx, dy = y - s.sy;
+          var d = Math.sqrt(dx * dx + dy * dy);
+          if (d < bestD) { bestD = d; best = s; }
+        }
+        if (!best) return;
+        var hitR = Math.max(18, best.size * 0.75);
+        if (bestD > hitR) return;
+        if (best.num === this.currentNumber) {
+          best.floating = true; best.floatT = 0;
+          this.playSound('correct');
+          if (this.currentNumber === this.getMaxNumber()) {
+            var self = this;
+            this._p3Finishing = true;
+            setTimeout(function() { self.completeGame(); }, 850);
+          } else {
+            this.currentNumber += this.getNumberStep();
+            this.updateUI();
+          }
+        } else {
+          best.wrongT = 0.5;
+          this.playSound('wrong');
+        }
+      };
+
+      SchulteGridGame.prototype._stopP3 = function() {
+        if (this._p3ResizeHandler) { window.removeEventListener('resize', this._p3ResizeHandler); this._p3ResizeHandler = null; }
+        if (this._p3 && this._p3.raf != null) { cancelAnimationFrame(this._p3.raf); }
+        this._p3 = null;
+        this._p3Canvas = null;
+        this._p3Finishing = false;
+        var c = document.getElementById('grid-container');
+        if (c) {
+          c.style.position = ''; c.style.left = ''; c.style.top = '';
+          c.style.right = ''; c.style.bottom = '';
+          c.style.width = ''; c.style.height = '';
+          c.style.display = ''; c.style.background = '';
+          c.style.padding = ''; c.style.marginTop = '';
+          c.style.borderRadius = ''; c.style.boxShadow = '';
+          c.style.transform = ''; c.style.maxWidth = ''; c.style.maxHeight = '';
+        }
+      };
+
+      // 图案4：圆形内 Voronoi（泰森多边形）不规则切片，每片面积近似相等；
+      //   数字 1..N 随机散布在各切片中，按从小到大顺序点击（与图案1/2/3 一致）。
+      SchulteGridGame.prototype._p4GenSeeds = function(N) {
+        var seeds = [];
+        var minD = 0.95 * Math.sqrt(Math.PI / N);
+        var guard = 0;
+        while (seeds.length < N && guard < 80) {
+          guard++;
+          var cur = minD, tries = 0;
+          while (seeds.length < N && tries < 3000 * N) {
+            tries++;
+            var r = 0.88 * Math.sqrt(Math.random()), a = Math.random() * 2 * Math.PI;  // 初始均匀盘分布；配合后续 Lloyd 松弛使面积均匀
+            var x = r * Math.cos(a), y = r * Math.sin(a);
+            var ok = true;
+            for (var i = 0; i < seeds.length; i++) {
+              var dx = x - seeds[i].x, dy = y - seeds[i].y;
+              if (dx * dx + dy * dy < cur * cur) { ok = false; break; }
+            }
+            if (ok) seeds.push({ x: x, y: y });
+          }
+          if (seeds.length < N) minD *= 0.85;     // 不够则放宽最小间距再补
+        }
+        return seeds;
+      };
+
+      SchulteGridGame.prototype._p4Clip = function(poly, a, b, c) {
+        var out = [], n = poly.length;
+        for (var k = 0; k < n; k++) {
+          var cur = poly[k], prev = poly[(k + n - 1) % n];
+          var dc = a * cur.x + b * cur.y + c, dp = a * prev.x + b * prev.y + c;
+          var curIn = dc <= 0, prevIn = dp <= 0;
+          if (curIn) {
+            if (!prevIn) out.push(this._p4Intersect(prev, cur, a, b, c));
+            out.push(cur);
+          } else if (prevIn) {
+            out.push(this._p4Intersect(prev, cur, a, b, c));
+          }
+        }
+        return out;
+      };
+
+      SchulteGridGame.prototype._p4Intersect = function(p1, p2, a, b, c) {
+        var d1 = a * p1.x + b * p1.y + c, d2 = a * p2.x + b * p2.y + c;
+        var t = d1 / (d1 - d2);
+        return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+      };
+
+      SchulteGridGame.prototype._p4Voronoi = function(seeds, clipR) {
+        clipR = clipR || 1;
+        var circle = [];
+        for (var k = 0; k < 72; k++) {
+          var ang = k / 72 * 2 * Math.PI;
+          circle.push({ x: Math.cos(ang) * clipR, y: Math.sin(ang) * clipR });
+        }
+        var cells = [];
+        for (var i = 0; i < seeds.length; i++) {
+          var poly = circle.map(function(p) { return { x: p.x, y: p.y }; });
+          for (var j = 0; j < seeds.length; j++) {
+            if (j === i) continue;
+            var a = seeds[j].x - seeds[i].x, b = seeds[j].y - seeds[i].y;
+            var mx = (seeds[i].x + seeds[j].x) / 2, my = (seeds[i].y + seeds[j].y) / 2;
+            var c = -(a * mx + b * my);
+            poly = this._p4Clip(poly, a, b, c);
+            if (poly.length < 3) break;
+          }
+          cells.push({ poly: poly, num: 0, done: false, wrong: false });
+        }
+        return cells;
+      };
+
+      // 多边形面积质心（Lloyd 松弛用）：标准质心，比顶点平均更接近单元真正中心
+      SchulteGridGame.prototype._p4Centroid = function(poly) {
+        var A = 0, cx = 0, cy = 0, n = poly.length;
+        for (var k = 0; k < n; k++) {
+          var p = poly[k], q = poly[(k + 1) % n];
+          var cr = p.x * q.y - q.x * p.y;
+          A += cr; cx += (p.x + q.x) * cr; cy += (p.y + q.y) * cr;
+        }
+        A *= 0.5;
+        if (Math.abs(A) < 1e-9) return { x: 0, y: 0 };
+        return { x: cx / (6 * A), y: cy / (6 * A) };
+      };
+
+      // Lloyd 松弛：把每个种子移到它所在单元的面积质心，反复迭代。
+      //   收敛后所有碎片面积趋近相等、间距均匀 —— 直接解决"外圈碎片明显大于内部"的不均匀问题，
+      //   同时最小碎片的内切半径显著变大，是"数字能放大且不压线"的前提。
+      SchulteGridGame.prototype._p4Lloyd = function(seeds, clipR, iters) {
+        clipR = clipR || 1; iters = iters || 10;
+        var maxR = clipR - 0.015;                 // 种子钳制在裁切圆内，防止越过裁切边导致单元被切薄
+        for (var it = 0; it < iters; it++) {
+          var cells = this._p4Voronoi(seeds, clipR);
+          for (var i = 0; i < seeds.length; i++) {
+            if (cells[i].poly.length < 3) continue;
+            var cen = this._p4Centroid(cells[i].poly);
+            var rr = Math.sqrt(cen.x * cen.x + cen.y * cen.y);
+            if (rr > maxR) { var s = maxR / rr; cen.x *= s; cen.y *= s; }
+            seeds[i].x = cen.x; seeds[i].y = cen.y;
+          }
+        }
+        return seeds;
+      };
+
+      SchulteGridGame.prototype._p4PointInPoly = function(px, py, poly) {
+        var inside = false, n = poly.length;
+        for (var i = 0, j = n - 1; i < n; j = i++) {
+          var xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+          var hit = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+          if (hit) inside = !inside;
+        }
+        return inside;
+      };
+
+      SchulteGridGame.prototype._p4PointSegDist = function(px, py, ax, ay, bx, by) {
+        var dx = bx - ax, dy = by - ay;
+        var l2 = dx * dx + dy * dy;
+        var t = l2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0;
+        if (t < 0) t = 0; else if (t > 1) t = 1;
+        var qx = ax + t * dx, qy = ay + t * dy;
+        return Math.sqrt((px - qx) * (px - qx) + (py - qy) * (py - qy));
+      };
+
+      // 种子点到其单元边界的最近距离(归一半径单位)：即该碎片能容纳的最大内切圆半径
+      SchulteGridGame.prototype._p4Inradius = function(sx, sy, poly) {
+        var minD = Infinity;
+        for (var k = 0; k < poly.length; k++) {
+          var a = poly[k], b = poly[(k + 1) % poly.length];
+          var d = this._p4PointSegDist(sx, sy, a.x, a.y, b.x, b.y);
+          if (d < minD) minD = d;
+        }
+        return minD;
+      };
+
+      SchulteGridGame.prototype._renderPatternGrid4 = function(container) {
+        this._stopP4();
+        container.style.position = 'absolute';
+        container.style.left = '50%'; container.style.top = '50%';
+        container.style.right = 'auto'; container.style.bottom = 'auto';
+        container.style.transform = 'translate(-50%, -54%)';  // 整体上移，避开底部开始按钮
+        container.style.width = '90%'; container.style.height = '90%';
+        container.style.maxWidth = ''; container.style.maxHeight = '';
+        container.style.display = 'block';
+        container.style.gridTemplateColumns = ''; container.style.gap = '';
+        container.style.padding = '0'; container.style.marginTop = '0';
+        container.style.borderRadius = '0'; container.style.boxShadow = 'none';
+        container.style.background = 'transparent';
+        container.innerHTML = '';
+        var canvas = document.createElement('canvas');
+        canvas.style.display = 'block';
+        canvas.style.width = '100%'; canvas.style.height = '100%';
+        container.appendChild(canvas);
+        this._p4Container = container;
+        var Nraw = (this.numbers && this.numbers.length) ? this.numbers.length : (this.gridSize * this.gridSize);
+        var CLIP = 0.94;                              // 碎片裁切半径(单位半径)：几乎贴到可见圆边(0.97)，消除"圆与容器之间的大空隙"
+        var READ_MIN = 18;                            // 人眼可读最小字号(px)：任何难度数字都不得小于它 —— 阅读优先于格数
+        var FS_CAP = 0.30, FS_K = 1.15;               // 字号上限(相对半径)与"内切半径→字号"系数：够大够读、不过分夸张
+        var palette = ['#E53935', '#FF5722', '#FF9800', '#FBC02D', '#43A047', '#00897B', '#1E88E5', '#3949AB', '#8E24AA', '#D81B60', '#00838F', '#6D4C41'];
+        // 软上限 49 格；字号按"最小碎片内切半径"取整局统一值，若低于可读下限则自动降格数
+        var N = Math.min(Nraw, 49);
+        var seeds = null, cells = null, minIn = 0;
+        while (true) {
+          seeds = this._p4GenSeeds(N);
+          for (var si = 0; si < seeds.length; si++) { seeds[si]._ph = Math.random() * Math.PI * 2; seeds[si]._ph2 = Math.random() * Math.PI * 2; }
+          seeds = this._p4Lloyd(seeds, CLIP, 10);      // Lloyd 松弛：碎片面积均匀，外圈不再明显大于内部
+          cells = this._p4Voronoi(seeds, CLIP);
+          minIn = Infinity;
+          for (var ci = 0; ci < cells.length; ci++) {
+            var inr = this._p4Inradius(seeds[ci].x, seeds[ci].y, cells[ci].poly);
+            if (inr < minIn) minIn = inr;
+          }
+          // 最坏 R≈225px 时的字号：min(上限, 内切半径×系数)，达到可读下限即保留该格数
+          if (N <= 9 || Math.min(225 * FS_CAP, minIn * 225 * FS_K) >= READ_MIN) break;
+          N--;
+        }
+        for (var ci2 = 0; ci2 < cells.length; ci2++) {
+          cells[ci2].num = this.getNumberStart() + ci2 * this.getNumberStep();  // 图案4 用连续 1..N 数字(位置由 Voronoi 天然随机)；不能用 numbers[ci2] 否则降格后会缺号卡死
+          cells[ci2]._cx = seeds[ci2].x; cells[ci2]._cy = seeds[ci2].y;  // 数字放在种子点：Voronoi单元围绕种子生成，才是板块真正的视觉中心
+          cells[ci2].color = palette[Math.floor(Math.random() * palette.length)];  // 随机彩色，与其它模式一致(不自动高亮下一个)
+        }
+        this._p4 = { canvas: canvas, cells: cells, baseCells: cells, baseSeeds: seeds, CLIP: CLIP, minInr: minIn, READ_MIN: READ_MIN, FS_CAP: FS_CAP, FS_K: FS_K, W: 0, H: 0, dpr: 1, cx: 0, cy: 0, R: 0 };
+        var self = this;
+        canvas.addEventListener('click', function(e) {
+          if (!self.isPlaying) return;
+          var rect = canvas.getBoundingClientRect();
+          self._p4Click(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        this._p4Measure();
+        this._p4ResizeHandler = function() { if (self._p4) self._p4Measure(); };
+        window.addEventListener('resize', this._p4ResizeHandler);
+        var self2 = this;
+        var p4frame = function () {
+          if (!self2._p4) return;
+          var t = performance.now() / 1000;
+          var amp = 0, spd = 0.4;                  // 完全不呼吸，方格和数字都不动，纯静态画面
+          var base = self2._p4.baseSeeds, old = self2._p4.cells;
+          var maxR = self2._p4.CLIP - 0.08;           // 漂移后种子仍远小于裁切边，避免单元突跳/卡顿
+          var ds = [];
+          for (var bi = 0; bi < base.length; bi++) {
+            var b = base[bi];
+            var dx = b.x + amp * Math.sin(t * spd + b._ph);
+            var dy = b.y + amp * Math.cos(t * spd * 0.8 + b._ph2);
+            var rr = Math.sqrt(dx * dx + dy * dy);
+            if (rr > maxR) { var s = maxR / rr; dx *= s; dy *= s; }
+            ds.push({ x: dx, y: dy });
+          }
+          var newCells = self2._p4Voronoi(ds, self2._p4.CLIP);  // 重算 Voronoi：相邻单元天然共用边，飘动时无缝隙
+          for (var ni = 0; ni < newCells.length; ni++) {
+            newCells[ni].num = self2.getNumberStart() + ni * self2.getNumberStep();  // 连续数字
+            if (old && old[ni]) { newCells[ni].done = old[ni].done; newCells[ni].wrong = old[ni].wrong; }
+            newCells[ni]._cx = self2._p4.baseCells[ni]._cx;  // 数字锚点=初始种子(固定不动)→绝对丝滑不卡，碎片边界只轻呼吸
+            newCells[ni]._cy = ds[ni].y;
+            newCells[ni].color = self2._p4.baseCells[ni].color;
+          }
+          self2._p4.cells = newCells;
+          self2._p4DrawStatic();
+          self2._p4.raf = requestAnimationFrame(p4frame);
+        };
+        this._p4.raf = requestAnimationFrame(p4frame);
+      };
+
+      SchulteGridGame.prototype._p4Measure = function() {
+        var p4 = this._p4; if (!p4) return;
+        var cont = this._p4Container;
+        // 容器尺寸保持安全值(限高 480px，不越过顶部时间栏/底部开始按钮)；
+        // "圆撑满容器"由 R=S/2*0.97 负责，不必把容器本身放大到 68% 高
+        var S = Math.floor(Math.min(window.innerWidth * 0.92, window.innerHeight * 0.62));
+        if (S > 480) S = 480;
+        if (S < 200) S = 200;
+        cont.style.width = S + 'px'; cont.style.height = S + 'px';
+        var dpr = window.devicePixelRatio || 1;
+        var c = p4.canvas;
+        c.width = Math.round(S * dpr); c.height = Math.round(S * dpr);
+        var ctx = c.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        p4.W = S; p4.H = S; p4.dpr = dpr;
+        // 磨砂玻璃背景(模糊光斑)尺寸变化后失效，绘制时按需重建
+        p4.bgCanvas = null;
+        this._p4DrawStatic();
+      };
+
+      SchulteGridGame.prototype._p4DrawStatic = function() {
+        var p4 = this._p4; if (!p4) return;
+        var c = p4.canvas, ctx = c.getContext('2d');
+        var S = p4.W;
+        ctx.clearRect(0, 0, S, S);
+        var cx = S / 2, cy = S / 2, R = S / 2 * 0.97;   // 圆撑满容器，几乎不剩空隙
+        p4.cx = cx; p4.cy = cy; p4.R = R;
+        // ---- 第0层：护眼浅色渐变背景(圆外也显示) ----
+        var bgG = ctx.createLinearGradient(0, 0, S, S);
+        bgG.addColorStop(0, '#e9f1eb'); bgG.addColorStop(0.5, '#f5f8f4'); bgG.addColorStop(1, '#dfeae2');
+        ctx.fillStyle = bgG; ctx.fillRect(0, 0, S, S);
+        // ---- 第1层：圆内模糊+提饱和的"风景"(玻璃后的世界)，离屏预渲染一次 ----
+        if (!p4.bgCanvas || p4.bgCanvas._S !== S) {
+          var bc = document.createElement('canvas');
+          bc.width = c.width; bc.height = c.height;
+          var bctx = bc.getContext('2d');
+          bctx.setTransform(p4.dpr, 0, 0, p4.dpr, 0, 0);
+          bctx.fillStyle = bgG; bctx.fillRect(0, 0, S, S);
+          // 静态苹果抽象色彩背景：大块弥散柔光，雾感蓝绿粉橙紫
+          var blobs = [
+            ['#bcd8e8', 0.58, S * 0.12, S * 0.18, S * 0.42],
+            ['#c8e4c4', 0.52, S * 0.82, S * 0.72, S * 0.38],
+            ['#f2d4da', 0.55, S * 0.72, S * 0.16, S * 0.35],
+            ['#f0dcc0', 0.45, S * 0.18, S * 0.78, S * 0.36],
+            ['#d8d6e8', 0.40, S * 0.44, S * 0.52, S * 0.45]
+          ];
+          for (var bi = 0; bi < blobs.length; bi++) {
+            var b = blobs[bi];
+            bctx.globalAlpha = b[1];
+            bctx.fillStyle = b[0];
+            bctx.beginPath(); bctx.arc(b[2], b[3], b[4], 0, Math.PI * 2); bctx.fill();
+          }
+          bctx.globalAlpha = 1;
+          if ('filter' in bctx) {
+            bctx.filter = 'blur(8px) saturate(170%)';   // 液态玻璃=弱模糊+提饱和(不是磨砂的重模糊)
+            bctx.drawImage(bc, 0, 0, S, S);
+            bctx.filter = 'none';
+            try {
+              bctx.filter = 'url(#lg-dist)';             // 液态折射扭曲：feTurbulence 噪声位移映射
+              bctx.drawImage(bc, 0, 0, S, S);
+            } catch (e) { /* 不支持 url() 滤镜则保持模糊背景 */ }
+            bctx.filter = 'none';
+          }
+          bc._S = S;
+          p4.bgCanvas = bc;
+        }
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+        ctx.drawImage(p4.bgCanvas, 0, 0, S, S);
+        // ---- 第2层：碎片玻璃面(菲涅尔曲面渐变) + 光晕 + 细白主线 ----
+        var fs = Math.min(R * p4.FS_CAP, (p4.minInr || 0.18) * R * p4.FS_K);  // 统一字号
+        if (fs < p4.READ_MIN) fs = p4.READ_MIN;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '600 ' + fs + 'px "Microsoft YaHei", sans-serif';
+        for (var i = 0; i < p4.cells.length; i++) {
+          var cell = p4.cells[i], poly = cell.poly;
+          if (poly.length < 3) continue;
+          ctx.beginPath();
+          var topY = Infinity, botY = -Infinity;
+          for (var k = 0; k < poly.length; k++) {
+            var px = cx + poly[k].x * R, py = cy + poly[k].y * R;
+            if (py < topY) topY = py;
+            if (py > botY) botY = py;
+            if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          if (cell.done) {
+            var dg = ctx.createLinearGradient(0, topY, 0, botY);
+            dg.addColorStop(0, 'rgba(43,168,158,0.52)'); dg.addColorStop(1, 'rgba(43,168,158,0.32)');
+            ctx.fillStyle = dg;
+          } else {
+            var gg = ctx.createLinearGradient(0, topY, 0, botY);
+            gg.addColorStop(0, 'rgba(255,255,255,0.35)');
+            gg.addColorStop(0.15, 'rgba(255,255,255,0.08)');
+            gg.addColorStop(0.70, 'rgba(255,255,255,0.06)');
+            gg.addColorStop(1, 'rgba(255,255,255,0.18)');
+            ctx.fillStyle = gg;
+          }
+          ctx.fill();
+          // 光晕 + 细白主线
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = cell.wrong ? 'rgba(232,83,63,0.25)' : 'rgba(255,255,255,0.16)';
+          ctx.stroke();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = cell.wrong ? 'rgba(232,83,63,0.95)' : 'rgba(255,255,255,0.65)';
+          ctx.stroke();
+        }
+        // ---- 第3层：数字(固定锚点=绝对丝滑，单色清晰不脏) ----
+        for (var i2 = 0; i2 < p4.cells.length; i2++) {
+          var cell2 = p4.cells[i2];
+          if (cell2.poly.length < 3) continue;
+          var dx = cx + (cell2._cx || 0) * R, dy = cy + (cell2._cy || 0) * R;
+          if (cell2.done) {
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          } else if (cell2.wrong) {
+            ctx.fillStyle = '#e8533f';
+          } else {
+            ctx.fillStyle = cell2.color || '#2c3e50';
+          }
+          ctx.fillText('' + cell2.num, dx, dy);
+        }
+        ctx.restore();
+        // ---- 圆边：简洁白描边 ----
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.stroke();
+      };
+
+      SchulteGridGame.prototype._p4Click = function(x, y) {
+        if (!this.isPlaying || !this._p4) return;
+        var p4 = this._p4;
+        var ux = (x - p4.cx) / p4.R, uy = (y - p4.cy) / p4.R;
+        if (ux * ux + uy * uy > 1.02) return;     // 圆外忽略
+        var hit = null;
+        for (var i = 0; i < p4.cells.length; i++) {
+          var cell = p4.cells[i];
+          if (cell.done) continue;
+          if (this._p4PointInPoly(ux, uy, cell.poly)) { hit = cell; break; }
+        }
+        if (!hit) return;
+        if (hit.num === this.currentNumber) {
+          hit.done = true;
+          this.playSound('correct');
+          // 通关判定以碎片数 N 为准(而非 gridSize²)：图案4 可能因可读字号而自动降格数，避免点完碎片后卡死
+          var maxN = this.getNumberStart() + (p4.cells.length - 1) * this.getNumberStep();
+          if (this.currentNumber === maxN) {
+            var self = this;
+            setTimeout(function() { self.completeGame(); }, 500);
+          } else {
+            this.currentNumber += this.getNumberStep();
+            this.updateUI();
+          }
+          this._p4DrawStatic();
+        } else {
+          var self2 = this;
+          hit.wrong = true;
+          this.playSound('wrong');
+          this._p4DrawStatic();
+          setTimeout(function() { hit.wrong = false; if (self2._p4) self2._p4DrawStatic(); }, 400);
+        }
+      };
+
+      SchulteGridGame.prototype._stopP4 = function() {
+        if (this._p4ResizeHandler) { window.removeEventListener('resize', this._p4ResizeHandler); this._p4ResizeHandler = null; }
+        if (this._p4 && this._p4.raf) { cancelAnimationFrame(this._p4.raf); }
+        this._p4 = null;
+        var c = document.getElementById('grid-container');
+        if (c) {
+          c.style.position = ''; c.style.left = ''; c.style.top = '';
+          c.style.right = ''; c.style.bottom = '';
+          c.style.width = ''; c.style.height = '';
+          c.style.display = ''; c.style.background = '';
+          c.style.padding = ''; c.style.marginTop = '';
+          c.style.borderRadius = ''; c.style.boxShadow = '';
+          c.style.transform = ''; c.style.maxWidth = ''; c.style.maxHeight = '';
+          c.style.gridTemplateColumns = ''; c.style.gap = '';
+        }
+      };
+
+      SchulteGridGame.prototype._stopP5 = function() {
+        if (this._p5 && this._p5.raf) { cancelAnimationFrame(this._p5.raf); }
+        this._p5 = null;
+        var c = document.getElementById('grid-container');
+        if (c) {
+          c.style.position = ''; c.style.left = ''; c.style.top = '';
+          c.style.right = ''; c.style.bottom = '';
+          c.style.width = ''; c.style.height = ''; c.style.display = '';
+          c.style.background = ''; c.style.padding = ''; c.style.marginTop = '';
+          c.style.borderRadius = ''; c.style.boxShadow = '';
+          c.style.transform = ''; c.style.maxWidth = ''; c.style.maxHeight = '';
+          c.style.gridTemplateColumns = ''; c.style.gap = '';
+        }
+      };
+
+      // ========== 图案5·星璇：4×4圆形网格，四象限旋转 ==========
+      SchulteGridGame.prototype._renderPatternGrid5 = function(container) {
+        this._stopP5();
+        container.style.position = 'absolute';
+        container.style.left = '50%'; container.style.top = '50%';
+        container.style.transform = 'translate(-50%, -53%)';
+        container.style.display = 'block';
+        container.style.gridTemplateColumns = '';
+        container.style.background = 'transparent';
+        container.innerHTML = '';
+        var canvas = document.createElement('canvas');
+        canvas.style.display = 'block'; canvas.style.width = '100%'; canvas.style.height = '100%';
+        container.appendChild(canvas);
+        var self = this;
+        // 图案5 三个颜色方案：1=紫粉(原5-1)、2=绿黄(5-2)、3=蓝红(5-3)
+        var P5_SCHEMES = {
+          1: { A: '#6a19f4', B: '#d87898' },
+          2: { A: '#5ba847', B: '#f8c838' },
+          3: { A: '#0088bc', B: '#a83838' }
+        };
+        function hexToHsl(hex) {
+          hex = hex.replace('#', '');
+          var r = parseInt(hex.substr(0, 2), 16) / 255,
+              g = parseInt(hex.substr(2, 2), 16) / 255,
+              b = parseInt(hex.substr(4, 2), 16) / 255;
+          var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+          var h = 0, s = 0, l = (mx + mn) / 2;
+          if (d !== 0) {
+            s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+            if (mx === r) h = ((g - b) / d) % 6;
+            else if (mx === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h *= 60; if (h < 0) h += 360;
+          }
+          return { h: h, s: s, l: l };
+        }
+        var scheme = P5_SCHEMES[self.patternColor || 1] || P5_SCHEMES[1];
+        var A = scheme.A, B = scheme.B;
+        function measure() {
+          var S = Math.floor(Math.min(window.innerWidth * 0.88, window.innerHeight * 0.64));
+          if (S > 480) S = 480; if (S < 200) S = 200;
+          container.style.width = S + 'px'; container.style.height = S + 'px';
+          var dpr = window.devicePixelRatio || 1;
+          canvas.width = Math.round(S * dpr); canvas.height = Math.round(S * dpr);
+          return { S: S, dpr: dpr };
+        }
+        var m = measure(), S = m.S, dpr = m.dpr;
+        var N = this.gridSize; var step = S / N, r = step * 0.48;
+        var quadDir = [-1, 1, 1, -1];            // UL CCW, UR CW, LL CW, LR CCW
+        var gdir = [[-1,-1],[1,-1],[-1,1],[1,1]]; // 四象限放射方向：内端A(朝全局中心)→外端B(朝各自外角)
+        var qAngles = [0, 0, 0, 0];  // 初始0：进入即呈“从中心放射向四角”的干净状态，之后按各象限方向慢速旋转
+        var mid = (N % 2 === 1) ? Math.floor(N / 2) : -1; // 奇数 N 才有中间行/列
+        var cells = [];
+        for (var row = 0; row < N; row++) {
+          for (var col = 0; col < N; col++) {
+            var qi = (row < N / 2 ? 0 : 2) + (col < N / 2 ? 0 : 1);
+            var ii = row * N + col;
+            var isMid = (mid >= 0) && (row === mid || col === mid); // 中间行/列不旋转
+            var isCenterCell = (mid >= 0) && (row === mid && col === mid); // 中心圆 = 径向镜像渐变
+            // 中间行/列圆：渐变 A 端朝向网格正中心（中间那个圆）
+            var gradDir = [0, 0];
+            if (isMid && !isCenterCell) {
+              var dx = S / 2 - (step * 0.5 + col * step);
+              var dy = S / 2 - (step * 0.5 + row * step);
+              var dlen = Math.hypot(dx, dy) || 1;
+              gradDir = [dx / dlen, dy / dlen];
+            }
+            cells.push({
+              cx: step * 0.5 + col * step, cy: step * 0.5 + row * step,
+              num: this.numbers[ii],
+              done: false, wrong: false, q: qi,
+              noRotate: isMid, fixedAng: 0, isCenter: isCenterCell, gradDir: gradDir
+            });
+          }
+        }
+        var p5 = {
+          canvas: canvas, S: S, dpr: dpr, r: r, cells: cells,
+          A: A, B: B,
+          qAngles: qAngles, qDirs: quadDir, gdir: gdir, lastT: performance.now()
+        };
+        // 预计算 A→B 的 RGB 线性插值渐变 stops（与参考图一致：蓝红之间过暗灰紫，而非 HSL 的亮品红；绿黄/紫粉自然过渡）
+        function hexToRgb(hex) {
+          hex = hex.replace('#', '');
+          return [parseInt(hex.substr(0,2),16), parseInt(hex.substr(2,2),16), parseInt(hex.substr(4,2),16)];
+        }
+        var _ar = hexToRgb(A), _br = hexToRgb(B);
+        function rgbLerp(t) {
+          return 'rgb(' + Math.round(_ar[0] + (_br[0]-_ar[0])*t) + ',' +
+                          Math.round(_ar[1] + (_br[1]-_ar[1])*t) + ',' +
+                          Math.round(_ar[2] + (_br[2]-_ar[2])*t) + ')';
+        }
+        // 普通圆渐变 stops：A/B 各占 ~28% 纯色区，中间过渡 ~44%（RGB 直线插值）
+        var gstops = [[0, A],[0.28, A]];
+        for (var gp = 0.33; gp < 0.72; gp += 0.05) {
+          var t = (gp - 0.28) / 0.44;
+          gstops.push([Math.round(gp*100)/100, rgbLerp(t)]);
+        }
+        gstops.push([0.72, B]); gstops.push([1, B]);
+        p5.gradStops = gstops;
+        // smootherstep 缓动：让渐变两端(A/B纯色)各占更多视觉比重、中间过渡色收敛
+        function p5Ease(t){ return t<=0 ? 0 : (t>=1 ? 1 : t*t*t*(t*(t*6-15)+10)); }
+        // 中心圆径向 stops：A 占内圈 35%，B 占外缘 15%，过渡段 50%
+        var centerStops = [[0, A], [0.35, A]];
+        for (var cgp = 0.40; cgp < 0.85; cgp += 0.05) {
+          var ct = p5Ease((cgp - 0.35) / 0.50);
+          centerStops.push([Math.round(cgp*100)/100, rgbLerp(ct)]);
+        }
+        centerStops.push([0.85, B]);
+        centerStops.push([1, B]);
+        p5.centerStops = centerStops;
+        this._p5 = p5;
+        canvas.addEventListener('click', function(e) {
+          if (!self.isPlaying) return;
+          var rect = canvas.getBoundingClientRect();
+          self._p5Click(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        var p5frame = function(now) {
+          if (!self._p5) return;
+          var dt = (now - p5.lastT) / 1000;
+          p5.lastT = now;
+          if (dt > 0.1) dt = 0.1;
+          var speed = 0.35;
+          for (var q = 0; q < 4; q++) { p5.qAngles[q] += speed * p5.qDirs[q] * dt; }
+          self._p5Draw();
+          p5.raf = requestAnimationFrame(p5frame);
+        };
+        p5.raf = requestAnimationFrame(p5frame);
+      };
+
+      SchulteGridGame.prototype._p5Draw = function() {
+        var p5 = this._p5; if (!p5) return;
+        var ctx = p5.canvas.getContext('2d');
+        var S = p5.S, dpr = p5.dpr, A = p5.A, B = p5.B;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, S, S);
+        ctx.fillStyle = A; ctx.fillRect(0, 0, S, S);
+        for (var q = 0; q < 4; q++) {
+          var ang = p5.qAngles[q];
+          for (var i = 0; i < p5.cells.length; i++) {
+            var cell = p5.cells[i], cx = cell.cx, cy = cell.cy, r = p5.r;
+            if (cell.q !== q) continue;
+            var drawAng = cell.noRotate ? cell.fixedAng : ang; // 中间行/列固定不旋转
+            ctx.save();
+            ctx.translate(cx, cy); ctx.rotate(drawAng);
+            var grad;
+            if (cell.isCenter) {
+              // 中心圆：径向镜像渐变（A 在圆心、B 在四缘，全方向对称）
+              grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+            } else {
+              // ld = A 端所在方向的单位向量；中间行/列圆 A 朝网格中心，其余 A 朝全局中心(象限内侧)
+              var ld = cell.noRotate ? cell.gradDir : [-p5.gdir[q][0], -p5.gdir[q][1]];
+              grad = ctx.createLinearGradient(ld[0] * r, ld[1] * r, -ld[0] * r, -ld[1] * r);
+            }
+            if (cell.done) {
+              grad.addColorStop(0, '#2ba89e');
+              grad.addColorStop(1, '#1f8f86');
+            } else {
+              var stops = cell.isCenter ? p5.centerStops : p5.gradStops;
+              for (var k = 0; k < stops.length; k++) {
+                grad.addColorStop(stops[k][0], stops[k][1]);
+              }
+            }
+            ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+            // 每个圆下方淡投影（水渍）：范围与浓度略加大，晕染更明显
+            ctx.shadowColor = 'rgba(0,0,0,0.28)';
+            ctx.shadowBlur = r * 0.45;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = r * 0.18;
+            ctx.fillStyle = grad; ctx.fill();
+            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+            if (cell.wrong) { ctx.lineWidth = 2.5; ctx.strokeStyle = '#e8533f'; ctx.stroke(); }
+            ctx.restore();
+            // 数字不旋转
+            var fs = Math.max(16, r * 0.82);
+            ctx.font = '600 ' + fs + 'px "Microsoft YaHei", sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = cell.done ? 'rgba(255,255,255,0.95)' : '#ffffff';
+            ctx.fillText('' + cell.num, cx, cy);
+          }
+        }
+      };
+
+      SchulteGridGame.prototype._p5Click = function(x, y) {
+        if (!this.isPlaying || !this._p5) return;
+        var p5 = this._p5;
+        for (var i = 0; i < p5.cells.length; i++) {
+          var cell = p5.cells[i];
+          if (cell.done) continue;
+          // 圆位置固定，直接判断点击是否在圆内
+          if (Math.hypot(x - cell.cx, y - cell.cy) < p5.r) {
+            if (cell.num === this.currentNumber) {
+              cell.done = true; this.playSound('correct');
+              // 通关：16个全点完;getMaxNumber不可用(图案5固定16格但随机数字)
+              var allDone = true;
+              for (var j = 0; j < p5.cells.length; j++) { if (!p5.cells[j].done) { allDone = false; break; } }
+              if (allDone) {
+                var self = this;
+                setTimeout(function() { self.completeGame(); }, 500);
+              } else { this.currentNumber += this.getNumberStep(); this.updateUI(); }
+            } else {
+              cell.wrong = true; this.playSound('wrong'); this._p5Draw();
+              var self2 = this;
+              setTimeout(function() { cell.wrong = false; if (self2._p5) self2._p5Draw(); }, 400);
+            }
+            this._p5Draw(); return;
+          }
+        }
+      };
+
+      // 图案6 随机模式(6-3)用的 10 套配色：统一「冷色打底(A/B) + 暖色焦点(C/D)」
+      // 10套：原版关系(A深色 / B=A同色系浅色版 / C=B对比色即补色,压暗保证白字可读 / D=B与C间色)；A色相绕色环铺开保证10套彼此可区分
+      SchulteGridGame.prototype._P6_PALETTES = [
+        { A:'#2B2A84', B:'#120FE6', C:'#AAAD0B', D:'#F04296' }, // 1 蓝紫底/同系浅/补色/间色 (A241 B241 C61 D331)
+        { A:'#2A5584', B:'#0F77E6', C:'#AD5E0B', D:'#F042ED' }, // 2 蓝底/同系浅/补色/间色 (A211 B211 C31 D301)
+        { A:'#2A8284', B:'#0FE3E6', C:'#AD0E0B', D:'#9C42F0' }, // 3 青蓝底/同系浅/补色/间色 (A181 B181 C1 D271)
+        { A:'#2A8458', B:'#0FE67E', C:'#AD0B59', D:'#4542F0' }, // 4 青绿底/同系浅/补色/间色 (A151 B151 C331 D241)
+        { A:'#2A842B', B:'#0FE612', C:'#AD0BAA', D:'#4296F0' }, // 5 绿底/同系浅/补色/间色 (A121 B121 C301 D211)
+        { A:'#55842A', B:'#77E60F', C:'#5E0BAD', D:'#42EDF0' }, // 6 黄绿底/同系浅/补色/间色 (A91 B91 C271 D181)
+        { A:'#82842A', B:'#E3E60F', C:'#0E0BAD', D:'#42F09C' }, // 7 黄底/同系浅/补色/间色 (A61 B61 C241 D151)
+        { A:'#84582A', B:'#E67E0F', C:'#0B59AD', D:'#42F045' }, // 8 橙底/同系浅/补色/间色 (A31 B31 C211 D121)
+        { A:'#842B2A', B:'#E6120F', C:'#0BAAAD', D:'#96F042' }, // 9 红底/同系浅/补色/间色 (A1 B1 C181 D91)
+        { A:'#842A55', B:'#E60F77', C:'#0BAD5E', D:'#EDF042' }  // 10 品红底/同系浅/补色/间色 (A331 B331 C151 D61)
+      ];
+
+      // ========== 图案6·嵌套旋转：A内含偏心B与C(B/C绕转)；相邻A间黄色D圆衔接；白底 ==========
+      SchulteGridGame.prototype._stopP6 = function() {
+        if (this._p6 && this._p6.raf) { cancelAnimationFrame(this._p6.raf); }
+        this._p6 = null;
+        var c = document.getElementById('grid-container');
+        if (c) {
+          c.style.position = ''; c.style.left = ''; c.style.top = '';
+          c.style.right = ''; c.style.bottom = '';
+          c.style.width = ''; c.style.height = ''; c.style.display = '';
+          c.style.background = ''; c.style.padding = ''; c.style.marginTop = '';
+          c.style.borderRadius = ''; c.style.boxShadow = '';
+          c.style.transform = ''; c.style.maxWidth = ''; c.style.maxHeight = '';
+          c.style.gridTemplateColumns = ''; c.style.gap = '';
+        }
+      };
+
+      SchulteGridGame.prototype._renderPatternGrid6 = function(container) {
+        this._stopP6();
+        container.style.position = 'absolute';
+        container.style.left = '50%'; container.style.top = '50%';
+        container.style.transform = 'translate(-50%, -53%)';
+        container.style.display = 'block';
+        container.style.gridTemplateColumns = '';
+        container.style.background = 'transparent';
+        container.innerHTML = '';
+        var canvas = document.createElement('canvas');
+        canvas.style.display = 'block'; canvas.style.width = '100%'; canvas.style.height = '100%';
+        container.appendChild(canvas);
+        var self = this;
+        // 图案6 颜色：6-1/6-2 用固定配色；6-3 用随机一套（见下方 isP63 分支）
+        function measure() {
+          var S = Math.floor(Math.min(window.innerWidth * 0.88, window.innerHeight * 0.64));
+          if (S > 480) S = 480; if (S < 200) S = 200;
+          container.style.width = S + 'px'; container.style.height = S + 'px';
+          var dpr = window.devicePixelRatio || 1;
+          canvas.width = Math.round(S * dpr); canvas.height = Math.round(S * dpr);
+          return { S: S, dpr: dpr };
+        }
+        var m = measure(), S = m.S, dpr = m.dpr;
+        var N = this.gridSize; var step = S / N, rA = step * 0.48;
+        var isP62 = (this.patternColor === 2);   // 图案6-2：球放大 + 数字坐在最小的 C 球上随它滚动
+        var isP63 = (this.patternColor === 3);   // 图案6-3：圆/六边形随机 + 随机一套配色
+        // 6-3 随机：每次进入/重开都重新掷形状(圆/六边形)与配色(10套随机一套)，保证每局不同
+        if (isP63) {
+          this._p6ShapeRand = (Math.random() < 0.5 ? 'circle' : 'hex');
+          this._p6PaletteIdx = Math.floor(Math.random() * this._P6_PALETTES.length);
+        }
+        var shape = isP63 ? this._p6ShapeRand : 'circle';
+        // 颜色：6-3 随机一套，其余用固定原版配色
+        var COL = isP63 ? this._P6_PALETTES[this._p6PaletteIdx] : { A: '#2e2d8b', B: '#0ca2da', C: '#db0d86', D: '#f5d74a' };
+        var rB, rC;
+        if (isP62 || isP63) { rB = rA * 0.90; rC = rB * 0.82; }   // 6-2/6-3：两个旋转球放大（仍内切不外溢）
+        else { rB = rA * 0.5; rC = rB * 0.5; }           // 6-1：原样
+        var rD = rA / 6;
+        // A 始终为正圆容器；随机形状作用于「数字底下的 C 球」，故 B/C 永远在圆内绕转
+        var inR = rA;
+        var offB = inR - rB, offC = rB - rC;  // B/C 偏心最大距离（内层圆内切外层，最远点贴边不出界）
+        var cells = [];
+        for (var row = 0; row < N; row++) {
+          for (var col = 0; col < N; col++) {
+            var ii = row * N + col;
+            cells.push({
+              cx: step * 0.5 + col * step, cy: step * 0.5 + row * step,
+              num: this.numbers[ii],
+              done: false, wrong: false,
+              phiB: Math.random() * Math.PI * 2,   // B 偏心方位（初始随机）
+              phiC: Math.random() * Math.PI * 2,   // C 偏心方位（初始随机）
+              dirB: 1, dirC: -1, spB: 0.7, spC: 1.1 // B顺时针/C逆时针，转速 rad/s
+            });
+          }
+        }
+        // D 圆：相邻 A 圆连线中点（静止、黄色、衔接）
+        var dlist = [];
+        for (var r = 0; r < N; r++) {
+          for (var c = 0; c < N; c++) {
+            var c1 = cells[r * N + c];
+            if (c + 1 < N) { var c2 = cells[r * N + c + 1]; dlist.push({ x: (c1.cx + c2.cx) / 2, y: (c1.cy + c2.cy) / 2 }); }
+            if (r + 1 < N) { var c3 = cells[(r + 1) * N + c]; dlist.push({ x: (c1.cx + c3.cx) / 2, y: (c1.cy + c3.cy) / 2 }); }
+          }
+        }
+        var p6 = {
+          canvas: canvas, S: S, dpr: dpr, rA: rA, rB: rB, rC: rC, rD: rD,
+          offB: offB, offC: offC, cells: cells, dlist: dlist,
+          COL: COL, isP62: isP62, isP63: isP63, shape: shape, numOnC: (isP62 || isP63), lastT: performance.now()
+        };
+        this._p6 = p6;
+        canvas.addEventListener('click', function(e) {
+          if (!self.isPlaying) return;
+          var rect = canvas.getBoundingClientRect();
+          self._p6Click(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        var p6frame = function(now) {
+          if (!self._p6) return;
+          var dt = (now - p6.lastT) / 1000; p6.lastT = now;
+          if (dt > 0.1) dt = 0.1;
+          for (var i = 0; i < p6.cells.length; i++) {
+            var cc = p6.cells[i];
+            cc.phiB += cc.dirB * cc.spB * dt;
+            cc.phiC += cc.dirC * cc.spC * dt;
+          }
+          self._p6Draw();
+          p6.raf = requestAnimationFrame(p6frame);
+        };
+        p6.raf = requestAnimationFrame(p6frame);
+      };
+
+      SchulteGridGame.prototype._p6Draw = function() {
+        var p6 = this._p6; if (!p6) return;
+        var ctx = p6.canvas.getContext('2d');
+        var S = p6.S, dpr = p6.dpr, COL = p6.COL;
+        var rA = p6.rA, rB = p6.rB, rC = p6.rC, rD = p6.rD, offB = p6.offB, offC = p6.offC;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, S, S);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, S, S);  // 白底（白色容积）
+        // 1) A/B/C 嵌套偏心旋转圆
+        for (var i = 0; i < p6.cells.length; i++) {
+          var cell = p6.cells[i];
+          var bx = cell.cx + offB * Math.cos(cell.phiB);
+          var by = cell.cy + offB * Math.sin(cell.phiB);
+          var cxp = bx + offC * Math.cos(cell.phiC);
+          var cyp = by + offC * Math.sin(cell.phiC);
+          cell._bx = bx; cell._by = by; cell._cxp = cxp; cell._cyp = cyp;  // 记录实时圆心供数字落点
+          // A 容器（始终正圆，带轻投影，白底上立体）
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(cell.cx, cell.cy, rA, 0, Math.PI * 2);
+          ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = rA * 0.22;
+          ctx.shadowOffsetX = 0; ctx.shadowOffsetY = rA * 0.10;
+          ctx.fillStyle = cell.done ? '#2ba89e' : COL.A; ctx.fill();
+          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+          ctx.restore();
+          // B 圆（边缘羽化：中心实心，最外缘渐变到透明，柔和模糊）
+          var bGrad = ctx.createRadialGradient(bx, by, 0, bx, by, rB);
+          bGrad.addColorStop(0, COL.B);
+          bGrad.addColorStop(0.72, COL.B);
+          bGrad.addColorStop(1, COL.B + '00');
+          ctx.beginPath(); ctx.arc(bx, by, rB, 0, Math.PI * 2);
+          ctx.fillStyle = bGrad; ctx.fill();
+          // C 球（数字底下那颗）：随机为正圆 或 正六边形；圆与六边形统一径向渐变羽化（六边形用略大渐变半径，边缘虚化但顶点仍可见）
+          var cRad = (p6.shape === 'hex') ? rC * 1.08 : rC;
+          var cGrad = ctx.createRadialGradient(cxp, cyp, 0, cxp, cyp, cRad);
+          cGrad.addColorStop(0, COL.C);
+          cGrad.addColorStop(0.72, COL.C);
+          cGrad.addColorStop(1, COL.C + '00');
+          ctx.beginPath();
+          if (p6.shape === 'hex') {
+            for (var ch = 0; ch < 6; ch++) {
+              var cha = (-90 + 60 * ch) * Math.PI / 180;
+              var chx = cxp + rC * Math.cos(cha), chy = cyp + rC * Math.sin(cha);
+              if (ch === 0) ctx.moveTo(chx, chy); else ctx.lineTo(chx, chy);
+            }
+            ctx.closePath();
+          } else {
+            ctx.arc(cxp, cyp, rC, 0, Math.PI * 2);
+          }
+          ctx.fillStyle = cGrad; ctx.fill();
+          if (cell.wrong) { ctx.lineWidth = 2.5; ctx.strokeStyle = '#e8533f'; ctx.beginPath(); ctx.arc(cell.cx, cell.cy, rA, 0, Math.PI * 2); ctx.stroke(); }
+        }
+        // 2) D 圆（静止黄，衔接相邻A）
+        for (var d = 0; d < p6.dlist.length; d++) {
+          ctx.beginPath(); ctx.arc(p6.dlist[d].x, p6.dlist[d].y, rD, 0, Math.PI * 2);
+          ctx.fillStyle = COL.D; ctx.fill();
+        }
+        // 3) 数字（白色，最顶，不旋转 → 方向始终正立）
+        for (var k = 0; k < p6.cells.length; k++) {
+          var cl = p6.cells[k];
+          var nx, ny, fs;
+          if (p6.numOnC) { nx = cl._cxp; ny = cl._cyp; fs = Math.max(11, rC * 0.8); }  // 6-2/6-3：数字坐在最小的 C 球上随它滚动
+          else { nx = cl.cx; ny = cl.cy; fs = Math.max(16, rA * 0.82); }              // 6-1：数字钉在 A 中心
+          ctx.font = '600 ' + fs + 'px "Microsoft YaHei", sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = cl.done ? 'rgba(255,255,255,0.95)' : '#ffffff';
+          ctx.fillText('' + cl.num, nx, ny);
+        }
+      };
+
+      SchulteGridGame.prototype._p6Click = function(x, y) {
+        if (!this.isPlaying || !this._p6) return;
+        var p6 = this._p6;
+        for (var i = 0; i < p6.cells.length; i++) {
+          var cell = p6.cells[i];
+          if (cell.done) continue;
+          if (Math.hypot(x - cell.cx, y - cell.cy) < p6.rA) {
+            if (cell.num === this.currentNumber) {
+              cell.done = true; this.playSound('correct');
+              var allDone = true;
+              for (var j = 0; j < p6.cells.length; j++) { if (!p6.cells[j].done) { allDone = false; break; } }
+              if (allDone) { var self = this; setTimeout(function() { self.completeGame(); }, 500); }
+              else { this.currentNumber += this.getNumberStep(); this.updateUI(); }
+            } else {
+              cell.wrong = true; this.playSound('wrong'); this._p6Draw();
+              var self2 = this;
+              setTimeout(function() { cell.wrong = false; if (self2._p6) self2._p6Draw(); }, 400);
+            }
+            this._p6Draw(); return;
+          }
+        }
+      };
+
+      // ========== 图案7·六边盘：以正六边形为中心的「真·六边形密铺」（蜂窝） ==========
+      // 几何：轴向坐标(q,r)，统一尖顶朝向（所有六边形朝向一致）→ 边贴边、零缝隙。
+      // 中心一格(环0)，每外环 6k 格；完整蜂窝到环R的总数 = 1+3R(R+1)（=1,7,19,37,61…）。
+      // 数量：沿用圆盘模式每档目标数(10/20/30/40/60)，靠「环数选择 + 必要时最外圈对称微调」控制在误差≤2。
+      SchulteGridGame.prototype._renderPatternGrid7 = function(container) {
+        container.style.position = 'absolute';
+        container.style.left = '50%'; container.style.top = '50%';
+        container.style.transform = 'translate(-50%, -50%)';
+        container.style.display = 'block';
+        container.style.gridTemplateColumns = '';
+        container.style.background = 'transparent';
+        container.innerHTML = '';
+        var self = this;
+
+        // 目标总数 = 圆盘模式该难度档的总格数
+        var cfg = this.getCircularRingConfig();
+        var target = 0;
+        for (var ci = 0; ci < cfg.rings.length; ci++) target += cfg.rings[ci].count;
+
+        var SQRT3 = Math.sqrt(3);
+        function natTotal(R) { return 1 + 3 * R * (R + 1); }   // 完整蜂窝到环R的总数
+        function hexRing(R) {                                   // 环R的6R个轴向坐标（按角度序）
+          var res = [];
+          if (R === 0) { res.push({ q: 0, r: 0 }); return res; }
+          // 包围盒 + 精确环距过滤：max(|q|,|r|,|s|)===R（s=-q-r），保证恰6R格、无重复无错位
+          for (var q = -R; q <= R; q++) {
+            for (var r = -R; r <= R; r++) {
+              var s = -q - r;
+              if (Math.max(Math.abs(q), Math.abs(r), Math.abs(s)) === R) res.push({ q: q, r: r });
+            }
+          }
+          // 按角度排序，使最外圈对称微调时分布均匀
+          res.sort(function (a, b) {
+            var aa = Math.atan2(1.5 * a.r, Math.sqrt(3) * (a.q + a.r / 2));
+            var bb = Math.atan2(1.5 * b.r, Math.sqrt(3) * (b.q + b.r / 2));
+            return aa - bb;
+          });
+          return res;
+        }
+        function symIdx(n, k) {                                  // 在 n 个里均匀挑 k 个下标
+          var out = [];
+          for (var i = 0; i < k; i++) out.push(((Math.round(i * n / k)) % n + n) % n);
+          return out;
+        }
+
+        // 选环数：最大完整蜂窝 ≤ target+2；再按「是否落在±2内」决定用完整蜂窝还是最外圈补格
+        var bestR = 0;
+        while (natTotal(bestR + 1) <= target + 2) bestR++;
+        var natBest = natTotal(bestR);
+        var clean = (natBest >= target) || (target - natBest <= 2);
+        var cells = [], maxRing, count;
+        if (clean) {
+          count = natBest; maxRing = bestR;
+          for (var ring = 0; ring <= bestR; ring++) {
+            var rc = hexRing(ring);
+            for (var c = 0; c < rc.length; c++) cells.push({ q: rc[c].q, r: rc[c].r, ring: ring });
+          }
+        } else {
+          maxRing = bestR + 1;
+          for (var ring2 = 0; ring2 <= bestR; ring2++) {
+            var rc2 = hexRing(ring2);
+            for (var c2 = 0; c2 < rc2.length; c2++) cells.push({ q: rc2[c2].q, r: rc2[c2].r, ring: ring2 });
+          }
+          // 最外圈按「180°中心对称」成对补格：每补一对(对跖格)保证整体图形中心对称
+          var need = target - natBest;
+          var nxt = hexRing(bestR + 1);
+          var halfN = nxt.length / 2;                 // 环格数 6R 恒为偶数 → halfN 整数
+          var pairs = Math.round(need / 2);           // 成对补（每对=2格），自动修正奇偶，使图形对称
+          if (pairs > halfN) pairs = halfN;
+          var pIdx = symIdx(halfN, pairs);            // 在 0..halfN-1 均匀挑 pairs 个下标
+          for (var pi = 0; pi < pIdx.length; pi++) {
+            var a = pIdx[pi];
+            cells.push({ q: nxt[a].q, r: nxt[a].r, ring: bestR + 1 });
+            var b = (a + halfN) % nxt.length;         // 180° 对跖格
+            cells.push({ q: nxt[b].q, r: nxt[b].r, ring: bestR + 1 });
+          }
+          count = natBest + 2 * pairs;
+        }
+
+        // 数字：复用游戏数字系统（getNumberByIndex 兼容奇/偶）+ 洗牌
+        var numbers = [];
+        for (var i = 0; i < count; i++) numbers.push(this.getNumberByIndex(i));
+        for (var i2 = numbers.length - 1; i2 > 0; i2--) {
+          var j = Math.floor(Math.random() * (i2 + 1));
+          var t = numbers[i2]; numbers[i2] = numbers[j]; numbers[j] = t;
+        }
+
+        // 六边形尺寸：在 500×500 viewBox 内密铺留边距（圆周最大半径≈242）
+        var size = 242 / (SQRT3 * maxRing + 1);
+        var fontSize = Math.max(12, Math.round(size * 0.72));
+
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        var svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('id', 'p7-svg');
+        svg.setAttribute('viewBox', '0 0 500 500');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.style.display = 'block';
+
+        var S = Math.floor(Math.min(window.innerWidth * 0.88, window.innerHeight * 0.64));
+        if (S > 480) S = 480; if (S < 200) S = 200;
+        container.style.width = S + 'px'; container.style.height = S + 'px';
+
+        // 淡圆盘背景（盘感）
+        var bg = document.createElementNS(SVGNS, 'circle');
+        bg.setAttribute('cx', 250); bg.setAttribute('cy', 250); bg.setAttribute('r', 248);
+        bg.setAttribute('fill', '#fafdfc'); bg.setAttribute('stroke', '#B0C4B8'); bg.setAttribute('stroke-width', '1');
+        svg.appendChild(bg);
+
+        var cx = 250, cy = 250, numIndex = 0;
+        for (var c3 = 0; c3 < cells.length; c3++) {
+          var cell = cells[c3];
+          var px = cx + size * SQRT3 * (cell.q + cell.r / 2);  // 尖顶六边形轴向→像素（与顶点朝上朝向 v*60-90 配套 → 边贴边密铺）
+          var py = cy + size * 1.5 * cell.r;
+          var number = numbers[numIndex++];
+
+          var g = document.createElementNS(SVGNS, 'g');
+          g.setAttribute('data-number', number);
+          g.setAttribute('pointer-events', 'all');
+          g.style.cursor = 'pointer';
+
+          // 正六边形：统一尖顶朝向（顶点朝上），所有格一致 → 边贴边密铺
+          var pts = [];
+          for (var v = 0; v < 6; v++) {
+            var ang = (v * 60 - 90) * Math.PI / 180;
+            pts.push((px + size * Math.cos(ang)).toFixed(2) + ',' + (py + size * Math.sin(ang)).toFixed(2));
+          }
+          var poly = document.createElementNS(SVGNS, 'polygon');
+          poly.setAttribute('points', pts.join(' '));
+          poly.setAttribute('fill', '#FFFFFF');
+          poly.setAttribute('stroke', '#2ba89e');
+          poly.setAttribute('stroke-width', '2');
+          poly.setAttribute('stroke-linejoin', 'round');
+          g.appendChild(poly);
+
+          var text = document.createElementNS(SVGNS, 'text');
+          text.setAttribute('x', px.toFixed(2));
+          text.setAttribute('y', py.toFixed(2));
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('dominant-baseline', 'central');
+          text.setAttribute('font-size', fontSize);
+          text.setAttribute('font-weight', '700');
+          text.setAttribute('font-family', 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif');
+          text.setAttribute('fill', '#1a1a1a');
+          text.setAttribute('pointer-events', 'none');
+          text.textContent = number;
+          g.appendChild(text);
+
+          g.onclick = (function(num, el) {
+            return function() { self.handleClick(num, el); };
+          })(number, g);
+
+          svg.appendChild(g);
+        }
+        container.appendChild(svg);
+
+        this._p7RealCount = count;   // 供 getTotalNumbers 读实际绘制数，防数字卡死
+      };
+
 
             // ========== 彩格模式 ==========
       // 三原色（红/绿/蓝 RGB），鲜艳不发灰，两两混色覆盖全部三种配对
@@ -7085,6 +8373,8 @@
         this.stopTimer();
         // 图案2：游戏结束停止持续旋转
         this._stopP2Spin();
+        // 图案3：游戏结束停止蒲公英动画
+        this._stopP3();
         if (this._squareMoveBothTimer) {
           clearTimeout(this._squareMoveBothTimer);
           this._squareMoveBothTimer = null;
@@ -7288,6 +8578,9 @@
         }
         if (this.isBounceMode) return this._bounceGetTotal();
         if (this.isVariantMode) return this.variantNumbers.length;
+        if (this.isPatternMode && this.patternSub === 7) {
+          return (this._p7RealCount != null) ? this._p7RealCount : 0;
+        }
         return this.gridSize * this.gridSize;
       };
 
@@ -9041,6 +10334,14 @@
         game._bounceHandleClick(ev);
       });
     </script>
+    <!-- 液态玻璃(Liquid Glass)折射滤镜：feTurbulence 分形噪声 → 平滑 → 位移映射，用于 canvas 背景的液态扭曲 -->
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+      <filter id="lg-dist" x="-30%" y="-30%" width="160%" height="160%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.014 0.014" numOctaves="2" seed="11" result="n"/>
+        <feGaussianBlur in="n" stdDeviation="1.1" result="ns"/>
+        <feDisplacementMap in="SourceGraphic" in2="ns" scale="16" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </svg>
   
     
   </body>

@@ -415,6 +415,7 @@ const ACTION_NUM={clap:'1',wave:'2',hair:'3',nose:'4'};
 const NUM_AUDIO_MAP={'1':{m:'public/audio/b2/m_num1.mp3',f:'public/audio/b2/f_num1.mp3'},'2':{m:'public/audio/b2/m_num2.mp3',f:'public/audio/b2/f_num2.mp3'},'3':{m:'public/audio/b2/m_num3.mp3',f:'public/audio/b2/f_num3.mp3'},'4':{m:'public/audio/b2/m_num4.mp3',f:'public/audio/b2/f_num4.mp3'}};
 const AUDIO_MAP={clap:{m:'public/audio/b2/m_clap.mp3',f:'public/audio/b2/f_clap.mp3'},wave:{m:'public/audio/b2/m_wave.mp3',f:'public/audio/b2/f_wave.mp3'},hair:{m:'public/audio/b2/m_hair.mp3',f:'public/audio/b2/f_hair.mp3'},nose:{m:'public/audio/b2/m_nose.mp3',f:'public/audio/b2/f_nose.mp3'}};
 
+const GRACE_MS = 150; // 宽限期：刺激窗口到期后仍显示，期间点击仍算有效（避免“还亮着却点不动”）
 let state={
   userMode:'child',
   gameMode:'train',
@@ -427,6 +428,7 @@ let state={
   trialStartTime:0,
   responded:false,
   timeoutId:null,
+  graceTimer:null,
   results:[],
   practiceActive:false,
   practiceTimer:null,
@@ -598,6 +600,7 @@ function countdown(n,cb){
 
 function runTrial(){
   if(!state.running)return;
+  clearTimeout(state.graceTimer);
   if(state.currentTrial>=state.trials.length){endGame();return;}
   const cfg=getConfig();const trial=state.trials[state.currentTrial];
   state.responded=false;state.trialStartTime=0;
@@ -612,17 +615,30 @@ function runTrial(){
   state.trialStartTime=performance.now();
   state.timeoutId=setTimeout(()=>{
     if(!state.responded){
-      if(!trial.isSimon){state.results.push({type:'nogo_correct',rt:cfg.timeout});state.score+=10;}
-      else{state.results.push({type:'go_wrong',rt:cfg.timeout});}
-      document.getElementById('score').textContent=state.score;
-      nextTrial();
+      if(!trial.isSimon){
+        // No-Go（反向）：忍住不点=抑制成功（正确），直接进下一题并锁住残留点击
+        state.results.push({type:'nogo_correct',rt:cfg.timeout});state.score+=10;
+        document.getElementById('score').textContent=state.score;
+        state.responded=true;
+        nextTrial();
+      } else {
+        // Go（西蒙说）：需要点。进入宽限期，指令仍显示，期间点击仍算命中
+        state.graceTimer=setTimeout(()=>{
+          if(!state.responded){
+            state.results.push({type:'go_wrong',rt:cfg.timeout});
+            document.getElementById('score').textContent=state.score;
+            state.responded=true;
+            nextTrial();
+          }
+        },GRACE_MS);
+      }
     }
   },cfg.timeout);
 }
 
 function handleAction(action){
   if(!state.running||state.responded||!state.trialStartTime)return;
-  state.responded=true;clearTimeout(state.timeoutId);
+  state.responded=true;clearTimeout(state.timeoutId);clearTimeout(state.graceTimer);
   const rt=performance.now()-state.trialStartTime;
   const trial=state.trials[state.currentTrial];
   if(!trial.isSimon){
@@ -666,7 +682,7 @@ function nextTrial(){
 }
 
 function resetToIdle(){
-  state.running=false;clearTimeout(state.timeoutId);
+  state.running=false;clearTimeout(state.timeoutId);clearTimeout(state.graceTimer);
   document.getElementById('start-btn').disabled=false;
   document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
   document.getElementById('instruction-display').innerHTML='<span class="prefix"></span><span id="cmd-text"></span>';
@@ -677,7 +693,7 @@ function resetToIdle(){
 }
 
 function endGame(){
-  state.running=false;clearTimeout(state.timeoutId);
+  state.running=false;clearTimeout(state.timeoutId);clearTimeout(state.graceTimer);
   document.getElementById('start-btn').disabled=false;
   document.getElementById('instruction-display').innerHTML='<span class="prefix"></span><span id="cmd-text"></span>';
   const goCorrect=state.results.filter(r=>r.type==='go_correct');

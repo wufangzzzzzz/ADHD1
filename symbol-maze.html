@@ -832,9 +832,9 @@
 
     function resetUI() {
       game.completed = false;
+      game.steps = 0;
       stopTimer();
-      document.getElementById('timer').textContent = '0';
-      document.getElementById('steps').textContent = '0';
+      document.getElementById('timerDisplay').textContent = '00:00';
       document.getElementById('newGameBtn').disabled = false;
       document.querySelectorAll('.symbol-type-btn').forEach(b=>b.disabled=false);
       // 清空画布显示初始状态

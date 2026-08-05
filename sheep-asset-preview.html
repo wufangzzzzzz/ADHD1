@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>羊素材预览（待确认）</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body {
+    background:#eef3ec;
+    font-family:"Microsoft YaHei","PingFang SC",sans-serif;
+    color:#444;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  }
+  h1 { font-size:18px; margin:18px 0 4px; font-weight:600; }
+  p.tip { font-size:13px; color:#888; margin:0 0 14px; text-align:center; max-width:560px; line-height:1.6; }
+  canvas { background:#fafaf6; border:1px solid #ddd; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,.06); }
+</style>
+</head>
+<body>
+  <h1>羊素材预览（仅供确认外观，未接入游戏）</h1>
+  <p class="tip">蜡笔卡通风格 · 黑头黑四肢 · 蓬松奶油羊毛身。<br>这只是「素材/角色」本身，没有数字、没有跑动、没有游戏。你确认样子后，再给我下一步要求，我才继续做。</p>
+  <canvas id="cv" width="660" height="420"></canvas>
+<script>
+  // 纯素材绘制：独立、静态、不依赖游戏，双击即可在浏览器打开
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+
+  function rr(c,x,y,w,h,r){
+    c.beginPath();
+    c.moveTo(x+r,y);
+    c.arcTo(x+w,y,x+w,y+h,r);
+    c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r);
+    c.arcTo(x,y,x+w,y,r);
+    c.closePath();
+  }
+
+  // 柔和蜡笔背景
+  function drawBg(c){
+    var g = c.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#eaf4fb');
+    g.addColorStop(0.62,'#f3f9ee');
+    g.addColorStop(1,'#e4f1d8');
+    c.fillStyle = g; c.fillRect(0,0,W,H);
+    // 云
+    c.fillStyle = 'rgba(255,255,255,0.7)';
+    [[110,70,34],[150,64,26],[80,72,22]].forEach(function(p){
+      c.beginPath(); c.arc(p[0],p[1],p[2],0,7); c.fill();
+    });
+    [[520,60,30],[556,54,22],[492,62,18]].forEach(function(p){
+      c.beginPath(); c.arc(p[0],p[1],p[2],0,7); c.fill();
+    });
+    // 地面草线（淡）
+    c.strokeStyle = 'rgba(140,180,120,0.45)';
+    c.lineWidth = 2; c.lineCap='round';
+    for(var i=0;i<26;i++){
+      var gx = 14 + i*25 + (i%2?6:-4);
+      c.beginPath();
+      c.moveTo(gx, H-22);
+      c.quadraticCurveTo(gx+4, H-40, gx+2, H-54);
+      c.stroke();
+    }
+  }
+
+  // 画一只羊（局部坐标，facing=1 朝右，-1 朝左翻转）
+  function drawSheep(c, x, y, sz, facing){
+    c.save();
+    c.translate(x, y);
+    if (facing < 0) c.scale(-1, 1);
+    c.lineJoin = 'round'; c.lineCap = 'round';
+
+    var cream = '#f7eecf';
+    var woolStroke = 'rgba(120,94,64,0.55)';
+    var black = '#2a2a2a';
+    var blackStroke = '#141414';
+
+    // ---- 腿（4条粗短黑腿，先画在身体后面）----
+    var legW = 0.15*sz, legH = 0.30*sz, legTop = 0.58*sz;
+    var legXs = [-0.30, -0.12, 0.12, 0.30];
+    c.fillStyle = black; c.strokeStyle = blackStroke; c.lineWidth = 2;
+    for (var li=0; li<4; li++){
+      var lx = legXs[li]*sz - legW/2;
+      rr(c, lx, legTop, legW, legH, legW/2);
+      c.fill(); c.stroke();
+      // 脚掌
+      c.beginPath();
+      c.ellipse(legXs[li]*sz, legTop+legH, legW*0.75, legW*0.42, 0, 0, 7);
+      c.fill(); c.stroke();
+    }
+
+    // ---- 尾巴（身后小黑团）----
+    c.fillStyle = black;
+    c.beginPath(); c.arc(-0.46*sz, -0.04*sz, 0.11*sz, 0, 7); c.fill(); c.stroke();
+
+    // ---- 蓬松羊毛身（多个圆叠出云朵轮廓）----
+    var fluff = [
+      [0,0,0.46],
+      [-0.34,-0.22,0.26],[-0.12,-0.34,0.27],[0.12,-0.33,0.26],[0.34,-0.20,0.25],
+      [-0.44,-0.02,0.24],[-0.40,0.22,0.23],[0.44,-0.04,0.24],[0.40,0.22,0.23],
+      [-0.26,0.34,0.25],[0.0,0.40,0.26],[0.26,0.34,0.24]
+    ];
+    c.fillStyle = cream;
+    for (var fi=0; fi<fluff.length; fi++){
+      c.beginPath();
+      c.arc(fluff[fi][0]*sz, fluff[fi][1]*sz, fluff[fi][2]*sz, 0, 7);
+      c.fill();
+    }
+    // 羊毛描边（细，显蓬松不显乱）
+    c.strokeStyle = woolStroke; c.lineWidth = 1.5;
+    for (var fi2=0; fi2<fluff.length; fi2++){
+      c.beginPath();
+      c.arc(fluff[fi2][0]*sz, fluff[fi2][1]*sz, fluff[fi2][2]*sz, 0, 7);
+      c.stroke();
+    }
+    // 顶部高光 + 底部淡阴影（干净蜡笔感）
+    c.fillStyle = 'rgba(255,255,255,0.18)';
+    c.beginPath(); c.ellipse(-0.05*sz, -0.18*sz, 0.30*sz, 0.16*sz, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(120,94,64,0.13)';
+    c.beginPath(); c.ellipse(0.04*sz, 0.30*sz, 0.38*sz, 0.16*sz, 0, 0, 7); c.fill();
+
+    // ---- 头（黑色，偏前上）----
+    var hx = 0.52*sz, hy = -0.16*sz, hr = 0.30*sz;
+    // 耳朵（两个小黑椭圆）
+    c.fillStyle = black; c.strokeStyle = blackStroke; c.lineWidth = 2;
+    c.save(); c.translate(hx, hy);
+    c.save(); c.translate(-0.30*hr, -0.08*hr); c.rotate(-0.5);
+    c.beginPath(); c.ellipse(0,0,0.24*hr,0.12*hr,0,0,7); c.fill(); c.stroke(); c.restore();
+    c.save(); c.translate(0.10*hr, -0.26*hr); c.rotate(0.35);
+    c.beginPath(); c.ellipse(0,0,0.24*hr,0.12*hr,0,0,7); c.fill(); c.stroke(); c.restore();
+    c.restore();
+    // 头主体
+    c.fillStyle = black;
+    c.beginPath(); c.arc(hx, hy, hr, 0, 7); c.fill(); c.stroke();
+    // 头顶卷毛（奶油小团，明确是羊）
+    var tuft = [[0,-0.20,0.17],[-0.11,-0.15,0.13],[0.11,-0.14,0.13]];
+    c.fillStyle = cream; c.strokeStyle = woolStroke; c.lineWidth = 1.4;
+    for (var ti=0; ti<tuft.length; ti++){
+      c.beginPath();
+      c.arc(hx+tuft[ti][0]*hr, hy+tuft[ti][1]*hr, tuft[ti][2]*hr, 0, 7);
+      c.fill(); c.stroke();
+    }
+    // 眼睛（白底黑瞳）
+    c.fillStyle = '#ffffff';
+    c.beginPath(); c.arc(hx+0.02*hr, hy-0.02*hr, 0.14*hr, 0, 7); c.fill();
+    c.beginPath(); c.arc(hx+0.30*hr, hy-0.02*hr, 0.14*hr, 0, 7); c.fill();
+    c.fillStyle = '#1a1a1a';
+    c.beginPath(); c.arc(hx+0.05*hr, hy, 0.06*hr, 0, 7); c.fill();
+    c.beginPath(); c.arc(hx+0.33*hr, hy, 0.06*hr, 0, 7); c.fill();
+    // 微笑（浅色弧线）
+    c.strokeStyle = 'rgba(247,238,207,0.92)'; c.lineWidth = 2;
+    c.beginPath(); c.arc(hx+0.16*hr, hy+0.14*hr, 0.12*hr, 0.15, Math.PI-0.15); c.stroke();
+    // 腮红
+    c.fillStyle = 'rgba(232,150,150,0.32)';
+    c.beginPath(); c.arc(hx+0.02*hr, hy+0.13*hr, 0.07*hr, 0, 7); c.fill();
+    c.beginPath(); c.arc(hx+0.32*hr, hy+0.13*hr, 0.07*hr, 0, 7); c.fill();
+
+    c.restore();
+  }
+
+  drawBg(ctx);
+  // 主素材：大羊（朝右）
+  drawSheep(ctx, 215, 215, 150, 1);
+  // 中号（朝左，验证翻转也好看）
+  drawSheep(ctx, 478, 175, 96, -1);
+  // 小号（朝右）
+  drawSheep(ctx, 512, 320, 60, 1);
+</script>
+</body>
+</html>

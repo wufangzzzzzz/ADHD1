@@ -268,6 +268,7 @@ const DIFF_CONFIG = {
 };
 
 // ===== 状态 =====
+const GRACE_MS = 150; // 宽限期：刺激窗口到期后仍显示，期间点击仍算有效（避免“还亮着却点不动”）
 let state = {
   mode:'child',
   level:'easy',
@@ -283,6 +284,7 @@ let state = {
   streakWrong:0,
   stimulusTimer:null,
   windowTimer:null,
+  graceTimer:null,
   results:[],
 };
 
@@ -445,6 +447,7 @@ function startGame(){
 function stopGame(){
   clearTimeout(state.stimulusTimer);
   clearTimeout(state.windowTimer);
+  clearTimeout(state.graceTimer);
   stopTrialTimer();
   endGame();
 }
@@ -469,6 +472,7 @@ function runTrial(){
   if(!state.running) return;
   clearTimeout(state.stimulusTimer);
   clearTimeout(state.windowTimer);
+  clearTimeout(state.graceTimer);
   if(state.currentTrial>=state.total){
     endGame();
     return;
@@ -485,13 +489,19 @@ function runTrial(){
   playBeep(500,0.04,0.06);
   startTrialTimer(DIFF_CONFIG[state.mode][state.level].timeout);
   state.windowTimer=setTimeout(()=>{
+    // 超时：进入宽限期，箭头仍显示，期间点击仍算有效
     if(!state.responded){
-      stopTrialTimer();
-      flashBorder('miss');
-      playBeep(200,0.2,0.15);
-      recordTrial(state.currentTrialData.type,'timeout',0);
-      updateAdaptive(false);
-      nextTrial();
+      state.graceTimer=setTimeout(()=>{
+        if(!state.responded){
+          stopTrialTimer();
+          flashBorder('miss');
+          playBeep(200,0.2,0.15);
+          recordTrial(state.currentTrialData.type,'timeout',0);
+          updateAdaptive(false);
+          state.responded=true;
+          nextTrial();
+        }
+      },GRACE_MS);
     }
   },DIFF_CONFIG[state.mode][state.level].timeout);
 },180);
@@ -500,7 +510,7 @@ function runTrial(){
 function handleResponse(dir){
   if(!state.running||state.responded||!state.trialStartTime) return;
   state.responded=true;
-  clearTimeout(state.windowTimer);
+  clearTimeout(state.windowTimer);clearTimeout(state.graceTimer);
   stopTrialTimer();
   const rt=performance.now()-state.trialStartTime;
   const trial=state.currentTrialData;
@@ -563,6 +573,7 @@ function resetToIdle(){
   document.getElementById('stimulus').innerHTML='';
   document.getElementById('hint-bar').style.opacity='0.3';
   stopTrialTimer();
+  clearTimeout(state.graceTimer);
   document.querySelectorAll('.diff-btn,.age-btn').forEach(b=>b.disabled=false);
   document.getElementById('score').textContent='0';
   document.getElementById('progress-fill').style.width='0%';
@@ -581,6 +592,7 @@ function endGame(){
   document.getElementById('hint-bar').style.opacity='0.3';
   clearTimeout(state.stimulusTimer);
   clearTimeout(state.windowTimer);
+  clearTimeout(state.graceTimer);
   stopTrialTimer();
   document.querySelectorAll('.diff-btn,.age-btn').forEach(b=>b.disabled=false);
   if(audioCtx){

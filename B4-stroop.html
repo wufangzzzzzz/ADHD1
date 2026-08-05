@@ -227,7 +227,8 @@ const ADULT_DIFF={
   'hard-medium':{timeout:1300,total:55,label:'高级·中等'},
   'hard-hard':{timeout:1200,total:60,label:'高级·困难'},
 };
-let state={age:'child',taskMode:'A',level:'easy',subLevel:'easy',running:false,trials:[],currentTrial:0,score:0,trialStartTime:0,responded:false,timeoutId:null,results:[]};
+const GRACE_MS = 150; // 宽限期：刺激窗口到期后仍显示，期间点击仍算有效（避免“还亮着却点不动”）
+let state={age:'child',taskMode:'A',level:'easy',subLevel:'easy',running:false,trials:[],currentTrial:0,score:0,trialStartTime:0,responded:false,timeoutId:null,graceTimer:null,results:[]};
 let audioCtx=null;
 function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();}
 function playBeep(freq,dur,vol=0.12){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(vol,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
@@ -335,6 +336,7 @@ function countdown(n,cb){
 
 function runTrial(){
   if(!state.running)return;
+  clearTimeout(state.graceTimer);
   if(state.currentTrial>=state.trials.length){endGame();return;}
   const cfg=getConfig();const trial=state.trials[state.currentTrial];
   state.responded=false;state.trialStartTime=0;
@@ -352,13 +354,22 @@ function runTrial(){
   });
   state.trialStartTime=performance.now();
   state.timeoutId=setTimeout(()=>{
-    if(!state.responded){state.results.push({type:'timeout',isConflict:trial.isConflict,taskMode:trial.taskMode});nextTrial();}
+    // 超时：进入宽限期，彩色词仍显示，期间点击仍算有效
+    if(!state.responded){
+      state.graceTimer=setTimeout(()=>{
+        if(!state.responded){
+          state.results.push({type:'timeout',isConflict:trial.isConflict,taskMode:trial.taskMode});
+          state.responded=true;
+          nextTrial();
+        }
+      },GRACE_MS);
+    }
   },cfg.timeout);
 }
 
 function handleChoice(chosen){
   if(!state.running||state.responded||!state.trialStartTime)return;
-  state.responded=true;clearTimeout(state.timeoutId);
+  state.responded=true;clearTimeout(state.timeoutId);clearTimeout(state.graceTimer);
   const rt=performance.now()-state.trialStartTime;
   const trial=state.trials[state.currentTrial];
   const correctAnswer=trial.taskMode==='A'?COLORS[trial.wordIdx].name:COLORS[trial.colorIdx].name;
@@ -383,7 +394,7 @@ function nextTrial(){
 }
 
 function endGame(){
-  state.running=false;clearTimeout(state.timeoutId);
+  state.running=false;clearTimeout(state.timeoutId);clearTimeout(state.graceTimer);
   document.getElementById('start-btn').disabled=false;
   document.getElementById('stroop-word').textContent='';
   document.getElementById('color-options').innerHTML='';

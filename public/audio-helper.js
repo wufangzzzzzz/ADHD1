@@ -474,13 +474,24 @@
   window.preloadAudio = function(word) {
     if (!AUDIO_MAP[word]) return Promise.resolve();
     var url = AUDIO_DIR + AUDIO_MAP[word];
-    if (_audioPreloadCache[url]) return Promise.resolve();
-    return fetch(url).then(function(r) {
-      if (!r.ok) throw new Error('preload fail ' + url);
-      return r.blob();
-    }).then(function(blob) {
-      _audioPreloadCache[url] = URL.createObjectURL(blob);
-    }).catch(function() { /* 静默失败，playAudioFile 会走重试 */ });
+    if (_audioPreloadCache[url]) return Promise.resolve(_audioPreloadCache[url]);
+    // 用 <audio> 媒体元素预加载：兼容 file:// 双击与 http 部署，无 CORS 限制，且预载真正生效
+    return new Promise(function(resolve) {
+      var audio = new Audio();
+      audio.preload = 'auto';
+      audio.src = url;
+      var settled = false;
+      function done(ok) {
+        if (settled) return;
+        settled = true;
+        if (ok) _audioPreloadCache[url] = url; // 缓存相对路径，playAudioFile 复用，播放零延迟
+        resolve(url);
+      }
+      audio.addEventListener('canplaythrough', function() { done(true); });
+      audio.addEventListener('loadeddata', function() { done(true); });
+      audio.addEventListener('error', function() { done(false); }); // 即使失败也放行，playAudioFile 会回退重试
+      try { audio.load(); } catch (e) { done(false); }
+    });
   };
   window.preloadAudioList = function(words) {
     return Promise.all((words || []).map(window.preloadAudio));

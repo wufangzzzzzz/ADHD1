@@ -697,7 +697,6 @@ function preloadChildImages() {
   var loaded = 0;
   for (var i = 1; i <= total; i++) {
     var img = new Image();
-    img.crossOrigin = 'anonymous';
     img.src = 'public/images/gestalt/child/img-' + String(i).padStart(2, '0') + '.jpg';
     img.onload = function() {
       loaded++;
@@ -778,8 +777,9 @@ function generateQuestion(diff, forceStyleId) {
       displayURL = displayCanvas.toDataURL();
     } else {
       var chosenImg = validImgs[Math.floor(Math.random() * validImgs.length)];
-      displayCanvas = imageToCanvas(chosenImg);
-      displayURL = displayCanvas.toDataURL();
+      // 直接使用图片 URL 作为拼图源，避免 file:// 下 canvas.toDataURL 触发 Tainted canvas SecurityError
+      displayURL = chosenImg.src;
+      displayCanvas = null;
       styleId = -1; // 儿童模式无风格
     }
   } else {
@@ -806,7 +806,7 @@ function generateQuestion(diff, forceStyleId) {
     for (var ci = 0; ci < allPos.length; ci++) {
       options.push({
         row: allPos[ci].row, col: allPos[ci].col,
-        canvas: displayCanvas,
+        displayURL: displayURL,
         isCorrect: true
       });
     }
@@ -1058,7 +1058,8 @@ function renderOptions(q, targetId) {
     var piece = document.createElement('div');
     piece.className = 'option-piece';
     piece.dataset.index = i;
-    var optURL = opt.canvas.toDataURL();
+    // 儿童模式选项直接引用图片 URL（opt.displayURL），成人模式用程序化 canvas（opt.canvas）
+    var optURL = opt.displayURL || (opt.canvas ? opt.canvas.toDataURL() : q.displayURL);
     piece.style.backgroundImage = 'url(' + optURL + ')';
     piece.style.backgroundSize = (q.cols * 100) + '% ' + (q.rows * 100) + '%';
     piece.style.backgroundPosition =
