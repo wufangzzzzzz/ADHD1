@@ -9,7 +9,7 @@
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;
   background:#FFFBFA;
-  height:100dvh;
+  height:100vh;height:100dvh;
   display:flex;align-items:center;justify-content:center;
   overflow:hidden;
   user-select:none;-webkit-user-select:none;
@@ -162,10 +162,18 @@ body{
 }
 .rules-box b{color:#2D2B55;}
 
-/* 开始按钮 */
-.start-btn{
+/* 右上区按钮组：开始游戏 + 停止游戏（置于右面板顶部，水平居中） */
+.top-actions{
+  display:flex;
+  gap:10px;
+  align-self:center;
+  justify-content:center;
   width:100%;
-  padding:12px;
+  margin:2px 0 6px;
+}
+.start-btn{
+  width:auto;
+  padding:10px 26px;
   border-radius:12px;
   border:none;
   background:linear-gradient(135deg,#FF5E0E,#FF9800);
@@ -177,7 +185,20 @@ body{
 }
 .start-btn:active{transform:scale(0.95);}
 .start-btn:disabled{opacity:0.4;cursor:not-allowed;}
-.start-btn.stop{background:linear-gradient(135deg,#FF073A,#FF5E0E);box-shadow:0 3px 12px rgba(255,7,58,0.25);}
+.stop-btn{
+  width:auto;
+  padding:10px 26px;
+  border-radius:12px;
+  border:none;
+  background:linear-gradient(135deg,#FF073A,#FF5E0E);
+  color:#fff;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+  transition:transform 0.1s ease;
+  box-shadow:0 3px 12px rgba(255,7,58,0.25);
+}
+.stop-btn:active{transform:scale(0.95);}
+.stop-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
 /* 右面板 */
 .right-panel{
@@ -187,13 +208,6 @@ body{
   gap:12px;
   padding:8px 0;
   overflow:hidden;
-}
-.game-title{
-  font-size:22px;font-weight:800;
-  background:linear-gradient(135deg,#FF5E0E,#FF69B4);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-  text-align:center;
 }
 .info-bar{
   display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -328,7 +342,7 @@ canvas{display:block;width:100%;height:100%;}
 @media (orientation: portrait){
   .container{
     flex-direction:column;
-    height:100dvh;
+    height:100vh;height:100dvh;
     gap:8px;
     padding:8px;
   }
@@ -359,7 +373,9 @@ canvas{display:block;width:100%;height:100%;}
   .pattern-select{width:100px;height:26px;}
   .config-desc, .rules-box{display:none;}
   .speed-row{margin:4px 0;padding:4px 8px;flex:1 1 150px;}
-  .start-btn{width:auto;flex:0 0 auto;padding:10px 20px;}
+  .top-actions{align-self:center;justify-content:center;width:100%;margin:2px 0 4px;}
+  .start-btn{width:auto;flex:0 0 auto;padding:10px 20px;margin:0;}
+  .stop-btn{width:auto;flex:0 0 auto;padding:10px 20px;margin:0;}
   .right-panel{
     flex:1;
     min-height:0;
@@ -367,7 +383,6 @@ canvas{display:block;width:100%;height:100%;}
     gap:8px;
     padding:4px 0;
   }
-  .game-title{font-size:18px;}
   .canvas-wrap{
     flex:0 0 auto;
     width:min(92vw, 54vh);
@@ -450,8 +465,6 @@ canvas{display:block;width:100%;height:100%;}
       <p>目标球数量可在上方「目标球数量」自选 1~4 个。<br>初级：6球，慢速8秒<br>中级：8球，中速12秒<br>高级：10球，快速15秒</p>
     </div>
 
-    <button class="start-btn" id="startBtn" onclick="onStartBtn()">开始训练</button>
-
     <div class="result-card" id="resultCard">
       <div class="result-title">训练结束</div>
       <div class="result-row"><span>总轮次</span><span class="rv" id="rRounds">-</span></div>
@@ -465,7 +478,10 @@ canvas{display:block;width:100%;height:100%;}
 
   <!-- 右面板 -->
   <div class="right-panel">
-    <div class="game-title">多目标追踪</div>
+    <div class="top-actions">
+      <button class="start-btn" id="startBtn" onclick="onStartBtn()">开始游戏</button>
+      <button class="stop-btn" id="stopBtn" onclick="onStopBtn()" disabled>停止游戏</button>
+    </div>
 
     <div class="info-bar">
       <div class="info-item">轮次 <span class="val" id="roundNum">0</span>/10</div>
@@ -532,6 +548,7 @@ const wrap = document.getElementById('canvasWrap');
 const hintText = document.getElementById('hintText');
 const resultCard = document.getElementById('resultCard');
 const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
 
 // 音效
 let audioCtx = null;
@@ -563,6 +580,7 @@ function resizeCanvas(){
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
+window.addEventListener('orientationchange', () => requestAnimationFrame(resizeCanvas));
 // 容器尺寸变化(如结果卡出现/布局重排)时自动同步画布缓冲并重绘，避免拉伸错位
 if(window.ResizeObserver){
   new ResizeObserver(()=>{
@@ -640,18 +658,21 @@ function startGame(){
   state.ballColor = document.getElementById('ballColorPicker').value;
   if(state.animId) cancelAnimationFrame(state.animId);
   resultCard.classList.remove('show');
-  startBtn.classList.add('stop');
-  startBtn.textContent = '停止训练';
+  updateButtons();
   document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=true);
   document.querySelectorAll('#sizePanel .diff-btn').forEach(b=>b.disabled=true);
   updateUI();
   startRound();
 }
 
-// 开始/停止按钮：训练中点击变红的「停止训练」可随时中止
-function onStartBtn(){
-  if(state.gameStarted) stopGame();
-  else startGame();
+// 右上角两个独立按钮：开始游戏 / 停止游戏
+function onStartBtn(){ if(!state.gameStarted) startGame(); }
+function onStopBtn(){ if(state.gameStarted) stopGame(); }
+// 统一更新按钮可用状态：训练中→开始禁用、停止可用；否则相反
+function updateButtons(){
+  const started = !!state.gameStarted;
+  if(startBtn) startBtn.disabled = started;
+  if(stopBtn) stopBtn.disabled = !started;
 }
 
 // 随时停止：取消动画与所有残留计时器，回到空闲态
@@ -670,8 +691,7 @@ function stopGame(){
   state.targets = [];
   state.selected = new Set();
   resultCard.classList.remove('show');
-  startBtn.classList.remove('stop');
-  startBtn.textContent = '开始训练';
+  updateButtons();
   document.getElementById('countdownBadge').classList.remove('show','big','urgent');
   document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
   document.querySelectorAll('#sizePanel .diff-btn').forEach(b=>b.disabled=false);
@@ -1031,8 +1051,7 @@ function evaluateRound(){
 function endGame(){
   state.phase = 'idle';
   state.gameStarted = false;
-  startBtn.disabled = false;
-  startBtn.textContent = '开始训练';
+  updateButtons();
   const acc = state.totalRounds > 0 ? Math.round(state.totalCorrect / (state.totalRounds * getK()) * 100) : 0;
   document.getElementById('rRounds').textContent = state.totalRounds;
   document.getElementById('rAcc').textContent = acc + '%';
@@ -1054,8 +1073,7 @@ function resetToIdle(){
   state.phase = 'idle';
   state.gameStarted = false;
   state.selectDeadline = 0;
-  startBtn.disabled = false;
-  startBtn.textContent = '开始训练';
+  updateButtons();
   resultCard.classList.remove('show');
   document.getElementById('countdownBadge').classList.remove('show','big','urgent');
   document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
@@ -1092,8 +1110,7 @@ document.getElementById('diffPanel').addEventListener('click',e=>{
   state.totalCorrect = 0;
   state.totalRounds = 0;
   resultCard.classList.remove('show');
-  startBtn.disabled = false;
-  startBtn.textContent = '开始训练';
+  updateButtons();
   hintText.textContent = '';
   updateConfigDesc();
   updateUI();
