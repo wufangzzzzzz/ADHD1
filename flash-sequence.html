@@ -374,6 +374,7 @@ function initGrid(){
   ).join('');
 }
 initGrid();
+rebuildUI(TOTAL); // 启动即生成答案槽 + 星星进度（默认位数也要有槽位，否则输入阶段点击报错）
 
 /* ===== 模式切换 ===== */
 document.querySelectorAll('.mode-btn').forEach(btn => {
