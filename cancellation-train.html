@@ -129,6 +129,33 @@
     .dim-input::-webkit-outer-spin-button,
     .dim-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     
+    .dim-input[readonly] { cursor: pointer; }
+    .dim-input[readonly]:hover { border-color: #4FC3F7; }
+    
+    /* 数字选择弹窗（行/列点击选择，平板友好） */
+    .num-picker-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center; z-index: 999;
+    }
+    .num-picker {
+      background: #1a1a2e; border: 2px solid #4FC3F7; border-radius: 16px;
+      padding: 16px; width: min(88vw, 430px); max-height: 82vh; overflow: auto;
+      text-align: center;
+    }
+    .np-title { color: #fff; font-size: 15px; font-weight: bold; margin-bottom: 12px; }
+    .np-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .np-btn {
+      padding: 10px 0; font-size: 15px; font-weight: bold;
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 10px;
+      background: rgba(255,255,255,0.08); color: #fff; cursor: pointer;
+    }
+    .np-btn:hover, .np-btn.sel { background: #4FC3F7; color: #0b1b2b; border-color: #4FC3F7; }
+    .np-cancel {
+      margin-top: 14px; padding: 9px 24px; font-size: 14px;
+      border: 1px solid rgba(255,255,255,0.3); border-radius: 10px;
+      background: rgba(255,255,255,0.08); color: #fff; cursor: pointer;
+    }
+    
     .template-select option {
       background: #1a1a2e;
       color: white;
@@ -536,9 +563,9 @@
     <button class="orient-btn" id="orientV" onclick="setOrientation('vertical')">竖版</button>
     <button class="colorful-btn" id="colorfulBtn" onclick="toggleColorful()">彩色</button>
     <span class="dim-sep">行</span>
-    <input class="dim-input" id="rowInput" type="number" min="4" max="40" value="12" onchange="applyCustomDims()">
+    <input class="dim-input" id="rowInput" type="number" min="4" max="40" value="12" readonly onclick="openNumPicker('row')">
     <span class="dim-sep">列</span>
-    <input class="dim-input" id="colInput" type="number" min="4" max="40" value="20" onchange="applyCustomDims()">
+    <input class="dim-input" id="colInput" type="number" min="4" max="40" value="20" readonly onclick="openNumPicker('col')">
     <span class="tc-sep">找</span>
     <select class="tc-select" id="targetCountSelect" onchange="setTargetCount(parseInt(this.value, 10))">
       <option value="1">1个</option>
@@ -1177,6 +1204,51 @@
     });
     window.addEventListener('resize', fitGrid);
     window.addEventListener('orientationchange', fitGrid);
+    
+    // ===== 数字选择弹窗（行/列点击选择，范围 4~40） =====
+    var pickTarget = null;
+    function openNumPicker(kind) {
+      pickTarget = kind;
+      document.getElementById('npTitle').textContent = (kind === 'row' ? '选择行数' : '选择列数');
+      var grid = document.getElementById('npGrid');
+      grid.innerHTML = '';
+      var cur = (kind === 'row') ? ROWS : COLS;
+      for (var i = 4; i <= 40; i++) {
+        (function(v) {
+          var b = document.createElement('button');
+          b.className = 'np-btn' + (v === cur ? ' sel' : '');
+          b.textContent = v;
+          b.onclick = function() { pickNum(v); };
+          grid.appendChild(b);
+        })(i);
+      }
+      document.getElementById('numPickerMask').style.display = 'flex';
+    }
+    function pickNum(v) {
+      if (pickTarget === 'row') {
+        document.getElementById('rowInput').value = v;
+        ROWS = v;
+      } else {
+        document.getElementById('colInput').value = v;
+        COLS = v;
+      }
+      closeNumPicker();
+      resetGame();
+      initGrid();
+    }
+    function closeNumPicker(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('numPickerMask').style.display = 'none';
+    }
   </script>
+  
+  <!-- 数字选择弹窗 -->
+  <div class="num-picker-mask" id="numPickerMask" style="display:none" onclick="closeNumPicker(event)">
+    <div class="num-picker" onclick="event.stopPropagation()">
+      <div class="np-title" id="npTitle">选择行数</div>
+      <div class="np-grid" id="npGrid"></div>
+      <button class="np-cancel" onclick="closeNumPicker()">取消</button>
+    </div>
+  </div>
 </body>
 </html>

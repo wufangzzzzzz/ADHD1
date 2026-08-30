@@ -618,6 +618,7 @@
       align-items: center;
       justify-content: center;
       animation: fadeIn 0.25s ease-out;
+      pointer-events: none; /* 提示浮层只做视觉提示，不拦截下方点击 */
     }
     .feedback-overlay.show { display: flex; }
     .feedback-overlay.correct { background: rgba(156,39,176,0.15); }

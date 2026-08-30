@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>色彩识别连线</title>
+<style>
+:root{
+  --ink:#1c2733;
+  --ink-dim:rgba(28,39,51,.62);
+  --glass:rgba(255,255,255,.70);
+  --glass-line:rgba(28,39,51,.14);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { width:100%; height:100%; overflow:hidden; }
+body {
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, rgba(76,110,245,.10) 0%, rgba(76,110,245,0) 60%),
+    linear-gradient(168deg, #f6faff 0%, #eef4fa 55%, #e7eff7 100%);
+  display:flex; flex-direction:column; color:var(--ink);
+}
+
+/* ===== 顶部毛玻璃细条 ===== */
+.topbar {
+  flex-shrink:0; position:relative; z-index:20;
+  display:flex; align-items:center; justify-content:center;
+  padding:10px 14px 8px;
+}
+.logo { font-size:19px; font-weight:800; letter-spacing:3px; color:var(--ink); text-shadow:0 1px 8px rgba(255,255,255,.15); }
+.home-link {
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  font-size:12px; color:var(--ink); border:1px solid var(--glass-line);
+  padding:4px 12px; border-radius:9px; text-decoration:none;
+  background:var(--glass); backdrop-filter:blur(6px);
+}
+.home-link:hover { background:rgba(255,255,255,.2); }
+
+/* ===== 全屏舞台 ===== */
+.stage { flex:1; min-height:0; position:relative; margin:0 10px 10px; border-radius:20px; overflow:hidden;
+  border:1px solid var(--glass-line); background:rgba(255,255,255,.04);
+  display:flex; align-items:center; justify-content:center; }
+/* 正方形画布容器：由 JS 精确设置边长，保证螺旋/圆 1:1 不变形 */
+.canvas-box { position:relative; flex:none; }
+#cv { width:100%; height:100%; display:block; touch-action:none; cursor:crosshair; }
+
+/* ===== 顶部信息条（提示居中 + 进度右侧，不遮挡画布） ===== */
+.info-bar {
+  flex-shrink:0; position:relative; display:flex; align-items:center; justify-content:center;
+  gap:10px; flex-wrap:wrap; padding:2px 14px 8px;
+}
+.float-card {
+  background:var(--glass); backdrop-filter:blur(10px);
+  border:1px solid var(--glass-line); border-radius:14px;
+  padding:8px 14px; font-size:13px; color:var(--ink);
+  box-shadow:0 4px 18px rgba(0,0,0,.25);
+  display:flex; align-items:center; gap:8px;
+}
+.hint-card { font-size:clamp(14px,1.8vw,18px); font-weight:700; }
+.hint-card .dot { width:20px; height:20px; border-radius:50%; border:2px solid rgba(28,39,51,.45); box-shadow:0 0 10px rgba(28,39,51,.12); flex-shrink:0; }
+.hint-card b { color:var(--ink); }
+.prog-card { position:absolute; right:14px; top:50%; transform:translateY(-50%); flex-direction:column; align-items:flex-end; gap:2px; }
+.prog-card b { font-size:15px; }
+.timer-track { height:5px; width:120px; border-radius:3px; background:rgba(28,39,51,.12); overflow:hidden; }
+.timer-fill { height:100%; background:linear-gradient(90deg,#7dd8ff,#a78bfa); border-radius:3px; transition:width 1s linear; }
+.timer-track[hidden] { display:none; }
+
+/* ===== 底部控制条（正常流，不遮挡画布） ===== */
+.ctrl-bar {
+  flex-shrink:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;
+  background:var(--glass); backdrop-filter:blur(12px);
+  border:1px solid var(--glass-line); border-radius:18px;
+  padding:8px 14px; margin:0 10px 10px; box-shadow:0 6px 22px rgba(0,0,0,.3);
+  max-width:96%;
+}
+.seg { display:flex; gap:4px; align-items:center; }
+.seg-label { font-size:11px; color:var(--ink-dim); margin-right:2px; }
+.seg-btn {
+  padding:5px 11px; border:1px solid var(--glass-line); background:rgba(255,255,255,.55);
+  border-radius:9px; font-size:12px; color:var(--ink); cursor:pointer; transition:all .2s; white-space:nowrap;
+}
+.seg-btn:hover { background:rgba(255,255,255,.16); }
+.seg-btn.active {
+  background:linear-gradient(135deg, rgba(125,216,255,.9), rgba(167,139,250,.9));
+  border-color:rgba(255,255,255,.4); color:#141b33; font-weight:700;
+  box-shadow:0 2px 10px rgba(125,216,255,.35);
+}
+.ctrl-sep { width:1px; height:22px; background:var(--glass-line); }
+.restart-btn {
+  padding:5px 14px; border:none; border-radius:9px; font-size:12px; font-weight:700; cursor:pointer;
+  background:linear-gradient(135deg,#7dd8ff,#a78bfa); color:#141b33; transition:all .2s;
+}
+.restart-btn:hover { transform:translateY(-1px); box-shadow:0 3px 12px rgba(125,216,255,.4); }
+
+/* 滑块 */
+.slider {
+  -webkit-appearance:none; appearance:none;
+  width:70px; height:4px; border-radius:2px;
+  background:linear-gradient(90deg,#7dd8ff,#a78bfa);
+  outline:none; cursor:pointer; vertical-align:middle;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance:none; appearance:none;
+  width:14px; height:14px; border-radius:50%;
+  background:#fff; border:2px solid #7dd8ff;
+  box-shadow:0 1px 4px rgba(28,39,51,.3); cursor:pointer;
+}
+.slider::-moz-range-thumb {
+  width:14px; height:14px; border-radius:50%;
+  background:#fff; border:2px solid #7dd8ff; cursor:pointer;
+}
+
+/* 玩法说明（控制条上方，不遮挡画布） */
+.howto {
+  flex-shrink:0; max-width:96%; align-self:center;
+  background:var(--glass); backdrop-filter:blur(8px); border:1px solid var(--glass-line);
+  border-radius:12px; padding:6px 12px; margin:0 10px 6px; font-size:11px; line-height:1.6; color:var(--ink-dim);
+}
+.howto[hidden] { display:none; }
+.howto b { color:var(--ink); }
+@media (max-width:820px), (max-height:560px) { .howto { display:none; } }
+@media (max-width:640px) {
+  .ctrl-bar { gap:6px; padding:6px 10px; }
+  .seg-btn { padding:4px 8px; font-size:11px; }
+  .ctrl-sep { display:none; }
+}
+
+/* ===== 成绩弹窗 ===== */
+.mask { position:fixed; inset:0; background:rgba(28,39,51,.35); display:flex; align-items:center; justify-content:center; z-index:99; }
+.mask[hidden] { display:none; }
+.modal {
+  background:linear-gradient(165deg,#ffffff,#eef4fb); border-radius:22px; padding:28px 32px; width:min(86vw, 400px);
+  text-align:center; border:1px solid var(--glass-line); box-shadow:0 14px 46px rgba(28,39,51,.18);
+}
+.m-title { font-size:22px; font-weight:800; color:var(--ink); margin-bottom:12px; }
+.m-stat { font-size:15px; color:var(--ink-dim); line-height:1.9; }
+.m-stat b { color:#1565c0; font-size:20px; }
+.m-grade { margin:14px 0 4px; font-size:30px; font-weight:800; letter-spacing:3px; }
+.m-grade.good { color:#1e8e5a; } .m-grade.mid { color:#c98a00; } .m-grade.low { color:#d6455f; }
+.m-tip { font-size:13px; color:var(--ink-dim); margin-bottom:16px; }
+.big-btn {
+  padding:11px 0; width:100%; border:none; border-radius:12px; color:#141b33; font-size:15px; font-weight:700;
+  cursor:pointer; letter-spacing:2px; transition:all .2s;
+  background:linear-gradient(135deg,#7dd8ff,#a78bfa);
+  box-shadow:0 4px 14px rgba(125,216,255,.35);
+}
+.big-btn:hover { transform:translateY(-1px); }
+
+/* 打印标题：屏幕隐藏，打印时显示 */
+.print-title { display:none; }
+
+/* ===== 打印样式：只打印题目（螺旋 + 球 + 图形化标题），隐藏所有交互元素 ===== */
+@page { size: A4 landscape; margin: 8mm; }
+@media print {
+  .topbar, .info-bar, .float-card, .ctrl-bar, .howto, .mask { display:none !important; }
+  html, body { overflow:visible !important; height:auto !important; }
+  body { background:#ffffff !important; }
+  .print-title {
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:15px; font-weight:800; color:#1c2733;
+  }
+  .print-dot {
+    width:16px; height:16px; border-radius:50%; flex-shrink:0;
+    border:1.5px solid #1c2733;
+  }
+  .stage {
+    flex:none !important; margin:0 auto !important; border:none !important; border-radius:0 !important;
+    background:#ffffff !important; box-shadow:none !important; overflow:visible !important;
+    height:180mm; display:flex; align-items:center; justify-content:center;
+  }
+  .canvas-box { position:relative; }
+  #cv { touch-action:auto !important; cursor:default !important; }
+}
+/* 横版：标题竖排在左侧 */
+@media print and (orientation: landscape) {
+  body { display:flex; flex-direction:row; align-items:center; justify-content:center; }
+  .print-title { order:-1; flex:none; flex-direction:column; writing-mode:vertical-rl; margin-right:12px; }
+  .stage { width:180mm; }
+}
+/* 竖版：标题横排在顶部 */
+@media print and (orientation: portrait) {
+  body { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+  .print-title { flex-direction:row; writing-mode:horizontal-tb; margin:0 0 8px; }
+  .stage { height:auto; width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">色彩识别连线</div>
+  <a class="home-link" href="index.html">主页</a>
+</div>
+
+<div class="info-bar">
+  <div class="float-card hint-card">
+    <span class="dot" id="hintDot"></span>
+    <span>请连接所有 <b id="hintName">橙色</b> 点</span>
+  </div>
+  <div class="float-card prog-card">
+    <span>已连 <b id="qCount">0</b> / <span id="qTotal">10</span> 个</span>
+    <span id="qTimer">用时 0:00</span>
+    <div class="timer-track" id="timerTrack" hidden><div class="timer-fill" id="timerFill"></div></div>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="canvas-box" id="canvasBox">
+    <canvas id="cv"></canvas>
+  </div>
+</div>
+
+<div class="print-title" id="printTitle">
+  <span class="print-dot" id="printDot"></span>
+  <span class="print-desc" id="printDesc"></span>
+</div>
+
+<div class="howto" id="howto">
+  <b>玩法</b>：从最外圈起点（B 端）按住鼠标自由画线，沿通道从外到内依次穿过所有「目标色球」，<b>避开其他颜色的障碍球</b>。连到最里面（A 端）最后一个目标色球即过关。碰到障碍球只提示不扣分。
+</div>
+
+<div class="ctrl-bar">
+  <span class="seg-label">点数</span>
+  <div class="seg" id="grpNeed">
+    <button class="seg-btn" data-need="10">10</button>
+    <button class="seg-btn" data-need="15">15</button>
+    <button class="seg-btn active" data-need="20">20</button>
+  </div>
+  <span class="ctrl-sep"></span>
+  <span class="seg-label">模式</span>
+  <div class="seg" id="grpMode">
+    <button class="seg-btn active" data-mode="train">训练</button>
+    <button class="seg-btn" data-mode="test">测评60秒</button>
+  </div>
+  <span class="ctrl-sep"></span>
+  <span class="seg-label">题数</span>
+  <div class="seg" id="grpLen">
+    <button class="seg-btn active" data-len="5">5</button>
+    <button class="seg-btn" data-len="10">10</button>
+    <button class="seg-btn" data-len="15">15</button>
+  </div>
+  <span class="ctrl-sep"></span>
+  <span class="seg-label">音效</span>
+  <div class="seg" id="grpSfx">
+    <button class="seg-btn active" data-sfx="1">开</button>
+    <button class="seg-btn" data-sfx="0">关</button>
+  </div>
+  <span class="ctrl-sep"></span>
+  <span class="seg-label">螺旋</span>
+  <div class="seg" id="grpSpiral">
+    <button class="seg-btn active" data-shape="0">圆</button>
+    <button class="seg-btn" data-shape="2">方</button>
+  </div>
+  <span class="ctrl-sep"></span>
+  <span class="seg-label">方向</span>
+  <input type="range" class="slider" id="rotSlider" min="0" max="360" value="0" step="1">
+  <span class="seg-label">目标球</span>
+  <input type="range" class="slider" id="ballSlider" min="5" max="16" value="8" step="1">
+  <span class="seg-label">目标球色</span>
+  <input type="color" id="tgtColorPick" value="#ffd43b" title="选目标球颜色（选中即固定该色，每关沿用）" style="width:26px;height:26px;border:none;background:none;cursor:pointer;vertical-align:middle;padding:0;">
+  <span class="seg-label">干扰数量</span>
+  <input type="range" class="slider" id="obsSlider" min="30" max="150" value="150" step="10">
+  <span class="ctrl-sep"></span>
+  <span class="seg-label">干扰球色</span>
+  <div class="seg" id="grpObsColor">
+    <button class="seg-btn active" data-obs="colorful">彩色</button>
+    <button class="seg-btn" data-obs="uniform">统一色</button>
+    <input type="color" id="obsColorPick" value="#e74c3c" title="选干扰球统一色" style="width:26px;height:26px;border:none;background:none;cursor:pointer;vertical-align:middle;padding:0;">
+  </div>
+  <span class="ctrl-sep"></span>
+  <button class="restart-btn" id="btnShape">动态形状</button>
+  <button class="restart-btn" id="btnRestart">重新开始</button>
+  <button class="restart-btn" id="btnPrint" onclick="window.print()">打印</button>
+</div>
+
+<div class="mask" id="mask" hidden>
+  <div class="modal">
+    <div class="m-title" id="mTitle">成绩</div>
+    <div class="m-stat" id="mStat"></div>
+    <div class="m-grade" id="mGrade"></div>
+    <div class="m-tip" id="mTip"></div>
+    <button class="big-btn" id="btnAgain">再来一局</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var state = {
+    need: 20, mode: 'train', len: 5,
+    qn: 0, wrong: 0, done: 0, locked: false,
+    timerId: null, startAt: 0, testLeft: 60,
+    sfx: true,
+    pts: [], target: null, curIdx: 0, targetColor: null,
+    spiralShape: 0,   // 螺旋形状：0圆 1三角 2方形（菱已移除）
+    rotation: 0,      // 螺旋旋转角度（弧度，0=顶部起点）
+    ballSize: 8,      // 目标球半径（默认中间值）
+    obsSize: 8,       // 干扰球基准半径（默认中间值）
+    obsCount: 150,    // 干扰球数量（滑块控制，默认最大）
+    obsColorful: true,  // 干扰球彩色模式（true=彩色，false=统一色）
+    obsColor: '#e74c3c', // 干扰球统一色（选色后生效）
+    tgtCustom: false,      // 目标球自定义颜色（true=固定自定义色）
+    tgtColorHex: '#ffd43b' // 目标球自定义颜色（默认黄）
+  };
+
+  function $(id){ return document.getElementById(id); }
+  var cv = $('cv'), ctx = cv.getContext('2d');
+  var hintDot = $('hintDot'), hintName = $('hintName'), qCount = $('qCount'), qTotal = $('qTotal'), qTimer = $('qTimer');
+  var mask = $('mask'), mTitle = $('mTitle'), mStat = $('mStat'), mGrade = $('mGrade'), mTip = $('mTip');
+  var timerTrack = $('timerTrack'), timerFill = $('timerFill');
+
+  var COLORS = [
+    { hex:'#ff6b6b', name:'红' },
+    { hex:'#4dabf7', name:'蓝' },
+    { hex:'#51cf66', name:'绿' },
+    { hex:'#ffd43b', name:'黄' },
+    { hex:'#b197fc', name:'紫' },
+    { hex:'#ffa94d', name:'橙' }
+  ];
+  var TURNS = 4;
+
+  function shadeHex(hex, amt){
+    // amt: -1~1，正数向白变亮，负数向黑变暗
+    var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    if (amt >= 0) {
+      r = Math.round(r + (255 - r) * amt);
+      g = Math.round(g + (255 - g) * amt);
+      b = Math.round(b + (255 - b) * amt);
+    } else {
+      r = Math.round(r * (1 + amt));
+      g = Math.round(g * (1 + amt));
+      b = Math.round(b * (1 + amt));
+    }
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  /* ===== 干扰球形状（每个球随机起点 + 独立循环 morph：圆形/三角形/方形/菱形） ===== */
+  var SHAPE_NAMES = ['圆形', '三角形', '方形', '菱形'];
+  var shapeActive = false;   // 干扰球循环动画开关
+  var SHAPE_N = 32;   // 形状采样点数（够圆滑）
+
+  function raySeg(dx, dy, ax, ay, bx, by){
+    // 射线 (0,0)+t*(dx,dy) 与线段 (ax,ay)-(bx,by) 交点参数 t；无交返回 Infinity
+    var vx = bx - ax, vy = by - ay;
+    var denom = dx * vy - dy * vx;
+    if (Math.abs(denom) < 1e-9) return Infinity;
+    var t = (ax * vy - ay * vx) / denom;
+    if (t <= 0) return Infinity;
+    var s = (Math.abs(vx) > Math.abs(vy)) ? (t * dx - ax) / vx : (t * dy - ay) / vy;
+    if (s < 0 || s > 1) return Infinity;
+    return t;
+  }
+  function shapeR(shape, a){
+    var c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
+    if (shape === 0) return 1;                   // 圆
+    if (shape === 2) return 1 / (Math.max(c, s) * Math.SQRT2);  // 方形（顶点在45°，归一化外接圆=1）
+    if (shape === 3) return 1 / (c + s);         // 菱形（顶点在轴上，外接圆=1）
+    // 三角形：顶点朝上（canvas y 向下），外接圆=1
+    var P = [[Math.cos(-Math.PI/2), Math.sin(-Math.PI/2)],
+             [Math.cos(Math.PI/6), Math.sin(Math.PI/6)],
+             [Math.cos(5*Math.PI/6), Math.sin(5*Math.PI/6)]];
+    var dx = Math.cos(a), dy = Math.sin(a);
+    var best = Infinity;
+    for (var i = 0; i < 3; i++) {
+      var r = raySeg(dx, dy, P[i][0], P[i][1], P[(i+1)%3][0], P[(i+1)%3][1]);
+      if (r > 0 && r < best) best = r;
+    }
+    return best === Infinity ? 1 : best;
+  }
+  var shapeCache = (function(){
+    var arr = [];
+    for (var si = 0; si < 4; si++) {
+      var row = [];
+      for (var i = 0; i < SHAPE_N; i++) row.push(shapeR(si, i / SHAPE_N * 2 * Math.PI));
+      arr.push(row);
+    }
+    return arr;
+  })();
+  function drawShape(ctx, x, y, rad, cur, tgt, t){
+    ctx.beginPath();
+    for (var i = 0; i <= SHAPE_N; i++) {
+      var idx = i % SHAPE_N;
+      var a = idx / SHAPE_N * 2 * Math.PI;
+      var rCur = shapeCache[cur][idx], rTgt = shapeCache[tgt][idx];
+      var r = (rCur + (rTgt - rCur) * t) * rad;
+      var px = x + r * Math.cos(a), py = y + r * Math.sin(a);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  /* ===== 音效 ===== */
+  var actx = null;
+  function initAudio(){
+    if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+    try { var AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); } catch(e){ actx = null; }
+  }
+  function tone(freq, dur, type, vol, delay){
+    if (!actx || !state.sfx) return;
+    var t = actx.currentTime + (delay || 0);
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.12, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + dur + 0.03);
+  }
+  function sfxOk(){ initAudio(); tone(880,.12,'sine',.13); tone(1318,.16,'sine',.09,.05); }
+  function sfxErr(){ initAudio(); tone(196,.18,'triangle',.15); tone(147,.22,'triangle',.11,.06); }
+  function sfxWin(){ initAudio(); [523,659,784,1046].forEach(function(f,i){ tone(f,.2,'sine',.11,i*.11); }); }
+  function sfxOver(){ initAudio(); tone(392,.18,'sine',.11); tone(494,.18,'sine',.11,.15); tone(587,.28,'sine',.11,.30); }
+
+  function randInt(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function shuffle(arr){ for(var i=arr.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=arr[i];arr[i]=arr[j];arr[j]=t; } return arr; }
+  function fmtTime(ms){ var s=Math.floor(ms/1000), m=Math.floor(s/60), r=s%60; return m+':'+(r<10?'0':'')+r; }
+
+  /* ===== 螺旋几何 ===== */
+  var geom = { cx:0, cy:0, maxR:0, r0:0, k:0 };
+  function initGeom(){
+    var w = cv.clientWidth || 800, h = cv.clientHeight || 600;
+    geom.cx = w / 2; geom.cy = h / 2;
+    geom.maxR = Math.min(w, h) / 2 - 24;   // 留 24px 边距：螺旋线(线宽4)外缘离边缘约 20px，打印不贴边、不被裁
+    geom.r0 = geom.maxR * 0.12;             // 让最内圈也是个清晰的小正三角形（不再 r0=0 变成"点"）
+    geom.k = (geom.maxR - geom.r0) / (TURNS * 2 * Math.PI);
+  }
+  function bandRadius(theta){ return geom.r0 + geom.k * theta; }
+  function BAND_W(){ return Math.max(16, geom.k * Math.PI * 2 * 0.52); } // 一圈间距的 52% 作为带宽
+  // 螺旋线在参数 theta 处的形状因子（含旋转，转成 shapeCache 角度约定，线性插值→平滑不锯齿）
+  function spiralShapeR(theta){
+    if (state.spiralShape === 0) return 1;   // 圆
+    var b = theta + state.rotation - Math.PI / 2;
+    b = ((b % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var f = b / (2 * Math.PI) * SHAPE_N;
+    var i0 = Math.floor(f) % SHAPE_N;
+    var i1 = (i0 + 1) % SHAPE_N;
+    var t = f - Math.floor(f);
+    var r0 = shapeCache[state.spiralShape][i0];
+    var r1 = shapeCache[state.spiralShape][i1];
+    return r0 + (r1 - r0) * t;
+  }
+  // 形状螺旋半径：边用圈基准（直）、顶点附近渐变回 base（连续，避免顶点径向跳变）
+  function spiralRadius(theta){
+    if (state.spiralShape === 0) return bandRadius(theta);
+    var sh = spiralShapeR(theta);
+    var turn = Math.floor(theta / (2 * Math.PI));   // 第几圈
+    var R_turn = geom.r0 + geom.k * turn * 2 * Math.PI;  // 圈基准（边用，常数）
+    // 仅在最接近顶点（sh > 0.95）时切回 base（连续），其余全用 R_turn（边直线）
+    var t = Math.max(0, Math.min(1, (sh - 0.95) / 0.05));
+    var R_eff = R_turn * (1 - t) + bandRadius(theta) * t;
+    return R_eff * sh;
+  }
+  // 螺旋坐标（含旋转；th=0 时在顶部）
+  function spiralPos(r, theta){
+    var a = theta + state.rotation;
+    return { x: geom.cx + r * Math.sin(a), y: geom.cy - r * Math.cos(a) };
+  }
+  // 形状螺旋的顶点序列：中心位于画布中心(cx,cy)的正多边形螺旋（直接公式生成）。
+  // 第 s 个顶点：半径 R = r0 + (s/V)·gap（连续增长，s 到 V 的整数倍时刚好 +gap → 严格等距），
+  //             角度 = startAngle + s·(2π/V)。
+  // 顶点天然以(cx,cy)为中心、最外圈外接半径 = r0 + TURNS·gap = maxR，与圆形同尺度铺满画布。
+  // 相邻顶点夹角恒为 2π/V → 内角严格 = (V-2)π/V = 60°(三角)/90°(方)，边为直线段（不七扭八拐）。
+  // 形状螺旋：海龟图（固定外角 2π/V → 内角严格 60°/90°），复刻定稿预览算法。
+  // 三角 base=-π/2（顶点朝上）、方 base=π/4（轴对齐）；最外顶点缩短到最外圈第1边所在直线，编号1与最外不连线。
+  // 缩放贴合画布：最外外接 = 2·maxR·0.92（大小与圆一致、完整显示）。
+  function getSpiralVertices(){
+    var V = (state.spiralShape === 1) ? 3 : 4;
+    var turns = (V === 3) ? 3 : TURNS;   // 三角3圈：通道宽+33%，目标球不被迫缩小
+    var gapPerTurn = (geom.maxR - geom.r0) / turns;   // 每圈净位移，与圆 gap 一致
+    var ext = 2 * Math.PI / V;
+    var base = (V === 3) ? -Math.PI / 2 : Math.PI / 4;
+    var dL, dirOff;
+    if (V === 3) { dL = gapPerTurn / Math.sqrt(3); dirOff = -210 * Math.PI / 180; }
+    else { dL = gapPerTurn / (2 * Math.sqrt(2)); dirOff = -225 * Math.PI / 180; }
+    var L0 = dL * 0.6;
+    var phi = base + dirOff;   // 旋转改由后处理加 state.rotation，让方向旋转有意义（目标球跟着转）
+    var x = 0, y = 0;
+    var verts = [{ x: x, y: y }];
+    var total = turns * V;                            // 总段数（V 段 = 一整圈）
+    for (var s = 0; s < total; s++) {
+      var L = L0 + s * dL;
+      x += L * Math.cos(phi);
+      y += L * Math.sin(phi);
+      phi += ext;
+      verts.push({ x: x, y: y });
+    }
+    // 缩短最外顶点：使其落在最外圈第1边(编号1,2)所在直线，编号1与最外顶点之间不连线
+    var o0 = (turns - 1) * V;
+    var P0 = verts[o0 + V - 1];
+    var Pend = verts[o0 + V];
+    var Q0 = verts[o0];
+    var Q1 = verts[o0 + 1];
+    var dx = Pend.x - P0.x, dy = Pend.y - P0.y;
+    var ex = Q1.x - Q0.x, ey = Q1.y - Q0.y;
+    var rhsx = Q0.x - P0.x, rhsy = Q0.y - P0.y;
+    var det = ex * dy - dx * ey;
+    var t = (-rhsx * ey + ex * rhsy) / det;
+    verts[o0 + V] = { x: P0.x + t * dx, y: P0.y + t * dy };
+    // 居中到 (0,0)
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (var vi = 0; vi < verts.length; vi++) {
+      if (verts[vi].x < minX) minX = verts[vi].x; if (verts[vi].x > maxX) maxX = verts[vi].x;
+      if (verts[vi].y < minY) minY = verts[vi].y; if (verts[vi].y > maxY) maxY = verts[vi].y;
+    }
+    var mcx = (minX + maxX) / 2, mcy = (minY + maxY) / 2;
+    var Rraw = 0;
+    for (var vi2 = 0; vi2 < verts.length; vi2++) {
+      verts[vi2].x -= mcx; verts[vi2].y -= mcy;
+      var rr = Math.hypot(verts[vi2].x, verts[vi2].y);
+      if (rr > Rraw) Rraw = rr;
+    }
+    // 旋转让最外未缩短顶点（verts[turns·V-1]）落在正右方：起始点在右侧（用户涂色指定）
+    var oIdx = turns * V - 1;
+    if (oIdx >= 0 && oIdx < verts.length) {
+      var oV = verts[oIdx];
+      var oAng = Math.atan2(oV.y, oV.x);
+      var rotAng = state.rotation - oAng - Math.PI/2;   // 视觉逆时针90°：方形末端(开口)默认到右侧（用户指定）
+      var csR = Math.cos(rotAng), snR = Math.sin(rotAng);
+      for (var vr = 0; vr < verts.length; vr++) {
+        var xx = verts[vr].x, yy = verts[vr].y;
+        verts[vr].x = xx * csR - yy * snR;
+        verts[vr].y = xx * snR + yy * csR;
+      }
+    }
+    // 缩放贴合画布：最外外接 = maxR（画满画布，和圆同大；不再缩到 0.92 → 三角/方不再太细）
+    var sc = geom.maxR / Rraw;
+    for (var vi3 = 0; vi3 < verts.length; vi3++) {
+      verts[vi3].x = geom.cx + verts[vi3].x * sc;
+      verts[vi3].y = geom.cy + verts[vi3].y * sc;
+    }
+    return verts;
+  }
+
+  // 实际画出来的螺旋线折点序列（与 draw() 完全一致，保证球落在真实线上）
+  function getSpiralPolyline(){
+    if (state.spiralShape === 0) {   // 圆：极坐标 spiralRadius 生成（方已弃用圆形逻辑，回海龟图）
+      var thetaB = TURNS * 2 * Math.PI;
+      var pts = [];
+      for (var th = 0; th < thetaB; th += 0.05) pts.push(spiralPos(spiralRadius(th), th));
+      pts.push(spiralPos(spiralRadius(thetaB), thetaB));
+      return pts;
+    }
+    return getSpiralVertices();
+  }
+  function buildPolylineData(){
+    var pts = getSpiralPolyline();
+    var len = [0];
+    for (var i = 1; i < pts.length; i++) len.push(len[i-1] + Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y));
+    return { pts: pts, len: len };
+  }
+  function pointAtArc(poly, arc){
+    var len = poly.len, pts = poly.pts;
+    var idx = 1;
+    while (idx < len.length && len[idx] < arc) idx++;
+    if (idx >= len.length) return pts[pts.length - 1];
+    if (idx === 0) return pts[0];
+    var segLen = len[idx] - len[idx-1];
+    if (segLen <= 0) return pts[idx];
+    var t = (arc - len[idx-1]) / segLen;
+    var a = pts[idx-1], b = pts[idx];
+    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+  }
+  function distToPolyline(poly, px, py){
+    var best = Infinity;
+    for (var i = 0; i < poly.pts.length - 1; i++) {
+      var d = segDist(poly.pts[i].x, poly.pts[i].y, poly.pts[i+1].x, poly.pts[i+1].y, px, py);
+      if (d < best) best = d;
+    }
+    return best;
+  }
+  // 点在多边形内判定（射线法）——用于在“三角形/方形自己的区域”内撒点
+  function inPoly(poly, x, y){
+    var inside = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+      var intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // 多边形螺旋专用：严格沿 draw() 折线生成球位（不再借用圆的径向模型）
+  function edgeAtArc(poly, a){
+    var idx = 1;
+    while (idx < poly.len.length && poly.len[idx] < a) idx++;
+    if (idx >= poly.len.length) idx = poly.len.length - 1;
+    if (idx === 0) idx = 1;
+    var segLen = poly.len[idx] - poly.len[idx-1];
+    if (segLen <= 0) return { idx: idx-1, t: 0 };
+    return { idx: idx-1, t: (a - poly.len[idx-1]) / segLen };
+  }
+  function normalAtArc(poly, a, Vsh){
+    var e = edgeAtArc(poly, a);
+    var a1 = poly.pts[e.idx], a2 = poly.pts[e.idx+1];
+    var dx = a2.x - a1.x, dy = a2.y - a1.y, el = Math.hypot(dx, dy) || 1;
+    var ux = dx / el, uy = dy / el;
+    var n1x = -uy, n1y = ux;
+    var n2x = uy, n2y = -ux;
+    var midAx = (a1.x + a2.x) / 2, midAy = (a1.y + a2.y) / 2;
+    var innerIdx = e.idx - Vsh;
+    var refx, refy;
+    if (innerIdx < 0) {
+      refx = geom.cx - midAx; refy = geom.cy - midAy;
+    } else {
+      var b1 = poly.pts[innerIdx], b2 = poly.pts[innerIdx+1];
+      refx = (b1.x + b2.x) / 2 - midAx;
+      refy = (b1.y + b2.y) / 2 - midAy;
+    }
+    var dot1 = n1x * refx + n1y * refy;
+    return { x: dot1 > 0 ? n1x : n2x, y: dot1 > 0 ? n1y : n2y };
+  }
+  function trueChannelGap(verts, Vsh){
+    var total = 0, cnt = 0;
+    for (var j = 0; j < Vsh; j++) {
+      var oA = verts[Vsh + j], oB = verts[Vsh + j + 1];
+      var iA = verts[j], iB = verts[j + 1];
+      var dx = oB.x - oA.x, dy = oB.y - oA.y, el2 = dx*dx + dy*dy;
+      if (el2 < 1e-6) continue;
+      var midx = (iA.x + iB.x) / 2, midy = (iA.y + iB.y) / 2;
+      var d = Math.abs((midx - oA.x) * dy - (midy - oA.y) * dx) / Math.sqrt(el2);
+      total += d; cnt++;
+    }
+    return cnt > 0 ? total / cnt : 1;
+  }
+  function gapAtArc(poly, a, Vsh){
+    var e = edgeAtArc(poly, a);
+    var a1 = poly.pts[e.idx], a2 = poly.pts[e.idx+1];
+    var dx = a2.x - a1.x, dy = a2.y - a1.y, el2 = dx*dx + dy*dy;
+    if (el2 < 1e-6) return 1;
+    var innerIdx = e.idx - Vsh;
+    if (innerIdx < 0) innerIdx = e.idx;
+    var b1 = poly.pts[innerIdx], b2 = poly.pts[innerIdx+1];
+    var midx = (b1.x + b2.x) / 2, midy = (b1.y + b2.y) / 2;
+    return Math.abs((midx - a1.x) * dy - (midy - a1.y) * dx) / Math.sqrt(el2);
+  }
+
+  /* ===== 点生成：目标球 + 障碍球 =====
+     圆形沿用半径式（球在通道中线，不贴螺旋线）；
+     三角/方/菱严格沿 draw() 折线生成：在折线上取点后沿法向（朝内）偏置半圈距，
+     目标球落在两臂间通道正中；障碍球在通道内法向抖动，绝不借用圆的径向/角度模型。 */
+  function genPoints(){
+    var pts = [];
+    var gap = geom.k * 2 * Math.PI;
+    var targetHex = state.targetColor.hex;
+    var need = state.need;
+    var ballR = state.ballSize;
+    var obsBase = state.obsSize;
+    var otherColors = COLORS.filter(function(c){ return c.hex !== targetHex; });
+    var obsCount = state.obsCount || 150;   // 数量由滑块控制（默认最大）
+
+    if (state.spiralShape === 0) {
+      // 圆：球在通道中线（方回海龟图多边形分支，弃用圆形逻辑）
+      var thetaB = TURNS * 2 * Math.PI;
+      var thetaMin = Math.PI + 0.3;
+      for (var i = 0; i < need; i++) {
+        var s = i / (need - 1);
+        var theta = thetaB - s * (thetaB - thetaMin);
+        var r = spiralRadius(theta) - gap * 0.5;
+        if (r < ballR + 4) r = ballR + 4;
+        var pos = spiralPos(r, theta);
+        pts.push({ x: pos.x, y: pos.y, r: r, theta: theta, arc: theta, rad: ballR, color: targetHex, isTarget: true, connected: false });
+      }
+    } else {
+      // 三角/方：跟圆一样——沿螺旋折线等弧长分布，球落在两臂通道中心（法向偏置半圈距）。
+      // i=0 在最外端(arcHi)，沿弧长往内到 arcLo；避角点(t 接近 0/1)就沿弧长微调到边中段。
+      var verts = getSpiralVertices();
+      var Vsh = (state.spiralShape === 1) ? 3 : 4;
+      var poly = buildPolylineData();
+      var gapPerp = trueChannelGap(verts, Vsh);   // 障碍球分支也用，必须保留
+      var edgeMargin = (poly.len[Vsh] - poly.len[0]) * 0.08;
+      var arcLo = poly.len[Vsh] + edgeMargin;
+      // 起点=出口（螺旋线尾/开口，右外圈）——用户指定起点靠近出口，不是 x 最大点（偏内）
+      var arcHi = poly.len[poly.len.length - 1] - edgeMargin;
+      var chanLen = arcHi - arcLo;
+      for (var i = 0; i < need; i++) {
+        var frac = (need === 1) ? 0.5 : i / (need - 1);
+        var a = arcHi - frac * chanLen;            // i=0 → 出口(线尾)
+        if (i > 0) {   // 起点 i=0 钉在出口(线尾/开口)，不往内退；其余避角点微调
+          var e = edgeAtArc(poly, a);
+          var step = chanLen * 0.015;
+          var sTry = 0;
+          while ((e.t < 0.18 || e.t > 0.82) && sTry < 8) { a -= step; e = edgeAtArc(poly, a); sTry++; }
+        }
+        var b = pointAtArc(poly, a);
+        var n = normalAtArc(poly, a, Vsh);
+        var lg = gapAtArc(poly, a, Vsh);
+        var x = b.x + n.x * lg * 0.5;
+        var y = b.y + n.y * lg * 0.5;
+        var d = distToPolyline(poly, x, y);
+        var rad = Math.min(ballR, d - 1);
+        if (rad < 2) rad = 2;
+        pts.push({ x: x, y: y, r: Math.hypot(x - geom.cx, y - geom.cy), theta: 0, arc: a, rad: rad, color: targetHex, isTarget: true, connected: false });
+      }
+    }
+
+    // 障碍球：圆沿用原分区逻辑；三角/方改为“在三角形/方形自己的区域里、螺旋线之间整体均匀撒点”
+    if (state.spiralShape === 0) {
+      // 圆：原分区逻辑（球在圈带内，按圈分层）
+      var zoneCnt = [Math.round(obsCount * 1 / 16), Math.round(obsCount * 3 / 16), Math.round(obsCount * 5 / 16), Math.round(obsCount * 7 / 16)];
+      for (var zi = 0; zi < 4; zi++) {
+        var n = zoneCnt[zi];
+        for (var si = 0; si < n; si++) {
+          var done = false;
+          for (var attempt = 0; attempt < 40 && !done; attempt++) {
+            var rad2 = rand(Math.max(3, obsBase - 1), obsBase + 1);
+            var th, r2, x2, y2, rr;
+            if (zi === 0) {
+              th = (si + Math.random()) / n * 2 * Math.PI;
+              var rLo2 = 20;
+              var rHi2 = spiralRadius(th) - gap - rad2 - 4;
+              if (rHi2 <= rLo2) continue;
+              r2 = rand(rLo2, rHi2);
+            } else {
+              th = 2 * Math.PI * zi + (si + Math.random()) / n * 2 * Math.PI;
+              var rLo2 = (spiralRadius(th) - gap) + 4 + rad2;
+              var rHi2 = spiralRadius(th) - rad2 - 4;
+              if (rHi2 <= rLo2) continue;
+              r2 = rand(rLo2, rHi2);
+            }
+            var pos2 = spiralPos(r2, th);
+            x2 = pos2.x; y2 = pos2.y; rr = r2;
+            var ok = true;
+            for (var k = 0; k < pts.length; k++) {
+              var q = pts[k];
+              var needD = q.isTarget ? (rad2 + q.rad) * 1.35 : (rad2 + q.rad) * 1.2;
+              if (Math.hypot(x2 - q.x, y2 - q.y) < needD) { ok = false; break; }
+            }
+            if (!ok) continue;
+            var oc = state.obsColorful ? otherColors[randInt(0, otherColors.length - 1)] : state.obsColor;
+            var initShape = randInt(0, 3);
+            pts.push({ x: x2, y: y2, r: rr, theta: th, rad: rad2, color: (typeof oc === 'string' ? oc : oc.hex), isTarget: false, hit: false,
+                       shapeFrom: initShape, shapeTo: (initShape + 1) % 4, shapeT: 1, shapeSpeed: rand(0.012, 0.028) });
+            done = true;
+          }
+        }
+      }
+    } else {
+      // 三角/方：在三角形/方形“自己的区域”内、螺旋线之间均匀撒点（含最外圈到边界间区域），排除中心空洞
+      var VshB = (state.spiralShape === 1) ? 3 : 4;
+      var polyB = buildPolylineData();
+      var radB = Math.max(3, Math.min(obsBase, gapPerp * 0.32));
+      // 按圈均分干扰（每圈 ~obsCount/圈数），外圈通道窄→外圈球自动缩小，保证各圈都能放下、分布均匀
+      var placedObs = [];
+      var att = 0, maxAtt = obsCount * 300;
+      var turnsN = (VshB === 3) ? 3 : 4;
+      for (var tg = 0; tg < turnsN && placedObs.length < obsCount; tg++) {
+        var loI = tg * VshB, hiI = Math.min((tg + 1) * VshB, polyB.len.length - 1);
+        var loA = polyB.len[loI] + (tg === 0 ? edgeMargin : 0);
+        var hiA = polyB.len[hiI] - (tg === turnsN - 1 ? edgeMargin : 0);
+        var segLenA = hiA - loA;
+        if (segLenA <= 0) continue;
+        var segCnt = Math.max(1, Math.round((VshB === 4 ? obsCount * 2 : obsCount) / turnsN));   // 方形干扰翻倍（用户：太少）
+        var radBt = radB;   // 球统一大小，不做小碎球（用户：为什么做那么小）；外圈放不下就少放
+        var si = 0;
+        while (si < segCnt && placedObs.length < obsCount && att < maxAtt) {
+          att++;
+          var frac = (si + 0.3 + Math.random() * 0.4) / segCnt;
+          si++;
+          var aB = loA + frac * segLenA;
+          var eB = edgeAtArc(polyB, aB);
+          if (eB.t < 0.10 || eB.t > 0.90) continue;          // 放宽避角点
+          var bB = pointAtArc(polyB, aB);
+          var nB = normalAtArc(polyB, aB, VshB);
+          var lgB = gapAtArc(polyB, aB, VshB);
+          var maxOffB = lgB * 0.5 - radBt - 2;
+          if (maxOffB <= 0) continue;
+          var offB = rand(-maxOffB, maxOffB);               // 通道宽内随机
+          var xB = bB.x + nB.x * (lgB * 0.5 + offB);
+          var yB = bB.y + nB.y * (lgB * 0.5 + offB);
+          var dB = distToPolyline(polyB, xB, yB);
+          if (dB < radBt + 2) continue;                      // 不压线
+          if (dB > lgB - radBt - 2) continue;                // 不越通道
+          var okB = true;
+          for (var kk = 0; kk < pts.length; kk++) {
+            if (Math.hypot(xB - pts[kk].x, yB - pts[kk].y) < (radBt + pts[kk].rad) * 1.15) { okB = false; break; }
+          }
+          if (okB) for (var kk2 = 0; kk2 < placedObs.length; kk2++) {
+            if (Math.hypot(xB - placedObs[kk2].x, yB - placedObs[kk2].y) < radBt * 2 * 1.15) { okB = false; break; }
+          }
+          if (!okB) continue;
+          placedObs.push({ x: xB, y: yB });
+          var ocB = state.obsColorful ? otherColors[randInt(0, otherColors.length - 1)] : state.obsColor;
+          var initShapeB = randInt(0, 3);
+          pts.push({ x: xB, y: yB, r: Math.hypot(xB - geom.cx, yB - geom.cy), theta: 0, rad: radBt, color: (typeof ocB === 'string' ? ocB : ocB.hex), isTarget: false, hit: false,
+                     shapeFrom: initShapeB, shapeTo: (initShapeB + 1) % 4, shapeT: 1, shapeSpeed: rand(0.012, 0.028) });
+        }
+      }
+    }
+    return pts;
+  }
+
+  /* 目标：筛选 isTarget 的目标球，按 θ 降序（B 端在前，A 端在后） */
+  function pickTarget(pts){
+    var seq = pts.filter(function(p){ return p.isTarget; });
+    // 按沿螺旋线的弧长/参数从外到内排序（多边形螺旋的物理半径 r 非单调，必须用 arc）
+    seq.sort(function(a, b){ return b.arc - a.arc; });
+    return { color: state.targetColor, seq: seq };
+  }
+
+  /* ===== 绘制 ===== */
+  var trail = [];   // 当前自由画笔迹
+  var strokes = []; // 玩家画完保留的笔迹（手动连线）
+  var drawing = false;
+  var dpr = 1;
+  var wrongTrail = [];  // 碰干扰球后的错误笔迹（红色高亮 2 秒后消失）
+  var wrongAt = 0;      // 错误笔迹时间戳
+  var strokeInvalid = false;  // 碰错后当前这一笔作废（onUp 不存档），避免障碍球附近残留线
+
+  function fitCanvas(){
+    var stage = document.getElementById('stage');
+    var box = document.getElementById('canvasBox');
+    // 用 stage 可用宽高（减边距）取最小值 → 正方形边长，画布永远 1:1
+    var availW = (stage ? stage.clientWidth : window.innerWidth) - 24;
+    var availH = (stage ? stage.clientHeight : window.innerHeight) - 24;
+    var size = Math.max(160, Math.floor(Math.min(availW, availH)));
+    box.style.width = size + 'px';
+    box.style.height = size + 'px';
+    dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(size * dpr);
+    cv.height = Math.round(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    initGeom();
+    draw();
+  }
+  window.addEventListener('resize', fitCanvas);
+  window.addEventListener('orientationchange', function(){ setTimeout(fitCanvas, 250); });
+  // 打印前/后强制同步 canvas 内部尺寸到 css（避免打印时圆被拉成椭圆）
+  window.addEventListener('beforeprint', function(){ setTimeout(fitCanvas, 50); });
+  window.addEventListener('afterprint', function(){ setTimeout(fitCanvas, 50); });
+
+  function draw(){
+    var w = cv.clientWidth, h = cv.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    // 螺旋线：圆形用连续采样，形状用顶点序列 lineTo（边是几何直线段）
+    var thetaB = TURNS * 2 * Math.PI;
+    ctx.beginPath();
+    if (state.spiralShape === 0) {
+      var p0 = spiralPos(spiralRadius(0), 0);
+      ctx.moveTo(p0.x, p0.y);
+      for (var th = 0.05; th < thetaB; th += 0.05) {
+        var sp = spiralPos(spiralRadius(th), th);
+        ctx.lineTo(sp.x, sp.y);
+      }
+      var pb = spiralPos(spiralRadius(thetaB), thetaB);
+      ctx.lineTo(pb.x, pb.y);
+    } else {
+      var verts = getSpiralVertices();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (var vi = 1; vi < verts.length; vi++) ctx.lineTo(verts[vi].x, verts[vi].y);
+    }
+    ctx.strokeStyle = 'rgba(28,39,51,.45)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // （已按要求移除中心 A 端圆环+实心点标记）
+
+    // B 端不再画"起"标记：第一颗目标球（带呼吸圈）本身就在最外端 B，就是起点
+
+    // 所有点：目标球醒目白描边，障碍球淡描边；障碍球碰过加红圈提示
+    var tgt = state.target;
+    for (var j = 0; j < state.pts.length; j++) {
+      var p = state.pts[j];
+      ctx.fillStyle = p.color;
+      if (p.isTarget) {
+        // 目标球：立体球（柔和径向渐变：左上高光 → 本色 → 右下阴影 + 底部淡反光）
+        var g = ctx.createRadialGradient(p.x - p.rad * 0.35, p.y - p.rad * 0.35, p.rad * 0.05, p.x, p.y, p.rad);
+        g.addColorStop(0, shadeHex(p.color, 0.7));      // 高光最亮
+        g.addColorStop(0.35, shadeHex(p.color, 0.18));  // 过渡
+        g.addColorStop(0.7, p.color);                    // 本色
+        g.addColorStop(0.92, shadeHex(p.color, -0.3));   // 阴影
+        g.addColorStop(1, shadeHex(p.color, -0.5));      // 边缘最暗
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2);
+        ctx.fill();
+        // 底部淡反光（右下角一点亮，增强立体球质感）
+        ctx.beginPath();
+        ctx.arc(p.x + p.rad * 0.4, p.y + p.rad * 0.45, p.rad * 0.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,.12)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(28,39,51,.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else {
+        // 干扰球：每个球独立形状 + 独立 morph（随机起点，循环圆/三角/方/菱形）
+        drawShape(ctx, p.x, p.y, p.rad, p.shapeFrom, p.shapeTo, p.shapeT);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(28,39,51,.28)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+    }
+
+    // 玩家画过的全部笔迹（画在球上方，全程清晰可见）
+    for (var si = 0; si < strokes.length; si++) {
+      var st = strokes[si];
+      if (st.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(st[0].x, st[0].y);
+        for (var q1 = 1; q1 < st.length; q1++) ctx.lineTo(st[q1].x, st[q1].y);
+        ctx.strokeStyle = state.target ? state.target.color.hex : '#fff';
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+    }
+    // 当前自由画笔迹
+    if (trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+      for (var q = 1; q < trail.length; q++) ctx.lineTo(trail[q].x, trail[q].y);
+      ctx.strokeStyle = state.target ? state.target.color.hex : '#fff';
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+    // 错误笔迹（碰干扰球后红色高亮 + 闪动，1 秒后消失）
+    if (wrongTrail.length > 1) {
+      var wElapsed = Date.now() - wrongAt;
+      if (wElapsed > 1000) {
+        wrongTrail = [];
+      } else {
+        var blink = (Math.sin(wElapsed / 70) + 1) / 2;   // 0~1 快速闪动
+        ctx.beginPath();
+        ctx.moveTo(wrongTrail[0].x, wrongTrail[0].y);
+        for (var wq = 1; wq < wrongTrail.length; wq++) ctx.lineTo(wrongTrail[wq].x, wrongTrail[wq].y);
+        ctx.strokeStyle = '#ff2d2d';
+        ctx.globalAlpha = 0.4 + blink * 0.6;   // 透明度闪动
+        ctx.lineWidth = 5 + blink * 1.5;       // 线宽也闪动（比正常线 3px 稍粗，醒目）
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+if (tgt) {
+      // 目标点已连：放大描边 + 对勾反馈（按 connected 标志遍历，不是固定 seq 顺序）
+      for (var g = 0; g < tgt.seq.length; g++) {
+        if (!tgt.seq[g].connected) continue;
+        var qq = tgt.seq[g];
+        ctx.beginPath();
+        ctx.arc(qq.x, qq.y, qq.rad + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = tgt.color.hex;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        // 对勾（白底+深线双层，任何球色上都清晰）
+        ctx.beginPath();
+        ctx.moveTo(qq.x - 5, qq.y - 1);
+        ctx.lineTo(qq.x - 1, qq.y + 4);
+        ctx.lineTo(qq.x + 6, qq.y - 4);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(qq.x - 5, qq.y - 1);
+        ctx.lineTo(qq.x - 1, qq.y + 4);
+        ctx.lineTo(qq.x + 6, qq.y - 4);
+        ctx.strokeStyle = '#1c2733';
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+    }
+    // 只标注第一个原色球（起点），剩下的不提示、无编号
+    if (tgt && state.curIdx === 0 && tgt.seq.length > 0) {
+      var nxt = tgt.seq[0];
+      var pulse2 = 10 + Math.sin(Date.now() / 280) * 3;
+      ctx.beginPath();
+      ctx.arc(nxt.x, nxt.y, nxt.rad + pulse2, 0, Math.PI * 2);
+      ctx.strokeStyle = tgt.color.hex;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([7, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  var animId = null;
+  function animLoop(){
+    if (shapeActive) {
+      // 每个干扰球独立推进 morph，四个形状循环（圆→三角→方→菱→圆…），各自节奏略有差异
+      for (var bi = 0; bi < state.pts.length; bi++) {
+        var bp = state.pts[bi];
+        if (bp.isTarget) continue;
+        bp.shapeT += bp.shapeSpeed;
+        if (bp.shapeT >= 1) {
+          bp.shapeT = 0;
+          bp.shapeFrom = bp.shapeTo;
+          bp.shapeTo = (bp.shapeTo + 1) % 4;
+        }
+      }
+    }
+    draw();
+    animId = requestAnimationFrame(animLoop);
+  }
+
+  /* ===== 自由画线 ===== */
+  function segDist(ax, ay, bx, by, px, py){
+    var dx = bx - ax, dy = by - ay;
+    var len2 = dx * dx + dy * dy;
+    if (len2 === 0) return Math.hypot(px - ax, py - ay);
+    var t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+    var cx = ax + t * dx, cy = ay + t * dy;
+    return Math.hypot(px - cx, py - cy);
+  }
+  // 线段 (a,b) 到点 (px,py) 的最近点坐标
+  function segClosestPoint(ax, ay, bx, by, px, py){
+    var dx = bx - ax, dy = by - ay;
+    var len2 = dx * dx + dy * dy;
+    if (len2 === 0) return { x: ax, y: ay };
+    var t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+    return { x: ax + t * dx, y: ay + t * dy };
+  }
+  // 形状在 (dx,dy) 方向（相对球心）的边界半径（含 morph 插值），圆形恒为 1
+  function shapeBoundaryRadius(pt, dx, dy){
+    var dist = Math.hypot(dx, dy);
+    if (dist < 0.001) return pt.rad;
+    var a = Math.atan2(dy, dx);
+    if (a < 0) a += 2 * Math.PI;
+    var idx = Math.round(a / (2 * Math.PI) * SHAPE_N) % SHAPE_N;
+    var rCur = shapeCache[pt.shapeFrom][idx];
+    var rTgt = shapeCache[pt.shapeTo][idx];
+    var r = rCur + (rTgt - rCur) * pt.shapeT;
+    return r * pt.rad;
+  }
+  function evPos(e){
+    var rect = cv.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+  function onDown(e){
+    if (state.locked || !state.target) return;
+    e.preventDefault();
+    initAudio();   // 首次交互解锁 AudioContext，保证连对/碰错的音效一定响
+    wrongTrail = [];     // 开始新笔画时，立即清掉上一段错线残留
+    strokeInvalid = false;  // 新一笔开始，默认有效
+    drawing = true;
+    trail = [evPos(e)];
+    draw();
+  }
+  function onMove(e){
+    if (!drawing) return;
+    e.preventDefault();
+    var p = evPos(e);
+    trail.push(p);
+    if (trail.length > 5000) trail.shift(); // 自由连贯笔迹，允许较长（上限5000，避免长笔画丢线）
+
+    // 障碍球检测：按形状实际边界精确判定（线段到球心最近点 vs 该方向形状边界半径），线真碰到形状才算
+    for (var i = 0; i < state.pts.length; i++) {
+      var pt = state.pts[i];
+      if (pt.isTarget || pt.hit) continue;
+      var closest = { x: p.x, y: p.y };
+      if (trail.length >= 2) {
+        var prevPt = trail[trail.length - 2];
+        closest = segClosestPoint(prevPt.x, prevPt.y, p.x, p.y, pt.x, pt.y);
+      }
+      var dOb = Math.hypot(closest.x - pt.x, closest.y - pt.y);
+      var boundary = shapeBoundaryRadius(pt, closest.x - pt.x, closest.y - pt.y);
+      if (dOb < boundary + 3) {
+        pt.hit = true;
+        state.wrong++;
+        sfxErr();
+        strokeInvalid = true;   // 碰错后当前这一笔作废（抬笔不存档），不残留线
+        // 错误笔迹：每次碰球都替换旧错线（一定清除旧的）；trail≥2 才记录新的一段
+        if (trail.length >= 2) {
+          wrongTrail = trail.slice(-40);
+          wrongAt = Date.now();
+        } else {
+          wrongTrail = [];
+        }
+        trail = [];
+      }
+    }
+
+    // 目标球判定：必须按从外到内顺序（seq[curIdx]）；用线段距离检测，画线扫过球就点亮，不漏判
+    var tgt = state.target;
+    if (tgt && state.curIdx < tgt.seq.length) {
+      var next = tgt.seq[state.curIdx];
+      var d = Math.hypot(p.x - next.x, p.y - next.y);
+      if (trail.length >= 2) {
+        var prev = trail[trail.length - 2];
+        d = Math.min(d, segDist(prev.x, prev.y, p.x, p.y, next.x, next.y));
+      }
+      if (d < next.rad + 10) {
+        next.connected = true;
+        state.curIdx++;
+        wrongTrail = [];   // 连对时立即清掉之前的错线残留，避免"连对了还闪红线"
+        sfxOk();
+        updateMeta();
+        if (state.curIdx >= tgt.seq.length) {
+          // 本关完成：先保存当前笔迹再清空（否则整条线丢失）
+          drawing = false;
+          state.locked = true;
+          state.qn++; state.done++;
+          if (trail.length > 1) {
+            strokes.push(trail.slice());
+            if (strokes.length > 40) strokes.shift();
+          }
+          trail = [];
+          sfxWin();
+          setTimeout(function(){ state.locked = false; nextLevel(); }, 700);
+        }
+      }
+    }
+    draw();
+  }
+  function onUp(e){
+    drawing = false;
+    if (trail.length > 1 && !strokeInvalid) {
+      strokes.push(trail.slice());
+      if (strokes.length > 40) strokes.shift(); // 只保留最近 40 笔
+    }
+    trail = [];
+    draw();
+  }
+  cv.addEventListener('pointerdown', onDown);
+  cv.addEventListener('pointermove', onMove);
+  cv.addEventListener('pointerup', onUp);
+  cv.addEventListener('pointercancel', onUp);
+
+  /* ===== 关卡 ===== */
+  function newLevel(){
+    // 目标色：用户自定义时固定用自定义色，否则每关随机
+    if (state.tgtCustom) { if (!state.targetColor || state.targetColor.hex !== state.tgtColorHex) state.targetColor = { hex: state.tgtColorHex, name: '自定义' }; }
+    else state.targetColor = COLORS[randInt(0, COLORS.length - 1)];
+    state.pts = genPoints();
+    state.target = pickTarget(state.pts);
+    if (!state.target || state.target.seq.length < state.need) {
+      if (!state.tgtCustom) state.targetColor = COLORS[randInt(0, COLORS.length - 1)];
+      state.pts = genPoints();
+      state.target = pickTarget(state.pts);
+    }
+    if (!state.target || state.target.seq.length < state.need) return false;
+    state.curIdx = 0;
+    strokes = [];        // 新关清掉上一关的笔迹
+    wrongTrail = [];     // 新关清掉上一关的错线残留
+    trail = [];
+    drawing = false;
+    updatePrintMeta();
+    updateMeta();
+    draw();
+    return true;
+  }
+
+  // 同步提示色 + 打印标题（颜色 + 形状 + 目标球数）：形状随螺旋形状变化，不再写死"圆形"
+  function updatePrintMeta(){
+    if (!state.target) return;
+    hintDot.style.background = state.targetColor.hex;
+    hintName.textContent = state.targetColor.name + '色';
+    var pd = $('printDot');
+    if (pd) {
+      pd.style.background = 'radial-gradient(circle at 35% 35%, #ffffff, ' + state.targetColor.hex + ' 45%, ' + shadeHex(state.targetColor.hex, -0.4) + ')';
+      if (state.spiralShape === 1) {            // 三角：正三角（底水平、顶点朝上），与圆/方区分
+        pd.style.borderRadius = '0'; pd.style.border = 'none';
+        pd.style.clipPath = 'polygon(50% 0%, 100% 100%, 0% 100%)';
+      } else if (state.spiralShape === 2) {     // 方：轴对齐方形
+        pd.style.borderRadius = '0'; pd.style.border = '1.5px solid #1c2733';
+        pd.style.clipPath = 'none';
+      } else {                                  // 圆
+        pd.style.borderRadius = '50%'; pd.style.border = '1.5px solid #1c2733';
+        pd.style.clipPath = 'none';
+      }
+    }
+    var pdesc = $('printDesc');
+    if (pdesc) {
+      var shapeName = (state.spiralShape === 1) ? '三角形' : (state.spiralShape === 2) ? '方形' : '圆形';
+      pdesc.textContent = '沿通道连线穿过所有【' + state.targetColor.name + ' ' + shapeName + '】球（' + state.target.seq.length + '个目标球）';
+    }
+    qTotal.textContent = state.target.seq.length;
+  }
+
+  function updateMeta(){
+    qCount.textContent = state.curIdx;
+    if (state.mode === 'test') qTimer.textContent = '剩余 ' + state.testLeft + ' 秒';
+    else qTimer.textContent = '用时 ' + fmtTime(Date.now() - state.startAt);
+  }
+
+  // 改形状/旋转/大小时重新生成点（保留当前目标色，不换关、不换颜色）
+  function regenPoints(){
+    state.pts = genPoints();
+    state.target = pickTarget(state.pts);
+    if (!state.target || state.target.seq.length < state.need) {
+      state.pts = genPoints();
+      state.target = pickTarget(state.pts);
+    }
+    state.curIdx = 0;
+    strokes = []; wrongTrail = []; trail = []; drawing = false;
+    updatePrintMeta();
+    updateMeta();
+    draw();
+  }
+
+  function nextLevel(){
+    if (state.mode === 'train' && state.done >= state.len) { showResult(); return; }
+    if (!newLevel()) showResult();
+  }
+
+  /* ===== 计时 ===== */
+  function startTestTimer(){
+    state.testLeft = 60;
+    updateMeta();
+    state.timerId = setInterval(function(){
+      state.testLeft--;
+      timerFill.style.width = (state.testLeft / 60 * 100) + '%';
+      updateMeta();
+      if (state.testLeft <= 0) {
+        clearInterval(state.timerId); state.timerId = null;
+        state.locked = true;
+        showResult();
+      }
+    }, 1000);
+  }
+
+  /* ===== 开始 ===== */
+  function startGame(){
+    stopTimer();
+    state.qn = 0; state.wrong = 0; state.done = 0; state.locked = false;
+    state.startAt = Date.now();
+    wrongTrail = []; trail = []; strokes = []; drawing = false;  // 重新开始：清空一切笔迹/错线残留
+    mask.hidden = true;
+    timerTrack.hidden = (state.mode !== 'test');
+    if (state.mode === 'test') timerFill.style.width = '100%';
+    syncPanel();
+    fitCanvas();
+    newLevel();
+    if (state.mode === 'test') startTestTimer();
+  }
+
+  function stopTimer(){ if (state.timerId) { clearInterval(state.timerId); state.timerId = null; } }
+
+  /* ===== 成绩 ===== */
+  function showResult(){
+    stopTimer();
+    state.locked = true;
+    mask.hidden = false;
+    if (state.mode === 'train') {
+      var pct = Math.round(state.qn / state.len * 100);
+      mTitle.textContent = '训练完成';
+      mStat.innerHTML = '连完 <b>' + state.qn + '</b> / ' + state.len + ' 关<br>正确率 <b>' + pct + '%</b> · 用时 <b>' + fmtTime(Date.now() - state.startAt) + '</b>';
+      mGrade.textContent = pct >= 90 ? '优秀' : (pct >= 70 ? '良好' : '继续加油');
+      mGrade.className = 'm-grade ' + (pct >= 90 ? 'good' : (pct >= 70 ? 'mid' : 'low'));
+      mTip.textContent = '点错 ' + state.wrong + ' 次 · 再来一局试试更快';
+      sfxOver();
+    } else {
+      var g = gradeFor(state.qn);
+      mTitle.textContent = '测评结果';
+      mStat.innerHTML = '60秒连完 <b>' + state.qn + '</b> 关<br>点错 <b>' + state.wrong + '</b> 次';
+      mGrade.textContent = g.name;
+      mGrade.className = 'm-grade ' + g.cls;
+      mTip.textContent = g.tip;
+      sfxOver();
+    }
+  }
+
+  function gradeFor(c){
+    var t = state.need === 10 ? [4, 3] : (state.need === 15 ? [3, 2] : [2, 1]);
+    if (c >= t[0]) return { name:'优', cls:'good', tip:'色彩分辨很稳，保持！' };
+    if (c >= t[1]) return { name:'良', cls:'mid', tip:'不错，再练练更顺！' };
+    return { name:'待提升', cls:'low', tip:'别急，多玩几次会更熟练' };
+  }
+
+  /* ===== 控制条 ===== */
+  function syncPanel(){
+    document.querySelectorAll('#grpNeed .seg-btn').forEach(function(b){
+      b.classList.toggle('active', +b.getAttribute('data-need') === state.need);
+    });
+    document.querySelectorAll('#grpMode .seg-btn').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-mode') === state.mode);
+    });
+    document.querySelectorAll('#grpLen .seg-btn').forEach(function(b){
+      b.classList.toggle('active', +b.getAttribute('data-len') === state.len);
+    });
+    document.querySelectorAll('#grpSfx .seg-btn').forEach(function(b){
+      b.classList.toggle('active', +b.getAttribute('data-sfx') === (state.sfx ? 1 : 0));
+    });
+  }
+  document.querySelectorAll('#grpNeed .seg-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ state.need = +btn.getAttribute('data-need'); startGame(); });
+  });
+  document.querySelectorAll('#grpMode .seg-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ state.mode = btn.getAttribute('data-mode'); startGame(); });
+  });
+  document.querySelectorAll('#grpLen .seg-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ state.len = +btn.getAttribute('data-len'); startGame(); });
+  });
+  document.querySelectorAll('#grpSfx .seg-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ state.sfx = (+btn.getAttribute('data-sfx')) === 1; syncPanel(); });
+  });
+  $('btnRestart').addEventListener('click', startGame);
+  $('btnAgain').addEventListener('click', startGame);
+  $('btnShape').addEventListener('click', function(){
+    // 点击切换：开始/停止 每个干扰球的独立循环（圆→三角→方→菱→圆…）
+    shapeActive = !shapeActive;
+    $('btnShape').textContent = shapeActive ? '停止变换' : '动态形状';
+  });
+
+  // 螺旋形状选项
+  document.querySelectorAll('#grpSpiral .seg-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      state.spiralShape = +btn.getAttribute('data-shape');
+      document.querySelectorAll('#grpSpiral .seg-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+      regenPoints();
+    });
+  });
+  // 旋转方向滑块（度 → 弧度）
+  $('rotSlider').addEventListener('input', function(){
+    state.rotation = (+this.value) * Math.PI / 180;
+    regenPoints();
+  });
+  // 目标球大小滑块
+  $('ballSlider').addEventListener('input', function(){
+    state.ballSize = +this.value;
+    regenPoints();
+  });
+  // 干扰球数量滑块（默认最大）
+  $('obsSlider').addEventListener('input', function(){
+    state.obsCount = +this.value;
+    regenPoints();
+  });
+  // 干扰球色：彩色 / 统一色 两个按钮
+  document.querySelectorAll('#grpObsColor .seg-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      state.obsColorful = (btn.getAttribute('data-obs') === 'colorful');
+      document.querySelectorAll('#grpObsColor .seg-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+      regenPoints();
+    });
+  });
+  // 选干扰球统一色（选中即切到统一色模式）
+  $('obsColorPick').addEventListener('input', function(){
+    state.obsColor = this.value;
+    state.obsColorful = false;
+    document.querySelectorAll('#grpObsColor .seg-btn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-obs') === 'uniform'); });
+    regenPoints();
+  });
+  // 目标球自定义颜色（选中即固定该色）
+  $('tgtColorPick').addEventListener('input', function(){
+    state.tgtCustom = true;
+    state.tgtColorHex = this.value;
+    state.targetColor = { hex: this.value, name: '自定义' };
+    regenPoints();
+    hintDot.style.background = state.targetColor.hex;
+    hintName.textContent = state.targetColor.name + '色';
+  });
+
+  // 调试/验证钩子
+  window.__csc = {
+    getTarget: function(){ return state.target; },
+    getPts: function(){ return state.pts; },
+    getCur: function(){ return state.curIdx; },
+    getQn: function(){ return state.qn; },
+    getDone: function(){ return state.done; },
+    getMode: function(){ return state.mode; },
+    getWrong: function(){ return state.wrong; },
+    getGeom: function(){ return { cx: geom.cx, cy: geom.cy, maxR: geom.maxR, k: geom.k, r0: geom.r0, bandW: BAND_W(), turns: TURNS }; },
+    getSpiralVerts: function(){ if (state.spiralShape === 0) return []; return getSpiralVertices(); },
+    getSpiralPolyline: function(){ return getSpiralPolyline(); },
+    getStrokes: function(){ return strokes; },
+    getShape: function(){ return { active: shapeActive }; },
+    getObsShapes: function(){ return state.pts.filter(function(p){ return !p.isTarget; }).map(function(p){ return p.shapeFrom; }); },
+    getWrongTrail: function(){ return wrongTrail.length; },
+    downAt: function(px, py){ var r = cv.getBoundingClientRect(); onDown({ clientX: r.left + px, clientY: r.top + py, preventDefault: function(){} }); },
+    drawTo: function(px, py){ var r = cv.getBoundingClientRect(); onMove({ clientX: r.left + px, clientY: r.top + py, preventDefault: function(){} }); },
+    up: function(){ onUp({}); }
+  };
+
+  startGame();
+  animLoop();
+})();
+</script>
+</body>
+</html>

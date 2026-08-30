@@ -525,6 +525,7 @@ async function showSequence(){
   setBlocksEnabled(false);
 
   for(let i = 0; i < state.sequence.length; i++){
+    if(state.phase !== 'showing') return;
     await sleep(300);
     const idx = state.sequence[i];
     blocks[idx].style.cssText = 'background:#FFDA00 !important; border-color:#FFDA00 !important; box-shadow:0 0 36px rgba(255,218,0,0.7) !important; transform:scale(1.06) !important;';
@@ -533,6 +534,7 @@ async function showSequence(){
     await sleep(cfg.litDuration);
     blocks[idx].style.cssText = '';
   }
+  if(state.phase !== 'showing') return;
   await sleep(400);
   state.phase = 'input';
   hintText.textContent = '请按顺序点击方块！';
@@ -672,6 +674,9 @@ function resetToIdle(){
   });
   document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
   resultCard.classList.remove('show');
+  startBtn.style.display = 'block';
+  startBtn.disabled = false;
+  startBtn.textContent = '开始训练';
   hintText.textContent = '点击开始训练';
   document.getElementById('rSpan').textContent = '-';
   document.getElementById('rCorrect').textContent = '-';

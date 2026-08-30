@@ -273,6 +273,7 @@
       align-items: center;
       z-index: 10000;
       flex-direction: column;
+      pointer-events: none; /* 通关庆祝浮层只做视觉提示，不拦截点击 */
     }
     
     .win-text {
@@ -627,6 +628,9 @@
       var btn = document.getElementById('symmetryBtn');
       btn.classList.toggle('active', symmetryMode);
       btn.textContent = symmetryMode ? '对称玩法 ✓' : '对称玩法';
+      
+      // 切换规则时重开棋盘，避免已填格子在新规则下无法纠正导致死局
+      startLevel();
       
       // 修改填充标题
       document.getElementById('fillTitle').textContent = symmetryMode ? '请左右对称填充' : '请填充';

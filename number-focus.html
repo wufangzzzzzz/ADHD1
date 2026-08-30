@@ -199,6 +199,17 @@
       background: rgba(79,195,247,0.2);
     }
     
+    .cell.cursor {
+      border-color: #FFD700;
+      box-shadow: 0 0 0 3px rgba(255,215,0,0.7), 0 0 12px rgba(255,215,0,0.5);
+      animation: cursorPulse 1.2s ease-in-out infinite;
+    }
+    
+    @keyframes cursorPulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(255,215,0,0.7), 0 0 12px rgba(255,215,0,0.5); }
+      50% { box-shadow: 0 0 0 3px rgba(255,215,0,0.35), 0 0 22px rgba(255,215,0,0.85); }
+    }
+    
     .cell.correct {
       border-color: #4CAF50;
       background: rgba(76,175,80,0.3);
@@ -346,6 +357,102 @@
       color: #4FC3F7;
     }
     
+    /* 主内容区（格子 + 键盘）：竖屏上下排，横屏左右排 */
+    .main-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    
+    /* 固定键盘区（不遮挡格子，直接连续输入） */
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 340px;
+      margin-top: 15px;
+      padding: 0 2px;
+    }
+    
+    .key-btn {
+      height: 52px;
+      border: none;
+      border-radius: 12px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.2s;
+      background: linear-gradient(135deg, #4FC3F7, #29B6F6);
+      color: white;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+    
+    .key-btn:active {
+      transform: scale(0.92);
+    }
+    
+    .key-btn.key-clear {
+      grid-column: span 3;
+      height: 44px;
+      background: linear-gradient(135deg, #ef5350, #e53935);
+      font-size: 14px;
+    }
+    
+    /* 手机竖屏（窄屏）适配：压缩顶部与格子/键盘，确保固定键盘完整可见不溢出 */
+    @media (max-width: 480px) {
+      .title-area h1 { font-size: 20px; letter-spacing: 1px; margin-bottom: 0; }
+      .subtitle { display: none; }
+      .mode-row { gap: 6px; }
+      .mode-btn { padding: 5px 10px; font-size: 11px; }
+      .score-bar { padding: 5px 12px; margin-bottom: 6px; max-width: 300px; }
+      .score-value { font-size: 16px; }
+      .round-indicator { display: none; }
+      .game-area { padding: 12px; margin-bottom: 8px; max-width: 264px; }
+      .grid-container { gap: 6px; margin-bottom: 10px; }
+      .cell { border-radius: 8px; font-size: 24px; }
+      .btn { padding: 8px 14px; font-size: 12px; }
+      .status { margin-top: 4px; font-size: 12px; }
+      .keypad { gap: 5px; margin-top: 8px; max-width: 264px; }
+      .key-btn { height: 40px; font-size: 18px; border-radius: 10px; }
+      .key-btn.key-clear { height: 32px; font-size: 12px; }
+    }
+    
+    /* 横屏：保持上下布局（格子在上、键盘在下），只压缩尺寸避免溢出 */
+    @media (orientation: landscape) {
+      .subtitle { display: none; }
+      .round-indicator { display: none; }
+      .score-bar { padding: 4px 10px; margin-bottom: 4px; }
+      .mode-row { gap: 6px; }
+      .mode-btn { padding: 5px 10px; font-size: 11px; }
+      .game-area { padding: 10px; margin-bottom: 6px; max-width: 300px; }
+      .grid-container { gap: 6px; margin-bottom: 8px; }
+      .keypad { gap: 6px; margin-top: 6px; max-width: 300px; }
+      .key-btn { height: 40px; font-size: 18px; }
+      .key-btn.key-clear { height: 30px; font-size: 12px; }
+      .status { margin-top: 4px; font-size: 12px; }
+    }
+    
+    /* 手机横屏（极矮屏）：保持上下布局，压缩尺寸，超高时可滚动 */
+    @media (orientation: landscape) and (max-height: 500px) {
+      body { overflow-y: auto; }
+      .title-area h1 { font-size: 14px; margin-bottom: 0; }
+      .score-bar { padding: 2px 6px; margin-bottom: 2px; }
+      .score-value { font-size: 13px; }
+      .mode-btn { padding: 3px 7px; font-size: 10px; }
+      .game-area { padding: 6px; max-width: 280px; }
+      .grid-container { gap: 3px; margin-bottom: 5px; }
+      .cell { border-radius: 6px; }
+      .btn { padding: 5px 10px; font-size: 11px; }
+      .keypad { gap: 3px; max-width: 280px; }
+      .key-btn { height: 32px; font-size: 16px; border-radius: 8px; }
+      .key-btn.key-clear { height: 26px; font-size: 11px; }
+      .status { margin-top: 2px; font-size: 11px; }
+    }
+    
     .number-picker {
       position: fixed;
       top: 50%;
@@ -403,6 +510,15 @@
       background: linear-gradient(135deg, #29B6F6, #03A9F4);
     }
     
+    .picker-btn.picker-clear {
+      background: linear-gradient(135deg, #ef5350, #e53935);
+      font-size: 14px;
+    }
+    
+    .picker-btn.picker-clear:hover {
+      background: linear-gradient(135deg, #e53935, #c62828);
+    }
+    
     .picker-cancel {
       width: 100%;
       margin-top: 12px;
@@ -441,6 +557,7 @@
       z-index: 2000;
       align-items: center;
       justify-content: center;
+      pointer-events: none; /* 满分提示浮层不拦截点击 */
     }
     
     .win-overlay.show {
@@ -490,6 +607,7 @@
       z-index: 2000;
       align-items: center;
       justify-content: center;
+      pointer-events: none; /* 答错提示浮层不拦截点击 */
     }
     
     .game-over-overlay.show {
@@ -531,6 +649,7 @@
       z-index: 2000;
       align-items: center;
       justify-content: center;
+      pointer-events: none; /* 答对提示浮层不拦截点击 */
     }
     
     .success-overlay.show {
@@ -614,33 +733,30 @@
     <div class="round-dot"></div>
   </div>
   
-  <div class="game-area">
-    <div class="grid-container" id="gridContainer">
-      <div class="cell hidden" id="cell0" onclick="cellClick(0)"></div>
-      <div class="cell hidden" id="cell1" onclick="cellClick(1)"></div>
-      <div class="cell hidden" id="cell2" onclick="cellClick(2)"></div>
-      <div class="cell hidden" id="cell3" onclick="cellClick(3)"></div>
-      <div class="cell hidden" id="cell4" onclick="cellClick(4)"></div>
-      <div class="cell hidden" id="cell5" onclick="cellClick(5)"></div>
-      <div class="cell hidden" id="cell6" onclick="cellClick(6)"></div>
-      <div class="cell hidden" id="cell7" onclick="cellClick(7)"></div>
-      <div class="cell hidden" id="cell8" onclick="cellClick(8)"></div>
+  <div class="main-row">
+    <div class="game-area">
+      <div class="grid-container" id="gridContainer">
+        <div class="cell hidden" id="cell0" onclick="cellClick(0)"></div>
+        <div class="cell hidden" id="cell1" onclick="cellClick(1)"></div>
+        <div class="cell hidden" id="cell2" onclick="cellClick(2)"></div>
+        <div class="cell hidden" id="cell3" onclick="cellClick(3)"></div>
+        <div class="cell hidden" id="cell4" onclick="cellClick(4)"></div>
+        <div class="cell hidden" id="cell5" onclick="cellClick(5)"></div>
+        <div class="cell hidden" id="cell6" onclick="cellClick(6)"></div>
+        <div class="cell hidden" id="cell7" onclick="cellClick(7)"></div>
+        <div class="cell hidden" id="cell8" onclick="cellClick(8)"></div>
+      </div>
+      
+      <div class="controls">
+        <button class="btn btn-start" onclick="startGame()">开始</button>
+        <button class="btn btn-reset" onclick="resetGame()">重置</button>
+      </div>
     </div>
     
-    <div class="controls">
-      <button class="btn btn-start" onclick="startGame()">开始</button>
-      <button class="btn btn-reset" onclick="resetGame()">重置</button>
-    </div>
+    <div class="keypad" id="keypad"></div>
   </div>
   
   <div class="status" id="status">点击开始按钮显示内容</div>
-  
-  <div class="picker-overlay" id="pickerOverlay" onclick="closePicker()"></div>
-  <div class="number-picker" id="numberPicker">
-    <div class="number-picker-title" id="pickerTitle">选择数字</div>
-    <div class="number-picker-grid" id="pickerGrid"></div>
-    <button class="picker-cancel" onclick="closePicker()">取消</button>
-  </div>
   
   <div class="win-overlay" id="winOverlay">
     <div class="win-content">
@@ -923,21 +1039,11 @@
       }
     }
     
-    // 点击格子
+    // 点击格子：把光标移到该格（不再弹窗）
     function cellClick(index) {
       if (!canInput) return;
-      if (contentType === 'number' && userInputs[index] > 0) return;
-      if ((contentType === 'color' || contentType === 'shape') && userInputs[index] >= 0) return;
-      
       playSound('click');
-      
-      for (var i = 0; i < 9; i++) {
-        document.getElementById('cell' + i).classList.remove('selected');
-      }
-      
-      currentCellIndex = index;
-      document.getElementById('cell' + index).classList.add('selected');
-      openPicker();
+      setCursor(index);
     }
     
     // 开始游戏
@@ -968,70 +1074,106 @@
           timerEl.classList.remove('show');
           hideItems();
           canInput = true;
-          document.getElementById('status').textContent = '点击格子选择内容';
+          buildKeypad();
+          setCursor(0);
+          document.getElementById('status').textContent = '点击下方键盘输入，光标所在格会自动填入';
         }
       }, 1000);
       countdownInterval = countdown;
     }
     
-    // 打开选择器
-    function openPicker() {
-      var grid = document.getElementById('pickerGrid');
-      var title = document.getElementById('pickerTitle');
-      grid.innerHTML = '';
+    // ---- 光标管理 ----
+    function setCursor(index) {
+      currentCellIndex = index;
+      for (var i = 0; i < 9; i++) {
+        var c = document.getElementById('cell' + i);
+        if (i === index) c.classList.add('cursor');
+        else c.classList.remove('cursor');
+      }
+    }
+    
+    function isEmpty(i) {
+      if (contentType === 'number') return userInputs[i] === 0;
+      return userInputs[i] < 0;
+    }
+    
+    function findNextEmpty(fromIndex) {
+      for (var i = fromIndex + 1; i < 9; i++) {
+        if (isEmpty(i)) return i;
+      }
+      for (var i = 0; i <= fromIndex; i++) {
+        if (isEmpty(i)) return i;
+      }
+      return -1;
+    }
+    
+    function allFilled() {
+      for (var i = 0; i < 9; i++) {
+        if (isEmpty(i)) return false;
+      }
+      return true;
+    }
+    
+    // ---- 固定键盘（不遮挡格子，直接连续输入） ----
+    function buildKeypad() {
+      var pad = document.getElementById('keypad');
+      pad.innerHTML = '';
       
       if (contentType === 'number') {
-        title.textContent = '选择数字';
         for (var i = 1; i <= 9; i++) {
-          var btn = document.createElement('button');
-          btn.className = 'picker-btn';
-          btn.textContent = i;
-          btn.onclick = (function(n) { return function() { selectItem(n); }; })(i);
-          grid.appendChild(btn);
+          var b = document.createElement('button');
+          b.className = 'key-btn';
+          b.textContent = i;
+          b.onclick = (function(n){ return function(){ keypadInput(n); }; })(i);
+          pad.appendChild(b);
         }
       } else if (contentType === 'color') {
-        title.textContent = '选择颜色';
         for (var i = 0; i < colors.length; i++) {
-          var btn = document.createElement('button');
-          btn.className = 'picker-btn';
-          btn.style.background = colors[i].value;
-          btn.textContent = colors[i].name;
-          btn.onclick = (function(n) { return function() { selectItem(n); }; })(i);
-          grid.appendChild(btn);
+          var b = document.createElement('button');
+          b.className = 'key-btn';
+          b.style.background = colors[i].value;
+          b.textContent = colors[i].name;
+          b.onclick = (function(n){ return function(){ keypadInput(n); }; })(i);
+          pad.appendChild(b);
         }
       } else if (contentType === 'shape') {
-        title.textContent = '选择图形';
         for (var i = 0; i < shapes.length; i++) {
-          var btn = document.createElement('button');
-          btn.className = 'picker-btn';
-          btn.style.background = '#333';
-          btn.style.color = 'white';
-          btn.style.fontSize = '11px';
-          btn.innerHTML = createShapeSVG(shapes[i].type, 'white');
-          btn.onclick = (function(n) { return function() { selectItem(n); }; })(i);
-          grid.appendChild(btn);
+          var b = document.createElement('button');
+          b.className = 'key-btn';
+          b.style.background = '#333';
+          b.style.color = 'white';
+          b.innerHTML = createShapeSVG(shapes[i].type, 'white');
+          b.onclick = (function(n){ return function(){ keypadInput(n); }; })(i);
+          pad.appendChild(b);
         }
       }
       
-      document.getElementById('pickerOverlay').classList.add('show');
-      document.getElementById('numberPicker').classList.add('show');
+      var clear = document.createElement('button');
+      clear.className = 'key-btn key-clear';
+      clear.textContent = '清除（撤销当前格）';
+      clear.onclick = function(){ clearCurrent(); };
+      pad.appendChild(clear);
     }
     
-    function closePicker() {
-      document.getElementById('pickerOverlay').classList.remove('show');
-      document.getElementById('numberPicker').classList.remove('show');
-      currentCellIndex = -1;
+    // 键盘输入：填入当前光标格，光标自动跳到下一个空格
+    function keypadInput(value) {
+      if (!canInput) return;
+      if (currentCellIndex < 0) {
+        var first = findNextEmpty(-1);
+        if (first < 0) return;
+        setCursor(first);
+      }
+      fillCell(currentCellIndex, value);
     }
     
-    // 选择内容
-    function selectItem(value) {
-      if (currentCellIndex < 0) return;
-      
-      var cell = document.getElementById('cell' + currentCellIndex);
-      userInputs[currentCellIndex] = value;
+    // 填充某个格子
+    function fillCell(index, value) {
+      userInputs[index] = value;
+      var cell = document.getElementById('cell' + index);
       
       if (contentType === 'number') {
         cell.textContent = value;
+        cell.style.background = 'white';
       } else if (contentType === 'color') {
         cell.style.background = colors[value].value;
         cell.innerHTML = '<svg width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="' + colors[value].value + '"/></svg>';
@@ -1040,28 +1182,29 @@
       }
       
       cell.classList.add('filled');
-      cell.classList.remove('selected');
-      
+      cell.classList.remove('cursor');
       playSound('fill');
-      closePicker();
       
-      // 检查是否全部填写
-      var allFilled = true;
-      for (var i = 0; i < 9; i++) {
-        if (contentType === 'number' && userInputs[i] === 0) {
-          allFilled = false;
-          break;
-        } else if ((contentType === 'color' || contentType === 'shape') && userInputs[i] < 0) {
-          allFilled = false;
-          break;
-        }
-      }
+      // 光标跳到下一个空格
+      setCursor(findNextEmpty(index));
       
-      if (allFilled) {
-        setTimeout(function() {
-          checkAnswer();
-        }, 300);
+      if (allFilled()) {
+        setTimeout(function() { checkAnswer(); }, 300);
       }
+    }
+    
+    // 清除当前光标格的内容（撤销）
+    function clearCurrent() {
+      if (!canInput || currentCellIndex < 0) return;
+      var index = currentCellIndex;
+      userInputs[index] = (contentType === 'number') ? 0 : -1;
+      var cell = document.getElementById('cell' + index);
+      cell.textContent = '';
+      cell.innerHTML = '';
+      cell.style.background = 'white';
+      cell.classList.remove('filled', 'correct', 'wrong');
+      cell.classList.add('cursor');
+      playSound('click');
     }
     
     // 验证答案
@@ -1122,6 +1265,8 @@
             gameStarted = false;
             canInput = false;
             userInputs = [];
+            currentCellIndex = -1;
+            document.getElementById('keypad').innerHTML = '';
             document.getElementById('timer').classList.remove('show');
             
             // 重置格子
@@ -1130,7 +1275,7 @@
               cell.innerHTML = '';
               cell.textContent = '';
               cell.style.background = 'white';
-              cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+              cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'cursor');
               cell.classList.add('hidden');
             }
             
@@ -1172,6 +1317,8 @@
               gameStarted = false;
               canInput = false;
               userInputs = [];
+              currentCellIndex = -1;
+              document.getElementById('keypad').innerHTML = '';
               currentScore = 0;
               document.getElementById('currentScore').textContent = '0';
               document.getElementById('timer').classList.remove('show');
@@ -1182,7 +1329,7 @@
                 cell.innerHTML = '';
                 cell.textContent = '';
                 cell.style.background = 'white';
-                cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+                cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'cursor');
                 cell.classList.add('hidden');
               }
               
@@ -1228,7 +1375,7 @@
             cell.innerHTML = '';
             cell.textContent = '';
             cell.style.background = 'white';
-            cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+            cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'cursor');
             cell.classList.add('hidden');
           }
           
@@ -1248,6 +1395,8 @@
       currentRound = 0;
       
       if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+      currentCellIndex = -1;
+      document.getElementById('keypad').innerHTML = '';
       
       document.getElementById('winOverlay').classList.remove('show');
       document.getElementById('gameOverOverlay').classList.remove('show');
@@ -1257,10 +1406,11 @@
         cell.innerHTML = '';
         cell.textContent = '';
         cell.style.background = 'white';
-        cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+        cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'cursor');
         cell.classList.add('hidden');
       }
       
+      currentScore = 0;
       updateRoundIndicator();
       document.getElementById('currentScore').textContent = '0';
       document.getElementById('roundText').textContent = '第 1 关';
@@ -1273,13 +1423,15 @@
       gameStarted = false;
       canInput = false;
       userInputs = [];
+      currentCellIndex = -1;
+      document.getElementById('keypad').innerHTML = '';
       
       for (var i = 0; i < 9; i++) {
         var cell = document.getElementById('cell' + i);
         cell.innerHTML = '';
         cell.textContent = '';
         cell.style.background = 'white';
-        cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'selected');
+        cell.classList.remove('show', 'input-mode', 'correct', 'wrong', 'filled', 'cursor');
         cell.classList.add('hidden');
       }
       

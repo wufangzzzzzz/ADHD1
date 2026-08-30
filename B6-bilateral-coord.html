@@ -506,10 +506,11 @@ function renderShapes(panel, shapes, side) {
   });
 }
 
-// ===== 处理形状点击（不判断对错，任意点击即算找到） =====
+// ===== 处理形状点击（校验是否属于当前目标对） =====
 function handleShapeClick(card, shape, side) {
   if(!state.isPlaying) return;
   if(card.classList.contains('found')) return;
+  if(shape.pairIdx !== state.currentPairIdx) return; // 点错形状：不属于当前目标对，忽略
 
   card.classList.add('found');
   playSound('click');

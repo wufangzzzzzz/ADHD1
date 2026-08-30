@@ -503,6 +503,7 @@
       align-items: center;
       justify-content: center;
       animation: fadeIn 0.25s ease-out;
+      pointer-events: none; /* 关键：反馈浮层只做视觉提示，不拦截下方键盘/删除按钮的点击 */
     }
     .feedback-overlay.show { display: flex; }
     .feedback-overlay.correct { background: rgba(76,175,80,0.15); }
@@ -625,10 +626,17 @@
     @media (min-width: 600px) {
       .key-btn { min-height: 64px; font-size: 32px; }
     }
+
+    /* 竖屏：隐藏学习材料 + 按键用固定高度，确保数字键盘完整可见 */
+    @media (orientation: portrait) {
+      .game-rules, .difficulty-hint { display: none; }
+      .key-btn { aspect-ratio: auto; min-height: 52px; }
+    }
   
   
 
-/* ===== 横屏布局：左功能 + 右游戏 ===== */
+/* ===== 横屏布局：左功能 + 右游戏（仅横屏生效） ===== */
+@media (orientation: landscape) and (min-width: 640px) {
 
   body {
     min-height: 100vh;
@@ -719,6 +727,7 @@
     max-width: 90vw;
     padding: 12px 16px;
   }
+}
 
 
 
@@ -1003,8 +1012,17 @@ let state = {
   isListening: false,      // 正在播放语音
   canInput: false,         // 用户可输入
   usedIndices: {},         // 各数据源已用索引
-  gameOver: false          // 本局结束
+  gameOver: false,         // 本局结束
+  wrongAttempts: 0,        // 当前题已答错次数（用于重试上限）
+  submitTimer: null        // 自动提交定时器句柄（可取消）
 };
+
+// ---- 局令牌：每次开局递增，让旧局所有未决的延迟回调失效（防止旧 timer 污染新局）----
+let _timerGen = 0;
+function schedule(fn, ms) {
+  const g = _timerGen;
+  return setTimeout(() => { if (g === _timerGen) fn(); }, ms);
+}
 
 // ---- DOM 引用 ----
 const $ = id => document.getElementById(id);
@@ -1085,6 +1103,7 @@ function selectLevel(level) {
   state.isPlaying = false;
   state.isListening = false;
   state.gameOver = false;
+  document.getElementById('startGameBtn').disabled = false;
   state.level = level;
   // 更新按钮状态
   document.querySelectorAll('.level-btn[data-level]').forEach(btn => {
@@ -1132,6 +1151,9 @@ function updateSubLevelDisplay() {
 function startNewGame() {
   // 先停止任何正在播放的音频
   if (window.stopAllAudio) window.stopAllAudio();
+  // 允许游戏中随时重开：令牌递增使旧局所有未决延迟回调失效
+  _timerGen++;
+  clearTimeout(state.submitTimer); // 取消旧局未决的自动提交
 
   const config = LEVEL_CONFIG[state.level];
   const subConfig = config.subLevels[state.subLevel];
@@ -1150,8 +1172,11 @@ function startNewGame() {
   state.totalAnswered = 0;
   state.consecutiveCorrect = 0;
   state.consecutiveWrong = 0;
+  state.wrongAttempts = 0;
   state.isPlaying = true;
   state.gameOver = false;
+  state.canInput = false;
+  state.userAnswer = '';
   state.usedIndices = {};
 
   // 重置UI
@@ -1161,7 +1186,7 @@ function startNewGame() {
   replayBtn.disabled = true;
 
   // 开始第一题
-  setTimeout(() => startQuestion(), 300);
+  schedule(startQuestion, 300);
 }
 
 // ---- 开始单题 ----
@@ -1175,6 +1200,7 @@ function startQuestion() {
   state.userAnswer = '';
   state.canInput = false;
   state.gameOver = false;
+  state.wrongAttempts = 0;
 
   // 更新进度点
   updateProgressDots();
@@ -1218,8 +1244,14 @@ function getCurrentRate() {
   const subConfig = config.subLevels[state.subLevel];
   return subConfig ? subConfig.speechRate : 0.85;
 }
+function getCurrentInterval() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config) return 500;
+  const subConfig = config.subLevels[state.subLevel];
+  return subConfig ? subConfig.digitInterval : 500;
+}
 function speakDigits(digits, callback) {
-  window.playAudioSequence(digits, 0, callback, getCurrentRate(), 300);
+  window.playAudioSequence(digits, 0, callback, getCurrentRate(), getCurrentInterval());
 }
 
 // ---- 再听一遍 ----
@@ -1263,8 +1295,9 @@ function pressDigit(digit) {
   // 当用户点够了所有数字，自动提交
   if (state.userAnswer.length === state.currentQuestion.length) {
   // submitBtn.disabled = false;  // removed with submit button
-    // 自动提交（延迟一点让用户看到最后输入的数字）
-    setTimeout(() => submitAnswer(), 400);
+    // 自动提交（延迟一点让用户看到最后输入的数字）；先取消旧的，避免删除重输时旧 timer 抢先提交
+    clearTimeout(state.submitTimer);
+    state.submitTimer = setTimeout(() => submitAnswer(), 400);
   }
 }
 
@@ -1302,8 +1335,6 @@ function submitAnswer() {
   const correctReverse = state.currentQuestion.split('').reverse().join('');
   const isCorrect = state.userAnswer === correctReverse;
 
-  state.totalAnswered++;
-
   if (isCorrect) {
     handleCorrect();
   } else {
@@ -1317,6 +1348,8 @@ function handleCorrect() {
   state.correctCount++;
   state.consecutiveCorrect++;
   state.consecutiveWrong = 0;
+  state.totalAnswered++;
+  state.wrongAttempts = 0;
 
   // 更新进度点
   const dot = $('dot-' + state.questionIndex);
@@ -1333,27 +1366,56 @@ function handleCorrect() {
 
   // 进入下一题
   state.questionIndex++;
-  setTimeout(() => startQuestion(), 1200);
+  schedule(startQuestion, 1200);
 }
 
 // ---- 答错处理 ----
 function handleWrong(correctReverse) {
-  state.consecutiveCorrect = 0;
-  state.consecutiveWrong++;
+  state.wrongAttempts++;
 
-  // 更新进度点
-  const dot = $('dot-' + state.questionIndex);
-  if (dot) { dot.className = 'progress-dot wrong'; }
+  if (state.wrongAttempts >= 3) {
+    // 连续答错 3 次：最终判错，跳过本题进入下一题
+    state.consecutiveCorrect = 0;
+    state.consecutiveWrong++;
+    state.totalAnswered++;
+    state.wrongAttempts = 0;
 
-  // 显示错误反馈（含对比）
-  showFeedback(false, correctReverse);
+    // 更新进度点
+    const dot = $('dot-' + state.questionIndex);
+    if (dot) { dot.className = 'progress-dot wrong'; }
 
-  // 检查降档
-  checkAdaptation();
+    // 显示错误反馈（含对比）
+    showFeedback(false, correctReverse);
 
-  // 下一题
-  state.questionIndex++;
-  setTimeout(() => startQuestion(), 2000);
+    // 检查降档
+    checkAdaptation();
+
+    // 下一题
+    state.questionIndex++;
+    schedule(startQuestion, 2000);
+  } else {
+    // 允许重试：标红错误位，保留输入，恢复可编辑，用户可删除重输
+    highlightWrongDigits(correctReverse);
+    state.canInput = true;
+    setInputEnabled(true);
+    replayBtn.disabled = false;
+    statusIcon.textContent = '';
+    statusText.textContent = '有数字错了，删掉改一下';
+    statusSub.textContent = '点「清除」删掉错位，重新输入';
+  }
+}
+
+// ---- 高亮答案中每一位的对错（重试时提示哪里错了） ----
+function highlightWrongDigits(correctReverse) {
+  const spans = answerDigits.querySelectorAll('.answer-digit');
+  spans.forEach((span, i) => {
+    span.classList.remove('correct-answer', 'wrong-answer');
+    if (span.textContent === correctReverse[i]) {
+      span.classList.add('correct-answer');
+    } else {
+      span.classList.add('wrong-answer');
+    }
+  });
 }
 
 // ---- 显示反馈 ----
@@ -1406,6 +1468,7 @@ function checkAdaptation() {
     if (state.subLevel < maxSub) {
       state.subLevel++;
       state.consecutiveCorrect = 0;
+      regenerateRemainingQuestions();
       showAdaptNotice('up', '连续答对5题，升档至「' + config.subLevels[state.subLevel].label + '」！');
       updateSubLevelDisplay();
     } else {
@@ -1416,11 +1479,25 @@ function checkAdaptation() {
     if (state.subLevel > 0) {
       state.subLevel--;
       state.consecutiveWrong = 0;
+      regenerateRemainingQuestions();
       showAdaptNotice('down', '连续错3题，降档至「' + config.subLevels[state.subLevel].label + '」，别着急，慢慢来');
       updateSubLevelDisplay();
     } else {
       showAdaptNotice('down', '已是最低档，多练习就会进步！');
     }
+  }
+}
+
+// 升/降档后，用新难度重新生成剩余题目，保证难度标签与实际题目一致
+function regenerateRemainingQuestions() {
+  const config = LEVEL_CONFIG[state.level];
+  if (!config || !state.questions || state.questions.length === 0) return;
+  const subConfig = config.subLevels[state.subLevel];
+  const remaining = 10 - state.questionIndex - 1;  // 当前题之后的剩余题数
+  if (remaining <= 0) return;
+  const newQs = pickQuestions(subConfig.dataKey, remaining);
+  for (let i = 0; i < remaining && i < newQs.length; i++) {
+    state.questions[state.questionIndex + 1 + i] = newQs[i];
   }
 }
 
@@ -1478,6 +1555,7 @@ function updateProgressDots() {
 function endGame() {
   state.isPlaying = false;
   state.canInput = false;
+  document.getElementById('startGameBtn').disabled = false;
   setInputEnabled(false);
   replayBtn.disabled = true;
   // submitBtn.disabled = true;  // removed with submit button
@@ -1527,6 +1605,7 @@ function closeResult() {
 function resetGame() {
   // 停止语音
   window.speechSynthesis && window.speechSynthesis.cancel();
+  document.getElementById('startGameBtn').disabled = false;
   state.isPlaying = false;
   state.isListening = false;
   state.canInput = false;
@@ -1609,6 +1688,7 @@ function selectSubLevel(index) {
   state.isPlaying = false;
   state.isListening = false;
   state.gameOver = false;
+  document.getElementById('startGameBtn').disabled = false;
   state.subLevel = index;
   updateSubLevelDisplay();
   state.questionIndex = 0;

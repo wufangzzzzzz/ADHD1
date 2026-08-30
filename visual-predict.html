@@ -541,6 +541,7 @@
     }
 
     function selectOption(element, angle) {
+      if (answered) return;
       const isCorrect = angle === correctAnswer;
 
       if (isCorrect) {

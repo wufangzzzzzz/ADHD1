@@ -11,7 +11,7 @@
   --accent:#7E7BFF;--accent2:#5C6BC0;
   --err:#EF5350;--ok:#66BB6A;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
+*{box-sizing:border-box;margin:0;padding:0;touch-action:manipulation;}
 html,body{width:100%;height:100dvh;overflow:hidden;}
 body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:radial-gradient(1200px 800px at 70% -10%,#1a174080,transparent),#0a0e1a;color:#EDE7F6;display:flex;align-items:center;justify-content:center;height:100dvh;user-select:none;-webkit-user-select:none;}
 .container{display:flex;gap:16px;width:min(98vw,1100px);height:min(96vh,680px);padding:12px;}
@@ -220,7 +220,8 @@ function topOf(col){return col.length?col[col.length-1]:Infinity;}
 function canMove(state,from,to){
   if(from===to)return false;
   if(state[from].length===0)return false;
-  return topOf(state[to])>state[from][state[from].length-1];
+  if(state[to].length===0)return true;
+  return topOf(state[from])>topOf(state[to]);
 }
 function legalMoves(state){
   const ms=[];
@@ -277,9 +278,33 @@ function buildDiffBtns(){
     const b=document.createElement('button');
     b.className='diff-btn'+(state.level===k?' active':'');
     b.textContent=LEVELS[k].name;
-    b.onclick=()=>{if(state.running)return;state.level=k;document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+    b.dataset.level=k;
+    b.onclick=()=>selectLevel(k);
     c.appendChild(b);
   });
+}
+// 选择难度：任何时刻都生效（进行中=停当前局；停止后=收起结果卡）
+function selectLevel(k){
+  if(state.running)abortGame();
+  state.level=k;
+  document.querySelectorAll('.diff-btn').forEach(x=>{
+    x.classList.toggle('active',x.dataset.level===k);
+  });
+  $('result-card').style.display='none';
+  state.current=[[],[],[]];
+  state.goal=[[],[],[]];
+  state.refSteps=LEVELS[k].moves;
+  state.steps=0;state.selected=null;state.timerStart=0;
+  renderGoal();renderTowers();updateHud();
+  $('feedback').textContent='已选「'+LEVELS[k].name+'」，点开始训练';
+}
+// 中途放弃：只停当前局，不弹结果、不计成绩
+function abortGame(){
+  state.running=false;state.solved=false;
+  clearTimers();
+  state.selected=null;state.timerStart=0;
+  $('start-btn').textContent='开始训练';
+  $('start-btn').classList.remove('stop-mode');
 }
 // ===== 渲染 =====
 function ballHTML(n,small){
@@ -302,7 +327,6 @@ function renderTowers(){
     const t=document.createElement('div');
     t.className='tower'+(state.selected===i?' selected':'');
     t.dataset.i=i;
-    t.onclick=()=>onTowerClick(i);
     col.forEach(n=>{const d=document.createElement('div');d.innerHTML=ballHTML(n,false);t.appendChild(d.firstChild);});
     w.appendChild(t);
   });
@@ -317,7 +341,7 @@ function updateHud(){
 function onTowerClick(i){
   if(!state.running||state.solved)return;
   if(state.selected===null){
-    if(state.current[i].length===0)return;
+    if(state.current[i].length===0){$('feedback').textContent='这根柱是空的，先点有球的柱子';return;}
     state.selected=i;renderTowers();
   }else{
     if(i===state.selected){state.selected=null;renderTowers();return;}
@@ -334,10 +358,10 @@ function tryMove(f,t){
     renderTowers();updateHud();
     if(isSame(state.current,state.goal)){onSolve();}
   }else{
+    $('feedback').textContent='只能放到空柱或更大的球上';
+    state.selected=null;renderTowers();
     const towerEl=document.querySelectorAll('.tower')[t];
     if(towerEl){towerEl.classList.add('invalid');setTimeout(()=>towerEl.classList.remove('invalid'),300);}
-    $('feedback').textContent='不能把小球放到更小的球上';
-    state.selected=null;renderTowers();
   }
 }
 function onSolve(){
@@ -363,7 +387,7 @@ function startGame(){
   $('start-btn').classList.add('stop-mode');
   $('feedback').textContent='把球摆成目标图示，步数越少越好';
   renderGoal();renderTowers();updateHud();
-  state._tick=at(1000,function tick(){if(state.running&&state.timerStart){updateHud();state._tick=at(1000,tick);}});
+  state._tick=at(1000,function tick(){if(state.running){updateHud();state._tick=at(1000,tick);}});
 }
 function stopGame(){
   state.running=false;state.solved=false;
@@ -416,6 +440,12 @@ function showResult(){
 }
 // ===== 初始化 =====
 buildDiffBtns();
+// 塔的点击用事件委托，iOS/安卓平板上更可靠
+$('towers').addEventListener('click',e=>{
+  const t=e.target.closest('.tower');
+  if(!t)return;
+  onTowerClick(parseInt(t.dataset.i,10));
+});
 // ===== 儿童色彩切换 =====
 function toggleKidMode(){ document.body.classList.toggle('kid-mode'); }
 </script>

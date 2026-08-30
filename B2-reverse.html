@@ -578,10 +578,9 @@ function generateTrials(){
 
 // ========== 训练模式 ==========
 function startGame(){
-  if(state.running)return;initAudio();
+  if(state.running)return;state.running=true;document.getElementById('start-btn').disabled=true;initAudio();
   preloadAllAudio().then(()=>{
-    state.trials=generateTrials();state.currentTrial=0;state.score=0;state.results=[];state.running=true;
-    document.getElementById('start-btn').disabled=true;
+    state.trials=generateTrials();state.currentTrial=0;state.score=0;state.results=[];
     document.getElementById('score').textContent='0';
     document.getElementById('progress-fill').style.width='0%';
     document.getElementById('trial-info').textContent='0 / '+state.trials.length;
@@ -725,10 +724,9 @@ function endGame(){
 
 // ========== 实际练习模式 ==========
 function startPractice(){
-  if(state.practiceActive)return;
+  if(state.practiceActive)return;state.practiceActive=true;
   initAudio();
   preloadAllAudio().then(()=>{
-    state.practiceActive=true;
     state.practiceCount=0;
     document.getElementById('start-btn').disabled=true;
     document.getElementById('practice-stop-btn').style.display='';

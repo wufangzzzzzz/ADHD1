@@ -1084,13 +1084,15 @@
 
       // 点击条件：时间<300ms，移动距离<10px
       if (timeDiff < 300 && distance < 10) {
+        // 阻止浏览器再合成一次 click，避免双重触发
+        e.preventDefault();
         var mouseEvent = new MouseEvent('click', {
           clientX: touchEndX,
           clientY: touchEndY
         });
         canvas.dispatchEvent(mouseEvent);
       }
-    }, { passive: true });
+    }, { passive: false });
 
     // 显示提示
     function showHint(text) {

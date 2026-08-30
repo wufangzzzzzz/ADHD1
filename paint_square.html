@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方形涂色设计板</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #3a2f28; color: #f5ece0; font-family: -apple-system, "Microsoft YaHei", sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 16px; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 6px; color: #ffd9a0; }
+  .hint { font-size: 13px; color: #c9b89c; margin-bottom: 14px; line-height: 1.6; text-align: center; max-width: 640px; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #4a3d33; padding: 10px 12px; border-radius: 12px; margin-bottom: 14px; max-width: 640px; }
+  .lbl { font-size: 13px; color: #c9b89c; }
+  .swatch { border: none; cursor: pointer; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 500; color: #fff; transition: transform .08s, box-shadow .08s; display: flex; align-items: center; gap: 6px; }
+  .swatch .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .swatch:hover { transform: translateY(-1px); }
+  .swatch.active { box-shadow: 0 0 0 3px #ffd9a0, 0 2px 6px rgba(0,0,0,.3); }
+  .sw-green { background: #2a7d4a; } .sw-green .dot { background: #2ecc71; }
+  .sw-yellow { background: #8a7a1a; } .sw-yellow .dot { background: #f1c40f; }
+  .sw-blue { background: #1f5d8a; } .sw-blue .dot { background: #3498db; }
+  .sw-red { background: #8a2a22; } .sw-red .dot { background: #e74c3c; }
+  .sw-erase { background: #5a4d43; } .sw-erase .dot { background: #f5ece0; border: 1px solid #aaa; }
+  .sz-wrap { display: flex; align-items: center; gap: 6px; color: #c9b89c; font-size: 12px; }
+  input[type=range] { width: 90px; vertical-align: middle; }
+  .clear, .exp { color: #fff; border: none; cursor: pointer; border-radius: 8px; padding: 8px 14px; font-size: 13px; }
+  .clear { background: #6a3a2a; } .clear:hover { background: #7a4a2a; }
+  .exp { background: #2a6d8a; } .exp:hover { background: #3a7d9a; }
+  .cur { font-size: 13px; color: #ffd9a0; margin-left: auto; font-weight: 500; }
+  .stage { position: relative; width: 600px; height: 600px; }
+  canvas { position: absolute; top: 0; left: 0; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.4); touch-action: none; }
+  #cv { cursor: crosshair; }
+  .footer { margin-top: 12px; font-size: 12px; color: #9a8a72; text-align: center; max-width: 640px; line-height: 1.6; }
+  .out-wrap { margin-top: 14px; width: 640px; max-width: 95vw; }
+  .out-wrap label { font-size: 13px; color: #ffd9a0; display: block; margin-bottom: 4px; }
+  textarea { width: 100%; height: 140px; background: #2a221c; color: #f5ece0; border: 1px solid #5a4d43; border-radius: 8px; padding: 8px; font-size: 11px; font-family: monospace; resize: vertical; }
+  .out-btn { margin-top: 6px; background: #4a6d2a; color: #fff; border: none; cursor: pointer; border-radius: 6px; padding: 6px 14px; font-size: 12px; } .out-btn:hover { background: #5a7d3a; }
+</style>
+</head>
+<body>
+  <h1>方形涂色设计板（带真实螺旋线）</h1>
+  <div class="hint">底层是<b style="color:#ffd9a0">你游戏里设定好的方形螺旋线</b>（海龟图+缩短+旋转朝上，原样复刻）。在螺旋线上涂色：<br>
+    <b style="color:#2ecc71">绿</b>=目标球连接点区 · <b style="color:#f1c40f">黄</b>=干扰块区 · <b style="color:#3498db">蓝</b>=起始点 · <b style="color:#e74c3c">红</b>=终点<br>
+    画完点"导出涂色"，把文本框内容复制发我（数据记录的是你的操作，不是图片识别，准确无误）。
+  </div>
+  <div class="bar">
+    <span class="lbl">画笔：</span>
+    <button class="swatch sw-green active" data-key="G" data-c="#2ecc71"><span class="dot"></span>目标球区</button>
+    <button class="swatch sw-yellow" data-key="Y" data-c="#f1c40f"><span class="dot"></span>干扰块区</button>
+    <button class="swatch sw-blue" data-key="B" data-c="#3498db"><span class="dot"></span>起始点</button>
+    <button class="swatch sw-red" data-key="R" data-c="#e74c3c"><span class="dot"></span>终点</button>
+    <button class="swatch sw-erase" data-key="E" data-c="__erase"><span class="dot"></span>橡皮</button>
+    <div class="sz-wrap">大小<input type="range" id="sz" min="6" max="80" value="22"><span id="szv">22</span></div>
+    <button class="clear" id="clr">清空涂色</button>
+    <button class="exp" id="exp">导出涂色</button>
+    <span class="cur" id="cur">当前：目标球区</span>
+  </div>
+  <div class="stage">
+    <canvas id="spiral" width="600" height="600"></canvas>
+    <canvas id="cv" width="600" height="600"></canvas>
+  </div>
+  <div class="footer">方形螺旋线（4 圈海龟图，非圆形逻辑）· 涂色在上层 · 橡皮只擦涂色 · 600×600<br>坐标 [x,y] 像素，左上 (0,0)；导出按 15px 网格压缩去重</div>
+  <div class="out-wrap">
+    <label>涂色数据（点"导出涂色"生成，全选复制发我）：</label>
+    <textarea id="out" readonly></textarea>
+    <button class="out-btn" id="copy">全选并复制</button>
+  </div>
+
+<script>
+(function(){
+  var spiralCv = document.getElementById('spiral');
+  var sctx = spiralCv.getContext('2d');
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var W = 600, H = 600;
+  var curKey = 'G', curColor = '#2ecc71', size = 22, drawing = false, lastX = 0, lastY = 0;
+  var NAMES = { G:'目标球区', Y:'干扰块区', B:'起始点', R:'终点', E:'橡皮' };
+  // 结构化涂色记录：每色一个点数组（操作日志，导出基于此，不靠像素识别）
+  var paint = { G: [], Y: [], B: [], R: [] };
+
+  // 底层：网格 + 方形螺旋线（原样复刻 color-spiral-connect getSpiralVertices 方形分支）
+  function drawSpiral(){
+    sctx.fillStyle = '#fafaf6'; sctx.fillRect(0,0,W,H);
+    sctx.strokeStyle = '#ece6d8'; sctx.lineWidth = 1;
+    for(var i=50;i<W;i+=50){ sctx.beginPath(); sctx.moveTo(i,0); sctx.lineTo(i,H); sctx.stroke(); sctx.beginPath(); sctx.moveTo(0,i); sctx.lineTo(W,i); sctx.stroke(); }
+    sctx.strokeStyle = '#c9b89c';
+    sctx.beginPath(); sctx.moveTo(W/2,0); sctx.lineTo(W/2,H); sctx.stroke();
+    sctx.beginPath(); sctx.moveTo(0,H/2); sctx.lineTo(W,H/2); sctx.stroke();
+    var cx=W/2, cy=H/2, maxR=270, r0=maxR*0.12, turns=4, V=4;
+    var gapPerTurn=(maxR-r0)/turns, ext=2*Math.PI/V, base=Math.PI/4;
+    var dL=gapPerTurn/(2*Math.sqrt(2)), dirOff=-225*Math.PI/180, L0=dL*0.6, rotation=0;
+    var phi=base+dirOff+rotation, x=0, y=0, verts=[{x:0,y:0}], total=turns*V;
+    for(var s=0;s<total;s++){ var L=L0+s*dL; x+=L*Math.cos(phi); y+=L*Math.sin(phi); phi+=ext; verts.push({x:x,y:y}); }
+    var o0=(turns-1)*V, P0=verts[o0+V-1], Pend=verts[o0+V], Q0=verts[o0], Q1=verts[o0+1];
+    var ddx=Pend.x-P0.x, ddy=Pend.y-P0.y, eex=Q1.x-Q0.x, eey=Q1.y-Q0.y, rhsx=Q0.x-P0.x, rhsy=Q0.y-P0.y;
+    var det=eex*ddy-ddx*eey, t=(-rhsx*eey+eex*rhsy)/det;
+    verts[o0+V]={x:P0.x+t*ddx,y:P0.y+t*ddy};
+    var minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+    for(var vi=0;vi<verts.length;vi++){ if(verts[vi].x<minX)minX=verts[vi].x; if(verts[vi].x>maxX)maxX=verts[vi].x; if(verts[vi].y<minY)minY=verts[vi].y; if(verts[vi].y>maxY)maxY=verts[vi].y; }
+    var mcx=(minX+maxX)/2, mcy=(minY+maxY)/2, Rraw=0;
+    for(var vi2=0;vi2<verts.length;vi2++){ verts[vi2].x-=mcx; verts[vi2].y-=mcy; var rr=Math.hypot(verts[vi2].x,verts[vi2].y); if(rr>Rraw)Rraw=rr; }
+    var oIdx=turns*V-1;
+    if(oIdx>=0&&oIdx<verts.length){ var oVr=verts[oIdx], oAng=Math.atan2(oVr.y,oVr.x), rotAng=0-oAng-Math.PI/2, csR=Math.cos(rotAng), snR=Math.sin(rotAng);   // 视觉逆时针90°：末端(开口)到右侧，与游戏一致
+      for(var vr=0;vr<verts.length;vr++){ var xx=verts[vr].x, yy=verts[vr].y; verts[vr].x=xx*csR-yy*snR; verts[vr].y=xx*snR+yy*csR; } }
+    var sc=maxR/Rraw;
+    for(var k=0;k<verts.length;k++){ verts[k].x=cx+verts[k].x*sc; verts[k].y=cy+verts[k].y*sc; }
+    sctx.strokeStyle='#5a4226'; sctx.lineWidth=3; sctx.lineJoin='round'; sctx.lineCap='round';
+    sctx.beginPath(); sctx.moveTo(verts[0].x,verts[0].y); for(var v=1;v<verts.length;v++) sctx.lineTo(verts[v].x,verts[v].y); sctx.stroke();
+    var oVf=verts[verts.length-1]; sctx.fillStyle='#5a4226'; sctx.beginPath(); sctx.arc(oVf.x,oVf.y,5,0,Math.PI*2); sctx.fill();   // 标折线末端(开口/线尾)，与游戏一致
+    window.__paintVerts = verts.slice();
+  }
+  drawSpiral();
+
+  function pos(e){ var r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
+
+  // 涂色：画布画点 + 记录到 paint[key]
+  function paintDot(x,y){
+    ctx.fillStyle = curColor; ctx.globalAlpha = 0.55;
+    ctx.beginPath(); ctx.arc(x,y,size/2,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    if(curKey !== 'E') paint[curKey].push({ x: Math.round(x), y: Math.round(y), s: size });
+  }
+  // 橡皮：画布擦 + 从 paint 各色删除被擦范围的点
+  function eraseDot(x,y){
+    ctx.save(); ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath(); ctx.arc(x,y,size/2,0,Math.PI*2); ctx.fill(); ctx.restore();
+    var r2 = size/2 + 2;
+    for(var key in paint){
+      var arr = paint[key];
+      for(var i=arr.length-1;i>=0;i--){
+        if(Math.hypot(arr[i].x-x, arr[i].y-y) <= r2 + arr[i].s/2) arr.splice(i,1);
+      }
+    }
+  }
+  function dot(x,y){ if(curKey==='E') eraseDot(x,y); else paintDot(x,y); }
+  function line(x0,y0,x1,y1){ var dx=x1-x0,dy=y1-y0,dist=Math.hypot(dx,dy),step=Math.max(1,size/4),n=Math.ceil(dist/step); for(var i=0;i<=n;i++){ var t=n===0?0:i/n; dot(x0+dx*t,y0+dy*t); } }
+
+  cv.addEventListener('mousedown', function(e){ drawing=true; var p=pos(e); lastX=p.x; lastY=p.y; dot(p.x,p.y); });
+  cv.addEventListener('mousemove', function(e){ if(!drawing)return; var p=pos(e); line(lastX,lastY,p.x,p.y); lastX=p.x; lastY=p.y; });
+  window.addEventListener('mouseup', function(){ drawing=false; });
+  cv.addEventListener('touchstart', function(e){ e.preventDefault(); drawing=true; var p=pos(e.touches[0]); lastX=p.x;lastY=p.y; dot(p.x,p.y); }, {passive:false});
+  cv.addEventListener('touchmove', function(e){ e.preventDefault(); if(!drawing)return; var p=pos(e.touches[0]); line(lastX,lastY,p.x,p.y); lastX=p.x;lastY=p.y; }, {passive:false});
+  cv.addEventListener('touchend', function(){ drawing=false; });
+
+  var btns = document.querySelectorAll('.swatch');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      btns.forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      curKey = b.getAttribute('data-key'); curColor = b.getAttribute('data-c');
+      document.getElementById('cur').textContent = '当前：' + (NAMES[curKey]||'');
+    });
+  });
+  var sz=document.getElementById('sz'), szv=document.getElementById('szv');
+  sz.addEventListener('input', function(){ size=+sz.value; szv.textContent=size; });
+  document.getElementById('clr').addEventListener('click', function(){
+    ctx.clearRect(0,0,W,H); paint={G:[],Y:[],B:[],R:[]};
+  });
+  cv.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+  // 导出：按 15px 网格压缩各色点，输出 JSON（数据来自操作记录，准确无误）
+  function exportPaint(){
+    var GRID = 15, cols = Math.floor(W/GRID), rows = Math.floor(H/GRID);
+    var out = {};
+    ['G','Y','B','R'].forEach(function(key){
+      var cells = {};
+      paint[key].forEach(function(p){
+        var gx = Math.floor(p.x/GRID), gy = Math.floor(p.y/GRID);
+        cells[gx+','+gy] = 1;
+      });
+      var arr = [];
+      for(var k in cells) arr.push(k.split(',').map(Number));
+      arr.sort(function(a,b){ return a[0]===b[0]?a[1]-b[1]:a[0]-b[0]; });
+      out[key] = arr;
+    });
+    return JSON.stringify(out);
+  }
+  document.getElementById('exp').addEventListener('click', function(){
+    document.getElementById('out').value = exportPaint();
+  });
+  document.getElementById('copy').addEventListener('click', function(){
+    var ta = document.getElementById('out'); ta.select(); ta.setSelectionRange(0, ta.value.length);
+    try { document.execCommand('copy'); alert('已复制，粘贴发我即可'); } catch(e){ alert('选中文本框按 Ctrl+C 复制'); }
+  });
+})();
+</script>
+</body>
+</html>

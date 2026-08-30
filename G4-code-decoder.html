@@ -1530,6 +1530,7 @@ function readNextWord(index) {
     // 朗读完当前词，启用数字键盘让用户输入
     setNumpadEnabled(true);
     replayBtn.disabled = false;
+    checkSubmitReady();
     // 等待用户输入当前词对应的数字
     // 用户按数字键后会调用 pressNum，自动推进到下一个词
   });

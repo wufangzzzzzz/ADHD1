@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>色球可放置区域 · 预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #1a1030; color: #fff;
+    font-family: system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 16px; gap: 12px;
+  }
+  .info { text-align: center; line-height: 1.7; }
+  .info .title { font-size: 18px; font-weight: 700; color: #ff6b6b; }
+  .info .sub { font-size: 12px; color: #cdc3e8; }
+  #cv {
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 16px;
+    width: min(88vw, 640px); height: min(88vw, 640px);
+    background: #1a1030;
+  }
+</style>
+</head>
+<body>
+  <div class="info">
+    <div class="title">红色区域 = 色球可放置的区域（圈间空隙 / 通道）</div>
+    <div class="sub">白色线 = 螺旋曲线 · 红区 = 相邻两圈曲线之间的空隙</div>
+  </div>
+  <canvas id="cv"></canvas>
+  <script>
+    var cv = document.getElementById('cv');
+    var ctx = cv.getContext('2d');
+    var TURNS = 5, r0 = 14;
+
+    function fit() {
+      var w = cv.clientWidth, h = cv.clientHeight;
+      var dpr = window.devicePixelRatio || 1;
+      cv.width = w * dpr; cv.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw(w, h);
+    }
+    function draw(w, h) {
+      var cx = w / 2, cy = h / 2;
+      var maxR = Math.min(w, h) / 2 - 20;
+      var k = (maxR - r0) / (TURNS * 2 * Math.PI);
+      var gap = (maxR - r0) / TURNS;
+      function br(t) { return r0 + k * t; }
+      var thetaB = TURNS * 2 * Math.PI;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 红色 = 球可放置区域（相邻两圈之间的完整空隙，不压线）
+      // 覆盖 theta ∈ [0, thetaB-2π]（有下一圈的角度），r ∈ [br+0.12gap, br+0.88gap]
+      ctx.beginPath();
+      for (var th = 0; th <= thetaB - 2 * Math.PI + 0.05; th += 0.05) {
+        var rr = br(th) + gap * 0.88;
+        var x = cx + rr * Math.cos(th), y = cy + rr * Math.sin(th);
+        if (th === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      for (var t2 = thetaB - 2 * Math.PI; t2 >= -0.05; t2 -= 0.05) {
+        var r2 = br(t2) + gap * 0.04;
+        var x2 = cx + r2 * Math.cos(t2), y2 = cy + r2 * Math.sin(t2);
+        ctx.lineTo(x2, y2);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 40, 40, 0.4)';
+      ctx.fill();
+
+      // 白色螺旋线（单线）
+      ctx.beginPath();
+      for (var t3 = 0; t3 <= thetaB + 0.05; t3 += 0.05) {
+        var r3 = br(t3);
+        var x3 = cx + r3 * Math.cos(t3), y3 = cy + r3 * Math.sin(t3);
+        if (t3 === 0) ctx.moveTo(x3, y3); else ctx.lineTo(x3, y3);
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,.9)';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // 中心点
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd43b';
+      ctx.fill();
+    }
+    fit();
+    window.addEventListener('resize', fit);
+  </script>
+</body>
+</html>

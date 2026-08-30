@@ -388,7 +388,7 @@ function runTrial(){
   document.getElementById('btn-right').disabled=false;
   state.trialStartTime=performance.now();
   state.timeoutId=setTimeout(()=>{
-    if(!state.responded){state.results.push({type:'timeout',rule:state.currentRule});nextTrial();}
+    if(!state.responded){state.responded=true;state.results.push({type:'timeout',rule:state.currentRule});nextTrial();}
   },cfg.timeout);
 }
 

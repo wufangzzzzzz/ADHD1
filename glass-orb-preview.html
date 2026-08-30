@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图案10·玻璃球 预览</title>
+<style>
+  :root { --cell: 92px; --gap: 12px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px; gap: 16px;
+    background: #eef2f7;
+  }
+  .info { text-align: center; color: #334; }
+  .info .title { font-size: 20px; font-weight: 700; color: #1f6feb; margin-bottom: 4px; }
+  .info .sub { font-size: 13px; color: #667; }
+  .card {
+    /* 容积：柔和渐变，让玻璃球的透明部分有内容可透，体现玻璃感 */
+    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 30%, #fce7f3 60%, #fef9c3 100%);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.12);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, var(--cell));
+    grid-template-rows: repeat(5, var(--cell));
+    gap: var(--gap);
+  }
+  .cell {
+    width: var(--cell); height: var(--cell);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .glass-orb {
+    position: relative;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    /* 主体：左上高光 → 透明 → 彩色半透明 → 边缘亮环（玻璃折射高光，替代黑线） */
+    background: radial-gradient(circle at 32% 28%,
+      rgba(255,255,255,0.95) 0%,
+      rgba(255,255,255,0.12) 20%,
+      var(--c) 60%,
+      rgba(255,255,255,0.40) 85%,
+      rgba(255,255,255,0.62) 100%
+    );
+    backdrop-filter: blur(5px) saturate(140%);
+    box-shadow:
+      0 6px 18px rgba(0,0,0,0.15),
+      0 0 20px var(--c),
+      inset 0 0 12px rgba(255,255,255,0.55);
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* 顶部高光点（玻璃反光） */
+  .glass-orb::before {
+    content: '';
+    position: absolute;
+    top: 14%; left: 20%;
+    width: 26%; height: 16%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.95), rgba(255,255,255,0) 70%);
+    transform: rotate(-28deg);
+    pointer-events: none;
+  }
+  .glass-orb .num {
+    position: relative; z-index: 2;
+    color: #fff; font-weight: 800; font-size: 30px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25), 0 0 8px rgba(255,255,255,0.5);
+  }
+</style>
+</head>
+<body>
+  <div class="info">
+    <div class="title">图案10 · 玻璃球（预览版）</div>
+    <div class="sub">玻璃质感圆形 + 左上高光 + 边缘亮环与彩色辉光 · 无黑线</div>
+  </div>
+  <div class="card">
+    <div class="grid" id="grid"></div>
+  </div>
+  <script>
+    var grid = document.getElementById('grid');
+    var html = '';
+    for (var i = 1; i <= 25; i++) {
+      var h = Math.floor(Math.random() * 360);
+      var s = Math.floor(70 + Math.random() * 28);
+      var l = Math.floor(55 + Math.random() * 15);
+      var c = 'hsla(' + h + ', ' + s + '%, ' + l + '%, 0.55)';
+      html += '<div class="cell"><div class="glass-orb" style="--c:' + c + '"><span class="num">' + i + '</span></div></div>';
+    }
+    grid.innerHTML = html;
+  </script>
+</body>
+</html>

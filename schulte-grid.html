@@ -81,7 +81,7 @@
       /* 顶部整合区域 */
       .top-bar {
         width: 100%;
-        max-width: 600px;
+        max-width: 680px;
         background: rgba(255, 255, 255, 0.95);
         border-radius: 8px;
         margin-bottom: 8px;
@@ -282,8 +282,12 @@
       .mode-group {
         display: flex;
         gap: 2px;
-        flex-shrink: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+        flex-wrap: wrap;
       }
+      .mode-group > .mode-btn,
+      .mode-group > .mode-dropdown-wrap { flex: 0 0 auto; }
 
       .mode-btn {
         padding: 3px 6px;
@@ -443,6 +447,12 @@
       }
       .mode-menu .mode-menu-item:hover { background: #E0F2F1; color: #00897B; }
       .mode-menu .mode-menu-item.selected { background: #00897B; color: #fff; }
+      .mode-menu .mode-menu-item.active { background: #00897B; color: #fff; }
+      .mode-menu .mode-menu-sep {
+        height: 1px;
+        margin: 4px 8px;
+        background: #e0e0e0;
+      }
 
       /* 彩格模式：点中正确→整格变绿并停转；点错→红色抖动 */
       .color-cell.correct .cc-circle { background: #4CAF50 !important; filter: none !important; -webkit-mask-image: none !important; mask-image: none !important; opacity: 1 !important; transform: none !important; }
@@ -1553,6 +1563,14 @@
       }
 
       /* 响应式设计 */
+      /* 中等屏幕（平板/小平板）：按钮紧凑，避免中段换行过多 */
+      @media screen and (max-width: 768px) {
+        .mode-group { gap: 2px; }
+        .mode-btn { font-size: 11px; padding: 3px 6px; }
+        /* 最右侧菜单改为向右贴边弹出，避免超出视口右边界 */
+        .mode-dropdown-wrap:last-child .mode-menu { right: 0; left: auto; }
+      }
+
       @media screen and (max-width: 480px) {
         .top-bar {
           padding: 4px 6px;
@@ -1576,8 +1594,8 @@
           font-size: 9px;
         }
         .mode-btn {
-          padding: 2px 5px;
-          font-size: 9px;
+          padding: 3px 6px;
+          font-size: 11px;
         }
         .timer-display {
           padding: 4px 10px;
@@ -2179,6 +2197,268 @@
           margin: 0 auto;
         }
       }
+      /* ===== 图案8·模糊球：径向渐变色块 + 黑色细圆线 + 白色模糊数字 + 呼吸缩放 ===== */
+      .orb-cell {
+        position: relative;
+        background: transparent !important;   /* 格子透明，容积（整个容器白底）统一呈现 */
+        border: none !important;
+        border-radius: 0 !important;          /* 去掉默认 8px 圆角，否则每格显示成小白块 */
+        box-shadow: none !important;          /* 去掉默认阴影 */
+        transition: none !important;          /* 去掉默认 0.15s transition，避免干扰呼吸动画 */
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        overflow: visible !important;
+        animation: orb-breathe 2.6s ease-in-out infinite;
+        transform-origin: center;
+      }
+      .orb-cell::before {
+        content: ''; position: absolute; inset: 4%; border-radius: 50%;
+        background: radial-gradient(circle at 48% 46%, var(--orb-c) 0%, var(--orb-c) 34%, var(--orb-c-soft) 55%, transparent 82%);
+        filter: blur(5px);
+        z-index: 1;
+      }
+      .orb-cell::after {
+        content: ''; position: absolute; inset: 14%; border-radius: 50%;
+        box-shadow: inset 0 0 0 0.6px rgba(0, 0, 0, 0.92);
+        pointer-events: none; z-index: 3;
+      }
+      .orb-cell .orb-num {
+        position: relative; z-index: 2;
+        color: #fff; font-weight: 800; line-height: 1;
+        /* 数字黑色描边 → 改为多层黑色柔光模拟水墨晕开的模糊黑边 */
+        text-shadow: 0 0 3px rgba(0, 0, 0, 0.55), 0 0 6px rgba(0, 0, 0, 0.28),
+                     0 0 8px rgba(255,255,255,0.7), 0 0 3px rgba(255,255,255,0.55), 0 0 1px rgba(255,255,255,0.4);
+      }
+      /* 点对/点错反馈：只作用于球线（不覆盖格子背景，保持容积纯净） */
+      .orb-cell.correct { background: transparent !important; }
+      .orb-cell.correct::after { box-shadow: inset 0 0 0 2.5px #4CAF50 !important; }
+      .orb-cell.wrong { background: transparent !important; }
+      .orb-cell.wrong::after { box-shadow: inset 0 0 0 2.5px #FF6B6B !important; }
+      @keyframes orb-breathe {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+      }
+      /* ===== 图案9·四圆花：4个虚化圆 + 中心叶子 + 白色数字，圆逆时针/叶子顺时针旋转 ===== */
+      .p9-cell {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        transition: none !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        overflow: visible !important;
+        padding: 0 !important;
+      }
+      .p9-cell svg { width: 100%; height: 100%; display: block; }
+
+      /* ===== 图案10·羊群：方格排列的白羊，格子内移动蹦跳（部分动部分静） ===== */
+      .pattern10-cell {
+        position: relative !important;
+        overflow: visible !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 10px !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        cursor: pointer;
+      }
+      .pattern10-face {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 204%;
+        height: 204%;   /* 羊再放大6%（192→204） */
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+      .pattern10-face.p10-face-r {
+        transform: translate(-50%, -50%) scaleX(-1);
+      }
+      .pattern10-sheep {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: url('pattern10-sheep.png') no-repeat center / contain;
+        filter: drop-shadow(1px 3px 4px rgba(0,0,0,0.22));   /* 淡淡的模糊投影 */
+      }
+      /* 预设动画：a1 左右移动蹦跳 / a2 原地蹦跳 / a3 左右摇摆（无类 = 静止） */
+      .pattern10-sheep.p10-a1 {
+        animation: p10-hop-move 4.5s ease-in-out infinite;
+      }
+      .pattern10-sheep.p10-a2 {
+        animation: p10-bounce 0.8s ease-in-out infinite;
+      }
+      .pattern10-sheep.p10-a3 {
+        animation: p10-sway 3s ease-in-out infinite;
+      }
+      @keyframes p10-hop-move {
+        0%   { transform: translate(-5%, 0); }
+        20%  { transform: translate(-2%, -4%); }
+        50%  { transform: translate(5%, 0); }
+        80%  { transform: translate(2%, -4%); }
+        100% { transform: translate(-5%, 0); }
+      }
+      @keyframes p10-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-7%); }
+      }
+      @keyframes p10-sway {
+        0%, 100% { transform: rotate(-8deg); }
+        50% { transform: rotate(8deg); }
+      }
+      .pattern10-num {
+        position: absolute;
+        left: 52%; top: 59%;
+        transform: translate(-50%, -50%);
+        font-size: clamp(18px, 4.5vmin, 42px);
+        font-weight: 800;
+        color: #4a3428;
+        text-shadow: 0 0 4px #fff, 0 0 4px #fff;
+        pointer-events: none;
+      }
+      .pattern10-cell.p10-correct .pattern10-sheep {
+        filter: grayscale(1) brightness(0.75) drop-shadow(1px 3px 4px rgba(0,0,0,0.22));
+        opacity: 0.45;
+      }
+      .pattern10-cell.p10-wrong .pattern10-sheep {
+        filter: sepia(1) saturate(4) hue-rotate(-45deg) drop-shadow(1px 3px 4px rgba(0,0,0,0.22));
+      }
+      .pattern10-cell.p10-wrong {
+        animation: p10-shake 0.4s ease;
+      }
+      @keyframes p10-shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-6px); }
+        40% { transform: translateX(6px); }
+        60% { transform: translateX(-4px); }
+        80% { transform: translateX(4px); }
+      }
+      /* ===== 算数独立模式：两格长条 + 算式（白底黑字 + 细黑体） ===== */
+      .pattern11-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        background: #ffffff;
+        border: 2px solid #b8b8b8;
+        border-radius: 8px;
+        color: #000000;
+        font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        cursor: pointer;
+        user-select: none;
+        transition: background .15s, opacity .3s;
+        text-align: center;
+        white-space: nowrap;
+        min-width: 0;
+        min-height: 0;
+        line-height: 1;
+      }
+      .pattern11-bar:hover { background: #f2f2f2; }
+      .pattern11-bar.p11-correct {
+        background: #4CAF50 !important;
+        color: #ffffff !important;
+        opacity: .5;
+        pointer-events: none;
+        border-color: #2e7d32;
+      }
+      .pattern11-bar.p11-wrong {
+        animation: p10-shake 0.4s ease;
+        background: #ffb3b3 !important;
+        border-color: #e57373;
+      }
+      /* 算式整体着色（含数字）：加=红 减=蓝 乘=橙 除=绿 */
+      .pattern11-bar.p11-c-add { color: #e53935; }
+      .pattern11-bar.p11-c-sub { color: #1e88e5; }
+      .pattern11-bar.p11-c-mul { color: #fb8c00; }
+      .pattern11-bar.p11-c-div { color: #43a047; }
+      /* 竖条（1×2）：token 分行布局——算式拆成数字组/运算符，每 token 一行从上到下；
+         数字组内保持横排（双位数 15 作为整体横着写，不拆开竖排）；
+         行距紧凑（line-height 1、无 gap），文字居中不贴边 */
+      .pattern11-bar.p11-v {
+        flex-direction: column;
+        gap: 0;
+        line-height: 1;
+        padding: 3px 4px;
+      }
+      .pattern11-bar.p11-v .p11-v-token {
+        display: inline-block;
+        white-space: nowrap;
+        line-height: 0.9;
+        margin-top: -1px;
+      }
+      /* 点对后：羊顺着头的方向飞出画面 */
+      .pattern10-cell.p10-fly-left {
+        animation: p10-fly-left 0.6s ease-in forwards;
+      }
+      .pattern10-cell.p10-fly-right {
+        animation: p10-fly-right 0.6s ease-in forwards;
+      }
+      @keyframes p10-fly-left {
+        to { transform: translateX(-150vw); opacity: 0; }
+      }
+      @keyframes p10-fly-right {
+        to { transform: translateX(150vw); opacity: 0; }
+      }
+
+      /* ===== 图案11·月全食：圆形A(#374866) + 黄色B(#ffd942)穿月遮挡 + 黑字白描边 ===== */
+      .p11-cell {
+        position: relative !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        cursor: pointer;
+      }
+      .p11-a {
+        position: absolute;
+        left: 0; top: 0;
+        width: 100%; height: 100%;
+        border-radius: 50%;
+        background: #374866;
+        overflow: hidden;
+        clip-path: circle(50% at 50% 50%);
+        -webkit-clip-path: circle(50% at 50% 50%);
+      }
+      .p11-b {
+        position: absolute;
+        left: 0; top: 0;
+        width: 100%; height: 100%;
+        border-radius: 50%;
+        background: #ffd942;
+        animation: p11moon 7s linear infinite;
+        will-change: transform;
+      }
+      @keyframes p11moon {
+        0%   { transform: translateX(-100%); }
+        50%  { transform: translateX(0); }
+        100% { transform: translateX(100%); }
+      }
+      .p11-num {
+        position: absolute;
+        left: 50%; top: 50%;
+        transform: translate(-50%, -50%);
+        font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-weight: 800;
+        color: #000;
+        -webkit-text-stroke: 2px #fff;
+        text-stroke: 2px #fff;
+        paint-order: stroke fill;
+        z-index: 3;
+        pointer-events: none;
+        line-height: 1;
+      }
+      .p11-cell.p11-done .p11-a { background: #4CAF50 !important; }
+      .p11-cell.p11-done .p11-num { color: #fff; -webkit-text-stroke: 0; text-stroke: 0; }
+      .p11-cell.p11-done .p11-b { animation: none; }
     </style>
   </head>
   <body>
@@ -2190,7 +2470,7 @@
     <!-- 顶部整合栏 -->
     <div class="top-bar">
       <div class="header">
-        <h1>舒尔特方格</h1>
+        <h1>舒尔特方格 <span id="ver-mark" style="font-size:0.7rem;color:#888;font-weight:400;margin-left:6px;">v2026-08-25-23:01</span></h1>
         <p style="color: #ff0000; font-size: 0.85rem; margin-top: 8px;">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
         <p>按顺序点击数字</p>
       </div>
@@ -2289,6 +2569,25 @@
               <div class="mode-menu-item" data-sub="6" data-color="2" onclick="game.setPatternSub(6,2)">图案6-2·球载数</div>
               <div class="mode-menu-item" data-sub="6" data-color="3" onclick="game.setPatternSub(6,3)">图案6-3·随机形变</div>
               <div class="mode-menu-item" data-sub="7" onclick="game.setPatternSub(7)">图案7·六边盘</div>
+              <div class="mode-menu-item" data-sub="8" onclick="game.setPatternSub(8)">图案8·模糊球</div>
+              <div class="mode-menu-item" data-sub="9" onclick="game.setPatternSub(9)">图案9·四圆花</div>
+              <div class="mode-menu-item" data-sub="10" onclick="game.setPatternSub(10)">图案10·羊群</div>
+              <div class="mode-menu-item" data-sub="11" onclick="game.setPatternSub(11)">图案11·月全食</div>
+            </div>
+          </div>
+          <div class="mode-dropdown-wrap">
+            <button class="mode-btn" data-mode="arithmetic" id="arith-mode-btn" onclick="game.toggleModeMenu('arithmetic')">算数 ▾</button>
+            <div class="mode-menu" id="arithmetic-menu" onclick="event.stopPropagation()">
+              <div class="mode-menu-item arith-op-btn active" data-op="all" onclick="game.setArithOp('all')">加减乘除</div>
+              <div class="mode-menu-item arith-op-btn" data-op="add" onclick="game.setArithOp('add')">加</div>
+              <div class="mode-menu-item arith-op-btn" data-op="sub" onclick="game.setArithOp('sub')">减</div>
+              <div class="mode-menu-item arith-op-btn" data-op="mul" onclick="game.setArithOp('mul')">乘</div>
+              <div class="mode-menu-item arith-op-btn" data-op="div" onclick="game.setArithOp('div')">除</div>
+              <div class="mode-menu-item arith-op-btn" data-op="addsub" onclick="game.setArithOp('addsub')">加减</div>
+              <div class="mode-menu-item arith-op-btn" data-op="muldiv" onclick="game.setArithOp('muldiv')">乘除</div>
+              <div class="mode-menu-sep"></div>
+              <div class="mode-menu-item arith-digit-btn active" data-digit="ones" onclick="game.setArithDigit('ones')">个位</div>
+              <div class="mode-menu-item arith-digit-btn" data-digit="tens" onclick="game.setArithDigit('tens')">十位</div>
             </div>
           </div>
           <button class="mode-btn speed-toggle" id="speed-toggle-btn" onclick="game.toggleSpeed()" style="display:none;">转速:0.1</button>
@@ -2339,13 +2638,13 @@
                 <button class="bg-item selected" data-bg="default" onclick="event.stopPropagation(); game.selectBgType('default')">默认</button>
                 <button class="bg-item" data-bg="stripe-diagonal" onclick="event.stopPropagation(); game.selectBgType('stripe-diagonal')">斜条纹</button>
                 <button class="bg-item" data-bg="stripe-horizontal" onclick="event.stopPropagation(); game.selectBgType('stripe-horizontal')">横条纹</button>
-                <button class="bg-item" data-bg="stripe-vertical" onclick="event.stopPropagation(); game.selectBgType('stripe-vertical')">竖条纹</button>
-                <button class="bg-item" data-bg="grid-pattern" onclick="event.stopPropagation(); game.selectBgType('grid-pattern')">网格纹</button>
-              </div>
+              <button class="bg-item" data-bg="stripe-vertical" onclick="event.stopPropagation(); game.selectBgType('stripe-vertical')">竖条纹</button>
+              <button class="bg-item" data-bg="grid-pattern" onclick="event.stopPropagation(); game.selectBgType('grid-pattern')">网格纹</button>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
 
     <div class="timer-display" id="timer-display">
@@ -2470,6 +2769,9 @@
         this.patternSub = 1;          // 图案子类型：1=图案1
         this.patternColor = 1;        // 图案5 颜色方案：1=紫粉 2=绿黄 3=蓝红
         this.patternHue = 215;        // 图案A色锚点色相，每局随机
+        this.isArithMode = false;     // 加减乘除独立模式标志（非图案子项）
+        this.arithmeticOp = 'all';    // 加减乘除 算式算子：add/sub/mul/div/addsub/muldiv/all
+        this.arithmeticDigit = 'ones';// 加减乘除 算式操作数位数：ones/tens/hundreds
         // ===== 彩格模式 =====
         this.isColorMode = false;     // 是否在彩格模式
         this.colorSub = 0;            // 0=未进, 1=彩格1
@@ -2603,6 +2905,24 @@
           var cbb = document.getElementById('chaos-btn');
           if (cbb) cbb.textContent = '混沌';
         }
+        // 离开加减乘除模式：清除标志 + 还原数字类型 + 停渲染
+        if (mode !== 'arithmetic' && this.isArithMode) {
+          this._stopP11();
+          this.isArithMode = false;
+          if (this._savedNumberType != null) {
+            this.numberType = this._savedNumberType;
+            this._savedNumberType = null;
+            var rntA = document.getElementById('numtype-btn');
+            if (rntA) rntA.textContent = '数字:' + (this.numberType === 'natural' ? '自然' : this.numberType === 'odd' ? '奇数' : '偶数');
+            var rntiA = document.querySelectorAll('.nt-item');
+            for (var rnjA = 0; rnjA < rntiA.length; rnjA++) {
+              rntiA[rnjA].classList.remove('selected');
+              if (rntiA[rnjA].dataset.nt === this.numberType) rntiA[rnjA].classList.add('selected');
+            }
+          }
+          var aBtnE = document.getElementById('arith-mode-btn');
+          if (aBtnE) aBtnE.classList.remove('active');
+        }
         // 离开图案模式：进入任何非图案模式时清除标志（避免误入 pattern 渲染分支）
         if (mode !== 'pattern' && this.isPatternMode) {
           this._stopP3();   // 停掉蒲公英动画
@@ -2680,7 +3000,7 @@
         // 混沌模式已改为 toggle，setMode('bounce') 不再直接调用
         // 保留兼容性：如果外部调用 setMode('bounce')，默认启动动模式
         if (mode === 'bounce') {
-          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
           if (this.isRotateMode) this.exitRotateMode();
           if (this.isVariantMode) this.exitVariantMode();
@@ -2689,9 +3009,55 @@
           return;
         }
 
+        // 加减乘除独立模式：两格长条算式（非图案子项），7 算子 + 个十百位在模式内
+        if (mode === 'arithmetic') {
+          if (this.isArithMode) {
+            // 已在该模式：重新生成一局
+            this.stopTimerAndReset();
+            this.renderGrid();
+            return;
+          }
+          this.stopTimerAndReset();
+          if (this.isCircularMode) this.exitCircularMode();
+          if (this.isBounceMode) this.exitBounceMode();
+          if (this.isRotateMode) this.exitRotateMode();
+          if (this.isVariantMode) this.exitVariantMode();
+          if (this.destroyMode > 0) {
+            this.destroyMode = 0;
+            var dbtnA = document.querySelector('.destroy-toggle');
+            if (dbtnA) {
+              dbtnA.dataset.destroy = 'false';
+              dbtnA.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
+              dbtnA.textContent = '毁灭';
+            }
+          }
+          // 保存原数字类型，强制自然数（1..块数）；难度不改动（gridSize 保留，_p11GridSize 映射）
+          if (this._savedNumberType == null) this._savedNumberType = this.numberType;
+          if (this.numberType && this.numberType !== 'natural') {
+            this.numberType = 'natural';
+            var ntBtnA = document.getElementById('numtype-btn');
+            if (ntBtnA) ntBtnA.textContent = '数字:自然';
+            var ntItemsA = document.querySelectorAll('.nt-item');
+            for (var nia = 0; nia < ntItemsA.length; nia++) {
+              ntItemsA[nia].classList.remove('selected');
+              if (ntItemsA[nia].dataset.nt === 'natural') ntItemsA[nia].classList.add('selected');
+            }
+          }
+          this.isArithMode = true;
+          this.currentMode = 'arithmetic';
+          var allBtnsA = document.querySelectorAll('.mode-btn');
+          for (var abi = 0; abi < allBtnsA.length; abi++) allBtnsA[abi].classList.remove('active');
+          var aBtn = document.getElementById('arith-mode-btn');
+          if (aBtn) aBtn.classList.add('active');
+          this.renderGrid();
+          this.updateUI();
+          this.updateStartButtonText();
+          return;
+        }
+
         // 变体模式下切偏移/混乱：保持变体仅切子模式（修复：原 2374 段被下方 variant 整段拦截，前移至此优先）
         if (this.isVariantMode && (mode === 'offset' || mode === 'chaos')) {
-          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          this.stopTimerAndReset();
           this.currentMode = mode;
           var btns2v = document.querySelectorAll('.mode-btn');
           for (var bi2v = 0; bi2v < btns2v.length; bi2v++) {
@@ -2707,7 +3073,7 @@
         // 变体模式
         if (mode === 'variant') {
           if (this.isVariantMode) {
-            if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+            this.stopTimerAndReset();
             // 恢复到普通变体（清除偏移/混乱）
             this.currentMode = 'variant';
             var vbtns = document.querySelectorAll('.mode-btn');
@@ -2720,7 +3086,7 @@
             this.reset();
             return;
           }
-          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
           if (this.isBounceMode) this.exitBounceMode();
           if (this.isRotateMode) this.exitRotateMode();
@@ -2739,6 +3105,7 @@
 
         // 图案模式下切换偏移/混乱：保持图案渲染，不退出模式，也不重设半边方向
         if (this.isPatternMode && (mode === 'offset' || mode === 'chaos')) {
+          this.stopTimerAndReset();
           this.currentMode = mode;
           var btns2p = document.querySelectorAll('.mode-btn');
           for (var bi2p = 0; bi2p < btns2p.length; bi2p++) {
@@ -2753,7 +3120,7 @@
 
         // 图案模式（独立视觉布局，不与偏移/混乱/换字/虚无/毁灭等效果组合）
         if (mode === 'pattern') {
-          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
           if (this.isBounceMode) this.exitBounceMode();
           if (this.isRotateMode) this.exitRotateMode();
@@ -3031,6 +3398,8 @@
           this.setMode('pattern');   // 进入图案模式（默认 sub=1 并渲染一次）
         }
         // 非图案模式进入、或图案模式内切换子类型：都落到这里统一设置并渲染
+        // 修复：游戏中切子类型必须停旧计时器（否则旧 setInterval 继续跑旧局计时）
+        this.stopTimerAndReset();
         this.patternSub = sub;
         var pbtn = document.getElementById('pattern-mode-btn');
         if (pbtn) {
@@ -3060,6 +3429,7 @@
         if (!this.isMosaicMode) {
           this.toggleMosaicMode(); // 进入马赛克（静）
         }
+        this.stopTimerAndReset();
         this.mosaicDynamic = dyn;
         var mb = document.getElementById('mosaic-mode-btn');
         if (mb) { mb.classList.add('active'); mb.textContent = '马赛克' + (dyn ? '·动' : '·静') + ' ▾'; }
@@ -3074,7 +3444,7 @@
         // 三态切换：普通 → 马赛克（静） → 马赛克（动） → 普通
         if (!this.isMosaicMode) {
           // 当前普通 → 进入马赛克（静）
-          if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+          this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
           if (this.isBounceMode) this.exitBounceMode();
           if (this.isRotateMode) this.exitRotateMode();
@@ -3191,6 +3561,7 @@
           this.reset();
           return;
         }
+        this.stopTimerAndReset();
         if (dir === 4) {
           this.enterSquareTransformMode();
         } else if (dir === 5) {
@@ -3217,6 +3588,7 @@
           this.enterSquareMoveMode();
         } else if (this.squareMoveDirection === 1) {
           // 横向 → 纵向
+          this.stopTimerAndReset();
           this.squareMoveDirection = 2;
           this.renderSquareMoveGrid();
           var btn = document.getElementById('square-move-btn');
@@ -3235,7 +3607,7 @@
       };
 
       SchulteGridGame.prototype.enterSquareMoveMode = function() {
-        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        this.stopTimerAndReset();
         // 退出其他所有布局模式
         if (this.isCircularMode) this.exitCircularMode();
         if (this.isBounceMode) this.exitBounceMode();
@@ -3339,7 +3711,7 @@
       };
 
       SchulteGridGame.prototype.enterSquareTransformMode = function() {
-        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
@@ -3457,7 +3829,7 @@
         };
       };
       SchulteGridGame.prototype.enterSquareColorMode = function() {
-        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
@@ -3713,6 +4085,7 @@
 
       // 视差配色切换；进入视差时复位到第 0 套
       SchulteGridGame.prototype.cycleVpScheme = function() {
+        this.stopTimerAndReset();
         this.vpSchemeIndex = (this.vpSchemeIndex + 1) % this.VP_SCHEMES.length;
         if (this.isVisualParallaxMode) this.renderVisualParallaxGrid();
       };
@@ -3728,6 +4101,7 @@
         if (!this.isVisualParallaxMode) {
           this.enterVisualParallaxMode(); // 进静（vpSubMode=1）
         }
+        this.stopTimerAndReset();
         this.vpSubMode = dyn ? 2 : 1;
         this.renderVisualParallaxGrid();
         var vb = document.getElementById('vp-mode-btn');
@@ -3749,6 +4123,7 @@
       SchulteGridGame.prototype.setVpSubNew1 = function() {
         if (this.isVisualParallaxMode && this.vpSubMode === 3) {
           // 已在新1：每次点击切换到下一套配色
+          this.stopTimerAndReset();
           this._vpNew1Scheme = (((this._vpNew1Scheme || 0) + 1) % this.VP_NEW1_SCHEMES.length);
           this.renderVisualParallaxGrid();
           var vb0 = document.getElementById('vp-mode-btn');
@@ -3775,6 +4150,7 @@
           this.isPatternMode = false;
           this.enterVisualParallaxMode();
         } else if (this.vpSubMode === 1) {
+          this.stopTimerAndReset();
           this.vpSubMode = 2;
           this.renderVisualParallaxGrid();
           var btn = document.getElementById('vp-mode-btn');
@@ -3788,7 +4164,7 @@
       };
 
       SchulteGridGame.prototype.enterVisualParallaxMode = function() {
-        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
@@ -4194,6 +4570,7 @@
         if (!this.isBumpyMode) {
           this.enterBumpyMode(); // 进静（bumpySubMode=1）
         }
+        this.stopTimerAndReset();
         if (dyn) { this.bumpySubMode = 2; this.renderBumpyGrid(); }
         var bb = document.getElementById('bumpy-mode-btn');
         if (bb) { bb.classList.add('active'); bb.textContent = '凹凸·' + (dyn ? '动' : '静') + ' ▾'; }
@@ -4208,6 +4585,7 @@
           this.isPatternMode = false;
           this.enterBumpyMode();
         } else if (this.bumpySubMode === 1) {
+          this.stopTimerAndReset();
           this.bumpySubMode = 2;
           this.renderBumpyGrid();
           var b1 = document.getElementById('bumpy-mode-btn');
@@ -4221,7 +4599,7 @@
       };
 
       SchulteGridGame.prototype.enterBumpyMode = function() {
-        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
@@ -5424,8 +5802,7 @@
 
       SchulteGridGame.prototype.reset = function() {
         this.currentNumber = this.getNumberStart();
-        this.isPlaying = false;
-        this.stopTimer();
+        this.stopTimerAndReset();
         this._stopP3();   // 任何重开先停掉蒲公英动画，避免残留 rAF
 
         // 先隐藏所有容器
@@ -5787,12 +6164,25 @@
           return;
         }
 
+        // 加减乘除独立模式：长条算式渲染（在图案分支前，独立于图案体系）
+        if (this.isArithMode) {
+          this._stopP11();
+          this._renderPatternGrid11(container, cellSize);
+          return;
+        }
+
         // 图案模式：独立渲染路径（按子模式分流）
         if (this.isPatternMode) {
           if (this.patternSub !== 3) this._stopP3();   // 离开图案3 时停掉蒲公英动画并复原容器
           if (this.patternSub !== 4) this._stopP4();   // 离开图案4 时停掉切片并复原容器
           if (this.patternSub !== 5) this._stopP5();   // 离开图案5 时停掉星璇动画并复原容器
           if (this.patternSub !== 6) this._stopP6();   // 离开图案6 时停掉嵌套旋转动画并复原容器
+          if (this.patternSub !== 10) this._stopP10(); // 离开图案10 时停掉羊群动画并复原容器
+          if (this.patternSub !== 11) container.style.background = '';
+          if (this.patternSub === 11) { this._renderPatternGridEclipse(container, cellSize); return; }
+          if (this.patternSub === 10) { this._renderPatternGrid10(container, cellSize); return; }
+          if (this.patternSub === 9) { this._renderPatternGrid9(container, cellSize); return; }
+          if (this.patternSub === 8) { this._renderPatternGrid8(container, cellSize); return; }
           if (this.patternSub === 7) { this._renderPatternGrid7(container); return; }
           if (this.patternSub === 6) { this._renderPatternGrid6(container); return; }
           if (this.patternSub === 5) { this._renderPatternGrid5(container); return; }
@@ -6272,6 +6662,712 @@
           c.style.borderRadius = ''; c.style.boxShadow = '';
           c.style.transform = ''; c.style.maxWidth = ''; c.style.maxHeight = '';
         }
+      };
+
+      // ========== 图案10·羊群：蓝天绿草 + 一堆带数字的白羊自由移动碰撞（玩法同混沌1 弹跳动，但用羊） ==========
+      SchulteGridGame.prototype._renderPatternGrid10 = function(container, cellSize) {
+        this._stopP10();
+        // grid 布局（像标准舒尔特方格那样排列，固定 cellSize 正方形）
+        container.style.position = '';
+        container.style.left = ''; container.style.top = '';
+        container.style.right = ''; container.style.bottom = '';
+        container.style.width = ''; container.style.maxWidth = '';
+        container.style.height = ''; container.style.maxHeight = '';
+        container.style.transform = '';
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.style.gap = '3px';
+        container.style.padding = '4px';
+        container.style.marginTop = '0';
+        container.style.borderRadius = '12px';
+        container.style.boxShadow = 'none';
+        // 蓝天只占顶部约 1/10，其余为草地
+        container.style.background = 'linear-gradient(180deg, #7ec8f0 0%, #a5dcf5 9%, #6cb858 10%, #4a9640 100%)';
+        container.innerHTML = '';
+
+        var N = this.numbers.length;
+        // 统一设置羊朝向 + 数字反向翻转：任何改朝向的地方都必须走这里，数字才永不镜像
+        function setFaceDir(face, right) {
+          face.classList.toggle('p10-face-r', !!right);
+          var nm = face.querySelector('.pattern10-num');
+          if (nm) nm.style.transform = right ? 'translate(-50%, -50%) scaleX(-1)' : '';
+        }
+
+        for (var i = 0; i < N; i++) {
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell pattern10-cell';
+          cell.dataset.number = this.numbers[i];
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          // 前后关系：越靠下（行号越大）的羊越靠前（z-index 越高），换位后羊进新格子自动跟随该格行号
+          cell.style.zIndex = Math.floor(i / this.gridSize) + 1;
+
+          // 方向层：羊随机朝左或朝右（朝向由 setFaceDir 统一管理，数字同步反向保持正向）
+          var face = document.createElement('div');
+          face.className = 'pattern10-face';
+          var faceRight = (Math.random() < 0.5);
+          cell.appendChild(face);
+
+          var sheep = document.createElement('div');
+          sheep.className = 'pattern10-sheep';
+          // 随机预设动画：0=静止，1=移动蹦跳，2=原地蹦跳，3=左右摇摆
+          var animIdx = Math.floor(Math.random() * 4);
+          if (animIdx > 0) {
+            sheep.classList.add('p10-a' + animIdx);
+            if (animIdx === 1) sheep.style.animationDuration = (7 + Math.random() * 3).toFixed(2) + 's';
+            if (animIdx === 2) sheep.style.animationDuration = (1.2 + Math.random() * 0.6).toFixed(2) + 's';
+            if (animIdx === 3) sheep.style.animationDuration = (4 + Math.random() * 2).toFixed(2) + 's';
+          }
+          face.appendChild(sheep);
+
+          var num = document.createElement('span');
+          num.className = 'pattern10-num';
+          num.textContent = this.numbers[i];
+          // 数字大小随格子缩放（约格子的42%），避免高难度格子变小后数字比羊还大
+          num.style.fontSize = Math.max(12, Math.round(cellSize * 0.42)) + 'px';
+          // 数字放进羊里跟随动画；反向翻转统一由 setFaceDir 处理（初始朝向 + 强制面对面都走它）
+          sheep.appendChild(num);
+          setFaceDir(face, faceRight);
+
+          cell.onclick = function() { game.handleClick(+this.dataset.number, this); };   // 羊换位后数字变，读 dataset 动态
+
+          container.appendChild(cell);
+        }
+        // 每次游戏随机 30% 的相邻对设为面对面（一右一左，头对头）；其余保持随机方向（不强制对看）
+        // 改朝向必须走 setFaceDir，数字反向翻转同步更新，避免数字镜像
+        for (var pr = 0; pr < this.gridSize; pr++) {
+          for (var pc = 0; pc < this.gridSize - 1; pc++) {
+            if (Math.random() < 0.3) {
+              var fA = container.children[pr * this.gridSize + pc].querySelector('.pattern10-face');
+              var fB = container.children[pr * this.gridSize + pc + 1].querySelector('.pattern10-face');
+              setFaceDir(fA, true); setFaceDir(fB, false);
+            }
+          }
+        }
+        this._p10StartSwap(container);   // 羊随机换位（面对面/头对头相邻才互换，带移动动画）
+      };
+
+      // 图案10·羊群随机换位：羊与头朝向相邻格（正前+前上斜+前下斜）的未点羊交换；
+      // 羊进入新格子后自动按该格行号取前后关系（z-index 已按行固定，无需改动）
+      SchulteGridGame.prototype._p10StartSwap = function(container) {
+        var self = this;
+        if (this._p10SwapTimer) clearInterval(this._p10SwapTimer);
+        var cells = Array.prototype.slice.call(container.children);
+        this._p10SwapCells = cells;
+        if (cells.length < 2) return;
+        // FLIP 移动动画：羊从原格平滑滑到新格（不是瞬间换位）
+        // 起点必须带 -50%,-50% 居中偏移（calc 叠加位移），否则从错位点起步 → 视觉"先退一下再前进"
+        function doFlip(f, from, to, scale) {
+          var dx = from.left - to.left, dy = from.top - to.top;
+          f.style.transition = 'none';
+          f.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scaleX(' + scale + ')';
+          f.getBoundingClientRect();
+          f.style.transition = 'transform 2s cubic-bezier(.25,.7,.3,1)';
+          f.style.transform = 'translate(-50%, -50%) scaleX(' + scale + ')';
+          setTimeout(function(){ f.style.transition=''; f.style.transform=''; }, 2080);
+        }
+        this._p10SwapOnce = function() {
+          if (!self.isPlaying || !self._p10SwapCells) return;
+          var N = self.gridSize;
+          var cells2 = self._p10SwapCells;
+          var usable = cells2.filter(function(c){
+            return c.classList.contains('pattern10-cell') && !c.classList.contains('p10-correct') &&
+                   !c.classList.contains('p10-wrong') && !c.classList.contains('p10-fly-left') && !c.classList.contains('p10-fly-right');
+          });
+          if (usable.length < 2) return;
+          // 收集所有“面对面”候选对（未点、头对头、含斜向；边界羊只朝内侧），随机选一对必定互换 → 每 tick 至少一个互换
+          var cands = [];
+          for (var u = 0; u < usable.length; u++) {
+            var c1 = usable[u];
+            var idx1 = cells2.indexOf(c1);
+            var r1 = Math.floor(idx1 / N), col1 = idx1 % N;
+            var face1 = c1.querySelector('.pattern10-face');
+            if (!face1) continue;
+            var right1 = face1.classList.contains('p10-face-r');
+            // 最外圈（边界行/列）的羊只能跟内侧相邻互换：候选方向固定为朝中心的三格（正内+两斜内），
+            // 不再因头朝外越界而永远不参与互换
+            var onBound = (r1 === 0 || r1 === N - 1 || col1 === 0 || col1 === N - 1);
+            var dirs;
+            if (onBound) {
+              var drc = (r1 <= (N - 1) / 2) ? 1 : -1;    // 往中心的行方向
+              var dcc = (col1 <= (N - 1) / 2) ? 1 : -1;  // 往中心的列方向
+              dirs = [[drc, 0], [drc, dcc], [drc, -dcc]]; // 正内 + 两个斜内（行偏移固定 drc）
+            } else {
+              // 内部羊：头朝向侧 正前 + 前上斜 + 前下斜（斜向也成立）
+              dirs = right1 ? [[-1,1],[0,1],[1,1]] : [[-1,-1],[0,-1],[1,-1]];
+            }
+            for (var d = 0; d < dirs.length; d++) {
+              var dd = dirs[d];
+              var nr = r1 + dd[0], nc = col1 + dd[1];
+              if (nr < 0 || nr >= N || nc < 0 || nc >= N) continue;
+              var idx2 = nr * N + nc;
+              var c2 = cells2[idx2];
+              if (!c2 || c2.classList.contains('p10-correct') || c2.classList.contains('p10-wrong')) continue;
+              var face2 = c2.querySelector('.pattern10-face');
+              if (!face2) continue;
+              var right2 = face2.classList.contains('p10-face-r');
+              if (right2 === right1) continue;   // 同向不算相互看着；反向（头对头，含斜向）才触发
+              cands.push({ c1: c1, c2: c2, f1: face1, f2: face2 });
+            }
+          }
+          if (!cands.length) return;             // 棋盘已无可换的面对面对 → 本 tick 跳过
+          var pc = cands[Math.floor(Math.random() * cands.length)];
+          var r1r = pc.f1.getBoundingClientRect();
+          var r2r = pc.f2.getBoundingClientRect();
+          pc.c1.appendChild(pc.f2); pc.c2.appendChild(pc.f1);
+          var n1 = pc.c1.dataset.number, n2 = pc.c2.dataset.number;
+          pc.c1.dataset.number = n2; pc.c2.dataset.number = n1;
+          var s1 = pc.f1.classList.contains('p10-face-r') ? -1 : 1;
+          var s2 = pc.f2.classList.contains('p10-face-r') ? -1 : 1;
+          var n1r = pc.f1.getBoundingClientRect();
+          var n2r = pc.f2.getBoundingClientRect();
+          doFlip(pc.f1, r1r, n1r, s1);
+          doFlip(pc.f2, r2r, n2r, s2);
+        };
+        this._p10SwapTimer = setInterval(this._p10SwapOnce, 4000);   // 每4秒必有一次互换（有面对面候选时）
+      };
+
+      // 蓝天绿草背景（天空渐变 + 云朵 + 草地短线）
+      SchulteGridGame.prototype._drawSkyGrass = function(ctx, W, H) {
+        var sky = ctx.createLinearGradient(0, 0, 0, H);
+        sky.addColorStop(0, '#7ec8f0');
+        sky.addColorStop(0.52, '#b9e2f5');
+        sky.addColorStop(0.53, '#6cb858');
+        sky.addColorStop(1, '#4a9640');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath(); ctx.ellipse(120, 90, 46, 20, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(380, 70, 52, 22, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(500, 140, 42, 18, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(240, 160, 44, 18, 0, 0, Math.PI * 2); ctx.fill();
+        if (!this._grassStrokes) {
+          this._grassStrokes = [];
+          for (var i = 0; i < 200; i++) {
+            this._grassStrokes.push({ x: Math.random() * W, y: H * 0.53 + Math.random() * H * 0.47, len: 6 + Math.random() * 10, a: Math.random() * Math.PI });
+          }
+        }
+        ctx.save();
+        ctx.strokeStyle = 'rgba(90,150,60,0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        for (var g = 0; g < this._grassStrokes.length; g++) {
+          var gr = this._grassStrokes[g];
+          ctx.beginPath();
+          ctx.moveTo(gr.x, gr.y);
+          ctx.lineTo(gr.x + Math.cos(gr.a) * gr.len, gr.y - Math.sin(gr.a) * gr.len);
+          ctx.stroke();
+        }
+        ctx.restore();
+      };
+
+      // 画一只羊 + 数字在羊肚子中央（点错的羊短暂闪红）
+      SchulteGridGame.prototype._drawSheepBall = function(ctx, s) {
+        if (!this._sheepImg || !this._sheepImg.complete) {
+          ctx.fillStyle = '#f0e6d6';
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.drawImage(this._sheepImg, s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        }
+        if (s.wrongT > 0) {
+          ctx.fillStyle = 'rgba(229,57,53,0.35)';
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = '#4a3428';
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 4;
+        ctx.font = 'bold ' + Math.floor(s.r * 0.55) + 'px "JetBrains Mono","Microsoft YaHei",sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(s.num, s.x, s.y + s.r * 0.08);
+        ctx.fillText(s.num, s.x, s.y + s.r * 0.08);
+      };
+
+      SchulteGridGame.prototype._p10Frame = function() {
+        var self = this;
+        if (!this._p10) return;
+        function frame(ts) {
+          if (!self._p10 || self._p10.raf == null) return;
+          if (self._p10.last == null) self._p10.last = ts;
+          var dt = (ts - self._p10.last) / 1000; self._p10.last = ts;
+          if (dt > 0.1) dt = 0.1;
+          self._p10Animate(dt);
+          self._p10.raf = requestAnimationFrame(frame);
+        }
+        this._p10.raf = requestAnimationFrame(frame);
+      };
+
+      SchulteGridGame.prototype._p10Animate = function(dt) {
+        var p = this._p10;
+        var canvas = this._p10Canvas;
+        if (!p || !canvas) return;
+        var W = p.W, H = p.H;
+        var sheep = p.sheep;
+
+        // 物理更新：移动 + 边界反弹
+        for (var i = 0; i < sheep.length; i++) {
+          var s = sheep[i];
+          if (s.clicked) continue;
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+          if (s.x - s.r < 0) { s.x = s.r; s.vx = Math.abs(s.vx); }
+          if (s.x + s.r > W) { s.x = W - s.r; s.vx = -Math.abs(s.vx); }
+          if (s.y - s.r < 0) { s.y = s.r; s.vy = Math.abs(s.vy); }
+          if (s.y + s.r > H) { s.y = H - s.r; s.vy = -Math.abs(s.vy); }
+          if (s.wrongT > 0) s.wrongT -= dt;
+        }
+        // 羊间碰撞
+        for (var i = 0; i < sheep.length; i++) {
+          for (var j = i + 1; j < sheep.length; j++) {
+            var a = sheep[i], b = sheep[j];
+            if (a.clicked || b.clicked) continue;
+            var dx = b.x - a.x, dy = b.y - a.y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            var minDist = a.r + b.r;
+            if (dist < minDist && dist > 0.001) {
+              var nx = dx / dist, ny = dy / dist;
+              var overlap = minDist - dist;
+              a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
+              b.x += nx * overlap / 2; b.y += ny * overlap / 2;
+              var dvx = a.vx - b.vx, dvy = a.vy - b.vy;
+              var dvn = dvx * nx + dvy * ny;
+              if (dvn > 0) {
+                a.vx -= dvn * nx; a.vy -= dvn * ny;
+                b.vx += dvn * nx; b.vy += dvn * ny;
+              }
+            }
+          }
+        }
+
+        // 渲染
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        this._drawSkyGrass(ctx, W, H);
+        for (var k = 0; k < sheep.length; k++) {
+          if (sheep[k].clicked) continue;  // 点对的羊消失
+          this._drawSheepBall(ctx, sheep[k]);
+        }
+      };
+
+      SchulteGridGame.prototype._p10Click = function(x, y) {
+        if (!this.isPlaying || !this._p10) return;
+        var best = null, bestD = 1e9;
+        var sheep = this._p10.sheep;
+        for (var i = 0; i < sheep.length; i++) {
+          var s = sheep[i];
+          if (s.clicked) continue;
+          var dx = x - s.x, dy = y - s.y;
+          var d = Math.sqrt(dx * dx + dy * dy);
+          if (d < bestD) { bestD = d; best = s; }
+        }
+        if (!best) return;
+        if (bestD > best.r) return;
+        if (best.num === this.currentNumber) {
+          best.clicked = true;
+          this.playSound('correct');
+          if (this.currentNumber === this.getMaxNumber()) {
+            var self = this;
+            setTimeout(function() { self.completeGame(); }, 400);
+          } else {
+            this.currentNumber += this.getNumberStep();
+            this.updateUI();
+          }
+        } else {
+          best.wrongT = 0.4;
+          this.playSound('wrong');
+        }
+      };
+
+      // 图案11·月全食：圆形A(#374866) + 黄色B(#ffd942)穿月遮挡 + 黑字白描边
+      // B 持续从左穿到右循环(月全食划过)；每格起始相位按 (行+列)%5 错开，使网格静止/任意时刻呈现 100/75/50/25/0 对角线分布
+      // 相位→初始动画进度映射：100%→0.5, 75%→0.4, 50%→0.3, 25%→0.185, 0%→0.0（对应两等圆重叠面积比例）
+      SchulteGridGame.prototype._renderPatternGridEclipse = function(container, cellSize) {
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.style.gap = Math.max(2, Math.floor(cellSize * 0.05)) + 'px';
+        container.style.background = '#8ffe57';   // 容积背景亮绿
+        container.style.padding = '0';
+        container.innerHTML = '';
+        var T = 7;  // 穿过动画周期(秒) —— 调慢：月全食划过更舒缓
+        var DELAY = [0.5, 0.4, 0.3, 0.185, 0.0]; // phase0..4 → 初始动画进度(遮挡 100/75/50/25/0)
+        var idx = 0;
+        for (var r = 0; r < this.gridSize; r++) {
+          for (var c = 0; c < this.gridSize; c++) {
+            var num = this.numbers[idx++];
+            var phase = (r + c) % 5;   // (行+列-2)%5 在 mod5 下等价
+            var cell = document.createElement('div');
+            cell.className = 'grid-cell p11-cell';
+            cell.style.width = cellSize + 'px';
+            cell.style.height = cellSize + 'px';
+            cell.style.display = 'block';
+            cell.style.position = 'relative';
+
+            var a = document.createElement('div');
+            a.className = 'p11-a';
+            var b = document.createElement('div');
+            b.className = 'p11-b';
+            b.style.animationDelay = (-DELAY[phase] * T) + 's';
+            var numEl = document.createElement('div');
+            numEl.className = 'p11-num';
+            numEl.style.fontSize = Math.floor(cellSize * 0.42) + 'px';
+            numEl.textContent = '' + num;
+
+            a.appendChild(b);
+            cell.appendChild(a);
+            cell.appendChild(numEl);
+            cell.onclick = (function(number) {
+              return function() { game.handleClick(number, this); };
+            })(num);
+            container.appendChild(cell);
+          }
+        }
+      };
+
+      SchulteGridGame.prototype._stopP10 = function() {
+        if (this._p10SwapTimer) { clearInterval(this._p10SwapTimer); this._p10SwapTimer = null; }  // 停羊群换位定时器
+        if (this._p10 && this._p10.raf != null) { cancelAnimationFrame(this._p10.raf); }
+        this._p10 = null;
+        this._p10Canvas = null;
+        var c = document.getElementById('grid-container');
+        if (c) {
+          c.style.position = ''; c.style.left = ''; c.style.top = '';
+          c.style.right = ''; c.style.bottom = '';
+          c.style.width = ''; c.style.height = '';
+          c.style.display = ''; c.style.background = '';
+          c.style.padding = ''; c.style.marginTop = '';
+          c.style.borderRadius = ''; c.style.boxShadow = '';
+          c.style.transform = ''; c.style.maxWidth = ''; c.style.maxHeight = '';
+        }
+      };
+
+      // ===== 加减乘除独立模式：两格长条（横/竖随机）+ 算式，目标数字 1..块数 =====
+      SchulteGridGame.prototype._p11GridSize = function() {
+        var g = this.gridSize;
+        if (g <= 5) return 6;    // 入门/初级/中级 → 6×6
+        if (g === 6) return 8;   // 高级 → 8×8
+        return 10;               // 专家/极限 → 10×10
+      };
+
+      // 相邻两格配成横条/竖条，全覆盖不重叠，横竖真正随机混合。
+      // 优先“随机顺序 + 四邻随机配对”（混合效果好）；偶发死锁（孤格无可用邻居）整体重试；
+      // 多次重试仍失败回退行式算法（整行横配/竖配，100% 成功）。
+      SchulteGridGame.prototype._p11BuildBlocks = function(size) {
+        for (var t = 0; t < 8; t++) {
+          var b = this._p11TryMix(size);
+          if (b) return b;
+        }
+        return this._p11TryRows(size);
+      };
+      SchulteGridGame.prototype._p11TryMix = function(size) {
+        var N = size * size, used = [], blocks = [];
+        for (var i = 0; i < N; i++) used[i] = false;
+        for (var i = 0; i < N; i++) {   // 行主序扫描：每格独立随机 横(右)/竖(下)，真正交错混合
+          if (used[i]) continue;
+          var r = Math.floor(i / size), c = i % size;
+          var opts = [];
+          if (c + 1 < size && !used[i + 1]) opts.push([i + 1, 'h']);
+          if (r + 1 < size && !used[i + size]) opts.push([i + size, 'v']);
+          if (!opts.length) {   // 右/下都不可用 → 尝试 左/上（通常已配，兜底防死锁）
+            if (c - 1 >= 0 && !used[i - 1]) opts.push([i - 1, 'h']);
+            if (r - 1 >= 0 && !used[i - size]) opts.push([i - size, 'v']);
+          }
+          if (!opts.length) return null;   // 孤格死锁 → 本次尝试失败
+          var pick = opts[Math.floor(Math.random() * opts.length)];
+          used[i] = used[pick[0]] = true;
+          blocks.push({ i: i, j: pick[0], dir: pick[1] });
+        }
+        return blocks;
+      };
+      // 兜底：整行横配/竖配（a + 2b = 行数 必有解，100% 成功）
+      SchulteGridGame.prototype._p11TryRows = function(size) {
+        var blocks = [], usedRow = [];
+        for (var r = 0; r < size; r++) usedRow[r] = false;
+        for (var r = 0; r < size; r++) {
+          if (usedRow[r]) continue;
+          if (r === size - 1 || Math.random() < 0.5) {
+            for (var c = 0; c < size; c += 2) blocks.push({ i: r * size + c, j: r * size + c + 1, dir: 'h' });
+            usedRow[r] = true;
+          } else {
+            for (var c2 = 0; c2 < size; c2++) blocks.push({ i: r * size + c2, j: (r + 1) * size + c2, dir: 'v' });
+            usedRow[r] = usedRow[r + 1] = true;
+          }
+        }
+        return blocks;
+      };
+
+      // 生成算式：a op b = target；操作数按位数档位；排除平凡式（+0 / ×1 / ÷1 / -0）
+      SchulteGridGame.prototype._p11GenExpr = function(target, opMode, digit) {
+        // 位数档 = 操作数范围：个位档先尽量 1 位数（1..9），表达不了放宽到 1..18，
+        // 再放宽到 1..60（高级/专家目标到 32/50，必须能表达大目标：如 37=38-1、37=25+12）；
+        // 十位档 10..99（所有运算最多 2 位数）；已无百位
+        var ranges;
+        if (digit === 'tens') ranges = [[10, 99]];
+        else ranges = [[1, 9], [1, 18], [1, 60]];
+        var ops;
+        if (opMode === 'add') ops = ['+'];
+        else if (opMode === 'sub') ops = ['-'];
+        else if (opMode === 'mul') ops = ['×'];
+        else if (opMode === 'div') ops = ['÷'];
+        else if (opMode === 'addsub') ops = ['+', '-'];
+        else if (opMode === 'muldiv') ops = ['×', '÷'];
+        else ops = ['+', '-', '×', '÷'];
+        for (var ri = 0; ri < ranges.length; ri++) {
+          var lo = ranges[ri][0], hi = ranges[ri][1];
+          // 算子尝试顺序打乱 + 每个算子固定尝试次数：
+          // 避免"可行区间大的算子成功快、占比失衡"（如加减模式偏加法、乘除模式偏除法）
+          var opOrder = ops.slice();
+          for (var oa = opOrder.length - 1; oa > 0; oa--) { var ob = Math.floor(Math.random() * (oa + 1)); var ot = opOrder[oa]; opOrder[oa] = opOrder[ob]; opOrder[ob] = ot; }
+          for (var oi = 0; oi < opOrder.length; oi++) {
+            var op = opOrder[oi];
+            var guard = 0;
+            while (guard++ < 60) {
+              var a, b;
+              if (op === '+') {
+                var aLo = Math.max(lo, target - hi), aHi = Math.min(hi, target - lo);
+                if (aLo > aHi) continue;
+                a = aLo + Math.floor(Math.random() * (aHi - aLo + 1));
+                b = target - a;
+                if (a === 0 || b === 0) continue;
+              } else if (op === '-') {
+                var aLo2 = target + lo, aHi2 = hi;
+                if (aLo2 > aHi2) continue;
+                a = aLo2 + Math.floor(Math.random() * (aHi2 - aLo2 + 1));
+                b = a - target;
+              } else if (op === '×') {
+                // 枚举 target 的因子（≥2 且 ≤hi 且 ≥bvMin），随机选一个 → 乘法必然成功
+                //（原随机抽 bv 对因子稀疏的合数如 46 会 60 次全败 → 掉进减法兜底，乘除模式混入减法）
+                var bvMin = Math.max(2, lo);
+                var factors = [];
+                for (var fc = 2; fc * fc <= target; fc++) {
+                  if (target % fc === 0) {
+                    if (fc >= bvMin && fc <= hi && target / fc >= 2 && target / fc <= hi) factors.push(fc);
+                    var fc2 = target / fc;
+                    if (fc2 !== fc && fc2 >= bvMin && fc2 <= hi && fc >= 2 && fc <= hi) factors.push(fc2);
+                  }
+                }
+                if (!factors.length) continue;   // 质数无解（质数已分给除法，理论不发生）
+                b = factors[Math.floor(Math.random() * factors.length)];
+                a = target / b;
+              } else { // ÷
+                if (target < 2) continue;   // 1 无法用除法非平凡表达
+                var bLoD = Math.max(2, Math.ceil(lo / target));
+                var rounds;
+                if (lo >= 10) {
+                  // 十位档：被除数 ≤99（所有运算最多 2 位数）
+                  rounds = [[bLoD, Math.min(hi, Math.floor(99 / target))]];
+                } else {
+                  // 个位档：优先被除数 ≤9（尽量 1 位数）；仅纯乘除模式才放宽 ≤99（质数如 11=22÷2 才能表达）
+                  rounds = [[bLoD, Math.min(hi, Math.floor(9 / target))]];
+                  if (opMode === 'div' || opMode === 'muldiv') {
+                    rounds.push([bLoD, Math.min(hi, Math.floor(99 / target))]);
+                  }
+                }
+                var doneD = false;
+                for (var rdi = 0; rdi < rounds.length && !doneD; rdi++) {
+                  var rLo = rounds[rdi][0], rHi = rounds[rdi][1];
+                  if (rHi < rLo) continue;
+                  var bTry = rLo + Math.floor(Math.random() * (rHi - rLo + 1));
+                  var aTry = target * bTry;
+                  if (aTry === bTry) continue;
+                  a = aTry; b = bTry; doneD = true;
+                }
+                if (!doneD) continue;
+              }
+              return a + op + b;
+            }
+          }
+        }
+        // 兜底：减法随机再试（最大档位范围内必有解）
+        var loL = ranges[ranges.length - 1][0], hiL = ranges[ranges.length - 1][1];
+        for (var t2 = 0; t2 < 60; t2++) {
+          var aL = loL + Math.floor(Math.random() * Math.max(1, hiL - loL));
+          var bL = aL - target;
+          if (bL >= loL && bL <= hiL) return aL + '-' + bL;
+        }
+        // 终极兜底：减法 (target+loL)-loL —— 结果必然 = target，绝不返回与目标无关的算式
+        return (target + loL) + '-' + loL;
+      };
+
+      SchulteGridGame.prototype._renderPatternGrid11 = function(container, cellSize) {
+        this._stopP11();
+        var size = this._p11GridSize();
+        this._p11Count = size * size / 2;
+        // grid 布局：1fr 均分撑满可用宽度、整体正方形（与其他模式一致，容积不缩小）
+        container.style.position = '';
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + size + ', 1fr)';
+        container.style.gridTemplateRows = 'repeat(' + size + ', 1fr)';
+        container.style.gap = '3px';
+        container.style.width = '100%';
+        container.style.height = '';
+        container.style.aspectRatio = '1 / 1';
+        container.style.maxWidth = '';
+        container.style.boxSizing = 'border-box';
+        container.style.padding = '4px';
+        container.style.marginTop = '0';
+        container.style.background = '#c7c7c7';   // 背景容器 78% 灰
+        container.style.borderRadius = '12px';
+        container.style.boxShadow = 'none';
+        container.innerHTML = '';
+        // 估算实际格宽（字号自适应用）
+        var gs = Math.max(28, Math.floor((container.clientWidth - 8) / size));
+        // 目标数字 1..块数 打乱分配给各块
+        var nums = [];
+        for (var n = 1; n <= this._p11Count; n++) nums.push(n);
+        for (var sh = nums.length - 1; sh > 0; sh--) { var sw = Math.floor(Math.random() * (sh + 1)); var st = nums[sh]; nums[sh] = nums[sw]; nums[sw] = st; }
+        var blocks = this._p11BuildBlocks(size);
+        // 算子精确配额（加/减、乘/除 各半，不是概率均匀）：
+        //  数字 1 直写黑色不算算式，配额只在 2..n 上分配（17/31/49 个）
+        //  addsub：偶数目标→加、奇数目标→减（严格交替）
+        //  muldiv：质数目标只能除法 → 全给除；除法无解合数(×2>99)→乘；其余合数补足除 → 乘/除接近各半
+        var opFor = {};
+        var quotaNums = [];
+        for (var qn = 0; qn < nums.length; qn++) if (nums[qn] !== 1) quotaNums.push(nums[qn]);
+        if (this.arithmeticOp === 'addsub') {
+          for (var ni = 0; ni < quotaNums.length; ni++) opFor[quotaNums[ni]] = (quotaNums[ni] % 2 === 0) ? 'add' : 'sub';
+        } else if (this.arithmeticOp === 'all') {
+          // 加减乘除（all）：4 种算子循环均匀分配（加≈减≈乘≈除≈n/4），质数分到乘则降级为除
+          var ops4 = ['add', 'sub', 'mul', 'div'];
+          var isPrimeA = function(x) { if (x < 2) return false; for (var d = 2; d * d <= x; d++) if (x % d === 0) return false; return true; };
+          for (var ai = 0; ai < quotaNums.length; ai++) {
+            var vA = quotaNums[ai];
+            var oA = ops4[ai % 4];
+            if (oA === 'mul' && isPrimeA(vA)) oA = 'div';
+            opFor[vA] = oA;
+          }
+        } else if (this.arithmeticOp === 'muldiv') {
+          var isPrime = function(x) { if (x < 2) return false; for (var d = 2; d * d <= x; d++) if (x % d === 0) return false; return true; };
+          var primes = [], comps = [], divImpossible = [];
+          for (var ni2 = 0; ni2 < quotaNums.length; ni2++) {
+            var v = quotaNums[ni2];
+            if (isPrime(v)) primes.push(v);                 // 质数只能除法 → 全给除
+            else if (v * 2 > 99) divImpossible.push(v);     // 除法无解（被除数>99）→ 必须乘
+            else comps.push(v);                             // 其余合数：按配额补足
+          }
+          var needDiv = Math.max(0, Math.round(quotaNums.length / 2) - primes.length - divImpossible.length);
+          for (var sh2 = comps.length - 1; sh2 > 0; sh2--) { var sw2 = Math.floor(Math.random() * (sh2 + 1)); var st2 = comps[sh2]; comps[sh2] = comps[sw2]; comps[sw2] = st2; }
+          for (var ci = 0; ci < comps.length; ci++) opFor[comps[ci]] = (ci < needDiv) ? 'div' : 'mul';
+          for (var pi = 0; pi < primes.length; pi++) opFor[primes[pi]] = 'div';
+          for (var di = 0; di < divImpossible.length; di++) opFor[divImpossible[di]] = 'mul';
+        }
+        var exprMap = {};
+        var exprUsed = {};   // 算式文本全局唯一保险：每个数字的算式不与其他块重复（防任何重复）
+        for (var bi = 0; bi < blocks.length; bi++) {
+          var num = nums[bi];
+          var useOp = opFor[num] || this.arithmeticOp;   // 有配额用配额，否则（all/单算子）走原逻辑
+          var expr;
+          for (var tryE = 0; tryE < 12; tryE++) {
+            expr = this._p11GenExpr(num, useOp, this.arithmeticDigit);
+            if (!exprUsed[expr]) break;
+          }
+          exprUsed[expr] = true;
+          exprMap[num] = expr;
+        }
+        // 统一字号：横条双格宽容纳最长算式；竖条 token 横排，单格宽容纳最长数字组（如 105）
+        var maxLen = 1, maxTok = 1;
+        for (var en in exprMap) {
+          if (exprMap[en].length > maxLen) maxLen = exprMap[en].length;
+          var tks = exprMap[en].match(/\d+|[+\-×÷]/g) || [exprMap[en]];
+          for (var tk = 0; tk < tks.length; tk++) if (tks[tk].length > maxTok) maxTok = tks[tk].length;
+        }
+        var fsU = Math.max(9, Math.floor(Math.min(gs * 0.6, (gs * 2 - 6) / (maxLen * 0.62), (gs - 12) / (maxTok * 0.62))));
+        var self11 = this;
+        // 保险：nums 在 shuffle 后若因任何原因含重复数字（极小概率），重新洗牌直到 1..count 各一次
+        for (var safety = 0; safety < 5; safety++) {
+          var seenN = {}; var hasDupN = false;
+          for (var sn = 0; sn < nums.length; sn++) { if (seenN[nums[sn]]) { hasDupN = true; break; } seenN[nums[sn]] = 1; }
+          if (!hasDupN) break;
+          for (var r2 = nums.length - 1; r2 > 0; r2--) { var t2 = Math.floor(Math.random() * (r2 + 1)); var tmp2 = nums[r2]; nums[r2] = nums[t2]; nums[t2] = tmp2; }
+        }
+        for (var bi2 = 0; bi2 < blocks.length; bi2++) {
+          var blk = blocks[bi2];
+          var num2 = nums[bi2];
+          var rA = Math.floor(blk.i / size), cA = blk.i % size;
+          var bar = document.createElement('div');
+          bar.className = 'pattern11-bar';
+          bar.dataset.number = num2;
+          // grid 定位：横条跨 2 列、竖条跨 2 行
+          bar.style.gridColumn = (cA + 1) + ' / ' + (cA + (blk.dir === 'h' ? 2 : 1) + 1);
+          bar.style.gridRow = (rA + 1) + ' / ' + (rA + (blk.dir === 'h' ? 1 : 2) + 1);
+          var expr = exprMap[num2];
+          if (num2 === 1) {
+            // 数字 1：直接写 "1"，黑色（不用算式）
+            bar.textContent = '1';
+          } else {
+            // 算式整体着色（含数字）：按算式运算符 加=红 减=蓝 乘=橙 除=绿
+            var opCh = (expr.match(/[+\-×÷]/) || ['+'])[0];
+            if (opCh === '+') bar.classList.add('p11-c-add');
+            else if (opCh === '-') bar.classList.add('p11-c-sub');
+            else if (opCh === '×') bar.classList.add('p11-c-mul');
+            else bar.classList.add('p11-c-div');
+            if (blk.dir === 'v') {
+              // 竖条：算式拆成 token（数字组/运算符），每 token 一行、数字组整体横排
+              bar.classList.add('p11-v');
+              var tks = expr.match(/\d+|[+\-×÷]/g) || [expr];
+              for (var tki = 0; tki < tks.length; tki++) {
+                var tsp = document.createElement('span');
+                tsp.className = 'p11-v-token';
+                tsp.textContent = tks[tki];
+                bar.appendChild(tsp);
+              }
+            } else {
+              bar.textContent = expr;
+            }
+          }
+          bar.style.fontSize = fsU + 'px';                   // 统一字号（不随算式长度变化）
+          bar.onclick = function() { self11.handleClick(+this.dataset.number, this); };
+          container.appendChild(bar);
+        }
+        // DOM 层自检（保险）：扫描渲染出的所有长条，dataset.number 有任何重复 → 清空容器整局重渲（最多 5 次）
+        var dupGuard = 0;
+        while (dupGuard < 5) {
+          var seenD = {}, hasDupD = false;
+          var barsNow = container.querySelectorAll('.pattern11-bar');
+          for (var di = 0; di < barsNow.length; di++) {
+            var dv = barsNow[di].dataset.number;
+            if (dv === undefined || dv === '' || seenD[dv]) { hasDupD = true; break; }
+            seenD[dv] = 1;
+          }
+          if (!hasDupD) break;
+          dupGuard++;
+          this._renderPatternGrid11(container, cellSize);   // 整局重建（内部会 innerHTML=''）
+          return;   // 递归返回后由新一轮自检兜底
+        }
+      };
+
+      SchulteGridGame.prototype._stopP11 = function() {
+        var c = document.getElementById('grid-container');
+        if (c) {
+          c.style.position = ''; c.style.left = ''; c.style.top = '';
+          c.style.right = ''; c.style.bottom = '';
+          c.style.width = ''; c.style.height = '';
+          c.style.display = ''; c.style.background = '';
+          c.style.padding = ''; c.style.marginTop = '';
+          c.style.borderRadius = ''; c.style.boxShadow = '';
+          c.style.transform = ''; c.style.maxWidth = ''; c.style.maxHeight = '';
+          c.style.gridTemplateColumns = ''; c.style.gridTemplateRows = '';
+          c.style.gap = ''; c.style.aspectRatio = ''; c.style.boxSizing = '';
+        }
+      };
+
+      // 加减乘除模式：选择算式算子（加/减/乘/除/加减/乘除/加减乘除）；未进入模式则先进
+      SchulteGridGame.prototype.setArithOp = function(op) {
+        this.arithmeticOp = op;
+        var btns = document.querySelectorAll('.arith-op-btn');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', btns[i].dataset.op === op);
+        if (!this.isArithMode) this.setMode('arithmetic');
+        else this.renderGrid();
+        this.closeAllModeMenus();
+      };
+
+      // 加减乘除模式：选择操作数位数（个位/十位/百位）；未进入模式则先进
+      SchulteGridGame.prototype.setArithDigit = function(d) {
+        this.arithmeticDigit = d;
+        var btns = document.querySelectorAll('.arith-digit-btn');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', btns[i].dataset.digit === d);
+        if (!this.isArithMode) this.setMode('arithmetic');
+        else this.renderGrid();
+        this.closeAllModeMenus();
       };
 
       // 图案4：圆形内 Voronoi（泰森多边形）不规则切片，每片面积近似相等；
@@ -6896,18 +7992,18 @@
       };
 
       // 图案6 随机模式(6-3)用的 10 套配色：统一「冷色打底(A/B) + 暖色焦点(C/D)」
-      // 10套：原版关系(A深色 / B=A同色系浅色版 / C=B对比色即补色,压暗保证白字可读 / D=B与C间色)；A色相绕色环铺开保证10套彼此可区分
+      // 10套：严守原版「关系」(A/B冷、C/D暖、明度阶梯 A36<B46=C46<D62、C为焦点)，但色相铺满整片冷区(紫→蓝→青→青绿)与暖区(品红→红→橙)
       SchulteGridGame.prototype._P6_PALETTES = [
-        { A:'#2B2A84', B:'#120FE6', C:'#AAAD0B', D:'#F04296' }, // 1 蓝紫底/同系浅/补色/间色 (A241 B241 C61 D331)
-        { A:'#2A5584', B:'#0F77E6', C:'#AD5E0B', D:'#F042ED' }, // 2 蓝底/同系浅/补色/间色 (A211 B211 C31 D301)
-        { A:'#2A8284', B:'#0FE3E6', C:'#AD0E0B', D:'#9C42F0' }, // 3 青蓝底/同系浅/补色/间色 (A181 B181 C1 D271)
-        { A:'#2A8458', B:'#0FE67E', C:'#AD0B59', D:'#4542F0' }, // 4 青绿底/同系浅/补色/间色 (A151 B151 C331 D241)
-        { A:'#2A842B', B:'#0FE612', C:'#AD0BAA', D:'#4296F0' }, // 5 绿底/同系浅/补色/间色 (A121 B121 C301 D211)
-        { A:'#55842A', B:'#77E60F', C:'#5E0BAD', D:'#42EDF0' }, // 6 黄绿底/同系浅/补色/间色 (A91 B91 C271 D181)
-        { A:'#82842A', B:'#E3E60F', C:'#0E0BAD', D:'#42F09C' }, // 7 黄底/同系浅/补色/间色 (A61 B61 C241 D151)
-        { A:'#84582A', B:'#E67E0F', C:'#0B59AD', D:'#42F045' }, // 8 橙底/同系浅/补色/间色 (A31 B31 C211 D121)
-        { A:'#842B2A', B:'#E6120F', C:'#0BAAAD', D:'#96F042' }, // 9 红底/同系浅/补色/间色 (A1 B1 C181 D91)
-        { A:'#842A55', B:'#E60F77', C:'#0BAD5E', D:'#EDF042' }  // 10 品红底/同系浅/补色/间色 (A331 B331 C151 D61)
+        { A:'#2E2C8C', B:'#0EA5DD', C:'#DD0E87', D:'#F3D449' }, // 1 蓝紫底/青蓝/品红焦点/黄 (A241 B196 C325 D49) 原版锚点
+        { A:'#852C8C', B:'#A50EDD', C:'#DD370E', D:'#F3DD49' }, // 2 紫红底/紫/红焦点/黄 (A296 B284 C12 D52)
+        { A:'#6C2C8C', B:'#6E0EDD', C:'#DD0E15', D:'#F3D749' }, // 3 紫底/紫蓝/红粉焦点/黄 (A280 B268 C358 D50)
+        { A:'#522C8C', B:'#370EDD', C:'#DD0E37', D:'#F3D149' }, // 4 紫蓝底/蓝/玫红焦点/黄 (A264 B252 C348 D48)
+        { A:'#392C8C', B:'#0E1CDD', C:'#DD0E5A', D:'#F3CC49' }, // 5 靛底/宝蓝/粉焦点/黄 (A248 B236 C338 D46)
+        { A:'#2C398C', B:'#0E53DD', C:'#DD6E0E', D:'#F3E249' }, // 6 蓝底/天蓝/橙焦点/黄 (A232 B220 C28 D54)
+        { A:'#2C4F8C', B:'#0E87DD', C:'#DD4C0E', D:'#F3DD49' }, // 7 天蓝底/湖蓝/橙红焦点/黄 (A218 B205 C18 D52)
+        { A:'#2C698C', B:'#0EBADD', C:'#DD2A0E', D:'#F3D749' }, // 8 azure底/青蓝/红焦点/黄 (A202 B190 C8 D50)
+        { A:'#2C848C', B:'#0EDDC1', C:'#DD0E30', D:'#F3D149' }, // 9 青底/青绿/玫红焦点/黄 (A185 B172 C350 D48)
+        { A:'#2C8C74', B:'#0EDD75', C:'#DD0E53', D:'#F3C949' }  // 10 青绿底/春绿/粉焦点/黄 (A165 B150 C340 D45)
       ];
 
       // ========== 图案6·嵌套旋转：A内含偏心B与C(B/C绕转)；相邻A间黄色D圆衔接；白底 ==========
@@ -7083,6 +8179,98 @@
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillStyle = cl.done ? 'rgba(255,255,255,0.95)' : '#ffffff';
           ctx.fillText('' + cl.num, nx, ny);
+        }
+      };
+
+      // 图案8·模糊球：普通方格布局，每格改为圆形径向渐变色块 + 黑色细圆线 + 白色模糊数字 + 呼吸缩放
+      SchulteGridGame.prototype._renderPatternGrid8 = function(container, cellSize) {
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.style.gap = '';
+        container.style.background = '#ffffff';
+        container.style.padding = '';
+        container.innerHTML = '';
+        var self = this;
+        var fontSize = Math.max(14, Math.round(cellSize * 0.42));
+        for (var i = 0; i < this.numbers.length; i++) {
+          var num = this.numbers[i];
+          var h = Math.floor(Math.random() * 360);
+          var s = Math.floor(72 + Math.random() * 26);
+          var l = Math.floor(48 + Math.random() * 20);
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell orb-cell';
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          cell.style.setProperty('--orb-c', 'hsl(' + h + ', ' + s + '%, ' + l + '%)');
+          cell.style.setProperty('--orb-c-soft', 'hsl(' + h + ', ' + (s - 8) + '%, ' + (l + 14) + '%)');
+          cell.style.animationDelay = (Math.random() * 1.6).toFixed(2) + 's';
+          var n = document.createElement('span');
+          n.className = 'orb-num';
+          n.style.fontSize = fontSize + 'px';
+          n.textContent = String(num);
+          cell.appendChild(n);
+          cell.onclick = (function(number) {
+            return function() { game.handleClick(number, this); };
+          })(num);
+          container.appendChild(cell);
+        }
+      };
+
+      // 图案9·四圆花：普通方格布局，每格 = 4个虚化圆(逆时针转) + 中心叶子(顺时针转) + 白色数字，容积深青绿
+      SchulteGridGame.prototype._renderPatternGrid9 = function(container, cellSize) {
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.style.gap = '';
+        container.style.background = '#004849';
+        container.style.padding = '';
+        container.innerHTML = '';
+        function leafPath() {
+          return 'M50 50 C40 47 45 28 50 20 C55 28 60 47 50 50 Z';
+        }
+        function buildSVG(num) {
+          var gid = 'og9' + num;
+          var lgid = 'lg9' + num;
+          return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+            '<defs>' +
+              '<radialGradient id="' + gid + '">' +
+                '<stop offset="0%" stop-color="#ff5100"/>' +
+                '<stop offset="75%" stop-color="#ff5100"/>' +
+                '<stop offset="100%" stop-color="#ff5100" stop-opacity="0"/>' +
+              '</radialGradient>' +
+              '<radialGradient id="' + lgid + '" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="30">' +
+                '<stop offset="0%" stop-color="#044d44"/>' +
+                '<stop offset="55%" stop-color="#044d44"/>' +
+                '<stop offset="100%" stop-color="#044d44" stop-opacity="0"/>' +
+              '</radialGradient>' +
+            '</defs>' +
+            '<g>' +
+              '<animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="14s" repeatCount="indefinite"/>' +
+              '<circle cx="50" cy="26" r="24" fill="url(#' + gid + ')"/>' +
+              '<circle cx="50" cy="74" r="24" fill="url(#' + gid + ')"/>' +
+              '<circle cx="26" cy="50" r="24" fill="url(#' + gid + ')"/>' +
+              '<circle cx="74" cy="50" r="24" fill="url(#' + gid + ')"/>' +
+            '</g>' +
+            '<g fill="url(#' + lgid + ')">' +
+              '<animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="14s" repeatCount="indefinite"/>' +
+              '<path d="' + leafPath() + '"/>' +
+              '<path d="' + leafPath() + '" transform="rotate(90 50 50)"/>' +
+              '<path d="' + leafPath() + '" transform="rotate(180 50 50)"/>' +
+              '<path d="' + leafPath() + '" transform="rotate(270 50 50)"/>' +
+            '</g>' +
+            '<text x="50" y="50" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="40" font-weight="800" font-family="system-ui,sans-serif">' + num + '</text>' +
+          '</svg>';
+        }
+        for (var i = 0; i < this.numbers.length; i++) {
+          var num = this.numbers[i];
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell p9-cell';
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          cell.innerHTML = buildSVG(num);
+          cell.onclick = (function(number) {
+            return function() { game.handleClick(number, this); };
+          })(num);
+          container.appendChild(cell);
         }
       };
 
@@ -7342,7 +8530,7 @@
       };
 
       SchulteGridGame.prototype.enterColorMode = function(sub, dynamic) {
-        if (this.isPlaying) { this.stopTimer(); this.isPlaying = false; }
+        this.stopTimerAndReset();
         // 退出所有其它布局模式
         if (this.isCircularMode) this.exitCircularMode();
         if (this.isBounceMode) this.exitBounceMode();
@@ -8182,11 +9370,25 @@
               bpolys[bpi].setAttribute('fill', '#4CAF50');
             }
           }
+        } else if (this.isArithMode) {
+          // 加减乘除：整条变绿淡出
+          element.classList.add('p11-correct');
+        } else if (this.isPatternMode && this.patternSub === 10) {
+          // 图案10：点对的羊顺着头的方向飞出画面
+          var p10Face = element.querySelector('.pattern10-face');
+          if (p10Face && p10Face.classList.contains('p10-face-r')) {
+            element.classList.add('p10-fly-right');
+          } else {
+            element.classList.add('p10-fly-left');
+          }
         } else if (this.isPatternMode && this.patternSub === 2) {
           // 图案2：透明格子 + div 数字，直接改数字颜色 + 格子底色给反馈
           var p2num = element.querySelector('.pattern2-num');
           if (p2num) p2num.style.color = '#ffffff';
           element.style.background = '#4CAF50';
+        } else if (this.isPatternMode && this.patternSub === 11) {
+          // 图案11·月全食：A圆变绿、数字变白、停B动画（由 CSS .p11-done 触发）
+          element.classList.add('p11-done');
         } else if (this.isPatternMode) {
           // 图案模式：格子内部是不透明 SVG，需直接改 SVG 填充来给变绿反馈
           var pRect = element.querySelector('rect');
@@ -8330,6 +9532,18 @@
             vpEl.classList.remove('wrong');
             vpEl.style.animation = '';
           }, 400);
+        } else if (this.isArithMode) {
+          // 加减乘除：点错闪红 + 抖动
+          element.classList.add('p11-wrong');
+          this.playSound('wrong');
+          var p11El = element;
+          setTimeout(function() { p11El.classList.remove('p11-wrong'); }, 400);
+        } else if (this.isPatternMode && this.patternSub === 10) {
+          // 图案10：点错闪红 + 抖动
+          element.classList.add('p10-wrong');
+          this.playSound('wrong');
+          var p10El = element;
+          setTimeout(function() { p10El.classList.remove('p10-wrong'); }, 400);
         } else if (this.isPatternMode && this.patternSub === 2) {
           // 图案2：透明格子 + div 数字，闪红 + 抖动
           var p2numW = element.querySelector('.pattern2-num');
@@ -8479,6 +9693,14 @@
         }
       };
 
+      // 停止计时并归零显示（所有模式/子模式切换共用；完成游戏不经过此路径，保留成绩显示）
+      SchulteGridGame.prototype.stopTimerAndReset = function() {
+        this.stopTimer();
+        this.isPlaying = false;
+        var t = document.getElementById('timer');
+        if (t) t.textContent = '00:00';
+      };
+
       SchulteGridGame.prototype.formatTime = function(seconds) {
         var mins = Math.floor(seconds / 60);
         var secs = seconds % 60;
@@ -8580,6 +9802,9 @@
         if (this.isVariantMode) return this.variantNumbers.length;
         if (this.isPatternMode && this.patternSub === 7) {
           return (this._p7RealCount != null) ? this._p7RealCount : 0;
+        }
+        if (this.isArithMode) {
+          return (this._p11Count != null) ? this._p11Count : 0;   // 加减乘除：目标数量 = 大方块数（网格格数/2）
         }
         return this.gridSize * this.gridSize;
       };

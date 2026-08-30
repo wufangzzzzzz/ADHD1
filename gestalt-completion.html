@@ -1187,7 +1187,7 @@ function tryPlaceFragment(optIdx, opt, row, col) {
   var key = row + ',' + col;
 
   // 检查是否匹配
-  if (opt.row === row && opt.col === col) {
+  if (opt.isCorrect && opt.row === row && opt.col === col) {
     // 正确！
     state.filledSlots[key] = true;
     q.options[optIdx].used = true;

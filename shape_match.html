@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>三角与方螺旋（圈距对齐圆=55px）</title>
+<style>
+  body { margin:0; background:#eef1f6; font-family:system-ui,"Microsoft YaHei",sans-serif; }
+  .wrap { display:flex; gap:24px; justify-content:center; padding:30px; flex-wrap:wrap; align-items:flex-start; }
+  .card { background:#fff; border:1px solid #d7dee8; border-radius:16px; padding:14px 16px; box-shadow:0 6px 18px rgba(28,39,51,.06); }
+  .ttl { text-align:center; font-weight:600; color:#1c2733; font-size:15px; margin-bottom:10px; }
+  .sub { text-align:center; color:#5b6b7b; font-size:13px; margin-top:6px; max-width:480px; }
+</style></head>
+<body><div class="wrap">
+    <div class="card">
+      <div class="ttl">正三角形螺旋</div>
+      <svg viewBox="-463 -463 927 927" width="927" height="927">
+        <rect x="-463" y="-463" width="927" height="927" fill="#fbfcff"/>
+        <path d="M 31.75 93.50 L 50.81 126.50 L -50.81 126.50 L 31.75 -16.50 L 146.07 181.50 L -146.07 181.50 L 31.75 -126.50 L 241.33 236.50 L -241.33 236.50 L 31.75 -236.50 L 336.60 291.50 L -336.60 291.50 L -0.00 -291.50" fill="none" stroke="#e8743b" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 31.75 -236.50 L 336.60 291.50 L -336.60 291.50 L -0.00 -291.50" fill="none" stroke="#c0392b" stroke-width="5" stroke-linejoin="round" opacity="0.5"/>
+        <circle cx="31.8" cy="-236.5" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="31.8" y="-236.5" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">1</text><circle cx="336.6" cy="291.5" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="336.6" y="291.5" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">2</text><circle cx="-336.6" cy="291.5" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="-336.6" y="291.5" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">3</text><circle cx="-0.0" cy="-291.5" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="-0.0" y="-291.5" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">4</text>
+      </svg>
+      <div class="sub">圈距=55px（与圆一致）；外接半径=445px（三角因 cos60/4 需放大到≈445 才能圈距=圆）</div>
+    </div>
+    <div class="card">
+      <div class="ttl">正方形螺旋</div>
+      <svg viewBox="-292 -292 585 585" width="585" height="585">
+        <rect x="-292" y="-292" width="585" height="585" fill="#fbfcff"/>
+        <path d="M -19.25 22.00 L -35.75 22.00 L -35.75 -22.00 L 35.75 -22.00 L 35.75 77.00 L -90.75 77.00 L -90.75 -77.00 L 90.75 -77.00 L 90.75 132.00 L -145.75 132.00 L -145.75 -132.00 L 145.75 -132.00 L 145.75 187.00 L -200.75 187.00 L -200.75 -187.00 L 200.75 -187.00 L 200.75 187.00" fill="none" stroke="#2f7ed8" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 145.75 187.00 L -200.75 187.00 L -200.75 -187.00 L 200.75 -187.00 L 200.75 187.00" fill="none" stroke="#c0392b" stroke-width="5" stroke-linejoin="round" opacity="0.5"/>
+        <circle cx="145.8" cy="187.0" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="145.8" y="187.0" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">1</text><circle cx="-200.7" cy="187.0" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="-200.7" y="187.0" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">2</text><circle cx="-200.7" cy="-187.0" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="-200.7" y="-187.0" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">3</text><circle cx="200.7" cy="-187.0" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="200.7" y="-187.0" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">4</text><circle cx="200.7" cy="187.0" r="10" fill="#fff" stroke="#c0392b" stroke-width="2"/><text x="200.7" y="187.0" dy="4" font-size="13" font-weight="700" fill="#c0392b" text-anchor="middle">5</text>
+      </svg>
+      <div class="sub">圈距=55px（与圆一致）；外接半径=274px（三角因 cos60/4 需放大到≈445 才能圈距=圆）</div>
+    </div></div></body></html>

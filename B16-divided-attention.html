@@ -358,6 +358,7 @@ function onCorner(idx){
       const rt=performance.now()-state.sub.lastT;
       addStat('subHits',1);addStat('subRtSum',rt);addStat('subRtC',1);
       state.subHits++;
+      state.sub.pending=false;state.sub.activeCorner=-1;
       const el=document.querySelector('.corner-btn[data-corner="'+idx+'"]');if(el)el.classList.remove('active');
       $('feedback').textContent='角落命中';
     }else{

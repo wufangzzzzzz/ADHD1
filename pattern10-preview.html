@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>图案10 · 羊群方格预览</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; }
+  body {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:#eaf4f0; font-family:-apple-system,sans-serif;
+  }
+  .title {
+    font-size:16px; font-weight:700; color:#2b5a3c; margin-bottom:10px;
+  }
+  .sub { font-size:12px; color:#6b8a77; margin-bottom:14px; }
+  .grid {
+    display:grid; grid-template-columns:repeat(5, 1fr);
+    gap:5px; width:min(92vmin, 700px);
+    background:#ffffff; padding:5px; border-radius:14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.10);
+  }
+  .cell {
+    position:relative; aspect-ratio:1; border-radius:9px; overflow:hidden;
+    background:linear-gradient(180deg,
+      #7ec8f0 0%, #a5dcf5 40%, #c2e8f8 52%,
+      #6cb858 52.5%, #4f9c43 78%, #428737 100%);
+  }
+  /* 草地分界线上一点波浪 */
+  .cell::after {
+    content:''; position:absolute; left:0; right:0; top:52.5%; height:4px;
+    background:rgba(255,255,255,.25);
+  }
+  .sheep {
+    position:absolute; inset:7%;
+  }
+  .sheep .body {
+    width:100%; height:100%;
+    background:url('pattern10-sheep.png') no-repeat center / contain;
+  }
+  .num {
+    position:absolute; left:50%; top:60%; transform:translate(-50%,-50%);
+    width:30%; aspect-ratio:1; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    font-size:clamp(13px, 2.6vmin, 22px); font-weight:800; color:#4a3428;
+    background:rgba(255,255,255,.92); border-radius:50%;
+    box-shadow:0 1px 3px rgba(0,0,0,.16);
+  }
+  /* 移动的羊：外层左右漫步，内层蹦跳 */
+  .cell.move .sheep { animation:wander ease-in-out infinite alternate; }
+  .cell.move .sheep .body { animation:hop ease-in-out infinite; }
+  @keyframes wander { from { transform:translateX(-16%); } to { transform:translateX(16%); } }
+  @keyframes hop { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-11%); } }
+</style>
+</head>
+<body>
+  <div class="title">图案10 · 羊群（预览，5×5 = 25 格）</div>
+  <div class="sub">每个方格 = 蓝天绿草，里面一只带数字的羊；移动的羊会蹦跳，静止的羊不动</div>
+  <div class="grid" id="grid"></div>
+
+<script>
+(function () {
+  var N = 5, total = N * N;
+  var nums = [];
+  for (var i = 1; i <= total; i++) nums.push(i);
+  for (var i = total - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = nums[i]; nums[i] = nums[j]; nums[j] = t;
+  }
+  var moveSet = new Set();
+  var moveCount = Math.floor(total / 2);
+  while (moveSet.size < moveCount) moveSet.add(Math.floor(Math.random() * total));
+
+  var grid = document.getElementById('grid');
+  for (var i = 0; i < total; i++) {
+    var cell = document.createElement('div');
+    cell.className = 'cell' + (moveSet.has(i) ? ' move' : '');
+
+    var sheep = document.createElement('div');
+    sheep.className = 'sheep';
+    if (moveSet.has(i)) {
+      sheep.style.animationDuration = (5.5 + Math.random() * 3).toFixed(2) + 's';
+      var body = document.createElement('div');
+      body.className = 'body';
+      body.style.animationDuration = (0.45 + Math.random() * 0.2).toFixed(2) + 's';
+      sheep.appendChild(body);
+    } else {
+      var body2 = document.createElement('div');
+      body2.className = 'body';
+      sheep.appendChild(body2);
+    }
+
+    var num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = nums[i];
+
+    cell.appendChild(sheep);
+    cell.appendChild(num);
+    grid.appendChild(cell);
+  }
+})();
+</script>
+</body>
+</html>

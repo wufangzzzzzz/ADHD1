@@ -1,0 +1,30 @@
+const puppeteer = require('puppeteer-core');
+const path = require('path');
+const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+const FILE = 'file://' + path.resolve('D:/专注力项目/color-spiral-connect.html');
+(async () => {
+  const b = await puppeteer.launch({ executablePath: EDGE, headless: 'new', args: ['--no-sandbox'] });
+  const p = await b.newPage();
+  await p.setViewport({ width: 800, height: 800 });
+  const errs = [];
+  p.on('pageerror', e => errs.push(e.message));
+  await p.goto(FILE, { waitUntil: 'networkidle0' });
+  await new Promise(r => setTimeout(r, 400));
+  const r = await p.evaluate(() => {
+    document.querySelector('#grpSpiral .seg-btn[data-shape="2"]').click();
+    const C = window.__csc;
+    const tgt = () => C.getPts().filter(x=>x.isTarget);
+    const obs = () => C.getPts().filter(x=>!x.isTarget);
+    const defT = [...new Set(tgt().map(x=>x.color))];
+    const pick = document.getElementById('tgtColorPick');
+    pick.value = '#00c853'; pick.dispatchEvent(new Event('input', {bubbles:true}));
+    const custT = [...new Set(tgt().map(x=>x.color))];
+    const obsCols = [...new Set(obs().map(x=>x.color))];
+    return { defT, custT, obsCols, hintName: document.getElementById('hintName').textContent };
+  });
+  console.log('默认目标球色:', r.defT.join(','));
+  console.log('选#00c853后 目标球色:', r.custT.join(','), ' 提示:', r.hintName);
+  console.log('干扰球色(应不含#00c853):', r.obsCols.slice(0,6).join(','));
+  console.log('ERRORS:', errs.length ? errs.join('|') : 'none');
+  await b.close();
+})();
