@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>视觉匹配 · 视觉专注力</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #fff;
+    --ink: #1f2430;
+    --primary: #2f6bff;
+    --primary-shadow: rgba(47,107,255,0.3);
+    --muted: #8a93a6;
+    --muted2: #9aa3b5;
+    --border: #d4d9e2;
+    --ok: #34c759;
+    --err: #ff3b30;
+    --line: #000000;
+    --shadow: 0 2px 10px rgba(20,30,60,0.06);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    margin: 0; padding: 10px;
+    height: 100vh; height: 100dvh; display: flex; flex-direction: column;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink);
+  }
+
+  /* 顶栏：左组(返回+标题) 与 右组(控件) 对齐整个版面 */
+  .topbar {
+    flex: none; width: 100%; max-width: 1080px; margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .top-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .back-btn {
+    border: 1px solid var(--border); background: #fff; color: #33405a;
+    padding: 7px 12px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; flex: none;
+  }
+  .topbar h1 { font-size: 17px; margin: 0; color: var(--primary); white-space: nowrap; }
+  .top-right { display: flex; align-items: center; gap: 8px; flex: none; }
+  .score-pill {
+    display: inline-flex; align-items: baseline; gap: 4px;
+    background: #fff; border: 1px solid var(--border); border-radius: 9px;
+    padding: 6px 12px; font-size: 13px; color: var(--muted); font-weight: 700;
+  }
+  .score-pill b { color: var(--primary); font-size: 16px; }
+  .set-btn, .print-btn {
+    border: 1px solid var(--border); background: #fff; color: #33405a;
+    padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .start-btn {
+    border: none; border-radius: 10px; padding: 10px 18px; flex: none;
+    background: var(--primary); color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 14px var(--primary-shadow);
+  }
+
+  /* 展示区：题目 */
+  .showcase-area {
+    flex: none; width: 100%; max-width: 1080px; margin: 0 auto;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--card); border-radius: var(--radius); padding: 8px 10px;
+    box-shadow: var(--shadow);
+  }
+  .showcase-area .cap { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.4; }
+  .task-wrap { width: min(32vh, 280px); aspect-ratio: 1 / 1; }
+  .task-wrap svg { width: 100%; height: 100%; display: block; }
+
+  /* 变换提示条（游戏区上方） */
+  .hint-bar {
+    flex: none; width: 100%; max-width: 1080px; margin: 8px auto 0;
+    display: none; align-items: center; justify-content: center; gap: 8px;
+    background: #eaf0ff; border: 1px solid #c9d8ff; border-radius: 10px;
+    padding: 8px 12px; font-size: 13px; font-weight: 700; color: #1f3aa6; text-align: center;
+  }
+  .hint-bar.show { display: flex; }
+
+  /* 游戏区：3x6 选项 */
+  .game-area {
+    flex: 1; min-height: 0; width: 100%; max-width: 1080px; margin: 8px auto 0;
+    display: flex; flex-direction: column;
+  }
+  .options-grid {
+    flex: 1; min-height: 0; width: 100%;
+    display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px;
+  }
+  .opt-card {
+    background: var(--card); border-radius: var(--radius); padding: 6px;
+    display: flex; align-items: center; justify-content: center; min-height: 0; min-width: 0; overflow: hidden;
+    box-shadow: var(--shadow); border: 2px solid transparent; cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease;
+    touch-action: manipulation;
+  }
+  .opt-card:active { transform: scale(0.97); }
+  .opt-card svg { width: 100%; height: 100%; display: block; }
+  .opt-card.correct { border-color: var(--ok); }
+  .opt-card.wrong { border-color: var(--err); }
+  .opt-card.shake { animation: shake .4s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  /* 通用浮层（设置） */
+  .overlay { display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; padding: 16px; background: rgba(20,28,48,0.45); }
+  .overlay.show { display: flex; }
+  .overlay-inner { background: #fff; border-radius: 16px; padding: 20px 22px; max-width: 440px; width: 100%; max-height: 90dvh; overflow-y: auto; }
+  .overlay-inner h3 { margin: 0 0 14px; color: var(--primary); font-size: 18px; }
+
+  /* 设置面板 */
+  .set-row { margin-bottom: 14px; }
+  .set-row > label { display: block; font-size: 13px; color: var(--ink); font-weight: 700; margin-bottom: 6px; }
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg button { flex: 1; min-width: 46px; padding: 9px 6px; border: 1px solid var(--border); background: #fff; color: #33405a; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .seg button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .set-note { font-size: 12px; color: var(--muted); margin: 2px 0 14px; }
+  .color-extra { margin-top: 10px; }
+  .color-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--ink); font-weight: 700; }
+  .color-line span { flex: none; }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatches input[type=color], .color-line input[type=color] {
+    width: 38px; height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer;
+  }
+  .set-actions { display: flex; gap: 10px; }
+  .set-actions button { flex: 1; padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; }
+  .set-actions .ghost { background: #fff; border: 1px solid var(--border); color: #33405a; }
+  .set-actions .primary { background: var(--primary); border: none; color: #fff; box-shadow: 0 4px 14px var(--primary-shadow); }
+
+  @media (max-width: 560px) {
+    .topbar h1 { font-size: 15px; }
+    .start-btn { padding: 9px 14px; font-size: 13px; }
+    .set-btn, .print-btn { padding: 7px 10px; font-size: 12px; }
+    .task-wrap { width: min(28vh, 230px); }
+    .options-grid { gap: 7px; }
+    .opt-card { padding: 4px; }
+    .hint-bar { font-size: 12px; }
+  }
+
+  /* ===== 打印区（默认隐藏，打印时显示） ===== */
+  #print-area { display: none; }
+  @media print {
+    html, body { height: auto; overflow: visible; }
+    body { background: #fff; padding: 0; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; text-align: center; }
+    @page { size: A4 landscape; margin: 10mm; }
+    .p-title { font-size: 22px; font-weight: 800; color: #111; margin: 0 0 8px; text-align: center; }
+    .p-hint { font-size: 14px; font-weight: 700; color: #1f3aa6; margin: 0 auto 8px; max-width: 240mm; }
+    .p-h { font-size: 15px; font-weight: 800; color: #111; margin: 8px 0 4px; text-align: center; }
+    .p-tip { font-size: 13px; color: #333; margin: 2px auto 8px; max-width: 240mm; }
+    .p-task { display: flex; justify-content: center; margin: 4px 0 6px; }
+    .p-task svg { width: 240px; height: 240px; }
+    .p-opts { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; max-width: 250mm; margin: 0 auto; }
+    .p-cell { border: 1.5px solid #333; border-radius: 6px; padding: 3px; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; }
+    .p-cell svg { width: 100%; height: 100%; display: block; }
+  }
+  .p-title { font-size: 22px; font-weight: 800; color: #111; margin: 0 0 8px; text-align: center; }
+  .p-hint { font-size: 14px; font-weight: 700; color: #1f3aa6; margin: 0 0 8px; text-align: center; }
+  .p-h { font-size: 15px; font-weight: 800; color: #111; margin: 8px 0 4px; }
+  .p-tip { font-size: 13px; color: #333; margin: 2px 0 8px; }
+  .p-task { display: flex; justify-content: center; margin: 4px 0 6px; }
+  .p-opts { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; max-width: 760px; margin: 0 auto; }
+  .p-cell { border: 1.5px solid #333; border-radius: 6px; padding: 3px; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; }
+  .p-cell svg { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="top-left">
+      <button class="back-btn" onclick="location.href='index.html'">← 返回</button>
+      <h1>视觉匹配</h1>
+    </div>
+    <div class="top-right">
+      <span class="score-pill">得分 <b id="score">0</b></span>
+      <button class="set-btn" id="set-btn">设置</button>
+      <button class="print-btn" id="print-btn">打印</button>
+      <button class="start-btn" id="start-btn">换一题</button>
+    </div>
+  </div>
+
+  <div class="showcase-area">
+    <div class="cap" id="cap">大正方形被两条对角线切成若干三角形，其中若干个涂了颜色。<br>请在下方 18 张图中，找出和题目涂色位置<b>完全相同</b>的那一张。</div>
+    <div class="task-wrap" id="task"></div>
+  </div>
+
+  <div class="hint-bar" id="hint-bar"></div>
+
+  <div class="game-area">
+    <div class="options-grid" id="options"></div>
+  </div>
+
+  <!-- 设置浮层 -->
+  <div class="overlay" id="settings-card">
+    <div class="overlay-inner">
+      <h3>设置</h3>
+      <div class="set-row">
+        <label>填充颜色</label>
+        <div class="seg" data-key="colorMode">
+          <button data-v="black" class="on">黑色</button>
+          <button data-v="same">彩色·同色</button>
+          <button data-v="diff">彩色·异色</button>
+        </div>
+        <div class="color-extra" id="color-extra"></div>
+      </div>
+      <div class="set-row">
+        <label>填充个数</label>
+        <div class="seg" data-key="fillCount">
+          <button data-v="1">1</button>
+          <button data-v="2" class="on">2</button>
+          <button data-v="3">3</button>
+          <button data-v="4">4</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <label>大方块数量</label>
+        <div class="seg" data-key="gridN">
+          <button data-v="2" class="on">4个（2×2）</button>
+          <button data-v="3">9个（3×3）</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <label>变换模式</label>
+        <div class="seg" data-key="transform">
+          <button data-v="none" class="on">无</button>
+          <button data-v="rot90">顺旋90°</button>
+          <button data-v="rot270">逆旋90°</button>
+          <button data-v="flipV">上下镜像</button>
+          <button data-v="flipH">左右镜像</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <label>难度</label>
+        <div class="seg" data-key="difficulty">
+          <button data-v="normal" class="on">普通</button>
+          <button data-v="hard">超难</button>
+        </div>
+      </div>
+      <div class="set-note">线条：黑色（已应用，超难模式额外加圆）</div>
+      <div class="set-actions">
+        <button class="ghost" id="set-cancel">取消</button>
+        <button class="primary" id="set-apply">应用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 打印区（屏幕隐藏，打印时显示） -->
+  <div id="print-area"></div>
+
+<script>
+  // ===== 配置（设置面板控制） =====
+  var CFG = {
+    colorMode: 'black',   // black | same | diff
+    fillCount: 2,
+    gridN: 2,
+    sameColor: '#2f6bff',
+    diffColors: ['#D62828','#1D3557','#2D6A4F','#7209B7'],
+    transform: 'none',    // none | rot90 | rot270 | flipV | flipH
+    difficulty: 'normal'  // normal | hard
+  };
+
+  var HINTS = {
+    rot90:  '正确项 = 题目「顺时针旋转 90°」后的样子',
+    rot270: '正确项 = 题目「逆时针旋转 90°」后的样子',
+    flipV:  '正确项 = 题目「上下镜像（上下翻转）」后的样子',
+    flipH:  '正确项 = 题目「左右镜像（左右翻转）」后的样子'
+  };
+
+  // ===== 几何：gridN×gridN 小正方形，每个画两条对角线 -> 4 三角 =====
+  // 全局编号 gi = (br*gridN+bc)*4 + i   i:0=上 1=右 2=下 3=左
+  function triPolygon(br, bc, i, size, gridN) {
+    var s = size / gridN;
+    var x0 = bc * s, y0 = br * s;
+    var x1 = x0 + s, y1 = y0 + s;
+    var cx = x0 + s/2, cy = y0 + s/2;
+    var tris = [
+      [[x0,y0],[cx,cy],[x1,y0]],   // 上
+      [[x1,y0],[cx,cy],[x1,y1]],   // 右
+      [[x1,y1],[cx,cy],[x0,y1]],   // 下
+      [[x0,y1],[cx,cy],[x0,y0]]    // 左
+    ];
+    var p = tris[i].map(function(pt){ return pt[0].toFixed(1)+","+pt[1].toFixed(1); }).join(" ");
+    return { points: p, gi: (br*gridN+bc)*4 + i };
+  }
+
+  // 小方块内子单元的变换（base: 0..3 通用；超难 4..7 为外圈，按 %4 同规则）
+  function subTransform(base, mode) {
+    var b = base % 4, outer = base >= 4 ? 4 : 0, nb;
+    if (mode === 'rot90')       nb = (b+1)%4;
+    else if (mode === 'rot270') nb = (b+3)%4;
+    else if (mode === 'flipV')  nb = (b===0?2:(b===2?0:b));
+    else if (mode === 'flipH')  nb = (b===1?3:(b===3?1:b));
+    else nb = b;
+    return nb + outer;
+  }
+  // 对一组已填充单元做整体变换（旋转/镜像），返回新的全局编号数组
+  function transformFilled(filled, mode) {
+    if (mode === 'none') return filled.slice();
+    var N = CFG.gridN, per = (CFG.difficulty === 'hard') ? 8 : 4, out = [];
+    for (var k=0; k<filled.length; k++) {
+      var gi = filled[k];
+      var small = Math.floor(gi / per);
+      var br = Math.floor(small / N), bc = small % N, base = gi % per;
+      var nbr, nbc;
+      if (mode === 'rot90')       { nbr = bc;     nbc = N-1-br; }
+      else if (mode === 'rot270') { nbr = N-1-bc; nbc = br; }
+      else if (mode === 'flipV')  { nbr = N-1-br; nbc = bc; }
+      else                       { nbr = br;     nbc = N-1-bc; } // flipH
+      out.push((nbr*N + nbc) * per + subTransform(base, mode));
+    }
+    out.sort(function(a,b){ return a-b; });
+    return out;
+  }
+
+  // 超难模式：小方块被对角线 + 内切圆切成 8 个小不规则块
+  // r: 0-3 内圈扇形(上/右/下/左)，4-7 外圈角块(上/右/下/左)
+  // 这些才是"被圆切出来的小块"，填色填的是它们，不是原来的三角
+  function regionPath(br, bc, r, size, gridN) {
+    var s = size / gridN, x0 = bc*s, y0 = br*s;
+    var cx = x0 + s/2, cy = y0 + s/2, half = s/2, rr = s/2, d = s * 0.3535533906;
+    function pt(x,y){ return (cx+x).toFixed(2)+","+(cy+y).toFixed(2); }
+    function arc(a0,a1,n){ var s2=''; for(var t=0;t<=n;t++){ var a=(a0+(a1-a0)*t/n)*Math.PI/180; s2 += (t?' ':'') + (cx+rr*Math.cos(a)).toFixed(2)+","+(cy+rr*Math.sin(a)).toFixed(2); } return s2; }
+    var TL=pt(-half,-half),TR=pt(half,-half),BR=pt(half,half),BL=pt(-half,half);
+    var T=pt(0,-half),R=pt(half,0),B=pt(0,half),L=pt(-half,0);
+    var PTL=pt(-d,-d),PTR=pt(d,-d),PBR=pt(d,d),PBL=pt(-d,d),C=pt(0,0);
+    if (r===0) return 'M '+C+' L '+PTL+' '+arc(225,315,6)+' Z';
+    if (r===1) return 'M '+C+' L '+PTR+' '+arc(315,405,6)+' Z';
+    if (r===2) return 'M '+C+' L '+PBR+' '+arc(45,135,6)+' Z';
+    if (r===3) return 'M '+C+' L '+PBL+' '+arc(135,225,6)+' Z';
+    if (r===4) return 'M '+TL+' L '+T+' L '+TR+' L '+PTR+' '+arc(315,225,6)+' L '+PTL+' Z';
+    if (r===5) return 'M '+TR+' L '+R+' L '+BR+' L '+PBR+' '+arc(45,-45,6)+' L '+PTR+' Z';
+    if (r===6) return 'M '+BR+' L '+B+' L '+BL+' L '+PBL+' '+arc(135,45,6)+' L '+PBR+' Z';
+    if (r===7) return 'M '+BL+' L '+L+' L '+TL+' L '+PTL+' '+arc(225,135,6)+' L '+PBL+' Z';
+    return '';
+  }
+
+  // filled: 已填充单元的全局编号数组；colors: 与 filled 等长
+  function buildSVGFragment(filled, colors, size, gridN) {
+    var filledSet = {}; var colorByGi = {};
+    for (var m=0; m<filled.length; m++) { filledSet[filled[m]] = 1; colorByGi[filled[m]] = colors[m]; }
+    var hard = (CFG.difficulty === 'hard');
+    var per = hard ? 8 : 4;
+    var parts = [];
+    for (var br=0; br<gridN; br++) for (var bc=0; bc<gridN; bc++) {
+      var small = br*gridN+bc;
+      var s = size / gridN, x0 = bc*s, y0 = br*s, x1 = x0+s, y1 = y0+s;
+      var cx = x0+s/2, cy = y0+s/2;
+      // 填充块（超难画 8 个不规则块；普通画 4 个三角）
+      for (var i=0; i<per; i++) {
+        var gi = small*per + i;
+        if (!filledSet[gi]) continue;
+        var fc = colorByGi[gi];
+        if (hard) {
+          parts.push('<path d="'+regionPath(br,bc,i,size,gridN)+'" fill="'+fc+'" stroke="'+fc+'" stroke-width="0.8"/>');
+        } else {
+          var t = triPolygon(br, bc, i, size, gridN);
+          parts.push('<polygon points="'+t.points+'" fill="'+fc+'" stroke="'+fc+'" stroke-width="0.8"/>');
+        }
+      }
+      // 黑色线（外框 + 对角线 + 超难圆形），画在最上层，保证不被色块遮住
+      parts.push('<rect x="'+x0+'" y="'+y0+'" width="'+s+'" height="'+s+'" fill="none" stroke="#000000" stroke-width="0.8"/>');
+      parts.push('<line x1="'+x0+'" y1="'+y0+'" x2="'+x1+'" y2="'+y1+'" stroke="#000000" stroke-width="0.6"/>');
+      parts.push('<line x1="'+x1+'" y1="'+y0+'" x2="'+x0+'" y2="'+y1+'" stroke="#000000" stroke-width="0.6"/>');
+      if (hard) parts.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(s/2)+'" fill="none" stroke="#000000" stroke-width="0.6"/>');
+    }
+    return parts.join("");
+  }
+
+  function makeSVG(filled, colors, size) {
+    return '<svg viewBox="0 0 '+size+' '+size+'" preserveAspectRatio="xMidYMid meet">'+buildSVGFragment(filled, colors, size, CFG.gridN)+'</svg>';
+  }
+
+  // ===== 音效 =====
+  var audioCtx = null;
+  function initAudio() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ audioCtx = null; } }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  }
+  function beep(freq, dur, type, when, vol) {
+    if (!audioCtx) return;
+    when = when || 0; vol = vol || 0.22;
+    var t0 = audioCtx.currentTime + when;
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.setValueAtTime(freq, t0); o.type = type || "sine";
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  function correctSound() { beep(660,0.10,"sine",0,0.22); beep(988,0.14,"sine",0.09,0.20); }
+  function errorSound() { beep(220,0.16,"square",0,0.20); beep(130,0.20,"square",0.10,0.18); }
+
+  // ===== 工具 =====
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
+  function randInt(n){ return Math.floor(Math.random()*n); }
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+  function colorsFor(filled) {
+    var colors = [];
+    for (var i=0; i<filled.length; i++) {
+      if (CFG.colorMode === 'black') colors.push('#000000');
+      else if (CFG.colorMode === 'same') colors.push(CFG.sameColor);
+      else colors.push(CFG.diffColors[i % CFG.diffColors.length]);
+    }
+    return colors;
+  }
+
+  // 生成一道题（不依赖屏幕状态，可独立用于打印）
+  function generatePuzzle() {
+    var per = (CFG.difficulty === 'hard') ? 8 : 4;
+    var total = CFG.gridN * CFG.gridN * per;
+    var pool = [];
+    for (var k=0; k<total; k++) pool.push(k);
+    var answer = shuffle(pool.slice()).slice(0, CFG.fillCount).sort(function(a,b){ return a-b; });
+    var colors = colorsFor(answer);
+    var correctPattern = transformFilled(answer, CFG.transform);
+    var correctPos = randInt(18);
+    var used = {}; used[answer.join(",")] = true; used[correctPattern.join(",")] = true;
+    var opts = [];
+    for (var k=0; k<18; k++) {
+      if (k === correctPos) { opts.push(correctPattern.slice()); continue; }
+      var cand, guard = 0;
+      do {
+        cand = shuffle(pool.slice()).slice(0, CFG.fillCount).sort(function(a,b){ return a-b; });
+        guard++;
+      } while (used[cand.join(",")] && guard < 300);
+      used[cand.join(",")] = true;
+      opts.push(cand);
+    }
+    return { answer: answer, colors: colors, options: opts, correctPos: correctPos };
+  }
+
+  // ===== 状态 =====
+  var state = { answer: [], colors: [], score: 0, locked: false };
+  var taskEl = document.getElementById("task");
+  var optionsEl = document.getElementById("options");
+  var scoreEl = document.getElementById("score");
+  var startBtn = document.getElementById("start-btn");
+  var hintBar = document.getElementById("hint-bar");
+
+  function updateHint() {
+    if (CFG.transform !== 'none' && HINTS[CFG.transform]) {
+      hintBar.textContent = HINTS[CFG.transform];
+      hintBar.classList.add('show');
+    } else {
+      hintBar.classList.remove('show');
+    }
+  }
+
+  function newRound() {
+    state.locked = false;
+    optionsEl.innerHTML = "";
+    var p = generatePuzzle();
+    state.answer = p.answer; state.colors = p.colors;
+    taskEl.innerHTML = makeSVG(p.answer, p.colors, 100);
+    updateHint();
+    document.getElementById('cap').innerHTML = (CFG.difficulty === 'hard')
+      ? '大正方形被对角线和圆形切分成更多不规则小块，其中若干个涂了颜色。<br>请在下方 18 张图中，找出和题目涂色位置<b>完全相同</b>的那一张。'
+      : '大正方形被两条对角线切成若干三角形，其中若干个涂了颜色。<br>请在下方 18 张图中，找出和题目涂色位置<b>完全相同</b>的那一张。';
+    for (var idx=0; idx<18; idx++) {
+      var card = document.createElement("div");
+      card.className = "opt-card";
+      card.dataset.k = idx;
+      card.dataset.ans = (idx === p.correctPos) ? "1" : "0";
+      card.innerHTML = makeSVG(p.options[idx], p.colors, 100);
+      card.addEventListener("click", onPick);
+      optionsEl.appendChild(card);
+    }
+  }
+
+  function onPick(e) {
+    if (state.locked) return;
+    initAudio();
+    var card = e.currentTarget;
+    if (card.dataset.ans === "1") {
+      state.locked = true;
+      card.classList.add("correct");
+      state.score++; scoreEl.textContent = state.score;
+      correctSound();
+      setTimeout(function(){ newRound(); }, 800);
+    } else {
+      if (card.classList.contains("wrong")) return;
+      card.classList.add("wrong", "shake");
+      errorSound();
+      setTimeout(function(){ card.classList.remove("wrong", "shake"); }, 600);
+    }
+  }
+
+  // ===== 打印 =====
+  function buildPrint() {
+    var p = generatePuzzle();
+    var html = '';
+    html += '<div class="p-title">视觉匹配 · 练习</div>';
+    if (CFG.transform !== 'none' && HINTS[CFG.transform]) {
+      html += '<div class="p-hint">' + HINTS[CFG.transform] + '</div>';
+    }
+    html += '<div class="p-h">题目</div>';
+    html += '<div class="p-task">' + makeSVG(p.answer, p.colors, 100) + '</div>';
+    var tip = (CFG.transform === 'none')
+      ? '请在下面的 18 张图中，圈出与上面题目涂色位置<strong>完全相同</strong>的那一张。'
+      : '请在下图中圈出题目变换后的那一张（见上方说明）。';
+    if (CFG.difficulty === 'hard') tip = '（含圆形切分：填色的是被圆切出的小块）' + tip;
+    html += '<div class="p-tip">' + tip + '</div>';
+    html += '<div class="p-opts">';
+    for (var i=0; i<18; i++) {
+      html += '<div class="p-cell">' + makeSVG(p.options[i], p.colors, 100) + '</div>';
+    }
+    html += '</div>';
+    document.getElementById("print-area").innerHTML = html;
+  }
+  function doPrint() { buildPrint(); window.print(); }
+
+  // ===== 设置面板 =====
+  var settingsCard = document.getElementById("settings-card");
+  var CFGprev = null;
+
+  function renderColorExtra() {
+    var box = document.getElementById("color-extra");
+    if (CFG.colorMode === 'same') {
+      box.innerHTML = '<div class="color-line"><span>填充颜色</span><input type="color" id="sameColor" value="'+CFG.sameColor+'"></div>';
+      document.getElementById("sameColor").addEventListener("input", function(e){ CFG.sameColor = e.target.value; });
+    } else if (CFG.colorMode === 'diff') {
+      var n = CFG.fillCount;
+      var html = '<div class="color-line"><span>每个填充颜色</span><div class="swatches">';
+      for (var i=0; i<n; i++) {
+        var c = CFG.diffColors[i] || '#D62828';
+        html += '<input type="color" data-di="'+i+'" value="'+c+'">';
+      }
+      html += '</div></div>';
+      box.innerHTML = html;
+      box.querySelectorAll('input[type=color]').forEach(function(inp){
+        inp.addEventListener("input", function(e){ CFG.diffColors[+e.target.dataset.di] = e.target.value; });
+      });
+    } else {
+      box.innerHTML = '';
+    }
+  }
+
+  function syncSegUI() {
+    document.querySelectorAll('.seg').forEach(function(seg){
+      var key = seg.dataset.key;
+      seg.querySelectorAll('button').forEach(function(b){
+        b.classList.toggle('on', b.dataset.v === String(CFG[key]));
+      });
+    });
+  }
+
+  document.getElementById('set-btn').addEventListener('click', function(){
+    CFGprev = clone(CFG);
+    syncSegUI(); renderColorExtra();
+    settingsCard.classList.add('show');
+  });
+  document.getElementById('set-cancel').addEventListener('click', function(){
+    if (CFGprev) CFG = clone(CFGprev);
+    syncSegUI();
+    settingsCard.classList.remove('show');
+  });
+  document.querySelectorAll('.seg').forEach(function(seg){
+    seg.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if (!b) return;
+      seg.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      var key = seg.dataset.key;
+      var v = b.dataset.v;
+      CFG[key] = (key === 'fillCount' || key === 'gridN') ? parseInt(v, 10) : v;
+      if (key === 'colorMode' || key === 'fillCount') renderColorExtra();
+    });
+  });
+  document.getElementById('set-apply').addEventListener('click', function(){
+    settingsCard.classList.remove('show');
+    newRound();
+  });
+
+  document.getElementById('print-btn').addEventListener('click', doPrint);
+  startBtn.addEventListener("click", function(){ initAudio(); newRound(); });
+
+  // 首屏自动出一题
+  newRound();
+</script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>视觉匹配 · 布局预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    color: #5d4037; padding: 24px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #8d6e63; margin-bottom: 20px; line-height: 1.5; }
+  .panel {
+    background: #fff; border-radius: 16px; padding: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08); margin-bottom: 20px;
+  }
+  .label { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .hint { font-size: 13px; color: #8d6e63; margin: 10px 0 16px; }
+  .options { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .opt {
+    background: #fff8f0; border: 2px solid #ffe0b2;
+    border-radius: 10px; padding: 6px;
+  }
+  .opt.correct { border-color: #66bb6a; box-shadow: 0 0 0 3px rgba(102,187,106,.25); }
+  svg { width: 100%; height: auto; display: block; }
+  .note {
+    font-size: 12px; color: #a1887f; margin-top: 16px; line-height: 1.7;
+    background: #fff; border-radius: 12px; padding: 14px 16px;
+  }
+  .tag { display:inline-block; background:#fff3e0; border-radius:6px; padding:1px 7px; margin:0 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>视觉匹配 · 布局预览</h1>
+  <div class="sub">
+    仅用于确认「大正方形切 16 个三角形 + 下方 3×6 选项排布」的外观方向。<br/>
+    确认后我再逐步做：设置面板（单色/双色、填色个数可调）· 在线点击作答+计分 · 一键打印。
+  </div>
+
+  <div class="panel">
+    <div class="label">题目（16 个三角形，随机 2 个填色）</div>
+    <div id="question" style="width:300px; margin:0 auto;"></div>
+  </div>
+
+  <div class="panel">
+    <div class="label">请选出与题目相同的图案</div>
+    <div class="hint">下方 <b>3 行 × 6 个 = 18 个选项</b>（其中 1 个正确，已用<span class="tag" style="color:#2e7d32">绿框</span>标出）</div>
+    <div class="options" id="options"></div>
+  </div>
+
+  <div class="note">
+    <b>预览说明：</b>本图为静态样例。<br/>
+    · 三角切法：2×2 共 4 个小正方形，每个画两条对角线 → 4×4 = <b>16</b> 个三角形。<br/>
+    · 题目：16 个三角里随机 2 个填色（此样例填了橙红色）。<br/>
+    · 选项：每个都是一张缩小版「16 三角图」，只有 1 张和题目填色位置完全一致。<br/>
+    · 正式版设置：<span class="tag">单色/双色切换</span> <span class="tag">填色三角个数可调（默认 2）</span>。<br/>
+    · 正式版打印：一张纸 = 上方题目 + 下方 18 选项，孩子用笔画圈。
+  </div>
+</div>
+
+<script>
+function makeGridSVG(filled, size) {
+  var s = size / 2; // 小正方形边长
+  var tri = [];
+  for (var br = 0; br < 2; br++) {
+    for (var bc = 0; bc < 2; bc++) {
+      var x0 = bc * s, y0 = br * s;
+      var cx = x0 + s / 2, cy = y0 + s / 2;
+      var inners = [
+        [[x0, y0], [x0 + s, y0], [cx, cy]],       // 0 上
+        [[x0 + s, y0], [x0 + s, y0 + s], [cx, cy]], // 1 右
+        [[x0 + s, y0 + s], [x0, y0 + s], [cx, cy]], // 2 下
+        [[x0, y0], [x0, y0 + s], [cx, cy]]          // 3 左
+      ];
+      for (var i = 0; i < 4; i++) {
+        var idx = (br * 2 + bc) * 4 + i;
+        tri.push({ pts: inners[i], on: filled.indexOf(idx) >= 0 });
+      }
+    }
+  }
+  var parts = ['<svg viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg">'];
+  for (var t = 0; t < tri.length; t++) {
+    var p = tri[t].pts.map(function (a) { return a[0] + ',' + a[1]; }).join(' ');
+    var fill = tri[t].on ? '#FF7043' : '#ffffff';
+    parts.push('<polygon points="' + p + '" fill="' + fill + '" stroke="#bcaaa4" stroke-width="1.5"/>');
+  }
+  parts.push('<rect x="0" y="0" width="' + size + '" height="' + size + '" fill="none" stroke="#8d6e63" stroke-width="2"/>');
+  parts.push('</svg>');
+  return parts.join('');
+}
+
+var questionFilled = [5, 11];
+document.getElementById('question').innerHTML = makeGridSVG(questionFilled, 300);
+
+var opts = [questionFilled.slice()];
+var used = {};
+used[questionFilled.slice().sort().join(',')] = true;
+var allIdx = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+function rndpair() {
+  while (true) {
+    var a = allIdx[Math.floor(Math.random() * 16)];
+    var b = allIdx[Math.floor(Math.random() * 16)];
+    if (a === b) continue;
+    var key = [a, b].sort().join(',');
+    if (used[key]) continue;
+    used[key] = true;
+    return [a, b];
+  }
+}
+for (var i = 0; i < 17; i++) opts.push(rndpair());
+// 洗牌
+for (var j = opts.length - 1; j > 0; j--) {
+  var k = Math.floor(Math.random() * (j + 1));
+  var tmp = opts[j]; opts[j] = opts[k]; opts[k] = tmp;
+}
+
+var oc = document.getElementById('options');
+for (var o = 0; o < opts.length; o++) {
+  var isCorrect = (opts[o].slice().sort().join(',') === questionFilled.slice().sort().join(','));
+  var div = document.createElement('div');
+  div.className = 'opt' + (isCorrect ? ' correct' : '');
+  div.innerHTML = makeGridSVG(opts[o], 80);
+  oc.appendChild(div);
+}
+</script>
+</body>
+</html>
