@@ -542,7 +542,6 @@
         <button class="back-btn" id="backBtn">← 返回</button>
         <span class="level-info" id="levelInfo">第 1 关</span>
         <button class="reset-btn" id="resetBtn">重置</button>
-        <button class="print-btn no-print" id="btnShape">动态形状</button>
         <button class="print-btn no-print" onclick="window.print()">打印</button>
       </div>
 
@@ -633,13 +632,16 @@
       var canvasW = 0, canvasH = 0;
       var shapeTime = 0; // 形状变换时间
       var shapeAnimId = null; // 动画ID
-      // 打印 / 打印预览：形状一律固定为静态圆形。
-      // 原代码没有任何打印处理，纸面抓到的是随机相位 → 打印预览里出现一堆星形/三角/方的"星星动画"。
-      // 动态形状开关：默认关（所有点恒为圆形）。与「色彩识别连线」里的「动态形状」按钮保持一致。
-      var shapeActive = false;
-      var printStatic = false;
-      window.addEventListener('beforeprint', function(){ printStatic = true; draw(); });
-      window.addEventListener('afterprint', function(){ printStatic = false; draw(); });
+      // [审计探针] 仅存在于临时副本
+      window.__cm = {
+        st: function(){ return shapeTime; },
+        setSt: function(v){ shapeTime = v; },
+        dots: function(){ return dotsData; },
+        cur: function(){ return currentColor; },
+        parts: function(){ return particles.length; },
+        dims: function(){ return { w: canvasW, h: canvasH }; },
+        lines: function(){ return currentLine.length; }
+      };
 
       // 形状常量
       var SHAPE_CIRCLE = 0;
@@ -778,28 +780,10 @@
       }
 
       // 形状变换动画
-      // ① requestAnimationFrame 必须写在 draw() 之前：原写法在 draw() 之后注册，
-      //    只要有一帧 draw() 抛异常，下一帧就永远不会被排上 -> 整屏永久冻结、所有点变形永久停止。
-      // ② shapeTime 按"真实时间"推进（16 = 60fps 下单帧的量）。原写法每帧硬加 16，
-      //    帧率掉到 F，变形速度就只剩 F/60（6fps 时形状周期从 4 秒变 40 秒，肉眼=停止）。
-      var shapePrevT = 0;
-      var shapeDrawErr = 0;
-      function animateShapes(ts) {
+      function animateShapes() {
+        shapeTime += 16; // 约60fps
+        draw();
         shapeAnimId = requestAnimationFrame(animateShapes);
-        var nowT = (typeof ts === 'number') ? ts : Date.now();
-        var dt = shapePrevT ? (nowT - shapePrevT) / 1000 : 1 / 60;
-        shapePrevT = nowT;
-        if (!(dt > 0)) dt = 1 / 60;
-        if (dt > 0.25) dt = 1 / 60;   // 切后台/窗口被遮挡后返回：按一帧算，避免所有点相位被同步、画面瞬跳
-        shapeTime += 16 * (dt * 60);
-        try {
-          draw();
-        } catch (err) {
-          shapeDrawErr++;
-          if (shapeDrawErr === 1 || shapeDrawErr % 100 === 0) {
-            console.error('draw() 单帧绘制异常（第 ' + shapeDrawErr + ' 次），已跳过该帧，动画继续：', err);
-          }
-        }
       }
 
       function initHomePage() {
@@ -992,30 +976,20 @@
             var cx = Math.max(safeMargin, Math.min(canvasW - safeMargin, dot.x));
             var cy = Math.max(safeMargin, Math.min(canvasH - safeMargin, dot.y));
             
-            if (!shapeActive || printStatic) {
-              // 关掉「动态形状」（默认）或打印时：点恒为圆形 —— 画面上不会出现星形/三角/方
-              drawCircle(ctx, cx, cy, dotR, allColors[color]);
-            } else {
-              // 开启「动态形状」时：所有点都从"圆形"同时起步，靠各自的推进速度差异自然错开。
-              // 原写法拿固定 offset 当相位，开局就有一批点正好落在星形稳定段 → 一进关卡满屏星星；
-              // 而单纯把相位差压小又会让全场同步变形（实测 80 点里 47 点同时是星形）。速度差方案两头都避开。
-              var seed = (idx * 7919 + color.charCodeAt(0) * 104729) % 1000;
-              var spd = 0.85 + seed / 1000 * 0.30;   // 0.85 ~ 1.15
-              drawMorphingShape(ctx, cx, cy, dotR, allColors[color], getShapeProgress(shapeTime * spd + 2000, 0));
-            }
+            // 为每个点使用随机偏移，让变换不同步更自然
+            var offset = (idx * 2500 + color.charCodeAt(0) * 800) % 12000;
+            var shapeInfo = getShapeProgress(shapeTime, offset);
+            
+            // 绘制平滑过渡的发光形状
+            drawMorphingShape(ctx, cx, cy, dotR, allColors[color], shapeInfo);
           });
         });
 
-        // 粒子（打印时不画：纸面上不该出现消除瞬间的爆点）
-        if (!printStatic) particles.forEach(function(p) {
-          // 半径必须为正：ctx.arc 收到负半径会抛 IndexSizeError，一旦从 draw() 里抛出去，
-          // 动画链就会断掉、整屏永久冻结。这里做最后一道防线。
-          var pr = p.size * p.life;
-          if (!(pr > 0)) return;
-          var palpha = Math.max(0, Math.min(255, Math.floor(p.life * 255)));
+        // 粒子
+        particles.forEach(function(p) {
           ctx.beginPath();
-          ctx.arc(p.x, p.y, pr, 0, Math.PI * 2);
-          ctx.fillStyle = allColors[p.color] + palpha.toString(16).padStart(2, '0');
+          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+          ctx.fillStyle = allColors[p.color] + Math.floor(p.life * 255).toString(16).padStart(2, '0');
           ctx.fill();
         });
       }
@@ -1167,23 +1141,17 @@
         animateParticles();
       }
 
-      var partPrevT = 0;
-      function animateParticles(ts) {
-        var nowT = (typeof ts === 'number') ? ts : Date.now();
-        var dt = partPrevT ? (nowT - partPrevT) / 1000 : 1 / 60;
-        partPrevT = nowT;
-        if (!(dt > 0)) dt = 1 / 60;
-        if (dt > 0.25) dt = 1 / 60;
-        var pk = dt * 60;
-        // 先减 life、再判存活。原写法"先判 life>0 再减 0.035"，最后一次会把 life 减成负数，
-        // 负 life × size → ctx.arc 抛 IndexSizeError → draw() 中断 → 动画链断掉（整屏冻结）。
+      function animateParticles() {
         particles = particles.filter(function(p) {
-          p.x += p.vx * pk; p.y += p.vy * pk; p.vy += 0.08 * pk;
-          p.life -= 0.035 * pk;
-          return p.life > 0;
+          if (p.life > 0) {
+            p.x += p.vx; p.y += p.vy; p.vy += 0.08;
+            p.life -= 0.035;
+            return true;
+          }
+          return false;
         });
-        if (particles.length > 0) requestAnimationFrame(animateParticles);   // 先续帧
-        try { draw(); } catch (err) { console.error('draw() 单帧绘制异常（粒子），已跳过：', err); }
+        draw();
+        if (particles.length > 0) requestAnimationFrame(animateParticles);
       }
 
       function checkComplete() {
@@ -1247,11 +1215,6 @@
       // 直接使用onclick绑定按钮事件
       document.getElementById('backBtn').onclick = goHome;
       document.getElementById('resetBtn').onclick = resetLevel;
-      document.getElementById('btnShape').onclick = function () {
-        shapeActive = !shapeActive;
-        this.textContent = shapeActive ? '停止变换' : '动态形状';
-        draw();
-      };
       document.getElementById('msgBtn1').onclick = closeMessage;
       document.getElementById('msgBtn2').onclick = nextLevel;
 

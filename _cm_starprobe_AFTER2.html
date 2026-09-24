@@ -633,6 +633,18 @@
       var canvasW = 0, canvasH = 0;
       var shapeTime = 0; // 形状变换时间
       var shapeAnimId = null; // 动画ID
+      window.__cm = {
+        dots: function(){ return dotsData; },
+        snap: function(){
+          return {
+            star: window.__starCalls || 0,
+            shapes: (window.__shapes || []).slice(),
+            st: shapeTime,
+            ps: (typeof printStatic !== 'undefined') ? printStatic : null,
+            sa: (typeof shapeActive !== 'undefined') ? shapeActive : null
+          };
+        }
+      };
       // 打印 / 打印预览：形状一律固定为静态圆形。
       // 原代码没有任何打印处理，纸面抓到的是随机相位 → 打印预览里出现一堆星形/三角/方的"星星动画"。
       // 动态形状开关：默认关（所有点恒为圆形）。与「色彩识别连线」里的「动态形状」按钮保持一致。
@@ -692,6 +704,7 @@
 
       // 绘制简单星形（无发光）
       function drawStar(ctx, cx, cy, r, color, innerRatio) {
+        window.__starCalls = (window.__starCalls || 0) + 1;
         ctx.beginPath();
         for (var i = 0; i < 5; i++) {
           var angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
@@ -724,6 +737,7 @@
 
       // 绘制过渡形状（无发光，清晰边缘）
       function drawMorphingShape(ctx, cx, cy, r, color, shapeInfo) {
+        if (window.__shapes) window.__shapes.push([shapeInfo.from, shapeInfo.to]);
         var from = shapeInfo.from;
         var to = shapeInfo.to;
         var progress = shapeInfo.progress;
@@ -956,6 +970,7 @@
       }
 
       function draw() {
+        window.__shapes = [];
         ctx.clearRect(0, 0, canvasW, canvasH);
         
         // 网格

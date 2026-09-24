@@ -1,0 +1,18 @@
+=== color-match.html（彩色连线） CPU降速 = 15× ===
+  源文件：D:/专注力项目/color-match.html
+  探针就绪=true  粒子=0
+  --- 连线之前 ---
+  连线前：帧率= 60fps  shapeTime推进=957.8 单位/秒（60fps 理论值 960；形状周期4秒 → 实测 4.18 秒/形状）
+  --- 已完成第一次连线（颜色=red），粒子数=12 当前笔迹点数=0 ---
+  连线后：帧率=  0fps  shapeTime推进=0.0 单位/秒（60fps 理论值 960；形状周期4秒 → 实测 n/a 秒/形状）
+
+=== 判定 ===
+  连线前 shapeTime 速率 = 957.8 /秒   连线后 = 0.0 /秒   比值 0.000
+  理论：shapeTime 每帧 +=16（硬编码假设 60fps）→ 帧率掉到 F，速率变成 960×F/60。
+  60fps 应为 ~960/秒；20fps → ~320；6fps → ~96（形状周期从 4 秒变 40 秒，肉眼=停止）。
+
+=== 报错 ===
+  PAGEERROR: IndexSizeError: Failed to execute 'arc' on 'CanvasRenderingContext2D': The radius provided (-0.0528931) is negative.
+file:///D:/%E4%B8%93%E6%B3%A8%E5%8A%9B%E9%A1%B9%E7%9B%AE/_cm_probe_BEFORE.html:991:15
+  PAGEERROR: IndexSizeError: Failed to execute 'arc' on 'CanvasRenderingContext2D': The radius provided (-0.0528931) is negative.
+file:///D:/%E4%B8%93%E6%B3%A8%E5%8A%9B%E9%A1%B9%E7%9B%AE/_cm_probe_BEFORE.html:991:15

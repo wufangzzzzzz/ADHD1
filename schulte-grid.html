@@ -2459,6 +2459,38 @@
       .p11-cell.p11-done .p11-a { background: #4CAF50 !important; }
       .p11-cell.p11-done .p11-num { color: #fff; -webkit-text-stroke: 0; text-stroke: 0; }
       .p11-cell.p11-done .p11-b { animation: none; }
+
+      /* ===== 图案12·原色变换：黑容积底 + 三原色球共用格心、各自偏移缓慢公转，
+         中心始终约 70% 相交形成白色（加色法 红+绿+蓝=白），数字压在白区上；点对则该格三原色消散 ===== */
+      .p12-cell { overflow: hidden; }
+      /* 旋转中心必须锁在格心（viewBox 50,50），transform-box 用 view-box 才能按用户单位取原点 */
+      .p12-orbit {
+        transform-box: view-box;
+        transform-origin: 50px 50px;
+        animation: p12spin 10s linear infinite;   /* 36°/秒，10 秒一圈（在 18°/s 基础上再快一倍） */
+      }
+      @keyframes p12spin {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+      }
+      /* 消散层：与旋转层分离，互不覆盖 animation */
+      .p12-balls {
+        transform-box: view-box;
+        transform-origin: 50px 50px;
+      }
+      .p12-cell.p12-dissolve .p12-orbit { animation-play-state: paused; }
+      .p12-cell.p12-dissolve .p12-balls { animation: p12dissolve 0.6s ease-out forwards; }
+      @keyframes p12dissolve {
+        0%   { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(1.55); }
+      }
+      /* 消散后：数字转绿（黑底上黑字会看不见），与其它模式"点对=变绿"反馈一致 */
+      .p12-cell.p12-dissolve text { fill: #4CAF50; }
+      @media print {
+        /* 打印必须静止且姿态归零：否则纸上会印出"转到一半"的歪图（同彩色连线打印出星星那次事故） */
+        .p12-orbit { animation: none !important; transform: none !important; }
+        .p12-balls { animation: none !important; opacity: 1 !important; transform: none !important; }
+      }
     </style>
   </head>
   <body>
@@ -2573,6 +2605,7 @@
               <div class="mode-menu-item" data-sub="9" onclick="game.setPatternSub(9)">图案9·四圆花</div>
               <div class="mode-menu-item" data-sub="10" onclick="game.setPatternSub(10)">图案10·羊群</div>
               <div class="mode-menu-item" data-sub="11" onclick="game.setPatternSub(11)">图案11·月全食</div>
+              <div class="mode-menu-item" data-sub="12" onclick="game.setPatternSub(12)">图案12·原色变换</div>
             </div>
           </div>
           <div class="mode-dropdown-wrap">
@@ -6179,6 +6212,7 @@
           if (this.patternSub !== 6) this._stopP6();   // 离开图案6 时停掉嵌套旋转动画并复原容器
           if (this.patternSub !== 10) this._stopP10(); // 离开图案10 时停掉羊群动画并复原容器
           if (this.patternSub !== 11) container.style.background = '';
+          if (this.patternSub === 12) { this._renderPatternGrid12(container, cellSize); return; }
           if (this.patternSub === 11) { this._renderPatternGridEclipse(container, cellSize); return; }
           if (this.patternSub === 10) { this._renderPatternGrid10(container, cellSize); return; }
           if (this.patternSub === 9) { this._renderPatternGrid9(container, cellSize); return; }
@@ -6385,6 +6419,182 @@
           t2.setAttribute('fill', onesFill);
           t2.textContent = ones;
           svg.appendChild(t2);
+
+          cell.appendChild(svg);
+
+          cell.onclick = (function(number) {
+            return function() { game.handleClick(number, this); };
+          })(num);
+
+          container.appendChild(cell);
+        }
+      };
+
+      // 图案12·原色变换：黑容积底 + 三原色球（加色法）共用格心、各自偏移缓慢公转，
+      //   中心始终约 70% 相交形成白色；数字压在白区上；点对数字时该格三原色消散消失（见 handleCorrectClick）。
+      //   几何：球半径 R，圆心各离格心 D、互隔 120°。D = 0.19R 时三球公共交集(白区)面积 = 单球面积的 70%
+      //   （数值解：D/R=0.20→68.8%，0.19→70.2%）。R=40、D=7.6 ⇒ 白区直径≈67(格内100坐标系)、
+      //   三色月牙最宽≈11.4、三球整体外径 95.2(<100，靠球自身留出格缝，无需 gap)。
+      //   加色法要点：三球与其黑色底必须同处一个 isolation 隔离层，screen 混合的基底才是那块不透明黑；
+      //   否则圆在透明基底上混合 → 颜色不成立。
+      SchulteGridGame.prototype._renderPatternGrid12 = function(container, cellSize) {
+        // 容器样式全部显式重置：避免从图案11等模式切来时残留 padding/aspectRatio/圆角污染布局
+        container.style.position = '';
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(' + this.gridSize + ', ' + cellSize + 'px)';
+        container.style.gridTemplateRows = '';
+        container.style.gap = '';
+        container.style.width = '';
+        container.style.height = '';
+        container.style.aspectRatio = '';
+        container.style.maxWidth = '';
+        container.style.minWidth = '';
+        container.style.padding = '';
+        container.style.boxSizing = '';
+        container.style.borderRadius = '';
+        container.style.boxShadow = 'none';
+        container.style.background = '#000000';   // 黑色容积背景，格缝同为黑
+        container.style.overflow = '';
+        container.innerHTML = '';
+
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        // ── 每格都不同的三个「轨道」随动量 ─────────────────────────────────────
+        // 先生要求：每个方格的三原色转动方向、转动轨道都不一样，偏心程度放在一个小范围里也要各不相同。
+        // ① 偏心程度 dr = 三球球心离格心的距离 ÷ 有效球半径(0.925R)。它就是"轨道"的半径，
+        //    直接决定三球张开的宽度与白区占比（数值积分 4000×4000 实测）：
+        //      dr=0.170 → 白区占单球 73.2%，球心距 6.60，球外径 48.60
+        //      dr=0.185 → 70.9%，                    7.19，        49.19
+        //      dr=0.200 → 68.7%，                    7.77，        49.77
+        //    ⇒ 取 [0.170, 0.200]：每格都不同，且全都落在"始终约 70% 相交"里；
+        //      上限 0.200 是被"球不许出格"卡的：dr>0.206 时 R+D 就 >50，格边处 alpha>0 会被裁出淡边。
+        // ② 公转周期：每格快慢不同（9.0~11.5s/圈，均值≈10.25s，与上一轮定下的 10s/圈一致）。
+        // ③ 转动方向：顺/逆各半。
+        // ④ 起始相位：随机跑满整圈，避免 81 格整齐同步、像整体闪动。
+        // 注意三球仍严格"互隔 120°、等距"⇒ 白区恒定居中在格心、面积不随公转变化，数字始终压在白区上。
+        var R = 42, CX = 50, CY = 50;
+        var S3 = Math.sqrt(3) / 2;
+        var EFF_R = 0.925;                              // 15% 渐隐带下 alpha>0.5 的有效半径系数
+        var DR_MIN = 0.170, DR_MAX = 0.200;             // 偏心程度范围
+        var DUR_MIN = 9.0, DUR_MAX = 11.5;              // 每格公转周期范围（秒/圈）
+        var balls;                                      // 在循环内按本格 dr 重建
+        // θ=0 基准下三球圆心：红 0°、绿 120°、蓝 240°（加色法三原色）
+
+        for (var i = 0; i < this.numbers.length; i++) {
+          var num = this.numbers[i];
+
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell p12-cell';
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          cell.style.background = 'transparent';
+          cell.style.border = 'none';
+          cell.style.padding = '0';
+          cell.style.display = 'flex';
+          cell.style.alignItems = 'center';
+          cell.style.justifyContent = 'center';
+          cell.dataset.number = num;
+
+          var svg = document.createElementNS(SVGNS, 'svg');
+          svg.setAttribute('viewBox', '0 0 100 100');
+          svg.setAttribute('width', '100%');
+          svg.setAttribute('height', '100%');
+          svg.style.display = 'block';
+
+          var iso = document.createElementNS(SVGNS, 'g');
+          iso.setAttribute('style', 'isolation:isolate');
+
+          var rect = document.createElementNS(SVGNS, 'rect');
+          rect.setAttribute('x', '0');
+          rect.setAttribute('y', '0');
+          rect.setAttribute('width', '100');
+          rect.setAttribute('height', '100');
+          rect.setAttribute('rx', '12');
+          rect.setAttribute('fill', '#000000');
+          iso.appendChild(rect);
+
+          // ── 本格独立抽取的随机量：偏心程度 / 周期 / 方向 / 相位，格格不同 ──
+          var dr  = DR_MIN + Math.random() * (DR_MAX - DR_MIN);      // 本格的偏心程度
+          var Dg  = dr * R * EFF_R;                                   // 三球心离格心的距离（用户单位）
+          var dur = DUR_MIN + Math.random() * (DUR_MAX - DUR_MIN);    // 本格的公转周期（秒）
+          var dir = Math.random() < 0.5 ? 1 : -1;                     // +1=顺时针  -1=逆时针
+          balls = [
+            { color: '#ff0000', x: CX + Dg,     y: CY },
+            { color: '#00ff00', x: CX - Dg / 2, y: CY + Dg * S3 },
+            { color: '#0000ff', x: CX - Dg / 2, y: CY - Dg * S3 }
+          ];
+
+          var orbit = document.createElementNS(SVGNS, 'g');
+          orbit.setAttribute('class', 'p12-orbit');
+          // 逐格随机起始相位：81 格若整齐同步公转，观感机械得像整体闪动
+          // ⚠️ 只逐个设 duration/direction/delay，不要用 style.animation 简写 ——
+          //    简写会把 animation-play-state 一并重置，导致 .p12-dissolve 的 paused 失效（点对数字后照样在转）。
+          orbit.style.animationDuration = dur.toFixed(2) + 's';
+          orbit.style.animationDirection = dir < 0 ? 'reverse' : 'normal';
+          orbit.style.animationDelay = '-' + (Math.random() * dur).toFixed(2) + 's';
+
+          // 边缘模糊 15%：每个球用径向渐变填充 —— 半径 0~85% 实色，85%~100% 渐隐到全透明，
+          //   即「边缘 15% 的宽度」是过渡带。
+          //   为什么不用 SVG feGaussianBlur：即便 σ = 0.15×R ≈ 6.3，模糊外溢约 1.5σ ≈ 9.5，
+          //   与球外径 49.4 相加近 59，仍超出格半径 50，会被 viewBox 裁出硬切口（反而变锐边）。
+          //   径向渐变完全在球内完成，不溢出、不被裁，且中心白区的几何分毫不动。
+          //   每球一个唯一 id：url(#id) 在同一文档内解析，id 重复会串到别的格子的渐变。
+          var defs = document.createElementNS(SVGNS, 'defs');
+          var gradIds = [];
+          for (var gi = 0; gi < balls.length; gi++) {
+            var gid = 'p12grad-' + i + '-' + gi;
+            gradIds.push(gid);
+            var rg = document.createElementNS(SVGNS, 'radialGradient');
+            rg.setAttribute('id', gid);
+            rg.setAttribute('cx', '50%');
+            rg.setAttribute('cy', '50%');
+            rg.setAttribute('r', '50%');
+            var st1 = document.createElementNS(SVGNS, 'stop');
+            st1.setAttribute('offset', '85%');
+            st1.setAttribute('stop-color', balls[gi].color);
+            st1.setAttribute('stop-opacity', '1');
+            var st2 = document.createElementNS(SVGNS, 'stop');
+            st2.setAttribute('offset', '100%');
+            st2.setAttribute('stop-color', balls[gi].color);
+            st2.setAttribute('stop-opacity', '0');
+            rg.appendChild(st1);
+            rg.appendChild(st2);
+            defs.appendChild(rg);
+          }
+          svg.appendChild(defs);
+
+          var ballG = document.createElementNS(SVGNS, 'g');
+          ballG.setAttribute('class', 'p12-balls');
+          for (var bi = 0; bi < balls.length; bi++) {
+            var c = document.createElementNS(SVGNS, 'circle');
+            c.setAttribute('cx', '' + balls[bi].x);
+            c.setAttribute('cy', '' + balls[bi].y);
+            c.setAttribute('r', '' + R);
+            c.setAttribute('fill', 'url(#' + gradIds[bi] + ')');
+            c.setAttribute('style', 'mix-blend-mode:screen');   // 加色法
+            ballG.appendChild(c);
+          }
+          orbit.appendChild(ballG);
+          iso.appendChild(orbit);
+          svg.appendChild(iso);
+
+          // 数字：单字居中、不补零 —— 与「默认模式」一致
+          //   （默认模式：numberSpan.textContent = numbers[i]，直接输出 1..N，不带前导 0）。
+          //   此前我照抄图案1 的两位补零，那是图案1「左右两个半圆各放一位数字」的设计需要；
+          //   图案12 没有这个约束，补零属于我自作主张，已去掉。
+          //   字体同样取「默认模式」的：.grid-cell 不设 font-family → 继承 body，
+          //   即 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif（Windows 上落到 Segoe UI）。
+          //   字号 40 / weight 700 / y=64 / text-anchor middle：y=64 对 40 号数字（数字高≈0.7em=28）
+          //   恰好使数字占 36~64，视觉中心 = 50 = 格心。
+          var t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('x', '50');
+          t.setAttribute('y', '64');
+          t.setAttribute('font-size', '40');
+          t.setAttribute('font-weight', '700');
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('font-family', "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif");
+          t.setAttribute('fill', '#000000');
+          t.textContent = '' + num;
+          svg.appendChild(t);
 
           cell.appendChild(svg);
 
@@ -9389,6 +9599,9 @@
         } else if (this.isPatternMode && this.patternSub === 11) {
           // 图案11·月全食：A圆变绿、数字变白、停B动画（由 CSS .p11-done 触发）
           element.classList.add('p11-done');
+        } else if (this.isPatternMode && this.patternSub === 12) {
+          // 图案12·原色变换：三原色消散消失 + 旋转暂停 + 数字转绿（均由 CSS .p12-dissolve 触发）
+          element.classList.add('p12-dissolve');
         } else if (this.isPatternMode) {
           // 图案模式：格子内部是不透明 SVG，需直接改 SVG 填充来给变绿反馈
           var pRect = element.querySelector('rect');

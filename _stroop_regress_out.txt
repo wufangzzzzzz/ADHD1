@@ -1,0 +1,18 @@
+=== stroop.html 回归（左右大小互换动画）===
+  state 可访问=true  startSwapAnim 可访问=true  当前 mode=word rule=0
+  已切到 size 模式 + 规则1，启动互换动画
+   t=   0ms  swapT= 0.021  swapRAF=    15  累计帧=  14  drawErr=0
+   t= 220ms  swapT= 0.222  swapRAF=    30  累计帧=  29  drawErr=0
+   t= 440ms  swapT= 0.664  swapRAF=    43  累计帧=  42  drawErr=0
+   t= 660ms  swapT= 0.942  swapRAF=    57  累计帧=  56  drawErr=0
+   t= 880ms  swapT=     1  swapRAF=    72  累计帧=  71  drawErr=0
+   t=1100ms  swapT=     1  swapRAF=    86  累计帧=  85  drawErr=0
+   t=1320ms  swapT=     1  swapRAF=   100  累计帧=  99  drawErr=0
+   t=1540ms  swapT= 0.947  swapRAF=   114  累计帧= 113  drawErr=0
+
+=== 判定 ===
+  swapT 出现 6 个不同值（>3 表示动画在正常推进）  最终 swapRAF=114  swapDrawErr=0
+  通过：互换动画正常运行
+
+=== 报错 ===
+  0 条

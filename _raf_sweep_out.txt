@@ -1,0 +1,17 @@
+=== 扫描 87 个游戏 HTML，其中 31 个含 rAF 循环 ===
+
+【缺陷1】rAF 注册在绘制调用之后（>任意一帧抛异常=永久冻结<） 共 3 处：
+  color-match.html                   animateParticles     第1158行   rAF 之前先调用了 draw(
+  color-spiral-connect.html          animLoop             第 992行   rAF 之前先调用了 draw(
+  stroop.html                        swapFrame            第 372行   rAF 之前先调用了 draw(
+
+【缺陷2】每帧 += 常量、且无时间驱动痕迹（慢设备上动画会变慢/像停止）：
+  schulte-grid-new.html              tick                 第10087行   每帧推进: angle += 360
+  schulte-grid.html                  tick                 第10202行   每帧推进: angle += 360
+  schulte-single-embed.html          tick                 第6863行   每帧推进: angle += 360
+
+【正常】已含时间驱动的 rAF 循环（供对照）：
+  color-spiral-connect.html          animLoop             第 992行
+  schulte-grid-new.html              frame                第6440行
+  schulte-grid.html                  frame                第6507行
+  stroop.html                        startSwapAnim        第 367行

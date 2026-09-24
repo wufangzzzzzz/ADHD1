@@ -1,0 +1,6 @@
+﻿_glass_diag_out.txt	1484	2026/9/21 22:20:33
+kaleidoscope-glass.html	14286	2026/9/21 22:19:49
+NOW	2026-09-21 22:20:47
+--- diag run start ---
+exit=0
+AFTER: _glass_diag_out.txt 1484 2026/9/21 22:20:51

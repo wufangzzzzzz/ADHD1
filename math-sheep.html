@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>算术羊保卫战 - 注意力训练游戏库</title>
+<style>
+/* ===== 基础：无纯黑纯白 + 单强调色 + 100dvh ===== */
+:root{
+  --ink:#1a1a2e;
+  --paper:#FEFEFE;
+  --bg:#f4efe6;
+  --accent:#e0762b;
+  --accent-d:#b85c1b;
+  --accent-l:#f6ddc6;
+  --line:#e2d9cb;
+  --ms-cell:84px;
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans:"PingFang SC","Microsoft YaHei","微软雅黑","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+/* 触屏：只保留捏合缩放/滚动，消除双击缩放与 300ms 延迟 */
+button,.ms-btn,.ms-main,.ms-sub2,.ms-cell{touch-action:manipulation;}
+html,body{margin:0;padding:0;overflow:hidden;}   /* 全页禁止滚动：内容由 JS 自适应缩放，永远一屏装下 */
+html{height:100vh;height:100dvh;}
+body{
+  height:100vh;height:100dvh;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+  display:flex;align-items:center;justify-content:center;   /* 整体垂直/水平居中 */
+}
+/* 高度由内容决定（不设 min-height），这样 scrollHeight 才是真实值，缩放才算得准 */
+.ms-app{width:100%;display:flex;flex-direction:column;align-items:center;padding:clamp(8px,2vw,22px);gap:clamp(8px,1.8vw,18px);transform-origin:center center;}
+
+/* ===== 头部 ===== */
+.ms-head{width:100%;max-width:960px;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;}
+.ms-head > div{min-width:0;flex:1 1 auto;}   /* 允许标题组收缩，绝不换行 → 头部高度恒定约 48px */
+.ms-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ms-back{
+  display:inline-block;text-decoration:none;color:var(--accent-d);
+  border:2px solid var(--accent-l);background:var(--paper);
+  border-radius:10px;padding:6px 12px;font-size:14px;font-weight:700;
+  transition:transform .12s ease, background .15s ease;
+}
+.ms-back:active{transform:scale(.96);}
+/* 音效开关：头部右侧单圆钮 */
+.ms-sound{
+  margin-left:auto;flex:0 0 auto;width:42px;height:42px;border-radius:50%;
+  background:var(--paper);border:2px solid var(--line);
+  color:var(--ink);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;line-height:1;padding:0;
+  transition:transform .12s ease, background .15s ease, border-color .15s ease;
+}
+.ms-sound:active{transform:scale(.9);}
+.ms-sound.muted{background:#f0e4d4;border-color:var(--accent-l);color:#9a8f82;}
+.ms-title{margin:0;font-size:clamp(20px,3.6vw,30px);font-weight:800;letter-spacing:.5px;}
+.ms-sub{margin:2px 0 0;font-size:clamp(12px,2.3vw,15px);color:#6b6257;}
+
+/* ===== 主体：竖屏上下堆叠 / 横屏左右分栏 ===== */
+.ms-board{
+  width:100%;max-width:min(94vw,480px);
+  display:flex;flex-direction:column;gap:clamp(10px,2vw,18px);
+}
+@media (orientation:landscape){
+  .ms-board{max-width:min(92vw,960px);flex-direction:row;align-items:flex-start;}
+  .ms-ctrl{flex:0 0 clamp(210px,26vw,300px);}
+  .ms-play{flex:1 1 auto;min-width:0;}
+}
+/* 竖屏：控制区改两列网格（状态条跨行），把宝贵的高度让给羊群 */
+@media (orientation:portrait){
+  /* align-items:start 必须有：否则同行两块会被拉伸成等高，状态条会从 54px 被撑到 97px */
+  .ms-ctrl{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-content:start;align-items:start;}
+  .ms-ctrl .ms-block{margin-bottom:0;}
+  .ms-ctrl .ms-status{grid-column:1 / -1;}
+  /* 竖屏高度金贵：出题区与结算区一并压紧，把空间让给羊群 */
+  .ms-quiz{padding:9px 10px;margin-bottom:9px;}
+  .ms-timerwrap{height:10px;margin:8px 0 5px;}
+  .ms-result{padding:9px 10px;margin-top:9px;}
+  .ms-ritem{padding:6px 3px;}
+  .ms-verdict{margin:8px 0;}
+  /* 副标题不换行，否则头部会从 50px 涨到 100px */
+  .ms-sub{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* 玩法说明：竖屏跨两列，字号收到 11px，高度从 153px 降到约 50px */
+  /* 开始/停止并排一行（竖屏），比上下叠放省约 40px */
+  .ms-actions{display:flex;gap:8px;align-items:stretch;}
+  .ms-actions .ms-main{flex:2 1 auto;}
+  .ms-actions .ms-sub2{flex:1 1 auto;margin-top:0;padding-left:6px;padding-right:6px;}
+  .ms-help{grid-column:1 / -1;}
+  .ms-help .ms-ol{padding-left:17px;font-size:11px;}
+  .ms-help .ms-ol li{margin-bottom:1px;}
+  /* 各处留白再收一轮，把高度让给羊群 */
+  .ms-expr{font-size:clamp(22px,5.6vw,38px);}
+  .ms-status{gap:6px;}
+  .ms-stat{padding:6px 4px;}
+  .ms-ritem{padding:5px 3px;}
+  .ms-verdict{margin:7px 0;}
+  .ms-label{margin-bottom:5px;font-size:12px;}
+}
+@media (orientation:landscape) and (max-height:500px){
+  .ms-app{padding:8px;gap:8px;}
+  .ms-sub{font-size:12px;}
+  .ms-help{margin-bottom:0;}
+  .ms-help .ms-ol{font-size:12px;padding-left:16px;margin:0;}
+  .ms-board{gap:10px;}
+}
+/* 横屏矮屏：出题区与结算区并排一行，羊群独享下方全部高度 */
+@media (orientation:landscape) and (max-height:600px){
+  .ms-play{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:start;}
+  /* 必须显式指定行列：DOM 顺序是 quiz→pasture→result，自动放置会把结算区排到第三行 */
+  .ms-quiz{grid-column:1;grid-row:1;margin-bottom:0;}
+  .ms-result{grid-column:2;grid-row:1;margin-top:0;}
+  .ms-pasture{grid-column:1 / -1;grid-row:2;}
+  .ms-verdict{margin:7px 0;}
+  .ms-expr{font-size:clamp(19px,3vw,32px);}   /* 并排后宽度减半，算式字号同步收，避免换行撑高 */
+  .ms-timerwrap{height:9px;margin:6px 0 3px;}
+  .ms-timertext{font-size:11px;}
+  .ms-result{padding:8px 9px;}
+  .ms-ritem{padding:4px 2px;}
+  .ms-ritem strong{font-size:14px;}
+  .ms-verdict{font-size:12px;margin:6px 0;}
+}
+
+.ms-panel{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:clamp(12px,2.4vw,18px);
+  box-shadow:0 6px 18px rgba(26,26,46,.06);
+}
+.ms-block{margin-bottom:14px;}
+.ms-block:last-child{margin-bottom:0;}
+.ms-label{margin:0 0 7px;font-size:13px;font-weight:800;color:#6b6257;letter-spacing:.6px;}
+
+/* ===== 状态条 ===== */
+.ms-status{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.ms-stat{
+  background:#fbf7f1;border:1px solid var(--line);border-radius:12px;
+  padding:8px 6px;text-align:center;
+}
+.ms-stat-k{display:block;font-size:12px;color:#6b6257;font-weight:700;}
+.ms-stat strong{font-family:var(--mono);font-size:clamp(17px,3.4vw,22px);font-weight:800;color:var(--accent-d);}
+
+/* ===== 按钮组（全部静态写死，位置永不变） ===== */
+.ms-btns{display:flex;flex-wrap:wrap;gap:8px;}
+.ms-btn{
+  flex:1 1 auto;min-width:64px;
+  appearance:none;border:2px solid var(--line);background:var(--paper);
+  color:var(--ink);border-radius:11px;padding:9px 10px;
+  font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;
+  transition:transform .12s ease, background .15s ease, border-color .15s ease, color .15s ease;
+}
+.ms-btn:active{transform:scale(.96);}
+.ms-btn.active{background:var(--accent);border-color:var(--accent);color:var(--paper);}
+.ms-btn:disabled{opacity:.45;cursor:default;}
+.ms-btn:disabled:active{transform:none;}
+.ms-main{
+  width:100%;appearance:none;border:none;cursor:pointer;
+  background:var(--accent);color:var(--paper);
+  border-radius:12px;padding:13px 14px;
+  font-family:var(--sans);font-size:17px;font-weight:800;letter-spacing:1px;
+  box-shadow:0 4px 0 var(--accent-d);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.ms-main:active{transform:translateY(2px);box-shadow:0 2px 0 var(--accent-d);}
+.ms-main:disabled{background:#cbb9a8;box-shadow:0 4px 0 #a89882;cursor:default;color:#fff;}
+.ms-main:disabled:active{transform:none;box-shadow:0 4px 0 #a89882;}
+.ms-sub2{
+  width:100%;appearance:none;cursor:pointer;margin-top:8px;
+  background:var(--paper);border:2px solid var(--line);color:#6b6257;
+  border-radius:12px;padding:9px 12px;
+  font-family:var(--sans);font-size:14px;font-weight:700;
+  transition:transform .12s ease, background .15s ease;
+}
+.ms-sub2:active{transform:scale(.97);}
+.ms-sub2:disabled{opacity:.45;cursor:default;}
+
+.ms-ol{margin:0;padding-left:20px;font-size:13px;color:#6b6257;}
+.ms-ol li{margin-bottom:3px;}
+
+/* ===== 出题区 ===== */
+.ms-quiz{
+  background:#fbf7f1;border:1px solid var(--line);border-radius:14px;
+  padding:12px 14px;text-align:center;margin-bottom:12px;
+}
+.ms-expr{
+  font-family:var(--mono);
+  font-size:clamp(26px,6.4vw,44px);font-weight:800;letter-spacing:1px;
+  color:var(--ink);line-height:1.25;word-break:break-word;
+}
+.ms-expr .ms-q{color:var(--accent);}
+.ms-timerwrap{
+  margin:10px 0 6px;height:12px;border-radius:8px;
+  background:#eee6d9;overflow:hidden;border:1px solid var(--line);
+}
+.ms-timerbar{height:100%;width:100%;border-radius:8px;background:var(--accent);transition:width .1s linear;}
+.ms-timerbar.ms-urgent{background:#c0392b;}
+.ms-timertext{font-family:var(--mono);font-size:13px;font-weight:700;color:#6b6257;}
+.ms-timertext.ms-urgent{color:#c0392b;}
+
+/* ===== 羊群草地 ===== */
+.ms-pasture{
+  display:grid;
+  grid-template-columns:repeat(5, var(--ms-cell));
+  gap:3px;padding:4px;margin:0 auto;
+  border-radius:12px;justify-content:center;
+  background:linear-gradient(180deg,#7ec8f0 0%,#a5dcf5 9%,#6cb858 10%,#4a9640 100%);
+  overflow:visible;
+}
+.ms-cell{
+  position:relative;overflow:visible;
+  width:var(--ms-cell);height:var(--ms-cell);
+  aspect-ratio:1;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:none;border-radius:10px;
+  padding:0;cursor:pointer;
+}
+.ms-face{
+  position:absolute;left:50%;top:50%;
+  width:204%;height:204%;
+  transform:translate(-50%,-50%);
+  pointer-events:none;z-index:1;
+}
+.ms-face.ms-face-r{transform:translate(-50%,-50%) scaleX(-1);}
+.ms-sheep{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:url('pattern10-sheep.png') no-repeat center / contain;
+  filter:drop-shadow(1px 3px 4px rgba(0,0,0,.22));
+}
+/* 预设动画：a1 左右移动蹦跳 / a2 原地蹦跳 / a3 左右摇摆（无类 = 静止） */
+.ms-sheep.ms-a1{animation:ms-hop-move 4.5s ease-in-out infinite;}
+.ms-sheep.ms-a2{animation:ms-bounce .8s ease-in-out infinite;}
+.ms-sheep.ms-a3{animation:ms-sway 3s ease-in-out infinite;}
+@keyframes ms-hop-move{
+  0%{transform:translate(-5%,0);}
+  20%{transform:translate(-2%,-4%);}
+  50%{transform:translate(5%,0);}
+  80%{transform:translate(2%,-4%);}
+  100%{transform:translate(-5%,0);}
+}
+@keyframes ms-bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-7%);}}
+@keyframes ms-sway{0%,100%{transform:rotate(-8deg);}50%{transform:rotate(8deg);}}
+.ms-num{
+  position:absolute;left:52%;top:59%;
+  transform:translate(-50%,-50%);
+  font-family:var(--mono);
+  font-size:calc(var(--ms-cell) * .42);
+  font-weight:800;color:#4a3428;
+  text-shadow:0 0 4px #fff,0 0 4px #fff;
+  pointer-events:none;
+}
+/* 入场：网格错峰 */
+.ms-cell.ms-in{animation:ms-pop .34s ease-out backwards;animation-delay:calc(var(--i,0) * 28ms);}
+@keyframes ms-pop{from{opacity:0;transform:translateY(8px) scale(.9);}to{opacity:1;transform:none;}}
+/* 点错：羊变橙抖动 */
+.ms-cell.ms-wrong{animation:ms-shake .4s ease;}
+.ms-cell.ms-wrong .ms-sheep{filter:sepia(1) saturate(4) hue-rotate(-45deg) drop-shadow(1px 3px 4px rgba(0,0,0,.22));}
+@keyframes ms-shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-6px);}
+  40%{transform:translateX(6px);}
+  60%{transform:translateX(-4px);}
+  80%{transform:translateX(4px);}
+}
+/* 点对后：羊顺着头的方向飞出画面（与舒尔特羊群一致） */
+.ms-cell.ms-fly-left{animation:ms-fly-left .6s ease-in forwards;}
+.ms-cell.ms-fly-right{animation:ms-fly-right .6s ease-in forwards;}
+@keyframes ms-fly-left{to{transform:translateX(-150vw);opacity:0;}}
+@keyframes ms-fly-right{to{transform:translateX(150vw);opacity:0;}}
+/* 点对：已点过的羊变灰，不参与换位 */
+.ms-cell.ms-correct .ms-sheep{filter:grayscale(1) brightness(.75) drop-shadow(1px 3px 4px rgba(0,0,0,.22));opacity:.45;}
+
+/* ===== 狼：从答案羊身后升起再把羊叼走 =====
+   终点抬高（y=-14%）：狼脸(眼鼻)越出羊头顶，完整可见；
+   第一行答案格用 ms-wolfcome-low（y=2%），避免狼头压到上方题目卡 */
+.ms-wolf{
+  position:absolute;left:50%;bottom:-8%;
+  width:158%;height:158%;
+  transform:translate(-50%,60%) scale(.8);
+  background:url('wolf-bf2.png') no-repeat center bottom / contain;
+  filter:drop-shadow(1px 3px 5px rgba(0,0,0,.3));
+  opacity:0;pointer-events:none;z-index:0;
+}
+.ms-cell.ms-wolfcome .ms-wolf{animation:ms-wolf-rise .75s cubic-bezier(.2,.9,.3,1) forwards;}
+@keyframes ms-wolf-rise{
+  0%{opacity:0;transform:translate(-50%,60%) scale(.78);}
+  35%{opacity:1;transform:translate(-50%,24%) scale(1);}
+  62%{opacity:1;transform:translate(-50%,-2%) scale(1.05);}
+  100%{opacity:1;transform:translate(-50%,-14%) scale(1);}
+}
+.ms-cell.ms-wolfcome-low .ms-wolf{animation:ms-wolf-rise-low .75s cubic-bezier(.2,.9,.3,1) forwards;}
+@keyframes ms-wolf-rise-low{
+  0%{opacity:0;transform:translate(-50%,60%) scale(.78);}
+  35%{opacity:1;transform:translate(-50%,26%) scale(1);}
+  62%{opacity:1;transform:translate(-50%,8%) scale(1.05);}
+  100%{opacity:1;transform:translate(-50%,2%) scale(1);}
+}
+.ms-cell.ms-taken{animation:ms-taken-out .6s ease-in forwards;}
+@keyframes ms-taken-out{to{transform:translateY(52%) scale(.8);opacity:0;}}
+.ms-cell.ms-empty{cursor:default;}
+
+/* ===== 结算区（内联，不弹窗，默认可见） ===== */
+.ms-result{
+  margin-top:12px;background:#fbf7f1;border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+}
+.ms-rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ms-ritem{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:8px 4px;text-align:center;}
+.ms-ritem span{display:block;font-size:11px;color:#6b6257;font-weight:700;}
+.ms-ritem strong{font-family:var(--mono);font-size:clamp(15px,3vw,20px);font-weight:800;color:var(--accent-d);}
+.ms-verdict{margin:10px 0;font-size:14px;font-weight:700;color:#6b6257;text-align:center;}
+
+/* ===== 紧凑模式：矮屏（vh<780）自动启用，先压缩留白省空间，尽量避免整页缩放 ===== */
+body.ms-tight .ms-app{padding:8px;gap:6px;}
+body.ms-tight .ms-panel{padding:10px;}
+body.ms-tight .ms-block{margin-bottom:8px;}
+body.ms-tight .ms-status{gap:6px;}
+body.ms-tight .ms-stat{padding:5px 4px;}
+body.ms-tight .ms-stat-k{font-size:11px;}
+body.ms-tight .ms-label{font-size:12px;margin-bottom:5px;}
+body.ms-tight .ms-btns{gap:6px;}
+body.ms-tight .ms-btn{padding:7px 8px;font-size:13px;min-width:54px;}
+body.ms-tight .ms-main{padding:10px 12px;font-size:15px;}
+body.ms-tight .ms-sub2{padding:7px 10px;font-size:13px;margin-top:6px;}
+body.ms-tight .ms-title{font-size:clamp(17px,4.2vw,22px);}
+body.ms-tight .ms-sub{font-size:12px;}
+body.ms-tight .ms-back{font-size:12px;padding:4px 9px;}
+body.ms-tight .ms-ol{font-size:12px;padding-left:17px;margin:0;}
+body.ms-tight .ms-ol li{margin-bottom:1px;}
+body.ms-tight .ms-quiz{padding:8px 10px;margin-bottom:8px;}
+body.ms-tight .ms-expr{font-size:clamp(22px,5.8vw,34px);}
+body.ms-tight .ms-timerwrap{height:10px;margin:7px 0 4px;}
+body.ms-tight .ms-timertext{font-size:12px;}
+body.ms-tight .ms-result{margin-top:8px;padding:8px 10px;}
+body.ms-tight .ms-rgrid{gap:6px;}
+body.ms-tight .ms-ritem{padding:5px 3px;}
+body.ms-tight .ms-ritem strong{font-size:15px;}
+body.ms-tight .ms-verdict{margin:7px 0;font-size:13px;}
+
+/* ===== 减少动效 ===== */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important;}
+}
+</style>
+</head>
+<body>
+<div class="ms-app">
+
+  <header class="ms-head">
+    <a class="ms-back" href="index.html">← 返回游戏库</a>
+    <div>
+      <h1 class="ms-title">算术羊保卫战</h1>
+      <p class="ms-sub">10 秒内从羊群里点出答案，慢了狼就会把羊叼走</p>
+    </div>
+    <button type="button" class="ms-sound" id="ms-sound" title="音效开关（记住你的选择）">🔊</button>
+  </header>
+
+  <div class="ms-board">
+
+    <!-- 左/上：控制区（所有按钮静态写死，位置永不变） -->
+    <aside class="ms-panel ms-ctrl">
+      <div class="ms-block">
+        <div class="ms-status">
+          <div class="ms-stat"><span class="ms-stat-k">题目</span><strong id="ms-idx">0/10</strong></div>
+          <div class="ms-stat"><span class="ms-stat-k">得分</span><strong id="ms-score">0</strong></div>
+          <div class="ms-stat"><span class="ms-stat-k">连对</span><strong id="ms-streak">0</strong></div>
+        </div>
+      </div>
+
+      <div class="ms-block">
+        <p class="ms-label">题目类型（可多选）</p>
+        <div class="ms-btns" id="ms-types">
+          <button type="button" class="ms-btn active" data-type="add">加法</button>
+          <button type="button" class="ms-btn active" data-type="sub">减法</button>
+          <button type="button" class="ms-btn active" data-type="mul">乘法表</button>
+          <button type="button" class="ms-btn" data-type="div">除法</button>
+        </div>
+      </div>
+
+      <div class="ms-block">
+        <p class="ms-label">每题时间</p>
+        <div class="ms-btns" id="ms-times">
+          <button type="button" class="ms-btn" data-sec="5">5 秒</button>
+          <button type="button" class="ms-btn active" data-sec="10">10 秒</button>
+          <button type="button" class="ms-btn" data-sec="15">15 秒</button>
+          <button type="button" class="ms-btn" data-sec="20">20 秒</button>
+        </div>
+      </div>
+
+      <div class="ms-block ms-actions">
+        <button type="button" class="ms-main" id="ms-start">开始一关</button>
+        <button type="button" class="ms-sub2" id="ms-stop" disabled>停止本关</button>
+      </div>
+
+      <div class="ms-block ms-help">
+        <p class="ms-label">玩法</p>
+        <ol class="ms-ol">
+          <li>限时内在羊群里点中答案那只羊，点对羊会飞走，越快分越高</li>
+          <li>超时狼会从那只羊身后冒出来把它叼走；10 题为一关</li>
+        </ol>
+      </div>
+    </aside>
+
+    <!-- 右/下：游戏区 -->
+    <main class="ms-panel ms-play">
+      <div class="ms-quiz">
+        <div class="ms-expr" id="ms-expr">点「开始一关」出题</div>
+        <div class="ms-timerwrap"><div class="ms-timerbar" id="ms-timerbar"></div></div>
+        <div class="ms-timertext" id="ms-timertext">准备中</div>
+      </div>
+
+      <div class="ms-pasture" id="ms-pasture"></div>
+
+      <div class="ms-result">
+        <p class="ms-label">本关成绩</p>
+        <div class="ms-rgrid">
+          <div class="ms-ritem"><span>答对</span><strong id="ms-r-correct">—</strong></div>
+          <div class="ms-ritem"><span>总分</span><strong id="ms-r-score">—</strong></div>
+          <div class="ms-ritem"><span>总用时</span><strong id="ms-r-time">—</strong></div>
+          <div class="ms-ritem"><span>正确率</span><strong id="ms-r-acc">—</strong></div>
+        </div>
+        <p class="ms-verdict" id="ms-verdict">完成一关后这里显示成绩</p>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var TOTAL_Q = 10;
+  var PASTURE = document.getElementById('ms-pasture');
+  var EL_EXPR = document.getElementById('ms-expr');
+  var EL_BAR  = document.getElementById('ms-timerbar');
+  var EL_TXT  = document.getElementById('ms-timertext');
+  var EL_IDX  = document.getElementById('ms-idx');
+  var EL_SCORE= document.getElementById('ms-score');
+  var EL_STREAK=document.getElementById('ms-streak');
+  var EL_STOP = document.getElementById('ms-stop');
+  var EL_RC   = document.getElementById('ms-r-correct');
+  var EL_RS   = document.getElementById('ms-r-score');
+  var EL_RT   = document.getElementById('ms-r-time');
+  var EL_RA   = document.getElementById('ms-r-acc');
+  var EL_VER  = document.getElementById('ms-verdict');
+
+  var S = {
+    running:false,
+    locked:true,
+    idx:0, score:0, streak:0, correct:0,
+    types:['add','sub','mul'],
+    secPerQ:10,
+    q:null,
+    deadline:0,
+    tickId:0,
+    phaseId:0,
+    runStart:0,
+    lastTick:-1
+  };
+
+  /* ---------- 音效（WebAudio，无外部资源） ----------
+     解锁策略：页面上第一次触摸/点击就创建并恢复 AudioContext（无声），
+     这样后续定时回调（狼出场、倒计时、结算）也能可靠出声，iOS/平板尤其需要。 */
+  var actx = null;
+  var muted = false;
+  function ensureAudio(){
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return null;
+      if(!actx) actx = new AC();
+      if(actx.state === 'suspended') actx.resume();
+      return actx;
+    }catch(e){ return null; }
+  }
+  document.addEventListener('pointerdown', function(){ ensureAudio(); }, true);
+  document.addEventListener('touchstart', function(){ ensureAudio(); }, true);
+  function beep(freq, dur, type, vol){
+    if(muted) return;
+    try{
+      var ctx = ensureAudio();
+      if(!ctx) return;
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine';
+      o.frequency.value = freq;
+      g.gain.value = vol || 0.07;
+      o.connect(g); g.connect(ctx.destination);
+      var t = ctx.currentTime;
+      g.gain.setValueAtTime(vol || 0.07, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.start(t); o.stop(t + dur + 0.02);
+    }catch(e){}
+  }
+  function sndStart(){ beep(523,.12,'triangle',.08); setTimeout(function(){ beep(784,.16,'triangle',.08); }, 110); }
+  function sndStop(){ beep(392,.1,'triangle',.07); setTimeout(function(){ beep(262,.16,'triangle',.07); }, 110); }
+  function sndTick(){ beep(880,.05,'sine',.045); }
+  function sndCorrect(){ beep(660,.12,'triangle',.09); setTimeout(function(){beep(880,.15,'triangle',.08);},90); }
+  function sndWrong(){ beep(150,.2,'sine',.07); }
+  function sndWolf(){ beep(150,.28,'sawtooth',.08); setTimeout(function(){beep(98,.5,'sawtooth',.07);},240); }
+  function sndFinish(){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){ beep(f,.16,'triangle',.08); }, i*140); }); }
+
+  /* ---------- 出题 ---------- */
+  function rnd(n){ return Math.floor(Math.random()*n); }
+  function genQuestion(types){
+    var t = types[rnd(types.length)];
+    var a,b,ans,text;
+    if(t === 'add'){
+      a = 1 + rnd(20); b = 1 + rnd(20);
+      ans = a + b; text = a + ' + ' + b;
+    }else if(t === 'sub'){
+      a = 2 + rnd(38); b = 1 + rnd(a - 1);
+      ans = a - b; text = a + ' - ' + b;
+    }else if(t === 'mul'){
+      a = 1 + rnd(9); b = 1 + rnd(9);
+      ans = a * b; text = a + ' × ' + b;
+    }else{
+      b = 1 + rnd(9); ans = 1 + rnd(9); a = b * ans;
+      text = a + ' ÷ ' + b;
+    }
+    return { type:t, text:text, ans:ans };
+  }
+  function shuffle(arr){
+    for(var i = arr.length - 1; i > 0; i--){
+      var j = rnd(i + 1), tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+  function genNumbers(ans){
+    var set = {}, arr = [ans], guard = 0;
+    set[ans] = 1;
+    while(arr.length < 25 && guard < 4000){
+      guard++;
+      var d = 1 + rnd(14);
+      var v = (Math.random() < 0.5) ? ans + d : ans - d;
+      if(v < 0 || v > 99) continue;
+      if(set[v]) continue;
+      set[v] = 1; arr.push(v);
+    }
+    var k = 0;
+    while(arr.length < 25){
+      if(!set[k]){ set[k] = 1; arr.push(k); }
+      k++;
+    }
+    return shuffle(arr);
+  }
+
+  /* ---------- 尺寸自适应：精确测量剩余高度定格子 + 兜底整页等比缩放（永不滚动、不裁切） ---------- */
+  var APP = document.querySelector('.ms-app');
+  var BOARD = document.querySelector('.ms-board');
+  var HEAD = document.querySelector('.ms-head');
+  var CTRL = document.querySelector('.ms-ctrl');
+  var PLAY = document.querySelector('.ms-play');
+  var QUIZ = document.querySelector('.ms-quiz');
+  var RESULT = document.querySelector('.ms-result');
+
+  function calcCell(){
+    if(!PASTURE) return;
+    var cs = getComputedStyle;
+    var isRow = cs(BOARD).flexDirection === 'row';
+    var vh = window.innerHeight || 640;
+    // 垂直：除羊群外的一切固定开销（头部 / 控制区(仅竖屏) / 出题区 / 结算区 / 各种 padding+gap）
+    var appPad = (parseFloat(cs(APP).paddingTop) || 0) + (parseFloat(cs(APP).paddingBottom) || 0);
+    var appGap = parseFloat(cs(APP).rowGap) || 0;
+    var boardGap = isRow ? 0 : (parseFloat(cs(BOARD).rowGap) || 0);
+    var playPad = (parseFloat(cs(PLAY).paddingTop) || 0) + (parseFloat(cs(PLAY).paddingBottom) || 0);
+    // 横屏矮屏时出题区与结算区并排一行，只算两者较高的那个（用实际位置判断，不靠猜）
+    var qb = QUIZ.getBoundingClientRect(), rb = RESULT.getBoundingClientRect();
+    var sameRow = rb.top < qb.bottom - 4;
+    var quizH = QUIZ.offsetHeight + (parseFloat(cs(QUIZ).marginBottom) || 0);
+    var resultH = RESULT.offsetHeight + (parseFloat(cs(RESULT).marginTop) || 0);
+    var blockH = sameRow ? Math.max(quizH, resultH) : (quizH + resultH);
+    var fixedH = appPad + appGap + HEAD.offsetHeight + boardGap + (isRow ? 0 : CTRL.offsetHeight)
+               + playPad + blockH + 10;
+    // 水平：play 面板内可用宽
+    var playW = PLAY.clientWidth - (parseFloat(cs(PLAY).paddingLeft) || 0) - (parseFloat(cs(PLAY).paddingRight) || 0);
+    var byH = (vh - fixedH - 20) / 5;    // 20 = 草地 padding8 + 格间距12
+    var byW = (playW - 22) / 5;          // 再留 2px 余量防挤出横向滚动
+    var cell = Math.floor(Math.min(byH, byW));
+    cell = Math.max(30, Math.min(cell, 118));
+    document.documentElement.style.setProperty('--ms-cell', cell + 'px');
+  }
+
+  // 兜底：格子已压到最小仍装不下 → 整页等比缩放，保证一屏完整可见、不出现滚动条
+  // 注意：只按“高度”算缩放。羊身美术会探出格子左右边缘，app.scrollWidth 因此被撑大，
+  // 若把宽度也算进去会把整页缩得过小（实测缩到 0.57）。
+  function measureScale(){
+    calcCell();
+    APP.style.transform = '';
+    var h = APP.scrollHeight || 1;
+    return Math.min(1, (window.innerHeight || 640) / h);
+  }
+  function fitAll(){
+    if(!APP) return;
+    // 先在标准模式下量一次；装不下就换紧凑模式再量一次，取缩放更接近 1（即内容更大）的那套
+    document.body.classList.remove('ms-tight');
+    var s1 = measureScale();
+    var s = s1;
+    if(s1 < 0.995){
+      document.body.classList.add('ms-tight');
+      var s2 = measureScale();
+      if(s2 > s1) s = s2;
+      else { document.body.classList.remove('ms-tight'); measureScale(); s = s1; }
+    }
+    if(s < 0.999) APP.style.transform = 'scale(' + s.toFixed(4) + ')';
+  }
+
+  /* ---------- 羊群渲染 ---------- */
+  function setFaceDir(face, right){
+    face.classList.toggle('ms-face-r', !!right);
+    var nm = face.querySelector('.ms-num');
+    if(nm) nm.style.transform = right ? 'translate(-50%,-50%) scaleX(-1)' : '';
+  }
+
+  function renderFlock(nums){
+    PASTURE.innerHTML = '';
+    for(var i = 0; i < nums.length; i++){
+      var cell = document.createElement('div');
+      cell.className = 'ms-cell ms-in';
+      cell.dataset.number = nums[i];
+      cell.style.zIndex = String(Math.floor(i / 5) + 1);
+      cell.style.setProperty('--i', String(i));
+
+      // 狼图层：写在羊前面 → 永远压在羊身后
+      var wolf = document.createElement('div');
+      wolf.className = 'ms-wolf';
+      cell.appendChild(wolf);
+
+      var face = document.createElement('div');
+      face.className = 'ms-face';
+      cell.appendChild(face);
+
+      var sheep = document.createElement('div');
+      sheep.className = 'ms-sheep';
+      var ai = rnd(4);
+      if(ai > 0){
+        sheep.classList.add('ms-a' + ai);
+        if(ai === 1) sheep.style.animationDuration = (7 + Math.random()*3).toFixed(2) + 's';
+        if(ai === 2) sheep.style.animationDuration = (1.2 + Math.random()*0.6).toFixed(2) + 's';
+        if(ai === 3) sheep.style.animationDuration = (4 + Math.random()*2).toFixed(2) + 's';
+      }
+      face.appendChild(sheep);
+
+      var num = document.createElement('span');
+      num.className = 'ms-num';
+      num.textContent = nums[i];
+      sheep.appendChild(num);
+
+      setFaceDir(face, Math.random() < 0.5);
+
+      cell.onclick = function(){ onCellClick(this); };
+      PASTURE.appendChild(cell);
+    }
+  }
+
+  function renderIdleFlock(){
+    var nums = [];
+    for(var i = 0; i < 25; i++) nums.push('?');
+    renderFlock(nums);
+    var cells = PASTURE.children;
+    for(var j = 0; j < cells.length; j++){
+      cells[j].onclick = null;
+      cells[j].classList.add('ms-empty');
+      cells[j].style.cursor = 'default';
+    }
+  }
+
+  /* ---------- 计时 ---------- */
+  function clearTimers(){
+    if(S.tickId){ clearInterval(S.tickId); S.tickId = 0; }
+    if(S.phaseId){ clearTimeout(S.phaseId); S.phaseId = 0; }
+  }
+  function updateTimer(){
+    var remain = S.deadline - Date.now();
+    if(remain < 0) remain = 0;
+    var ratio = remain / (S.secPerQ * 1000);
+    EL_BAR.style.width = (ratio * 100).toFixed(1) + '%';
+    var sec = (remain / 1000).toFixed(1);
+    EL_TXT.textContent = '还剩 ' + sec + ' 秒';
+    var urgent = remain <= 3000;
+    EL_BAR.classList.toggle('ms-urgent', urgent);
+    EL_TXT.classList.toggle('ms-urgent', urgent);
+    // 最后 3 秒：每秒一声短滴答，提醒"快没时间了"
+    if(urgent && remain > 0){
+      var s = Math.ceil(remain / 1000);
+      if(s !== S.lastTick){ S.lastTick = s; sndTick(); }
+    }
+    if(remain <= 0) onTimeout();
+  }
+
+  /* ---------- 设置锁定：游戏中题型/时间不可改，避免静默重开 ---------- */
+  function lockSettings(lock){
+    var btns = document.querySelectorAll('#ms-types .ms-btn, #ms-times .ms-btn');
+    for(var i = 0; i < btns.length; i++) btns[i].disabled = lock;
+  }
+
+  /* ---------- 交互 ---------- */
+  function findCellByNumber(n){
+    var cells = PASTURE.children;
+    for(var i = 0; i < cells.length; i++){
+      if(cells[i].dataset.number !== '' && +cells[i].dataset.number === n) return cells[i];
+    }
+    return null;
+  }
+  function onCellClick(cell){
+    if(!S.running || S.locked) return;
+    var n = cell.dataset.number;
+    if(n === '') return;
+    if(+n === S.q.ans) onRight(cell);
+    else onWrong(cell);
+  }
+  function onRight(cell){
+    S.locked = true;
+    if(S.tickId){ clearInterval(S.tickId); S.tickId = 0; }
+    var remain = Math.max(0, S.deadline - Date.now());
+    var ratio = remain / (S.secPerQ * 1000);
+    var gain = 10 + Math.round(10 * ratio) + Math.min(S.streak, 5) * 2;
+    S.score += gain; S.correct++; S.streak++;
+    // 与舒尔特羊群一致：点对的羊顺着头的方向飞出画面
+    var face = cell.querySelector('.ms-face');
+    if(face && face.classList.contains('ms-face-r')) cell.classList.add('ms-fly-right');
+    else cell.classList.add('ms-fly-left');
+    cell.classList.add('ms-correct');
+    sndCorrect();
+    updateHud();
+    EL_TXT.textContent = '答对了 +' + gain + ' 分';
+    EL_TXT.classList.remove('ms-urgent');
+    S.phaseId = setTimeout(function(){ nextQuestion(); }, 1000);
+  }
+  function onWrong(cell){
+    cell.classList.add('ms-wrong');
+    setTimeout(function(){ cell.classList.remove('ms-wrong'); }, 420);
+    S.streak = 0;
+    sndWrong();
+    updateHud();
+  }
+  function onTimeout(){
+    S.locked = true;
+    if(S.tickId){ clearInterval(S.tickId); S.tickId = 0; }
+    EL_BAR.style.width = '0%';
+    EL_TXT.textContent = '时间到！狼把羊叼走了';
+    EL_BAR.classList.remove('ms-urgent');
+    EL_TXT.classList.add('ms-urgent');
+    S.streak = 0;
+    updateHud();
+    var cell = findCellByNumber(S.q.ans);
+    // 狼在羊身后升起 → 再把羊一起叼走
+    if(cell){
+      // 答案在第一行时不高探，避免狼头压到上方题目卡；其余行正常高探露脸
+      var kids = PASTURE.children, cellIdx = -1;
+      for(var ci = 0; ci < kids.length; ci++){ if(kids[ci] === cell){ cellIdx = ci; break; } }
+      if(cellIdx >= 0 && Math.floor(cellIdx / 5) === 0) cell.classList.add('ms-wolfcome-low');
+      else cell.classList.add('ms-wolfcome');
+      sndWolf();
+      setTimeout(function(){ cell.classList.add('ms-taken'); }, 900);
+      setTimeout(function(){ cell.innerHTML = ''; cell.dataset.number = ''; cell.classList.add('ms-empty'); }, 1650);
+    }else{
+      sndWolf();
+    }
+    S.phaseId = setTimeout(function(){ nextQuestion(); }, 1750);
+  }
+
+  /* ---------- 流程 ---------- */
+  function updateHud(){
+    EL_IDX.textContent = S.idx + '/' + TOTAL_Q;
+    EL_SCORE.textContent = String(S.score);
+    EL_STREAK.textContent = String(S.streak);
+  }
+  function nextQuestion(){
+    if(!S.running) return;
+    if(S.idx >= TOTAL_Q){ finish(); return; }
+    S.idx++;
+    S.q = genQuestion(S.types);
+    renderFlock(genNumbers(S.q.ans));
+    EL_EXPR.innerHTML = S.q.text + ' <span class="ms-q">= ?</span>';
+    EL_TXT.textContent = '还剩 ' + S.secPerQ.toFixed(1) + ' 秒';
+    EL_TXT.classList.remove('ms-urgent');
+    EL_BAR.classList.remove('ms-urgent');
+    EL_BAR.style.width = '100%';
+    updateHud();
+    S.locked = false;
+    S.lastTick = -1;
+    S.deadline = Date.now() + S.secPerQ * 1000;
+    S.tickId = setInterval(updateTimer, 80);
+  }
+  function startGame(){
+    clearTimers();
+    S.running = true; S.locked = true;
+    S.idx = 0; S.score = 0; S.streak = 0; S.correct = 0;
+    S.runStart = Date.now();
+    sndStart();
+    // 运行中：唯一「开始/再玩」主按钮锁定为进行中，防止误触清空进度
+    document.getElementById('ms-start').textContent = '本关进行中…';
+    document.getElementById('ms-start').disabled = true;
+    lockSettings(true);
+    EL_STOP.disabled = false;
+    EL_RC.textContent = '—'; EL_RS.textContent = '—';
+    EL_RT.textContent = '—'; EL_RA.textContent = '—';
+    EL_VER.textContent = '进行中…答对越多、手越快，分越高';
+    nextQuestion();
+  }
+  function stopGame(){
+    clearTimers();
+    S.running = false; S.locked = true;
+    document.getElementById('ms-start').textContent = '开始一关';
+    document.getElementById('ms-start').disabled = false;
+    lockSettings(false);
+    EL_STOP.disabled = true;
+    EL_BAR.style.width = '0%';
+    EL_TXT.classList.remove('ms-urgent');
+    sndStop();
+    if(S.idx === 0){
+      EL_TXT.textContent = '准备中';
+    }else{
+      EL_TXT.textContent = '已停止，点「开始一关」重开';
+    }
+  }
+  function finish(){
+    clearTimers();
+    S.running = false; S.locked = true;
+    // 结算：主按钮成为唯一「再玩一次」入口
+    document.getElementById('ms-start').textContent = '再玩一次';
+    document.getElementById('ms-start').disabled = false;
+    lockSettings(false);
+    EL_STOP.disabled = true;
+    var used = Math.max(0, Date.now() - S.runStart);
+    var acc = Math.round(S.correct / TOTAL_Q * 100);
+    EL_RC.textContent = S.correct + '/' + TOTAL_Q;
+    EL_RS.textContent = String(S.score);
+    EL_RT.textContent = (used / 1000).toFixed(1) + 's';
+    EL_RA.textContent = acc + '%';
+    var v;
+    if(acc === 100) v = '满分！羊一只都没丢，反应稳得很';
+    else if(acc >= 80) v = '很好，稳住这个速度就能满分';
+    else if(acc >= 50) v = '及格线以上，再快一点就能保住更多羊';
+    else v = '被狼叼走了不少，先熟一熟乘法表再来';
+    EL_VER.textContent = v;
+    EL_EXPR.innerHTML = '本关结束 · 得分 <span class="ms-q">' + S.score + '</span>';
+    EL_BAR.style.width = '0%';
+    EL_TXT.textContent = '本关完成';
+    EL_TXT.classList.remove('ms-urgent');
+    sndFinish();
+    renderIdleFlock();
+  }
+
+  /* ---------- 事件绑定：按钮静态，切换只改 class（规则R / AI） ---------- */
+  /* ---------- 音效开关（记住选择） ---------- */
+  var EL_SOUND = document.getElementById('ms-sound');
+  function setMuted(m){
+    muted = m;
+    EL_SOUND.classList.toggle('muted', m);
+    EL_SOUND.textContent = m ? '🔇' : '🔊';
+    try{ localStorage.setItem('mathSheepMute', m ? '1' : '0'); }catch(e){}
+  }
+  setMuted((function(){
+    try{ return localStorage.getItem('mathSheepMute') === '1'; }catch(e){ return false; }
+  })());
+  EL_SOUND.onclick = function(){
+    setMuted(!muted);
+    if(!muted) sndStart();   // 打开音效时给一声提示
+  };
+
+  document.getElementById('ms-start').onclick = function(){ startGame(); };
+  EL_STOP.onclick = function(){ stopGame(); };
+
+  document.getElementById('ms-types').addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('.ms-btn') : null;
+    if(!btn) return;
+    var on = this.querySelectorAll('.ms-btn.active');
+    if(btn.classList.contains('active') && on.length === 1) return;   // 至少保留一种题型
+    btn.classList.toggle('active');
+    syncTypes();
+  });
+  document.getElementById('ms-times').addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('.ms-btn') : null;
+    if(!btn) return;
+    var all = this.querySelectorAll('.ms-btn');
+    for(var i = 0; i < all.length; i++) all[i].classList.remove('active');
+    btn.classList.add('active');
+    S.secPerQ = +btn.dataset.sec;
+  });
+  function syncTypes(){
+    var act = document.querySelectorAll('#ms-types .ms-btn.active');
+    var arr = [];
+    for(var i = 0; i < act.length; i++) arr.push(act[i].dataset.type);
+    S.types = arr.length ? arr : ['add','sub','mul'];
+  }
+
+  var fitTimer = 0;
+  function fitSoon(){
+    if(fitTimer) clearTimeout(fitTimer);
+    fitTimer = setTimeout(function(){ fitTimer = 0; fitAll(); }, 60);
+  }
+  window.addEventListener('resize', fitSoon);
+  window.addEventListener('orientationchange', function(){ setTimeout(fitAll, 300); });
+  if(window.ResizeObserver && RESULT){
+    new ResizeObserver(fitSoon).observe(RESULT);   // 结算区文案换行导致高度变化时也要重新适配
+  }
+
+  syncTypes();
+  renderIdleFlock();
+  fitAll();
+  window.addEventListener('load', fitAll);
+})();
+</script>
+</body>
+</html>

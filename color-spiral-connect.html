@@ -987,13 +987,26 @@ if (tgt) {
     }
   }
   var animId = null;
-  function animLoop(){
+  var animPrevT = 0;        // 上一帧时间戳（ms）：把变形速度绑到"真实时间"，而不是帧数
+  var drawErrCount = 0;     // 单帧绘制异常计数：只丢这一帧，绝不断掉动画链
+  function animLoop(ts){
+    // ① 先把下一帧排上：任何一帧 draw() 出错都不会让动画链断掉（否则整屏永久冻结、变形永久停止）
+    animId = requestAnimationFrame(animLoop);
+    // ② 变形按"真实时间"推进，与帧率无关。dt 归一化到 60fps（dt*60 = 相当于多少帧的量）。
+    //    慢帧照真实时长补偿；超过 0.25s 视为"切后台/窗口被遮挡后返回"，按一帧处理、不补偿，
+    //    否则所有球会被同步重置相位，且画面瞬跳一大截。
+    var nowT = (typeof ts === 'number') ? ts : Date.now();
+    var dt = animPrevT ? (nowT - animPrevT) / 1000 : 1 / 60;
+    animPrevT = nowT;
+    if (!(dt > 0)) dt = 1 / 60;
+    if (dt > 0.25) dt = 1 / 60;
     if (shapeActive) {
       // 每个干扰球独立推进 morph，四个形状循环（圆→三角→方→菱→圆…），各自节奏略有差异
+      var kFrame = dt * 60;
       for (var bi = 0; bi < state.pts.length; bi++) {
         var bp = state.pts[bi];
         if (bp.isTarget) continue;
-        bp.shapeT += bp.shapeSpeed;
+        bp.shapeT += bp.shapeSpeed * kFrame;
         if (bp.shapeT >= 1) {
           bp.shapeT = 0;
           bp.shapeFrom = bp.shapeTo;
@@ -1001,8 +1014,15 @@ if (tgt) {
         }
       }
     }
-    draw();
-    animId = requestAnimationFrame(animLoop);
+    // ③ 单帧异常隔离：出错只丢这一帧，动画继续
+    try {
+      draw();
+    } catch (err) {
+      drawErrCount++;
+      if (drawErrCount === 1 || drawErrCount % 100 === 0) {
+        console.error('draw() 单帧绘制异常（第 ' + drawErrCount + ' 次），已跳过该帧，动画继续：', err);
+      }
+    }
   }
 
   /* ===== 自由画线 ===== */
@@ -1366,6 +1386,7 @@ if (tgt) {
     getSpiralPolyline: function(){ return getSpiralPolyline(); },
     getStrokes: function(){ return strokes; },
     getShape: function(){ return { active: shapeActive }; },
+    getDrawErrors: function(){ return drawErrCount; },
     getObsShapes: function(){ return state.pts.filter(function(p){ return !p.isTarget; }).map(function(p){ return p.shapeFrom; }); },
     getWrongTrail: function(){ return wrongTrail.length; },
     downAt: function(px, py){ var r = cv.getBoundingClientRect(); onDown({ clientX: r.left + px, clientY: r.top + py, preventDefault: function(){} }); },

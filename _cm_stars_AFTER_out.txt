@@ -1,0 +1,21 @@
+=== 星星（drawStar）量化验证 — AFTER ===
+  源文件：D:/专注力项目/color-match.html
+  已进入第 10 关
+
+--- 场景A：一进关卡的开局画面（150ms 内）---
+  开局 0~150ms             帧内点数= 80  稳定星形=  0  涉及星形=  0  窗口内 drawStar 次数=    0  printStatic=false  shapeTime=192
+  开局 150~450ms           帧内点数= 80  稳定星形=  0  涉及星形=  0  窗口内 drawStar 次数=    0  printStatic=false  shapeTime=496
+
+--- 场景B：进入打印预览（派发 beforeprint）---
+  打印模式 0.5s              帧内点数=  0  稳定星形=  0  涉及星形=  0  窗口内 drawStar 次数=    0  printStatic=true  shapeTime=1105
+
+--- 场景C：游玩中（打印结束后等 8 秒）---
+  游玩中 0.5s               帧内点数= 80  稳定星形= 47  涉及星形= 67  窗口内 drawStar 次数= 1596  printStatic=false  shapeTime=9303
+
+=== 判定 ===
+  开局画面：稳定星形 0 个 → 0 个（期望 0）  通过 ✓
+  打印模式：0.5 秒内 drawStar 调用 0 次，帧内点数 0（期望 0）  通过 ✓
+  游玩中　：0.5 秒内 drawStar 调用 1596 次（说明变形动画仍在运行，未被破坏）
+
+=== 报错 ===
+  0 条

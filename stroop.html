@@ -156,7 +156,7 @@ const cv=document.getElementById('cv');
 const wrap=document.querySelector('.preview-wrap');
 let state={mode:'word', rule:0, rows:6, cols:8, colorCount:4, wordCount:4, orient:'portrait', sizePrompt:null, swapT:0, printStatic:false};
 let matrix=[];
-let swapRAF=null, swapStart=0, swapDir=1;
+let swapRAF=null, swapStart=0, swapDir=1, swapDrawErr=0;
 
 function ri(n){return Math.floor(Math.random()*n);}
 
@@ -371,18 +371,22 @@ function startSwapAnim(){
 }
 function swapFrame(now){
   if(!(state.mode==='size' && state.rule===1 && !state.printStatic)){ swapRAF=null; return; }
+  // ★ 先把下一帧排上：原写法在 draw() 之后注册，只要有一帧 draw() 抛异常，
+  //   这个自循环就永久断掉，「左右大小互换」再也不动（整类"动画突然停止"的根因）。
+  swapRAF=requestAnimationFrame(swapFrame);
   const el=now-swapStart;
   if(el<SWAP_DUR){
     state.swapT = swapDir===1 ? easeInOutCubic(el/SWAP_DUR) : 1-easeInOutCubic(el/SWAP_DUR);
-    draw();
-    swapRAF=requestAnimationFrame(swapFrame);
   } else if(el<SWAP_DUR+SWAP_HOLD){
     state.swapT = swapDir===1?1:0;
-    draw();
-    swapRAF=requestAnimationFrame(swapFrame);
   } else {
     swapDir=-swapDir; swapStart=now;
-    swapRAF=requestAnimationFrame(swapFrame);
+  }
+  try {
+    draw();
+  } catch(err){
+    swapDrawErr++;
+    if(swapDrawErr===1 || swapDrawErr%100===0) console.error('draw() 单帧绘制异常（第 '+swapDrawErr+' 次），已跳过该帧，动画继续：', err);
   }
 }
 function stopSwapAnim(){

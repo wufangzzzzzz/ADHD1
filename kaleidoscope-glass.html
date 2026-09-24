@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>万花筒玻璃效果</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: radial-gradient(circle at 50% 42%, #101827 0%, #05070c 62%, #020306 100%);
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #c9d6ea;
+    -webkit-user-select: none; user-select: none;
+  }
+  #cv {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    display: block; border-radius: 50%;
+  }
+  .panel {
+    position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    padding: 10px 16px; max-width: 94vw;
+    background: rgba(10, 16, 28, 0.66);
+    border: 1px solid rgba(140, 170, 220, 0.16);
+    border-radius: 12px;
+  }
+  .panel label {
+    display: flex; flex-direction: column; gap: 5px;
+    font-size: 12px; color: #93a6c2; width: 104px;
+  }
+  .panel label span { color: #dbe6f7; font-size: 12px; }
+  .panel input[type=range] { width: 100%; accent-color: #7aa2ff; height: 18px; }
+  #status {
+    position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
+    font-size: 12px; color: #6d7f9c; white-space: nowrap;
+  }
+  #err {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    max-width: 80vw; font-size: 13px; line-height: 1.6; color: #ff9c9c;
+    display: none; word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="err"></div>
+<div id="status">正在初始化</div>
+<div class="panel">
+  <label>镜面数<span id="v-seg">8</span><input type="range" id="p-seg" min="6" max="16" step="1" value="8"></label>
+  <label>玻璃密度<span id="v-scale">6.0</span><input type="range" id="p-scale" min="2" max="9" step="0.1" value="6"></label>
+  <label>棱边光晕<span id="v-rim">1.00</span><input type="range" id="p-rim" min="0" max="2" step="0.05" value="1"></label>
+  <label>色散<span id="v-chroma">1.00</span><input type="range" id="p-chroma" min="0" max="2.5" step="0.05" value="1"></label>
+  <label>变幻速度<span id="v-speed">0.70</span><input type="range" id="p-speed" min="0" max="2.5" step="0.05" value="0.7"></label>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById('cv');
+  var statusEl = document.getElementById('status');
+  var errEl = document.getElementById('err');
+  window.__glass = { ok: false, err: '', fps: 0, frames: 0, size: 0 };
+
+  var gl = null;
+  try {
+    gl = cv.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true })
+      || cv.getContext('experimental-webgl', { alpha: false, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true });
+  } catch (e) { gl = null; }
+
+  if (!gl) {
+    window.__glass.err = 'no-webgl';
+    errEl.style.display = 'block';
+    errEl.textContent = '这个环境没有启用 WebGL，玻璃效果无法绘制。';
+    statusEl.textContent = 'WebGL 不可用';
+    return;
+  }
+
+  var VS = [
+    'attribute vec2 aPos;',
+    'void main() { gl_Position = vec4(aPos, 0.0, 1.0); }'
+  ].join('\n');
+
+  var FS = [
+    '#ifdef GL_FRAGMENT_PRECISION_HIGH',
+    'precision highp float;',
+    '#else',
+    'precision mediump float;',
+    '#endif',
+    'uniform vec2 uRes;',
+    'uniform float uTime;',
+    'uniform float uSeg;',
+    'uniform float uScale;',
+    'uniform float uRim;',
+    'uniform float uChroma;',
+    'uniform float uSpeed;',
+    'uniform float uMode;',
+    'uniform sampler2D uNoise;',
+    'const float PI = 3.14159265359;',
+    'vec2 rnd2(vec2 c) {',
+    '  return texture2D(uNoise, (mod(c, 64.0) + 0.5) * 0.015625).gb;',
+    '}',
+    'float rnd1(vec2 c) {',
+    '  return texture2D(uNoise, (mod(c, 64.0) + 0.5) * 0.015625).r;',
+    '}',
+    'vec3 hsv2rgb(vec3 c) {',
+    '  vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);',
+    '  return c.z * mix(vec3(1.0), rgb, c.y);',
+    '}',
+    'vec4 voro(vec2 x, float t) {',
+    '  vec2 n = floor(x);',
+    '  vec2 f = fract(x);',
+    '  float f1 = 8.0;',
+    '  float f2 = 8.0;',
+    '  vec2 best = vec2(0.0);',
+    '  for (int j = -1; j <= 1; j++) {',
+    '    for (int i = -1; i <= 1; i++) {',
+    '      vec2 g = vec2(float(i), float(j));',
+    '      vec2 o = rnd2(n + g);',
+    '      o = 0.5 + 0.34 * vec2(sin(t * 0.6 + 6.2831853 * o.x), cos(t * 0.55 + 6.2831853 * o.y));',
+    '      vec2 d = g + o - f;',
+    '      float dd = dot(d, d);',
+    '      if (dd < f1) { f2 = f1; f1 = dd; best = n + g; }',
+    '      else if (dd < f2) { f2 = dd; }',
+    '    }',
+    '  }',
+    '  float hueSeed = fract(0.7548776662466927 * best.x + 0.5698402909980532 * best.y);',
+    '  return vec4(sqrt(f1), sqrt(f2), rnd1(best), hueSeed);',
+    '}',
+    'vec3 shardLayer(vec2 uv, float t, float seed) {',
+    '  vec4 v = voro(uv, t);',
+    '  float f1 = v.x;',
+    '  float f2 = v.y;',
+    '  float id = fract(v.z + seed);',
+    '  float edge = f2 - f1;',
+    '  float hue = fract(v.w + seed * 0.37);',
+    '  float clear = step(0.82, fract(id * 5.13));',
+    '  float sat = (0.55 + 0.32 * fract(id * 13.7)) * (1.0 - 0.85 * clear);',
+    '  float val = 0.38 + 0.62 * fract(id * 7.31);',
+    '  vec3 tint = hsv2rgb(vec3(hue, sat, val));',
+    '  float body = mix(mix(0.34, 0.60, clear), 1.0, smoothstep(0.0, 0.46, f1));',
+    '  float streak = 0.5 + 0.5 * sin(f1 * 34.0 + id * 21.0);',
+    '  body *= 0.84 + 0.28 * streak;',
+    '  body *= 0.86 + 0.30 * fract(id * 23.1);',
+    '  vec3 col = tint * body;',
+    '  col += tint * smoothstep(0.50, 0.0, f1) * 0.85;',
+    '  float rimW = 0.030 * uRim;',
+    '  float rim = smoothstep(rimW, 0.0, edge);',
+    '  col += vec3(1.0, 0.97, 0.92) * rim * 0.55;',
+    '  float disp = 0.010 * uChroma * uRim;',
+    '  float outR = smoothstep(rimW * 1.5, 0.0, edge + disp);',
+    '  float outB = smoothstep(rimW * 1.5, 0.0, edge - disp);',
+    '  col += vec3(1.00, 0.30, 0.22) * max(outR - outB, 0.0) * 0.60;',
+    '  col += vec3(0.22, 0.46, 1.00) * max(outB - outR, 0.0) * 0.60;',
+    '  float gw = 0.016 + 0.015 * fract(id * 17.3);',
+    '  float gap = smoothstep(0.0, gw, edge);',
+    '  col *= mix(0.03, 1.0, gap);',
+    '  return col;',
+    '}',
+    'void main() {',
+    '  vec2 q = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;',
+    '  float r0 = length(q);',
+    '  q *= 1.0 + 0.05 * r0 * r0;',
+    '  float r = length(q);',
+    '  float ang = atan(q.y, q.x) + uTime * 0.05 * uSpeed;',
+    '  float A = PI / uSeg;',
+    '  float m = mod(ang, 2.0 * A);',
+    '  float fold = m > A ? (2.0 * A - m) : m;',
+    '  vec2 dir = vec2(cos(fold), sin(fold));',
+    '  vec2 uv = dir * (r * uScale) + 0.06 * vec2(cos(fold * 3.0), sin(fold * 3.0));',
+    '  float t = uTime * uSpeed * 0.35;',
+    '  if (uMode > 6.5) {',
+    '    vec2 nn = floor(uv);',
+    '    gl_FragColor = vec4(rnd1(nn + vec2(-1.0, -1.0)), rnd1(nn + vec2(0.0, 0.0)), rnd1(nn + vec2(1.0, -1.0)), 1.0);',
+    '    return;',
+    '  }',
+    '  if (uMode > 5.5) {',
+    '    vec2 nn = floor(uv);',
+    '    gl_FragColor = vec4(rnd2(nn).x, rnd2(nn + vec2(1.0, 2.0)).x, rnd2(nn + vec2(-3.0, 1.0)).x, 1.0);',
+    '    return;',
+    '  }',
+    '  if (uMode > 4.5) {',
+    '    vec4 dv = voro(uv, t);',
+    '    gl_FragColor = vec4(clamp(dv.x * 2.0, 0.0, 1.0), clamp(dv.y * 2.0, 0.0, 1.0), clamp((dv.y - dv.x) * 6.0, 0.0, 1.0), 1.0);',
+    '    return;',
+    '  }',
+    '  if (uMode > 3.5) {',
+    '    float hp = 0.0;',
+    '    #ifdef GL_FRAGMENT_PRECISION_HIGH',
+    '    hp = 1.0;',
+    '    #endif',
+    '    float pa = fract(12345.678 + uTime * 1.0e-7);',
+    '    float pb = fract(1234.5678 + uTime * 1.0e-7);',
+    '    float pc = fract(123.45678 + uTime * 1.0e-7);',
+    '    gl_FragColor = vec4(hp, pa, pc, 1.0);',
+    '    return;',
+    '  }',
+    '  if (uMode > 2.5) {',
+    '    vec2 nn = floor(uv);',
+    '    gl_FragColor = vec4(clamp(nn.x * 0.12 + 0.5, 0.0, 1.0), clamp(nn.y * 0.12 + 0.5, 0.0, 1.0), 0.20, 1.0);',
+    '    return;',
+    '  }',
+    '  if (uMode > 1.5) {',
+    '    vec4 dv2 = voro(uv, t);',
+    '    float did = dv2.z;',
+    '    gl_FragColor = vec4(fract(did), fract(did * 7.31), fract(did * 13.7), 1.0);',
+    '    return;',
+    '  }',
+    '  if (uMode > 0.5) {',
+    '    gl_FragColor = vec4(rnd1(vec2(-4.0, 3.0)), rnd1(vec2(0.0, 0.0)), rnd1(vec2(2.0, -1.0)), 1.0);',
+    '    return;',
+    '  }',
+    '  vec3 c0 = shardLayer(uv, t, 0.0);',
+    '  vec3 c1 = shardLayer(uv * 2.1 + vec2(5.13, 3.71), t, 0.37);',
+    '  vec3 c2 = shardLayer(uv * 4.4 + vec2(9.71, 7.13), t, 0.74);',
+    '  vec3 acc = c0 * (0.86 + 0.52 * c1) * (0.90 + 0.28 * c2);',
+    '  acc += pow(max(acc - vec3(0.62), vec3(0.0)), vec3(1.6)) * 0.70;',
+    '  float vig = smoothstep(1.00, 0.26, r);',
+    '  float field = smoothstep(0.500, 0.490, r);',
+    '  acc *= mix(0.22, 1.0, vig);',
+    '  acc *= field;',
+    '  float ring = smoothstep(0.007, 0.0, abs(r - 0.478));',
+    '  acc += vec3(0.40, 0.48, 0.62) * ring * 0.8;',
+    '  acc = pow(max(acc, vec3(0.0)), vec3(0.93));',
+    '  gl_FragColor = vec4(acc, 1.0);',
+    '}'
+  ].join('\n');
+
+  function showErr(msg) {
+    window.__glass.err = msg;
+    errEl.style.display = 'block';
+    errEl.textContent = '着色器错误：' + msg;
+  }
+
+  function compile(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      throw new Error(gl.getShaderInfoLog(s) || 'compile failed');
+    }
+    return s;
+  }
+
+  var prog;
+  try {
+    prog = gl.createProgram();
+    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      throw new Error(gl.getProgramInfoLog(prog) || 'link failed');
+    }
+  } catch (e) {
+    showErr(e.message);
+    statusEl.textContent = '着色器编译失败';
+    return;
+  }
+
+  gl.useProgram(prog);
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  var aPos = gl.getAttribLocation(prog, 'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  var NOISE_N = 64;
+  var noiseData = new Uint8Array(NOISE_N * NOISE_N * 4);
+  var _seed = 20260921;
+  function _rnd() {
+    _seed |= 0; _seed = (_seed + 0x6D2B79F5) | 0;
+    var tt = Math.imul(_seed ^ (_seed >>> 15), 1 | _seed);
+    tt = (tt + Math.imul(tt ^ (tt >>> 7), 61 | tt)) ^ tt;
+    return ((tt ^ (tt >>> 14)) >>> 0) / 4294967296;
+  }
+  for (var ni = 0; ni < noiseData.length; ni += 4) {
+    noiseData[ni] = Math.floor(_rnd() * 256);
+    noiseData[ni + 1] = Math.floor(_rnd() * 256);
+    noiseData[ni + 2] = Math.floor(_rnd() * 256);
+    noiseData[ni + 3] = 255;
+  }
+  var noiseTex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, NOISE_N, NOISE_N, 0, gl.RGBA, gl.UNSIGNED_BYTE, noiseData);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.uniform1i(gl.getUniformLocation(prog, 'uNoise'), 0);
+
+  var U = {
+    res: gl.getUniformLocation(prog, 'uRes'),
+    time: gl.getUniformLocation(prog, 'uTime'),
+    seg: gl.getUniformLocation(prog, 'uSeg'),
+    scale: gl.getUniformLocation(prog, 'uScale'),
+    rim: gl.getUniformLocation(prog, 'uRim'),
+    chroma: gl.getUniformLocation(prog, 'uChroma'),
+    speed: gl.getUniformLocation(prog, 'uSpeed'),
+    mode: gl.getUniformLocation(prog, 'uMode')
+  };
+
+  var MODE = 0;
+
+  var P = { seg: 8, scale: 5, rim: 1, chroma: 1, speed: 0.7 };
+
+  function bindSlider(id, key, valId, digits) {
+    var el = document.getElementById(id);
+    var out = document.getElementById(valId);
+    if (!el) return;
+    function apply() {
+      P[key] = parseFloat(el.value);
+      if (out) out.textContent = digits > 0 ? P[key].toFixed(digits) : String(P[key]);
+    }
+    el.addEventListener('input', apply);
+    apply();
+  }
+  bindSlider('p-seg', 'seg', 'v-seg', 0);
+  bindSlider('p-scale', 'scale', 'v-scale', 1);
+  bindSlider('p-rim', 'rim', 'v-rim', 2);
+  bindSlider('p-chroma', 'chroma', 'v-chroma', 2);
+  bindSlider('p-speed', 'speed', 'v-speed', 2);
+
+  function resize() {
+    var size = Math.min(window.innerWidth, window.innerHeight * 0.86) * 0.96;
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+    var px = Math.min(Math.round(size * dpr), 1180);
+    cv.style.width = size + 'px';
+    cv.style.height = size + 'px';
+    cv.width = px;
+    cv.height = px;
+    window.__glass.size = px;
+    gl.viewport(0, 0, px, px);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var t0 = performance.now();
+  var frames = 0, fpsBase = t0, lastFps = 0;
+
+  function frame(now) {
+    var t = (now - t0) / 1000;
+    gl.uniform2f(U.res, cv.width, cv.height);
+    gl.uniform1f(U.time, t);
+    gl.uniform1f(U.seg, P.seg);
+    gl.uniform1f(U.scale, P.scale);
+    gl.uniform1f(U.rim, P.rim);
+    gl.uniform1f(U.chroma, P.chroma);
+    gl.uniform1f(U.speed, P.speed);
+    gl.uniform1f(U.mode, MODE);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    frames++;
+    window.__glass.frames = frames;
+    if (now - fpsBase >= 500) {
+      lastFps = Math.round(frames * 1000 / (now - fpsBase));
+      window.__glass.fps = lastFps;
+      statusEl.textContent = 'WebGL 就绪 · ' + cv.width + 'px · ' + lastFps + ' fps';
+      frames = 0;
+      fpsBase = now;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  window.__glass.ok = true;
+  statusEl.textContent = 'WebGL 就绪 · ' + cv.width + 'px';
+  requestAnimationFrame(frame);
+
+  window.__setMode = function (m) { MODE = m; };
+
+  window.__hueHist = function (bins) {
+    bins = bins || 16;
+    var w = cv.width, h = cv.height;
+    var buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    var hist = [], b;
+    for (b = 0; b < bins; b++) hist[b] = 0;
+    var n = 0, lowSat = 0, sr = 0, sg = 0, sb = 0;
+    for (var i = 0; i < buf.length; i += 4 * 17) {
+      var r = buf[i] / 255, g = buf[i + 1] / 255, bl = buf[i + 2] / 255;
+      sr += r; sg += g; sb += bl;
+      var m1 = Math.max(r, Math.max(g, bl)), m0 = Math.min(r, Math.min(g, bl));
+      var d = m1 - m0;
+      var sat = m1 > 0 ? d / m1 : 0;
+      var bi;
+      if (d < 1e-6 || sat < 0.12) {
+        lowSat++;
+        bi = 0;
+      } else {
+        var hu;
+        if (m1 === r) hu = ((g - bl) / d) % 6;
+        else if (m1 === g) hu = (bl - r) / d + 2;
+        else hu = (r - g) / d + 4;
+        hu = hu / 6;
+        if (hu < 0) hu += 1;
+        bi = Math.floor(hu * bins);
+        if (bi >= bins) bi = bins - 1;
+        if (bi < 0) bi = 0;
+      }
+      hist[bi]++;
+      n++;
+    }
+    return { bins: bins, hist: hist, total: n, lowSat: lowSat, avgR: sr / n, avgG: sg / n, avgB: sb / n };
+  };
+
+  window.__px = function (x, y) {
+    var w = cv.width, h = cv.height;
+    var buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    var idx = (Math.round(y) * w + Math.round(x)) * 4;
+    return [buf[idx], buf[idx + 1], buf[idx + 2], buf[idx + 3]];
+  };
+
+  window.__gridProbe = function (n) {
+    n = n || 5;
+    var w = cv.width, h = cv.height;
+    var buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    var out = [];
+    for (var j = 0; j < n; j++) {
+      for (var i = 0; i < n; i++) {
+        var x = Math.round((i + 0.5) / n * (w - 1));
+        var y = Math.round((j + 0.5) / n * (h - 1));
+        var idx = (y * w + x) * 4;
+        out.push([buf[idx], buf[idx + 1], buf[idx + 2]]);
+      }
+    }
+    return out;
+  };
+
+  window.__sampleRing = function (radius01, count) {
+    var w = cv.width, h = cv.height;
+    var buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    var cx = w / 2, cy = h / 2, R = Math.min(w, h);
+    var out = [], i;
+    for (i = 0; i < count; i++) {
+      var a = i / count * Math.PI * 2;
+      var x = Math.max(0, Math.min(w - 1, Math.round(cx + Math.cos(a) * R * radius01)));
+      var y = Math.max(0, Math.min(h - 1, Math.round(cy + Math.sin(a) * R * radius01)));
+      var idx = (y * w + x) * 4;
+      out.push([buf[idx], buf[idx + 1], buf[idx + 2]]);
+    }
+    return out;
+  };
+
+  window.__stats = function () {
+    var w = cv.width, h = cv.height;
+    var buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    var n = 0, sr = 0, sg = 0, sb = 0, slum = 0, slum2 = 0, ssat = 0;
+    var mx = 0, mn = 255, colors = 0, dark = 0, mid = 0, bright = 0, vivid = 0;
+    var seen = {};
+    for (var i = 0; i < buf.length; i += 4 * 37) {
+      var r = buf[i], g = buf[i + 1], b = buf[i + 2];
+      var lum = (r * 0.299 + g * 0.587 + b * 0.114);
+      var m1 = Math.max(r, Math.max(g, b)), m0 = Math.min(r, Math.min(g, b));
+      var sat = m1 > 0 ? (m1 - m0) / m1 : 0;
+      sr += r; sg += g; sb += b; slum += lum; slum2 += lum * lum; ssat += sat; n++;
+      if (lum > mx) mx = lum;
+      if (lum < mn) mn = lum;
+      if (lum < 40) dark++;
+      else if (lum < 180) mid++;
+      else bright++;
+      if (sat > 0.25) vivid++;
+      var key = (r >> 4) + '_' + (g >> 4) + '_' + (b >> 4);
+      if (!seen[key]) { seen[key] = 1; colors++; }
+    }
+    var mLum = slum / n;
+    return {
+      samples: n,
+      avgR: Math.round(sr / n), avgG: Math.round(sg / n), avgB: Math.round(sb / n),
+      avgLum: Math.round(mLum),
+      lumStd: Math.round(Math.sqrt(Math.max(0, slum2 / n - mLum * mLum))),
+      avgSat: Math.round(ssat / n * 100) / 100,
+      darkPct: Math.round(dark / n * 100), midPct: Math.round(mid / n * 100), brightPct: Math.round(bright / n * 100),
+      vividPct: Math.round(vivid / n * 100),
+      minLum: Math.round(mn), maxLum: Math.round(mx),
+      distinctColors: colors
+    };
+  };
+})();
+</script>
+</body>
+</html>

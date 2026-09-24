@@ -1,0 +1,14 @@
+=== v2 扫描：87 个 HTML / 31 个 rAF 循环（已剥注释）===
+
+【缺陷1】rAF 注册在绘制之后 → 0 处：
+  （无）
+
+【缺陷2】每帧 += 常量且无时间驱动 → 0 处：
+  （无）
+
+【对照】已加 try/catch 保护的 rAF 循环：
+  color-match.html              animateShapes     第  765行
+  color-match.html              animateParticles  第 1130行
+  color-spiral-connect.html     animLoop          第  909行
+  schulte-single-embed.html     setupEmbed        第 7749行
+  stroop.html                   swapFrame         第  357行

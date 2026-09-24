@@ -1,0 +1,4 @@
+﻿check:
+check_exit=0
+run_exit=0
+NOW 22:22:14

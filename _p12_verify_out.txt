@@ -1,0 +1,53 @@
+=== 图案12·原色变换 数值验证 ===
+  源文件：D:/专注力项目/schulte-grid.html
+  gridSize=4  已渲染 .p12-cell 数量=16（期望 16）
+  [PASS] 图案12 进入并渲染出全部格子  n=16
+  已固定公转角：getAnimations=1（0 说明 CSS 动画没挂上）
+  [PASS] CSS 公转动画已挂到 .p12-orbit  anims=1
+  首格屏幕尺寸：120×120 px
+  采样画布 120×120 = 14400 px
+  各类像素占比：
+    red         861    5.98%  均值rgb=[249,3,4]
+    green       859    5.97%  均值rgb=[2,248,3]
+    blue        857    5.95%  均值rgb=[2,2,247]
+    yellow      645    4.48%  均值rgb=[252,252,7]
+    magenta     644    4.47%  均值rgb=[252,6,252]
+    cyan        651    4.52%  均值rgb=[6,251,250]
+    white      4645   32.26%  均值rgb=[252,252,252]
+    black      5238   36.38%  均值rgb=[2,2,2]
+  单球屏幕半径 r≈48.0px，单球面积≈7238px²
+  白区面积 / 单球面积 = 64.2%（设计值 70%）
+  --- 判据 ---
+  [PASS] 存在纯红区  5.98%
+  [PASS] 存在纯绿区  5.97%
+  [PASS] 存在纯蓝区  5.95%
+  [PASS] 存在两两交叠·黄 (红+绿)  4.48%
+  [PASS] 存在两两交叠·品红 (红+蓝)  4.47%
+  [PASS] 存在两两交叠·青 (绿+蓝)  4.52%
+  [PASS] 存在三交·白 (红+绿+蓝)  32.26%
+  [FAIL] 白区面积 = 单球面积 70% ±4%  64.2%
+  [PASS] 黄区颜色纯净  [252,252,7]
+  [PASS] 品红区颜色纯净  [252,6,252]
+  [PASS] 青区颜色纯净  [6,251,250]
+  [PASS] 白区颜色纯净  [252,252,252]
+  格子中心 (415.5, 419.5)
+    旋转   0° → orbit bbox 中心 (417.8, 419.5)  尺寸 109.7×111.8
+    旋转  90° → orbit bbox 中心 (415.5, 421.8)  尺寸 111.8×109.7
+    旋转 180° → orbit bbox 中心 (413.2, 419.5)  尺寸 109.7×111.8
+    旋转 270° → orbit bbox 中心 (415.5, 417.2)  尺寸 111.8×109.7
+  [FAIL] 公转中心锁在格心（四角度 bbox 中心偏差 < 1.5px）  最大偏差 2.28px
+  [PASS] 四角度 bbox 尺寸稳定（形状未随公转变形）  宽 109.7/111.8/109.7/111.8
+  当前待点数字=1 → 点击后 cell class="grid-cell p12-cell"
+  [FAIL] 点对数字后加上 .p12-dissolve
+  消散后：balls opacity=undefined  动画=undefined  orbit play-state=undefined  数字 fill=undefined
+  [FAIL] 消散后三原色不可见（opacity→0）  opacity=undefined
+  [FAIL] 消散后该格旋转已暂停  play-state=undefined
+  [FAIL] 消散后数字转绿（黑底上仍可见）
+  [FAIL] 消散只作用于被点的那一格  已消散 0 / 共 16
+  打印介质下：orbit animation=none  transform=none  balls animation=none  balls opacity=1
+  [PASS] 打印时公转动画关闭  animation=none
+  [PASS] 打印时姿态归零（transform=none）  transform=none
+  [PASS] 打印时三原色完整可见  opacity=1
+  [PASS] 页面无 JS 报错
+
+=== 合计：PASS 18 / FAIL 7 ===

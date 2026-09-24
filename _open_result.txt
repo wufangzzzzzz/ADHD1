@@ -1,0 +1,9 @@
+﻿exit=0
+榛樿鍏宠仈 ProgId: ChromeHTML
+娴忚鍣?exe    : C:\Program Files\Google\Chrome\Application\chrome.exe
+鎵撳紑鐩爣      : file:///D:/涓撴敞鍔涢」鐩?kaleidoscope-glass.html
+鍚姩鍙傛暟      : --new-window (寮哄埗鏂扮獥鍙?
+鏂扮獥鍙ｅ懡涓?   : hwnd=9178404 | 涓囪姳绛掔幓鐠冩晥鏋?- Google Chrome
+AttachThreadInput : 宸叉寕鎺?
+SetForegroundWindow: True
+鍓嶅彴绐楀彛: 9178404 | 鐩爣: 9178404 -> 宸叉槸鍓嶅彴 鉁?

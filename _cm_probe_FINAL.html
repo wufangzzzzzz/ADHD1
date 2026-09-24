@@ -633,6 +633,16 @@
       var canvasW = 0, canvasH = 0;
       var shapeTime = 0; // 形状变换时间
       var shapeAnimId = null; // 动画ID
+      // [审计探针] 仅存在于临时副本
+      window.__cm = {
+        st: function(){ return shapeTime; },
+        setSt: function(v){ shapeTime = v; },
+        dots: function(){ return dotsData; },
+        cur: function(){ return currentColor; },
+        parts: function(){ return particles.length; },
+        dims: function(){ return { w: canvasW, h: canvasH }; },
+        lines: function(){ return currentLine.length; }
+      };
       // 打印 / 打印预览：形状一律固定为静态圆形。
       // 原代码没有任何打印处理，纸面抓到的是随机相位 → 打印预览里出现一堆星形/三角/方的"星星动画"。
       // 动态形状开关：默认关（所有点恒为圆形）。与「色彩识别连线」里的「动态形状」按钮保持一致。
