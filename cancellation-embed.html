@@ -63,6 +63,12 @@
   @media print{.no-print,.back-btn,.win-overlay{display:none!important;}*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{background:#fff!important;overflow:visible!important;height:auto!important;}body{display:block!important;}}
 
   /* ===== 嵌入模式 ===== */
+  /* ⚠ html 也必须挂 embed-mode（见 JS setupEmbed 里两行都加）。
+     旧版只给 body 加 class ⇒ html 的 height:100% 从未生效 ⇒ html 高度退化成 auto，
+     整页高度只能靠 body{min-height:100dvh} 兜底；内容一旦超过视口
+     （竖版 20 行会撑到 752px > iframe 视口 702px），就把 html 一起撑破，底部被 overflow:hidden 裁掉。
+     放进双人对战里、翻转 180° 后，被裁掉的那 40~50px 正好翻到视觉另一侧，表现为"有内容超出画面"。
+     height:100% 生效后 body 严格等于视口高，game-area/grid 走 flex 分配，行数再多也不会撑破。 */
   html.embed-mode,body.embed-mode{height:100%;overflow:hidden;}
   body.embed-mode{padding:0;background:#0f1226;color:#333;display:flex;flex-direction:column;}
   .embed-mode .back-btn,.embed-mode .header,.embed-mode .mode-bar,
@@ -86,7 +92,11 @@
   }
   .embed-mode .grid{
     flex:1 1 auto;min-height:0;width:100%;max-width:none;gap:2px;overflow:hidden;
-    grid-template-rows:repeat(var(--rows,12),1fr);
+    /* 必须用 minmax(0,1fr)：裸 1fr 的隐含最小尺寸是 auto（= 单元格内容高度≈30px），
+       竖版 20 行会被锁死在 20×30+间距 = 638px，超过可用高度 624px，
+       把 body 撑到 752px（iframe 视口只有 712px）⇒ 底部 40px 被 overflow:hidden 裁掉。
+       在双人对战里翻转 180° 后，这段被裁的内容正好翻到视觉另一侧，表现为"有内容超出画面"。 */
+    grid-template-rows:repeat(var(--rows,12),minmax(0,1fr));
   }
   .embed-mode .cell{
     min-width:0;max-width:none;aspect-ratio:auto;overflow:hidden;
@@ -422,6 +432,7 @@ function adjustFontSize(){
   if(!params.has('embed'))return;
   isEmbed=true;
   embedSide=params.get('side')||'L';
+  document.documentElement.classList.add('embed-mode');   // html 也必须加，否则 html{height:100%} 永不生效
   document.body.classList.add('embed-mode');
 
   window.addEventListener('message',function(ev){

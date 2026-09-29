@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>5×5×5 立方体 · 八角字母</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#0E1520;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+  #cv{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab}
+  #cv.on{cursor:grabbing}
+  #hd{position:fixed;left:24px;top:20px;color:#EAF1FA;pointer-events:none}
+  #hd h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.3px}
+  #hd p{margin:7px 0 0;font-size:13px;line-height:1.6;color:#7C8DA4}
+  #ft{position:fixed;right:22px;bottom:20px;display:flex;gap:12px;align-items:center}
+  #hint{color:#63748C;font-size:12.5px}
+  #btnReset{appearance:none;border:1px solid #2C3D52;background:#16202E;color:#C9D6E6;
+    font-size:13px;padding:9px 15px;border-radius:10px;cursor:pointer;font-family:inherit}
+  #btnReset:hover{background:#1D2A3C;border-color:#3A4F6A}
+  #btnReset:active{transform:translateY(1px)}
+  #btnLock{appearance:none;border:1px solid #2C3D52;background:#16202E;color:#C9D6E6;
+    font-size:13px;padding:9px 15px;border-radius:10px;cursor:pointer;font-family:inherit}
+  #btnLock:hover{background:#1D2A3C;border-color:#3A4F6A}
+  #btnLock:active{transform:translateY(1px)}
+  #btnLock.on{background:#3A2A12;border-color:#B8792A;color:#FFC978}
+  #cv.lock{cursor:default}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hd">
+  <h1>5×5×5 立方体 · 8 个角的字母</h1>
+  <p>拖动旋转 · 滚轮或双指缩放 · 字母旁小数字 = 离观察者远近序（1 最近 … 8 最远）</p>
+  <p>默认视角已把整个立方体<b>绕视线转 180°</b>：<b>C 在最上面、E 在最下面</b>（B 右上 / D 左上 / F 右下 / H 左下；A 与 G 仍重合在画面正中）</p>
+  <p>含 A 的 3 个面（<b>AEHD / ADCB / AEFB</b> = u0 / w0 / v0）已去掉 ⇒ 只剩远侧 3 面为墙、盒子朝观察者这一侧敞开（格线 48→24 条、棱 12→9 条，去掉的 3 条正是只属于它们的 A–B / A–D / A–E）。这 3 面墙与剩下的 9 条棱一律走<b>亮档</b>（旧的"背面暗档"在只剩远侧墙时会几乎看不见）</p>
+  <p>远侧三面墙上有完整 5×5 格线 · G 角（三面墙的墙角、最远处的角）上放了 <b>3 个 1×1×1 小方格</b>：G 角那格 + 往 H 一格 + 往 F 一格；后两格各自与 G 角那格<b>共用一个整面</b>、投影上就<b>各自共用 2 个边</b>。配色沿用大立方体 ⇒ <b>蓝面正在上面</b>、绿面在左、橙面在右</p>
+  <p>3 个小方格对着这 3 面墙的<b>投影</b>已填到墙上（w5 墙 3 格 / v5 墙 2 格 / u5 墙 2 格，共 <b>7 格</b>；索引口径与游戏本体的答案计算同一套）。投影格画在<b>墙这一层</b>（在小方格之下）—— 默认视角下这 7 格正好是小方格自己贴墙的那一面，被小方格挡着看不见；转动视角即可看见</p>
+  <p id="lvNear"></p>
+  <p id="lvCoinc"></p>
+</div>
+
+<div id="ft">
+  <span id="hint">拖动立方体旋转</span>
+  <button id="btnLock">锁定视角</button>
+  <button id="btnReset">对准 A–G</button>
+</div>
+
+<script>
+/* ============================================================
+   5×5×5 大立方体 · 8 个顶点字母 · 可旋转
+   相机与旋转数学与 cube-projection.html（立体投影涂色）完全同一套：
+     右手系基 (A0 右, B0 上, N0 指向屏幕里)，观察者在 -N0 一侧。
+     默认视角 = 绕视线轴 N0 转 180°（见下面 var M 的说明）：
+     等价于整幅画面在屏幕内转半圈 ⇒ C 到最上面、E 到最下面；
+     而 A、G 正好在这条转轴上（是不动点）⇒ 仍然重合在画面中心、A 仍最近、G 仍最远。
+   ============================================================ */
+var VN = 5;                                  /* 每方向 5 格 ⇒ 5×5×5 */
+var CEN = { u: VN / 2, v: VN / 2, w: VN / 2 };   /* 体心，用来把画面居中 */
+var HALF_DIAG = VN * Math.sqrt(3) / 2;          /* 外接球半径 4.3301，用来定死大小 */
+
+/* 8 个顶点：底面 A B C D（w=0）、顶面 E F G H（w=5），竖棱 A-E / B-F / C-G / D-H */
+var CORNER = {
+  A: { u: 0,  v: 0,  w: 0 }, B: { u: VN, v: 0,  w: 0 },
+  C: { u: VN, v: VN, w: 0 }, D: { u: 0,  v: VN, w: 0 },
+  E: { u: 0,  v: 0,  w: VN }, F: { u: VN, v: 0,  w: VN },
+  G: { u: VN, v: VN, w: VN }, H: { u: 0,  v: VN, w: VN }
+};
+var CNAME = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+/* 6 个外表面：每个面记 方向键 k、外法向 n、4 个顶点（按环绕顺序）
+   k 决定配色，与游戏本体同源：u 绿 / v 橙 / w 蓝 */
+var FACES = [
+  { k: 'w', n: { u: 0, v: 0, w: -1 }, q: ['A', 'B', 'C', 'D'] },
+  { k: 'w', n: { u: 0, v: 0, w: 1 },  q: ['E', 'F', 'G', 'H'] },
+  { k: 'v', n: { u: 0, v: -1, w: 0 }, q: ['A', 'B', 'F', 'E'] },
+  { k: 'v', n: { u: 0, v: 1, w: 0 },  q: ['D', 'C', 'G', 'H'] },
+  { k: 'u', n: { u: -1, v: 0, w: 0 }, q: ['A', 'D', 'H', 'E'] },
+  { k: 'u', n: { u: 1, v: 0, w: 0 },  q: ['B', 'C', 'G', 'F'] }
+];
+
+/* 12 条棱：从 FACES 自动去重生成（每个面 4 条边，共享边只留一条）。
+   ⚠️ 为什么棱必须【单独画一次】，而不是靠"每个面各画一遍外框"：
+      共享棱被画两遍 ⇒ 白色的不透明度按 1-(1-a)² 叠加 ⇒ 亮度翻倍。
+      实测（_cb1_px.py）：正面那 9 条棱 .90 叠 .90 = 0.99（纯白 252），
+      而最深处那 3 条棱（F-G / G-H / C-G，被两个背面共享）.30 叠 .30 = 0.51（G=140）
+      —— 比正面格线 .34（G=100）还亮，整个"前亮后暗"的层次就反了。
+      单独画一次后：正面棱 .90、背面棱 .18、正面格线 .34、背面格线 .14，层次干净。 */
+var EDGES = (function () {
+  var m = {}, out = [];
+  FACES.forEach(function (f) {
+    for (var i = 0; i < 4; i++) {
+      var a = f.q[i], b = f.q[(i + 1) % 4];
+      var key = a < b ? a + b : b + a;
+      if (!m[key]) { m[key] = { a: a, b: b, fs: [] }; out.push(m[key]); }
+      m[key].fs.push(f);
+    }
+  });
+  return out;
+})();
+var COL = { u: '#6FD463', v: '#FF8354', w: '#5AA9FF' };
+
+/* ---------- 先生 2026-09-28：「你把 AEHD ADCB AEFB 这三个面去掉」 ----------
+   这三个面是：u=0（ADHE）、w=0（ABCD）、v=0（ABFE）—— 也就是【含 A 的那三块】，
+   在默认视角下正好是离观察者最近的三块。
+
+   「去掉」按【面板真的不存在】来理解（不是只把线画淡）：
+     · 这三块的面板不画 ⇒ 它们的 5×5 格线一根都不画；
+     · 一条棱【两侧的面都没了】才跟着消失 ⇒ A–B（w0+v0）、A–D（w0+u0）、A–E（v0+u0）
+       这三条正好都是这两个被去掉面的公共棱 ⇒ 一起消失。剩下的 9 条棱两侧都还有面板。
+
+   结果就是「盒子朝观察者这一侧敞开」：远侧那三块（u=5 / v=5 / w=5）成为墙，
+   墙上有完整的 5×5 格线，G 角上那 3 个小方格正好坐在三面墙的墙角上，前面再无遮挡。
+
+   ⚠️ 按【面的身份】去掉（u=0 / v=0 / w=0），不是按「当前哪三块朝观察者」——
+      转动立方体时，被去掉的永远是这三块。
+   ⚠️ 被去掉面的【对面】（u5/v5/w5）格线要走亮档：它们现在是唯一的墙，
+      按旧的「背面 = 暗档」画会几乎看不见（实测 .14 档 G≈54，低于所有判据的检出阈值）。 */
+var DROP_FACES = ['A-B-C-D', 'A-B-F-E', 'A-D-H-E'];      /* w0 / v0 / u0 */
+function faceKey(f) { return f.q.join('-'); }
+function isDropped(f) { return DROP_FACES.indexOf(faceKey(f)) >= 0; }
+/* 与 f 同轴、法向相反的另一块面 */
+function oppo(f) {
+  for (var i = 0; i < FACES.length; i++) {
+    var g = FACES[i];
+    if (g.k === f.k && g.n.u === -f.n.u && g.n.v === -f.n.v && g.n.w === -f.n.w) return g;
+  }
+  return null;
+}
+/* 三个共用判据（页面绘制与探针都用同一套，避免两处口径不一致） */
+function faceOn(f) { return !isDropped(f); }
+/* 一个面在【当前视角】下是否朝观察者 */
+function faceFront(f) { return dot3(cam(f.n), N0) < -1e-6; }
+/* 格线深浅：朝观察者的面用亮档；对面已被去掉的那面墙也用亮档（见上面那段注释） */
+function faceLoud(f) { return faceFront(f) || isDropped(oppo(f)); }
+/* 一条棱：两侧的面都被去掉才不画 */
+function edgeOn(e) { return !(e.fs.length && e.fs.every(function (f) { return isDropped(f); })); }
+/* 棱的「近 / 远」：两侧面里只要有一个朝观察者，就算近棱（用来把小方格夹在中间画） */
+function edgeFront(e) { return e.fs.some(faceFront); }
+/* 棱的明暗：一条棱挨着任意一个【被画出来、且走亮档】的面，它就走亮档
+   （= 取它两侧面里亮的那一个，与面同口径）。
+   ⚠️ 为什么不能沿用旧的「两侧面都是背面 ⇒ 暗档」：
+      先生去掉含 A 的 3 个面之后，剩下的 3 面墙（u5/v5/w5）【全部】是几何背面，
+      于是它们之间的 3 条内角棱（C–G / G–H / F–G）会掉进 .18 暗档（实测 G≈63），
+      比这 3 面墙自己的格线 .34（G≈100）还暗 ⇒ 盒子的内角当场看不见、只剩 3 块分离的菱形。
+      按新口径：活下来的 9 条棱全都挨着那 3 面墙 ⇒ 全部亮档 .90，
+      画出来就是标准「开口盒子线框」：六边形外框 + 中间一个 Y 形内角 + 墙上淡格线。
+      附带好处：口径与视角无关（3 面墙永远走亮档），转立方体时棱的明暗不会跳。 */
+function edgeLoud(e) { return e.fs.some(function (f) { return faceOn(f) && faceLoud(f); }); }
+var DIRNAME = { u: '朝右面', v: '朝左面', w: '朝上面' };
+
+/* ---------- G 点上的 1×1×1 小立方体 ----------
+   先生 2026-09-28：「G 点放置为 1×1 的立方体，这个立方体的颜色沿用现在大的立方体颜色」。
+   取【贴着 G 角、朝大立方体内部】的那一格，即 [4,5]³（G=(5,5,5) 正是它的一个顶点），
+   这样它落在大立方体 5×5×5 网格的某一格里，而不是浮在立方体外面。
+   ⚠️ 朝内 / 朝外两种取法在屏幕上【完全相同】：投影对 (k,k,k) 是退化的
+      （SP(u+1,v+1,w+1)==SP(u,v,w)），而 [4,5]³ 与 [5,6]³ 之间正好差一个体对角线平移
+      ⇒ 投影分毫不差，只有深度不同。选朝内是因为它属于大立方体内部的格子体系（也因此更靠前）。
+   配色沿用大立方体：u 绿 / v 橙 / w 蓝；面对面同色，远的先画、近的压住远的。 */
+var GM = VN - 1;                                   /* 4 —— 小立方体朝内那一侧的坐标 */
+
+/* ---------- 关于小立方体的「蓝色面在上面」 ----------
+   先生 2026-09-28 先说过「把小立方体蓝色面放在上面」，我据此给小立方体单独做了一份
+   「按轴对调」的配色表（绕棱中点轴转 180°，让蓝面从下楔挪到上侧楔）。
+   随后先生明确：要转的是【整个立方体】——「我要求你把这个立方体旋转 180 度，
+   C 就变成了最上面、E 变成了最下面」。
+
+   改成转整个立方体之后（视角绕 N0 转 180°，见上面 var M 的长注释），
+   那份自定义配色就【多余了，已撤销】：小立方体的三个可见面仍然是 −u / −v / −w
+   （绕 N0 转不改变任何深度），但它们在屏幕上的位置整体转了半圈
+   ⇒ −w 面（蓝）从「下楔」跑到【顶楔】，正好就是「蓝色面在上面」。
+   所以这里直接用 COL（= 大立方体的配色，也就是先生最初那句「颜色沿用大立方体颜色」）。
+
+   ⚠️ 留个记录免得以后再绕：小立方体是【每对相对面同色】的（u 全绿 / v 全橙 / w 全蓝），
+      绕【面对轴】转 180° 是立方体自对称 ⇒ 屏幕上看不出任何变化；
+      能看出变化的只有绕【棱中点轴】的 180°（等价于「任意两色对调」）。
+      这条结论本身没错，只是当时用错了对象 —— 要转的是整个立方体。 */
+function cv3(u, v, w) { return { u: u, v: v, w: w }; }
+
+/* ---------- 先生 2026-09-28：「小方格到 H 和到 F 各放一个方格，
+              这俩方格分别共用这个方格的 2 个边，就是分别挨着这个方格」
+
+   三格都是 1×1×1，占的格子：
+     · G 角那格      [4,5] × [4,5] × [4,5]   （已有；G=(5,5,5) 是它的一个顶点）
+     · 往 H 那一格   [3,4] × [4,5] × [4,5]   （u 减一格 —— 因为 G→H 就是 −u 方向）
+     · 往 F 那一格   [4,5] × [3,4] × [4,5]   （v 减一格 —— 因为 G→F 就是 −v 方向）
+
+   ⚠️「共用这个方格的 2 个边」这句是【判据】，不是随口说的（我复算过才动手）：
+     面相邻的两格在投影上是两个六边形，它们的重叠区域正好是一个【4 边菱形】，
+     这个菱形的 4 条边里【2 条来自本格、2 条来自邻格】—— 正是「共用 2 个边」。
+     （另一种「棱相邻」（两个轴各挪一格）虽然也是 2+2，但屏幕上指向 C / A 方向，
+      不是 H / F，所以排除。）
+
+   ⚠️ 遮挡：往 H、往 F 这两格【比 G 角那格更靠前】（它们中心的 u+v+w 更小）
+     ⇒ 它们要压在 G 角那格上面。所以先按【格】的中心深度排序（远的格先画），
+     同一格内部再按【面】的深度排序。两格之间只共一条棱、投影上仅相切不重叠，
+     谁先谁后都不影响结果。
+
+   配色一律沿用大立方体：u 绿 / v 橙 / w 蓝（每对相对面同色）。 */
+var SM_CELLS = [
+  { lo: [GM, GM, GM],     tag: 'G 角那格' },        /* [4,5]³ */
+  { lo: [GM - 1, GM, GM], tag: '往 H（−u 一格）' }, /* [3,4]×[4,5]×[4,5] */
+  { lo: [GM, GM - 1, GM], tag: '往 F（−v 一格）' }  /* [4,5]×[3,4]×[4,5] */
+];
+
+/* 一格 [a,a+1]×[b,b+1]×[c,c+1] 的 6 个面（法向 + 一圈 4 个角）。
+   六个面全都生成，靠 depthRel 排序决定谁盖谁；k 决定这个面用哪个颜色。 */
+function cellFaces(a, b, c) {
+  var p00 = cv3(a, b, c), p10 = cv3(a + 1, b, c),
+      p11 = cv3(a + 1, b + 1, c), p01 = cv3(a, b + 1, c),
+      q00 = cv3(a, b, c + 1), q10 = cv3(a + 1, b, c + 1),
+      q11 = cv3(a + 1, b + 1, c + 1), q01 = cv3(a, b + 1, c + 1);
+  return [
+    { k: 'w', n: { u: 0, v: 0, w: -1 }, q: [p00, p10, p11, p01] },
+    { k: 'w', n: { u: 0, v: 0, w: 1 },  q: [q00, q10, q11, q01] },
+    { k: 'v', n: { u: 0, v: -1, w: 0 }, q: [p00, p10, q10, q00] },
+    { k: 'v', n: { u: 0, v: 1, w: 0 },  q: [p01, p11, q11, q01] },
+    { k: 'u', n: { u: -1, v: 0, w: 0 }, q: [p00, p01, q01, q00] },
+    { k: 'u', n: { u: 1, v: 0, w: 0 },  q: [p10, p11, q11, q10] }
+  ];
+}
+
+/* ---------- ★ 先生 2026-09-28：「现在不是剩下 3 个面吗 就是游戏区的面
+                然后填充对应的小方格对着这 3 个面的投影」
+
+   索引口径【与游戏本体 cube-projection.html 的 buildAns() 逐字同一套】，不另造一套：
+     一个格子 (u,v,w) 投到某面墙 = 把它沿那条坐标轴"拍平"，索引就是它在墙上剩下的两个坐标：
+       w 墙 EFGH（q0=E，q0→q1 是 +u、q0→q3 是 +v）：格 (i,j) = (u, v)
+       v 墙 DCGH（q0=D，q0→q1 是 +u、q0→q3 是 +w）：格 (i,j) = (u, w)
+       u 墙 BCGF（q0=B，q0→q1 是 +v、q0→q3 是 +w）：格 (i,j) = (v, w)
+     （游戏本体里就是 A.w[K2(c.u,c.v)] / A.v[K2(c.u,c.w)] / A.u[K2(c.v,c.w)]；
+       那边墙是 w0/v0/u0、这边剩下的是 w5/v5/u5 —— 同一对相对面，索引口径相同。）
+
+   三格算下来（用 _cb1_proj_probe.js 在页面里现算的，不是手推）：
+     w5 墙 3 格 (4,4)(3,4)(4,3) · v5 墙 2 格 (4,4)(3,4) · u5 墙 2 格 (4,4)(3,4) ⇒ 共 7 格。
+   ⚠️ 有重叠是必然的、不是错：往 H（u−1）那格与 G 角那格在 u5 墙上的投影同格（v,w 都一样）；
+      往 F（v−1）那格与 G 角那格在 v5 墙上同理 ⇒ 3+2+2 = 7，而不是 3×3 = 9。
+   ⚠️ 层级：投影格画在【墙这一层】—— 它就落在墙面上，不能压在小方格上面。
+      默认视角下这 7 格正好等于小方格自己贴墙的那一面（接触面，实测被盖住 100%），
+      所以在默认视角看不出变化；转到看得见墙外侧的角度就能看见。 */
+var WALL_FACE = { w: 1, v: 3, u: 5 };              /* 三面墙在 FACES 里的下标 */
+var PROJ_IDX = {
+  w: function (lo) { return [lo[0], lo[1]]; },
+  v: function (lo) { return [lo[0], lo[2]]; },
+  u: function (lo) { return [lo[1], lo[2]]; }
+};
+/* 3 面墙上要填的格：'i|j' → 投到它的那些小方格的下标 */
+function projCells() {
+  var out = { w: {}, v: {}, u: {} };
+  SM_CELLS.forEach(function (c, ci) {
+    ['w', 'v', 'u'].forEach(function (k) {
+      var ij = PROJ_IDX[k](c.lo), key = ij[0] + '|' + ij[1];
+      (out[k][key] = out[k][key] || []).push(ci);
+    });
+  });
+  return out;
+}
+/* 某个面上的一格 (i,j) 的 4 个屏幕点：
+   q0 沿 q0→q1 走 i 格、沿 q0→q3 走 j 格 —— 与游戏本体 wallQuad() 的索引口径一致。
+   （面是平行四边形 ⇒ 双线性插值 = q0 + (q1−q0)·t + (q3−q0)·s） */
+function faceCellQuad(f, i, j) {
+  var p0 = CORNER[f.q[0]], p1 = CORNER[f.q[1]], p3 = CORNER[f.q[3]];
+  function at(a, b) {
+    var t = a / VN, s = b / VN;
+    return PT({ u: p0.u + (p1.u - p0.u) * t + (p3.u - p0.u) * s,
+                v: p0.v + (p1.v - p0.v) * t + (p3.v - p0.v) * s,
+                w: p0.w + (p1.w - p0.w) * t + (p3.w - p0.w) * s });
+  }
+  return [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
+}
+
+/* ---------- 216 个格点：u / v / w 各取 0~5 ----------
+   ⚠️ 先生 2026-09-28 20:4x：「现在去掉所有的坐标点」—— 那一层 (u,v,w) 坐标标注
+      （91 处文字 + ×n + 「坐标标注」按钮 + 说明行）已【整体移除】，见下面 draw() 里那段注释。
+      这张格点表 NPTS 保留：它只是"格点在哪"的几何数据，给探针做核验用，不再参与任何绘制。
+   坐标系定义（与 8 个顶点字母同一套，不是另起一套）：
+     · 原点 A = (0,0,0)；u 沿 A→B、v 沿 A→D、w 沿 A→E，三个方向各长 5。
+     · 于是 B(5,0,0) C(5,5,0) D(0,5,0) E(0,0,5) F(5,0,5) G(5,5,5) H(0,5,5)。
+     · 5 格 ⇒ 每个方向 6 条格线 ⇒ 格点总数 6×6×6 = 216。
+   ⚠️ 216 个格点在等轴投影下【只落在 91 个屏幕位置上】：投影对 (k,k,k) 是退化的
+      （SP(u+1,v+1,w+1)==SP(u,v,w)），所以 (u,v,w) 与 (u+t,v+t,w+t) 画在同一个点。
+      位置只由 (a,b)=(u-w, v-w) 决定，而 (a,b) 可行 ⟺ 存在 w∈[0,5] 使 a+w、b+w 都在 [0,5]，
+      即区间 [max(0,-a,-b), min(5, 5-a, 5-b)] 非空。数出来 36(a,b≥0) + 25(a,b<0) + 15 + 15 = 91。
+      ⚠️ 第三象限只有 5×5 = 25 组（a、b 的负值只有 -1~-5 这 5 个），我第一次按 6×6 手算成 102，
+         被实测打回 —— 这个数字请用 _cb1_verify.js 的 ⑪d 现场推，不要手算。
+      最极端的是画面正中心那个位置：(0,0,0)(1,1,1)(2,2,2)(3,3,3)(4,4,4)(5,5,5) 六个格点全叠在那，
+      A 与 G 就是其中的首尾两个。 */
+var NPTS = (function () {
+  var a = [];
+  for (var i = 0; i <= VN; i++) for (var j = 0; j <= VN; j++) for (var k = 0; k <= VN; k++)
+    a.push({ u: i, v: j, w: k });
+  return a;
+})();
+
+/* ---------- 3D 基（与游戏本体逐字相同） ---------- */
+var A0 = { x: -0.70711, y: 0.70711, z: 0 };
+var B0 = { x: -0.40825, y: -0.40825, z: 0.81650 };
+var N0 = { x: 0.57735, y: 0.57735, z: 0.57735 };
+/* ---------- 默认视角 ----------
+   先生 2026-09-28：「我要求你把这个立方体旋转 180 度，C 就变成了最上面、E 变成了最下面」。
+
+   实现方式：把视角矩阵初始化为【绕视线轴 N0 转 180°】。
+   ⚠️ 为什么不能用「绕某条坐标轴转 180°」：
+      绕 u / v / w 任意一条【坐标轴】转 180°，A–G 体对角线就不再对着观察者了，
+      A 与 G 不再重合、还要重新算遮挡 —— 那是另一个视角，牵一发动全身。
+      而绕 N0 转 180° 是【转相机（画面在屏幕内转半圈）】：
+      3D 空间中所有点的深度（即与 N0 的点积）一个都不变 ⇒ 前后关系、遮挡、正/背面、
+      A 最近(1)/G 最远(8) 全部原样保留，只有屏幕 (x,y) 整体旋转 180°。
+
+   ⚠️ 为什么结果是 C 最上 / E 最下（独立算过，不是推的）：
+      · A=(0,0,0) 与 G=(5,5,5) 都在过体心、方向 N0 的那条直线上 ⇒ 是这条转轴的不动点
+        ⇒ 投影仍在画面正中心 (640,400)，深度仍是 −4.3301 / +4.3301。
+      · C=(5,5,0) 原本在 (640,697.93)，转半圈后到 (640,102.07) = 最上面；
+        E=(0,0,5) 从 (640,102.07) 到 (640,697.93) = 最下面。
+      · B→右上、D→左上、F→右下、H→左下（左右也一起换，这才是「转半圈」而不是「上下翻」）。 */
+var M = rotAxis(N0.x, N0.y, N0.z, Math.PI);      /* 绕视线轴 N0 转 180° = 默认视角 */
+var zoom = 1;
+
+function dot3(a, b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+function cam(p) {
+  return { x: M[0] * p.u + M[1] * p.v + M[2] * p.w,
+           y: M[3] * p.u + M[4] * p.v + M[5] * p.w,
+           z: M[6] * p.u + M[7] * p.v + M[8] * p.w };
+}
+function rel(p) { return { u: p.u - CEN.u, v: p.v - CEN.v, w: p.w - CEN.w }; }
+/* 正交投影：屏幕 x = 相机坐标 · A0，屏幕 y = -(相机坐标 · B0)（canvas y 向下） */
+function flatRel(rp) { var q = cam(rp); return { x: dot3(q, A0), y: -dot3(q, B0) }; }
+/* 视深度：投影方向 N0 上的分量，越大越远 */
+function depthRel(rp) { var q = cam(rp); return dot3(q, N0); }
+
+function mm(A, B) {
+  var C = new Array(9), i, j, k, s;
+  for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) {
+    s = 0;
+    for (k = 0; k < 3; k++) s += A[i * 3 + k] * B[k * 3 + j];
+    C[i * 3 + j] = s;
+  }
+  return C;
+}
+function rotAxis(ax, ay, az, th) {
+  var n = Math.sqrt(ax * ax + ay * ay + az * az);
+  if (n < 1e-9) return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  ax /= n; ay /= n; az /= n;
+  var c = Math.cos(th), s = Math.sin(th), t = 1 - c;
+  return [t * ax * ax + c, t * ax * ay - s * az, t * ax * az + s * ay,
+          t * ax * ay + s * az, t * ay * ay + c, t * ay * az - s * ax,
+          t * ax * az - s * ay, t * ay * az + s * ax, t * az * az + c];
+}
+/* 与世界坐标无关的旋转：绕屏幕水平轴转 dyPix、绕屏幕垂直轴转 dxPix（与游戏手感一致） */
+var ROTK = 0.0082;
+function applyRot(dxPix, dyPix) {
+  var R = mm(rotAxis(A0.x, A0.y, A0.z, dyPix * ROTK),
+             rotAxis(-B0.x, -B0.y, -B0.z, dxPix * ROTK));
+  M = mm(R, M);
+}
+
+/* ---------- 画布与取景 ---------- */
+var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+var VW = 0, VH = 0, F = { s: 1, ox: 0, oy: 0 };
+function fitView() {
+  VW = cv.clientWidth; VH = cv.clientHeight;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (cv.width !== Math.round(VW * dpr) || cv.height !== Math.round(VH * dpr)) {
+    cv.width = Math.round(VW * dpr); cv.height = Math.round(VH * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  /* 大小用外接球定死 ⇒ 任意角度下都一样大，不会忽大忽小 */
+  F.s = Math.min(VW, VH) * 0.395 / HALF_DIAG * zoom;
+  F.ox = VW / 2; F.oy = VH / 2;
+}
+function PT(p) { var r = flatRel(rel(p)); return { x: F.ox + r.x * F.s, y: F.oy + r.y * F.s }; }
+
+function inQuad(px, py, q) {
+  var s = 0, i, A, B, cr, g;
+  for (i = 0; i < q.length; i++) {
+    A = q[i]; B = q[(i + 1) % q.length];
+    cr = (B[0] - A[0]) * (py - A[1]) - (B[1] - A[1]) * (px - A[0]);
+    if (Math.abs(cr) < 1e-9) continue;
+    g = cr > 0 ? 1 : -1;
+    if (s === 0) s = g; else if (s !== g) return false;
+  }
+  return true;
+}
+
+/* ============================================================
+   绘制
+   ============================================================ */
+/* 每帧算一次：6 个面的屏幕四边形 + 深度 + 是否朝观察者 */
+function scene() {
+  var out = [];
+  for (var i = 0; i < FACES.length; i++) {
+    var f = FACES[i], pts = [], d = 0, j;
+    for (j = 0; j < 4; j++) {
+      var c = CORNER[f.q[j]];
+      d += depthRel(rel(c));
+      pts.push(c);
+    }
+    var nn = cam(f.n);                                   /* 法向也过同一个旋转 */
+    out.push({ f: f, pts: pts, d: d / 4, front: dot3(nn, N0) < -1e-6,
+               scr: pts.map(PT) });
+  }
+  out.sort(function (a, b) { return b.d - a.d; });        /* 远的先画 */
+  return out;
+}
+
+/* 一个顶点是否被别的面挡住（含它的那 3 个面不算遮挡） */
+function cornerVisible(name, sc) {
+  var p = CORNER[name], s = PT(p), dp = depthRel(rel(p));
+  for (var i = 0; i < sc.length; i++) {
+    var it = sc[i];
+    if (it.f.q.indexOf(name) >= 0) continue;              /* 自己所在的面 */
+    if (it.d >= dp - 1e-9) continue;                      /* 该面整体不比它近 */
+    if (inQuad(s.x, s.y, it.scr.map(function (q) { return [q.x, q.y]; }))) return false;
+  }
+  return true;
+}
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+/* 标签避让：把 8 个字母当成 8 个等半径圆互相推开，保证不重叠；再夹回画布内。
+   完全重合的两点（体对角线 A/G 在默认视角下投影重合）靠初始角度扰动分开。 */
+var LAB_R = 27;            /* 斥力半径（圆近似，标签约 42×30） */
+var LAB_OFF = 44;          /* 标签先沿「中心 → 角」方向外移这么多，再用引线连回角点，
+                              否则白底标签会正好盖住那个角，等于把要看的点挡掉了 */
+/* A/G 重合时分列左右的距离。⚠️ 不能沿用 LAB_OFF=44：G 角上放着小方格，它投影在画面
+   正中心，所以标签必须让开它。先生的方格从 1 格变成 3 格后（G 角那格 + 往 H + 往 F），
+   这团方块在中心那一行的水平半宽从 51.6px 涨到 103.2px（= 2 格）。
+   取 144 ⇒ 标签内缘距中心 123px，比 103.2 还多出 19.8px 空隙（标签半宽 21）。 */
+var COINC_OFF = 144;
+var COINC = { on: false, x: 0, y: 0, a: 'A', b: 'G', gap: 999 };
+/* A 与 G 是大立方体的**体对角线两端**。视线正对这条对角线时，两点在画面上严格重合成一个点 ——
+   这正是先生 2026-09-28 要固定的那个角度（「在我的视角中 A 和 G 重合在一条线上」）。
+   遇到这种情形，把两个字母分别放到中心的上下两侧、中间拉一条虚线穿过它们共同的落点，
+   让"A 与 G 在同一条视线上"一眼看得见（而不是让它们挤在中心被斥力互相推开、看不出关系）。 */
+function layoutLabels(anchors) {
+  var L = anchors.map(function (a, i) {
+    var vx = a.x - VW / 2, vy = a.y - VH / 2, len = Math.hypot(vx, vy);
+    if (len < 2) {                                  /* 落在画面正中心的角（A/G 那种）没有向外方向 */
+      var ang = i * Math.PI * 2 / 8;
+      vx = Math.cos(ang); vy = Math.sin(ang); len = 1;
+    }
+    return { name: a.name, ax: a.x, ay: a.y,
+             x: a.x + vx / len * LAB_OFF, y: a.y + vy / len * LAB_OFF };
+  });
+  var ia = -1, ig = -1;
+  for (var q = 0; q < L.length; q++) { if (L[q].name === 'A') ia = q; if (L[q].name === 'G') ig = q; }
+  var gap = (ia >= 0 && ig >= 0) ? Math.hypot(L[ia].ax - L[ig].ax, L[ia].ay - L[ig].ay) : 999;
+  COINC = { on: false, x: 0, y: 0, a: 'A', b: 'G', gap: gap, ia: ia, ig: ig };
+  var pin = {};
+  if (gap < 3 && ia >= 0 && ig >= 0) {
+    COINC.on = true; COINC.x = L[ia].ax; COINC.y = L[ia].ay;
+    pin[ia] = pin[ig] = 1;
+  }
+  var pad = 6, minx = LAB_R + pad, maxx = VW - LAB_R - pad,
+      miny = LAB_R + pad, maxy = VH - LAB_R - pad;
+  /* 沿【水平】方向分列左右：竖直方向正好压在两块侧面的公共棱上（那条深色描边会把虚线吃掉），
+     水平方向则是从中心一头扎进绿面、一头扎进橙面的内部，虚线看得最清楚。 */
+  function rePin() {
+    if (!COINC.on) return;
+    L[ia].x = COINC.x - COINC_OFF; L[ia].y = COINC.y;
+    L[ig].x = COINC.x + COINC_OFF; L[ig].y = COINC.y;
+  }
+  rePin();
+  for (var it = 0; it < 260; it++) {
+    for (var i = 0; i < L.length; i++) for (var j = i + 1; j < L.length; j++) {
+      var dx = L[j].x - L[i].x, dy = L[j].y - L[i].y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d >= LAB_R * 2) continue;
+      if (d < 1e-6) { dx = 1; dy = 0; d = 1; }
+      var push = (LAB_R * 2 - d) / 2, ux = dx / d, uy = dy / d;
+      if (!pin[i]) { L[i].x -= ux * push; L[i].y -= uy * push; }
+      if (!pin[j]) { L[j].x += ux * push; L[j].y += uy * push; }
+    }
+    for (var m = 0; m < L.length; m++) {
+      if (pin[m]) continue;
+      L[m].x = Math.max(minx, Math.min(maxx, L[m].x));
+      L[m].y = Math.max(miny, Math.min(maxy, L[m].y));
+    }
+    rePin();                                        /* 每轮都把 A/G 按回那条竖线上 */
+  }
+  return L;
+}
+
+function draw() {
+  fitView();
+  var W = VW, H = VH;
+  /* ⚠️ 每次绘制先把画布状态复位到已知值。踩过：lineCap 只在「画引线」那一节设成 'round'、
+     之后没还原 ⇒ 下一帧画外表面描边时继承了上一帧的 lineCap ⇒ **第一帧(butt)与后续帧(round)
+     在六边形棱边上有 67 个像素不同**（探针数据完全一致也照样不同）。这类"状态泄漏"会让
+     "同状态两次截图必须逐像素相同"这条判据假 FAIL。 */
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
+  ctx.setLineDash([]);
+  ctx.lineDashOffset = 0;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.clearRect(0, 0, W, H);
+
+  var sc = scene();
+
+  /* ① 大立方体：6 个面【全部改线框】—— 不再有任何实色填充，只剩棱 + 5×5 格线。
+        层次靠线的明暗分：背面（背对观察者的 3 个面）暗、正面亮；否则 6 个面一共 24 条格线
+        交叉成一团，看不出前后。
+        绘制顺序必须是【背面格线 → 背面棱 → G 角的 1×1×1 小立方体 → 正面格线 → 正面棱】：
+        小立方体在 [4,5]³ 很靠里，大立方体的正面线在它前面、背面线在它后面，
+        所以它得夹在中间画，前后关系才对。 */
+  function wireFace(it, loud) {
+    var ps = it.scr;
+    /* 只画格线，不画面外框 —— 外框就是棱，交给 wireEdges 统一画一次 */
+    ctx.beginPath();
+    for (var t = 1; t < VN; t++) {
+      var f = t / VN;
+      ctx.moveTo(ps[0].x + (ps[1].x - ps[0].x) * f, ps[0].y + (ps[1].y - ps[0].y) * f);
+      ctx.lineTo(ps[3].x + (ps[2].x - ps[3].x) * f, ps[3].y + (ps[2].y - ps[3].y) * f);
+      ctx.moveTo(ps[0].x + (ps[3].x - ps[0].x) * f, ps[0].y + (ps[3].y - ps[0].y) * f);
+      ctx.lineTo(ps[1].x + (ps[2].x - ps[1].x) * f, ps[1].y + (ps[2].y - ps[1].y) * f);
+    }
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = loud ? 'rgba(255,255,255,.34)' : 'rgba(255,255,255,.14)';
+    ctx.lineWidth = loud ? 1.15 : 1.0;
+    ctx.stroke();
+  }
+  /* 12 条棱里实际画 9 条（A–B / A–D / A–E 两侧的面都被先生去掉了 ⇒ 一起消失），
+     每条只画一次。分两层口径：
+       · 近 / 远（edgeFront）：远的先画、近的压在小方格之上，这样小方格才夹在中间；
+       · 暗 / 亮（edgeLoud）：同一遍里暗的先画、亮的后画，颜色与面同口径（.90 / .18）。
+     注意：这是 6 个面【全画线框】才需要的处理 —— 以前只画 3 个实色面时，
+     棱由实色面的深色描边顺手带出来，不存在"画两遍"的问题。 */
+  function wireEdges(near) {
+    [false, true].forEach(function (loud) {
+      ctx.beginPath();
+      var any = false;
+      EDGES.forEach(function (e) {
+        /* 两侧的面都被去掉 ⇒ 这条棱跟着面板一起消失（A–B / A–D / A–E） */
+        if (!edgeOn(e)) return;
+        if (edgeFront(e) !== near) return;
+        if (edgeLoud(e) !== loud) return;
+        var p1 = PT(CORNER[e.a]), p2 = PT(CORNER[e.b]);
+        ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+        any = true;
+      });
+      if (!any) return;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'butt';
+      ctx.strokeStyle = loud ? 'rgba(255,255,255,.90)' : 'rgba(255,255,255,.18)';
+      ctx.lineWidth = loud ? 2.2 : 1.5;
+      ctx.stroke();
+    });
+  }
+  /* G 角那格 1×1×1 小方格 + 往 H 一格 + 往 F 一格：实色，每对相对面同色。
+     颜色取 COL（= 大立方体配色），配色不另做表。
+
+     画法（这三条都是复算过才定的，理由见文件顶部 SM_CELLS 那段长注释）：
+       · 每格【只画朝观察者的 3 个面】。背面 3 个面永远被本格的正面盖住，画了纯属白画；
+         更要紧的是【会惹祸】：相邻两格在共用平面上有一对面（法向相反、深度完全相同），
+         谁先谁后由排序决定、不稳定，画背面就可能把邻格的正面涂掉。
+       · 格与格之间【远的格先画】（d 大 = 远，按格中心深度）。往 H / 往 F 那两格比 G 角
+         那格更靠前 ⇒ 压在它上面。G 角那格朝邻格的那两个面是【内部交界面】，本来就该被
+         邻格盖住 —— 邻格的正面投影正好覆盖它（我按三菱形的投影划分验过：邻格六边形 ⊇
+         交界菱形）。 */
+  function drawSmall() {
+    var cells = SM_CELLS.map(function (c, ci) {
+      var f6 = cellFaces(c.lo[0], c.lo[1], c.lo[2]);
+      f6.forEach(function (f) {
+        var t = 0;
+        f.q.forEach(function (p) { t += depthRel(rel(p)); });
+        f.d = t / 4;
+      });
+      return { ci: ci, tag: c.tag, faces: f6,
+               d: depthRel(rel(cv3(c.lo[0] + 0.5, c.lo[1] + 0.5, c.lo[2] + 0.5))) };
+    });
+    cells.sort(function (a, b) { return b.d - a.d; });
+    cells.forEach(function (c) {
+      c.faces.filter(function (f) { return dot3(cam(f.n), N0) < -1e-6; })
+        .sort(function (a, b) { return b.d - a.d; })
+        .forEach(function (f) {
+          var ps = f.q.map(PT), i;
+          ctx.beginPath();
+          ctx.moveTo(ps[0].x, ps[0].y);
+          for (i = 1; i < 4; i++) ctx.lineTo(ps[i].x, ps[i].y);
+          ctx.closePath();
+          ctx.fillStyle = COL[f.k];
+          ctx.fill();
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = 'rgba(12,20,32,.62)';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        });
+    });
+  }
+  /* ①-0 ★ 3 面墙上的投影格（先生 2026-09-28 新加）。
+         每格只画它自己那一格：实色（= 该面墙的轴色，与大立方体/小方格同一套 COL）+ 深色描边，
+         与游戏本体游戏区填格子的观感一致（那边是 G.col[kd] 填充 + 深描边）。
+         分层：跟它所在的那面墙同一层 —— 远侧墙的投影格画在小方格【之前】（会被小方格挡住），
+         近侧墙的画在小方格【之后】。两处都画在格线【之前】⇒ 格线压在色块上面，与墙的观感一致。 */
+  function drawProj(near) {
+    var pc = projCells();
+    ['w', 'v', 'u'].forEach(function (k) {
+      var f = FACES[WALL_FACE[k]];
+      if (!faceOn(f) || faceFront(f) !== near) return;
+      Object.keys(pc[k]).forEach(function (key) {
+        var ij = key.split('|'), ps = faceCellQuad(f, +ij[0], +ij[1]), t;
+        ctx.beginPath();
+        ctx.moveTo(ps[0].x, ps[0].y);
+        for (t = 1; t < 4; t++) ctx.lineTo(ps[t].x, ps[t].y);
+        ctx.closePath();
+        ctx.fillStyle = COL[k];
+        ctx.fill();
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(12,20,32,.62)';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      });
+    });
+  }
+  /* 面板的格线深浅：朝观察者的一面用亮档；【对面已被去掉】的那面墙也用亮档
+     （它是现在我们唯一能看到的墙，用旧的背面暗档会几乎看不见）。 */
+  drawProj(false);
+  sc.forEach(function (it) { if (!it.front && faceOn(it.f)) wireFace(it, faceLoud(it.f)); });
+  wireEdges(false);
+  drawSmall();
+  drawProj(true);
+  sc.forEach(function (it) { if (it.front && faceOn(it.f)) wireFace(it, faceLoud(it.f)); });
+  wireEdges(true);
+
+  /* ② 8 个顶点：可见的实心、被挡的空心；再算离观察者的远近序（1 最近） */
+  var order = CNAME.slice().sort(function (a, b) {
+    return depthRel(rel(CORNER[a])) - depthRel(rel(CORNER[b]));
+  });
+  var rank = {};
+  order.forEach(function (n, i) { rank[n] = i + 1; });
+
+  var anchors = CNAME.map(function (n) {
+    var p = PT(CORNER[n]);
+    var vis = cornerVisible(n, sc);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, vis ? 6.2 : 4.6, 0, Math.PI * 2);
+    if (vis) {
+      ctx.fillStyle = '#0E1520'; ctx.fill();
+      ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2.6; ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(14,21,32,.55)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    return { name: n, x: p.x, y: p.y, vis: vis };
+  });
+
+  /* ③ 坐标点标注 —— 【已按先生 2026-09-28 20:4x 的要求整体移除】
+        原来这里是 216 个格点的 (u,v,w) 文字标注（同一投影位置只取最靠前的那个当代表，
+        另用小号字 ×n 说明该位置压着几个格点），先生原话：「现在去掉所有的坐标点」。
+        移除的是：这一整段绘制 + 「坐标标注 · 开/关」按钮 + 说明文字里的两行（216 格点 / 91 位置）。
+        保留的是：8 个角的小圆点与字母标签（那是"角"，不是坐标点）、以及 NPTS 这张格点表
+        （只给探针做几何核验用，不再参与任何绘制）。
+        ⚠️ 判据侧同步：_cb1_verify.js 的 ⑪i/j/k（按钮开关）改成"页面已无该按钮与绘制"，
+           _cb1_px.py 的 ⑫（开/关两图相减）改成"与改前快照相减 ⇒ 只少了坐标文字、别处逐像素没动"。 */
+
+  /* ④ 引线 + 字母标签（永远画在最上层，不会互相压住） */
+  var L = layoutLabels(anchors);
+  ctx.lineCap = 'round';
+  /* A 与 G 重合成一个点时，在两者之间拉一条虚线穿过它们共同的落点 ——
+     这条线就是「视线正对 A–G 体对角线」的可视化 */
+  if (COINC.on) {
+    ctx.save();
+    ctx.setLineDash([5, 8]);
+    ctx.beginPath();
+    ctx.moveTo(COINC.x - COINC_OFF + 24, COINC.y);
+    ctx.lineTo(COINC.x + COINC_OFF - 24, COINC.y);
+    /* 这根虚线会正好从中间那个 1×1×1 小立方体身上穿过 —— 这是对的，不是瑕疵：
+       小立方体就坐在 G 角上，而这条线就是「A–G 体对角线 = 视线」本身，
+       线穿过方块正好把"视线穿过 G 点那个小方块"画出来了。 */
+    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    ctx.restore();
+  }
+  L.forEach(function (b, i) {
+    /* 重合的 A / G 不画引线 —— 它们的引线正好落在同一条竖线上，会把这根虚线整个盖掉，
+       变成"白画一根虚线"。这一对直接用虚线当连接线。 */
+    if (COINC.on && (i === COINC.ia || i === COINC.ig)) return;
+    ctx.beginPath();
+    ctx.moveTo(b.ax, b.ay);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = 'rgba(255,255,255,.42)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  });
+  L.forEach(function (b, i) {
+    var w = 42, h = 30, x = b.x - w / 2, y = b.y - h / 2;
+    ctx.beginPath();
+    ctx.arc(b.ax, b.ay, 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    roundRect(ctx, x, y, w, h, 9);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = anchors[i].vis ? '#22324A' : 'rgba(34,50,74,.55)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#152034';
+    ctx.font = '700 19px -apple-system,"Segoe UI","PingFang SC",sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(b.name, x + 9, y + h / 2 + 0.5);
+    ctx.fillStyle = '#7A8CA3';
+    ctx.font = '600 11px -apple-system,"Segoe UI","PingFang SC",sans-serif';
+    ctx.fillText(String(rank[b.name]), x + 25, y + h / 2 + 1.5);
+  });
+
+  /* ⑤ 说明文字（放在 layoutLabels 之后，才能用本帧真实的 COINC 状态） */
+  var txt = '最近：' + order[0] + ' 角　·　最远：' + order[7] + ' 角（被挡住的那个）';
+  if (txt !== nearTxt) { nearTxt = txt; nearEl.textContent = txt; }
+  var ct = COINC.on ? COINC.a + ' 与 ' + COINC.b + ' 在画面上重合成一点 · 视线正对 ' + COINC.a + '–' + COINC.b + ' 体对角线'
+                    : '当前视线没有正对 ' + COINC.a + '–' + COINC.b + ' 体对角线（两点已分开 ' + COINC.gap.toFixed(0) + 'px）';
+  if (ct !== coincTxt) {
+    coincTxt = ct; coincEl.textContent = ct;
+    coincEl.style.display = COINC.on ? '' : 'none';
+  }
+}
+
+/* ============================================================
+   交互：拖动旋转（带惯性）· 滚轮 / 双指缩放
+   ============================================================ */
+var ptr = {}, last = null, pinch = 0, spin = { x: 0, y: 0 }, raf = 0;
+var nearEl = document.getElementById('lvNear'), nearTxt = '';
+var coincEl = document.getElementById('lvCoinc'), coincTxt = '';
+coincEl.style.display = 'none';
+
+/* ---------- 锁定视角：把这个角度钉死，拖动 / 滚轮 / 双指一律失效 ---------- */
+var locked = false;
+var btnLock = document.getElementById('btnLock'), btnReset = document.getElementById('btnReset');
+var hintEl = document.getElementById('hint');
+function setLock(v) {
+  locked = !!v;
+  btnLock.classList.toggle('on', locked);
+  btnLock.textContent = locked ? '已锁定 · 点此解锁' : '锁定视角';
+  cv.classList.toggle('lock', locked);
+  hintEl.textContent = locked ? '视角已锁定 · 拖动与缩放已停用' : '拖动立方体旋转';
+  if (locked) { spin.x = spin.y = 0; ptr = {}; last = null; pinch = 0; cv.classList.remove('on'); }
+  draw();
+}
+btnLock.addEventListener('click', function () { setLock(!locked); });
+
+function loop() {
+  raf = 0;
+  if (Math.abs(spin.x) > 0.05 || Math.abs(spin.y) > 0.05) {
+    applyRot(spin.x, spin.y);
+    spin.x *= 0.93; spin.y *= 0.93;
+    draw();
+    raf = requestAnimationFrame(loop);
+  } else { spin.x = spin.y = 0; }
+}
+function kick() { if (!raf) raf = requestAnimationFrame(loop); }
+
+cv.addEventListener('pointerdown', function (e) {
+  if (locked) return;
+  cv.setPointerCapture(e.pointerId);
+  ptr[e.pointerId] = { x: e.clientX, y: e.clientY };
+  last = { x: e.clientX, y: e.clientY };
+  pinch = 0; spin.x = spin.y = 0;
+  cv.classList.add('on');
+});
+cv.addEventListener('pointermove', function (e) {
+  if (locked) return;
+  if (!ptr[e.pointerId]) return;
+  ptr[e.pointerId] = { x: e.clientX, y: e.clientY };
+  var ids = Object.keys(ptr);
+  if (ids.length >= 2) {
+    var a = ptr[ids[0]], b = ptr[ids[1]];
+    var d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinch > 0) { zoom = Math.max(0.5, Math.min(3, zoom * (d / pinch))); draw(); }
+    pinch = d;
+    return;
+  }
+  var dx = e.clientX - last.x, dy = e.clientY - last.y;
+  last = { x: e.clientX, y: e.clientY };
+  if (Math.abs(dx) > 26) dx = 26 * Math.sign(dx);        /* 防止掉帧时猛地跳一下 */
+  if (Math.abs(dy) > 26) dy = 26 * Math.sign(dy);
+  applyRot(dx, dy);
+  spin.x = dx * 0.5; spin.y = dy * 0.5;
+  draw();
+});
+function up(e) {
+  delete ptr[e.pointerId];
+  pinch = 0;
+  if (!Object.keys(ptr).length) { last = null; cv.classList.remove('on'); if (spin.x || spin.y) kick(); }
+  else last = ptr[Object.keys(ptr)[0]];
+}
+cv.addEventListener('pointerup', up);
+cv.addEventListener('pointercancel', up);
+cv.addEventListener('wheel', function (e) {
+  e.preventDefault();
+  if (locked) return;
+  zoom = Math.max(0.5, Math.min(3, zoom * (e.deltaY > 0 ? 0.92 : 1.08)));
+  draw();
+}, { passive: false });
+
+/* 对准 A–G：把视角精确归位到【默认角度】= 绕视线轴 N0 转 180°（zoom 1）。
+   A 与 G 在这一角度下于画面正中心严格重合。锁定状态下也允许（它就是这个锁定角度本身）。 */
+btnReset.addEventListener('click', function () {
+  M = rotAxis(N0.x, N0.y, N0.z, Math.PI); zoom = 1; spin.x = spin.y = 0;
+  ptr = {}; last = null; pinch = 0;
+  draw();
+});
+/* ---------- 坐标标注按钮与开关：已按先生 2026-09-28 20:4x「去掉所有的坐标点」整体移除 ----------
+   （原来这里是 btnPts + setPts()：控制 216 个格点 (u,v,w) 文字的显示/隐藏。现在连按钮一起去掉了。） */
+
+window.addEventListener('resize', draw);
+
+/* 探针：给外部脚本做数值核验用（不影响画面） */
+window.__probe = function () {
+  var sc = scene();
+  var anchors = CNAME.map(function (n) {
+    var p = PT(CORNER[n]);
+    var vis = cornerVisible(n, sc);
+    var d = depthRel(rel(CORNER[n]));
+    return { name: n, x: p.x, y: p.y, vis: vis, depth: d };
+  });
+  var order = anchors.slice().sort(function (a, b) { return a.depth - b.depth; });
+  var rank = {};
+  order.forEach(function (a, i) { rank[a.name] = i + 1; });
+  var L = layoutLabels(anchors);
+  var lab = L.map(function (b, i) { return { name: b.name, x: b.x, y: b.y }; });
+  var mind = 1e9, pair = null;
+  for (var i = 0; i < lab.length; i++) for (var j = i + 1; j < lab.length; j++) {
+    var dd = Math.hypot(lab[j].x - lab[i].x, lab[j].y - lab[i].y);
+    if (dd < mind) { mind = dd; pair = lab[i].name + '/' + lab[j].name; }
+  }
+  return {
+    W: VW, H: VH, zoom: zoom, halfDiag: HALF_DIAG,
+    facesFront: sc.filter(function (it) { return it.front; })
+                  .map(function (it) { return { k: it.f.k, q: it.f.q.slice(),
+                    scr: it.scr.map(function (p) { return [+p.x.toFixed(2), +p.y.toFixed(2)]; }) }; }),
+    facesBack: sc.filter(function (it) { return !it.front; })
+                 .map(function (it) { return { k: it.f.k, q: it.f.q.slice() }; }),
+    corners: anchors.map(function (a) { return { name: a.name, x: +a.x.toFixed(2), y: +a.y.toFixed(2),
+                                                vis: a.vis, rank: rank[a.name], depth: +a.depth.toFixed(4) }; }),
+    labels: lab.map(function (b) { return { name: b.name, x: +b.x.toFixed(2), y: +b.y.toFixed(2) }; }),
+    labelMinDist: +mind.toFixed(2), labelClosestPair: pair,
+    coinc: { on: COINC.on, x: +COINC.x.toFixed(2), y: +COINC.y.toFixed(2), gap: +COINC.gap.toFixed(3),
+             a: COINC.a, b: COINC.b },
+    locked: locked,
+    /* 线框：先生 2026-09-28 去掉了含 A 的 3 个面（AEHD / ADCB / AEFB）
+       ⇒ 只剩 3 个面参与绘制、每面 4×2 = 8 条格线 ⇒ 共 24 条；棱从 12 条减到 9 条。 */
+    wire: { faces: FACES.length,
+            facesDrawn: sc.filter(function (it) { return faceOn(it.f); }).length,
+            dropped: DROP_FACES.slice(),
+            front: sc.filter(function (it) { return it.front && faceOn(it.f); }).length,
+            back: sc.filter(function (it) { return !it.front && faceOn(it.f); }).length,
+            gridPerFace: (VN - 1) * 2,
+            coincOff: COINC_OFF,
+            /* 实际画了格线的面（含屏幕四边形 + 亮/暗档），供扫格线判据用 */
+            drawn: sc.filter(function (it) { return faceOn(it.f); }).map(function (it) {
+              return { k: it.f.k, q: it.f.q.slice(), front: it.front, loud: faceLoud(it.f),
+                       scr: it.scr.map(function (p) { return [+p.x.toFixed(2), +p.y.toFixed(2)]; }) };
+            }),
+            /* 12 条棱里实际画 9 条；每条只画一次。
+               「近/远」(edgeFront) 只决定它画在小方格之前还是之后；
+               「亮/暗」(edgeLoud) 才决定颜色：亮档 .90 / 暗档 .18。 */
+            edges: EDGES.length,
+            edgesDrawn: EDGES.filter(edgeOn).length,
+            edgesDropped: EDGES.filter(function (e) { return !edgeOn(e); })
+                               .map(function (e) { return e.a + '-' + e.b; }),
+            edgesFront: EDGES.filter(edgeOn).filter(edgeFront).length,
+            edgesLoud: EDGES.filter(edgeOn).filter(edgeLoud).length,
+            edgesDim: EDGES.filter(edgeOn).filter(function (e) { return !edgeLoud(e); }).length,
+            edgeList: EDGES.filter(edgeOn).map(function (e) {
+              var p1 = PT(CORNER[e.a]), p2 = PT(CORNER[e.b]);
+              return { a: e.a, b: e.b, front: edgeFront(e), loud: edgeLoud(e),
+                       x1: +p1.x.toFixed(2), y1: +p1.y.toFixed(2),
+                       x2: +p2.x.toFixed(2), y2: +p2.y.toFixed(2) };
+            }) },
+    /* ★ 3 面墙上的投影格（先生 2026-09-28 新加）。
+       每面墙列出实际要填的每一格：格号 + 该格的屏幕四点 + 它在当前视角下被
+       【小方格已经画出来的面】盖住的比例（采样 9×9）。默认视角应≈1（= 看不见，
+       因为这 7 格正好是小方格贴墙的接触面）；转视角后会下降 ⇒ 这就是"投影格看得见了吗"的判据。 */
+    proj: (function () {
+      var pc = projCells(), out = {};
+      /* 小方格【已经画出来】的面（与 drawSmall 同一判据 = 法向朝观察者），转成 [[x,y],…] 供 inQuad */
+      var drawnQ = [];
+      SM_CELLS.forEach(function (c) {
+        cellFaces(c.lo[0], c.lo[1], c.lo[2]).forEach(function (ff) {
+          if (dot3(cam(ff.n), N0) < -1e-6) {
+            drawnQ.push(ff.q.map(function (p) { var s = PT(p); return [s.x, s.y]; }));
+          }
+        });
+      });
+      ['w', 'v', 'u'].forEach(function (k) {
+        var f = FACES[WALL_FACE[k]];
+        out[k] = Object.keys(pc[k]).sort().map(function (key) {
+          var ij = key.split('|').map(Number);
+          var quad = faceCellQuad(f, ij[0], ij[1]);
+          var hit = 0, tot = 0, a, b, i2;
+          for (a = 1; a <= 9; a++) for (b = 1; b <= 9; b++) {
+            tot++;
+            var t = a / 10, s = b / 10;
+            var px = quad[0].x + (quad[1].x - quad[0].x) * t + (quad[3].x - quad[0].x) * s;
+            var py = quad[0].y + (quad[1].y - quad[0].y) * t + (quad[3].y - quad[0].y) * s;
+            for (i2 = 0; i2 < drawnQ.length; i2++) if (inQuad(px, py, drawnQ[i2])) { hit++; break; }
+          }
+          return { i: ij[0], j: ij[1], from: pc[k][key].slice(),
+                   quad: quad.map(function (p) { return [+p.x.toFixed(2), +p.y.toFixed(2)]; }),
+                   coveredBySmall: +(hit / tot).toFixed(3) };
+        });
+      });
+      out.counts = { w: Object.keys(pc.w).length, v: Object.keys(pc.v).length, u: Object.keys(pc.u).length };
+      out.total = out.counts.w + out.counts.v + out.counts.u;
+      return out;
+    })(),
+    /* G 角那个 1×1×1 小方格 + 【往 H】一格 + 【往 F】一格（先生 2026-09-28 的要求） */
+    small: (function () {
+      /* —— 每一格：8 个角的屏幕坐标 / 6 个六边形顶点 / 投影中心 / 屏幕上的一格长度 —— */
+      var cells = SM_CELLS.map(function (c) {
+        var lo = c.lo, hi = [lo[0] + 1, lo[1] + 1, lo[2] + 1];
+        var corners = [], hex = [];
+        [0, 1].forEach(function (du) { [0, 1].forEach(function (dv) { [0, 1].forEach(function (dw) {
+          var u = lo[0] + du, v = lo[1] + dv, w = lo[2] + dw, p = PT(cv3(u, v, w));
+          var o = { uvw: [u, v, w], duvw: [du, dv, dw],
+                    x: +p.x.toFixed(2), y: +p.y.toFixed(2),
+                    depth: +depthRel(rel(cv3(u, v, w))).toFixed(4),
+                    /* 「中心角」= 投影落进六边形正中心的那两个角（duvw 全 0 或全 1）——
+                       立方体的近角与远角，等轴投影下必落在六边形中心 */
+                    isMid: (du === dv && dv === dw) };
+          corners.push(o);
+          if (!o.isMid) hex.push([o.x, o.y]);
+        }); }); });
+        var cen = PT(cv3(lo[0] + .5, lo[1] + .5, lo[2] + .5));
+        hex.sort(function (a, b) {
+          return Math.atan2(a[1] - cen.y, a[0] - cen.x) - Math.atan2(b[1] - cen.y, b[0] - cen.x);
+        });
+        var far = PT(cv3(hi[0], lo[1], lo[2]));
+        return { tag: c.tag, lo: lo, hi: hi,
+                 center: { x: +cen.x.toFixed(2), y: +cen.y.toFixed(2) },
+                 radiusPx: +Math.hypot(far.x - cen.x, far.y - cen.y).toFixed(3),
+                 hexHalfW: +(Math.cos(Math.PI / 6) * Math.hypot(far.x - cen.x, far.y - cen.y)).toFixed(2),
+                 corners: corners, hex: hex };
+      });
+      function isMid(lo, uvw) {
+        var d0 = uvw[0] - lo[0], d1 = uvw[1] - lo[1], d2 = uvw[2] - lo[2];
+        return (d0 === d1 && d1 === d2);
+      }
+      /* —— ★ 先生那句「这俩方格分别共用这个方格的 2 个边」的量化 ——
+         两格共用一个整面 ⇒ 这个面在屏幕上是 4 条边。
+         一条边落在某格【轮廓】上 ⟺ 它两个端点都不是该格的「中心角」
+           （端点是中心角 ⇒ 这条边是从六边形中心射出的内部线，不是轮廓）。
+         预期：这 4 条边里 2 条落在一格轮廓、2 条落在另一格轮廓（互不重复）。 */
+      function share(ia, ib, axis) {
+        var A = cells[ia], Bc = cells[ib];
+        var plane = Math.max(A.lo[axis], Bc.lo[axis]);
+        var oth = [0, 1, 2].filter(function (t) { return t !== axis; });
+        var p0 = A.lo[oth[0]], q0 = A.lo[oth[1]];
+        var quad = [[p0, q0], [p0 + 1, q0], [p0 + 1, q0 + 1], [p0, q0 + 1]].map(function (r) {
+          var uvw = []; uvw[axis] = plane; uvw[oth[0]] = r[0]; uvw[oth[1]] = r[1];
+          var s = PT(cv3(uvw[0], uvw[1], uvw[2]));
+          return { uvw: uvw, x: +s.x.toFixed(2), y: +s.y.toFixed(2) };
+        });
+        var edges = quad.map(function (p, i) {
+          var q = quad[(i + 1) % 4];
+          return { p: [p.x, p.y], q: [q.x, q.y], uvw: [p.uvw, q.uvw],
+                   onA: !isMid(A.lo, p.uvw) && !isMid(A.lo, q.uvw),
+                   onB: !isMid(Bc.lo, p.uvw) && !isMid(Bc.lo, q.uvw) };
+        });
+        return { a: ia, b: ib, axis: ['u', 'v', 'w'][axis], plane: plane,
+                 quad: quad.map(function (p) { return [p.x, p.y]; }), edges: edges,
+                 onA: edges.filter(function (e) { return e.onA; }).length,
+                 onB: edges.filter(function (e) { return e.onB; }).length };
+      }
+      /* —— 9 个朝观察者的面：其中 2 个是「内部交界面」（邻格压在它上面），7 个真可见 —— */
+      var faces = [];
+      cells.forEach(function (c, ci) {
+        cellFaces(c.lo[0], c.lo[1], c.lo[2]).forEach(function (f) {
+          if (dot3(cam(f.n), N0) >= -1e-6) return;             /* 背面：永远看不见，页面也不画 */
+          var ps = f.q.map(PT), sx = 0, sy = 0;
+          ps.forEach(function (p) { sx += p.x / 4; sy += p.y / 4; });
+          var hid = cells.some(function (o, oi) {
+            return oi !== ci && o.lo[0] === c.lo[0] + f.n.u &&
+                   o.lo[1] === c.lo[1] + f.n.v && o.lo[2] === c.lo[2] + f.n.w;
+          });
+          faces.push({ ci: ci, tag: c.tag, k: f.k, color: COL[f.k], vis: !hid,
+                       cx: +sx.toFixed(2), cy: +sy.toFixed(2), q: ps.map(function (p) {
+                         return [+p.x.toFixed(2), +p.y.toFixed(2)];
+                       }) });
+        });
+      });
+      /* —— 三格投影的并集：包围盒 + 面积（0.5px 网格积分，用来跟实测像素对账） —— */
+      function inHex(x, y, h) {
+        var s = 0;
+        for (var i = 0; i < h.length; i++) {
+          var a = h[i], b = h[(i + 1) % h.length];
+          var cr = (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]);
+          if (Math.abs(cr) < 1e-9) continue;
+          var g = cr > 0 ? 1 : -1;
+          if (s === 0) s = g; else if (s !== g) return false;
+        }
+        return true;
+      }
+      var hxs = [], hys = [];
+      cells.forEach(function (c) { c.hex.forEach(function (p) { hxs.push(p[0]); hys.push(p[1]); }); });
+      var x0 = Math.min.apply(null, hxs), x1 = Math.max.apply(null, hxs),
+          y0 = Math.min.apply(null, hys), y1 = Math.max.apply(null, hys);
+      var g = 0.5, hits = 0, tot = 0;
+      for (var gx = x0 + g / 2; gx < x1; gx += g) for (var gy = y0 + g / 2; gy < y1; gy += g) {
+        tot++;
+        if (cells.some(function (c) { return inHex(gx, gy, c.hex); })) hits++;
+      }
+      /* —— G 角那格的三个可见楔子（保留旧字段：⑬d/⑬e 用它断「蓝在上 / 绿在左 / 橙在右」）—— */
+      var cel0 = cells[0];
+      var wedges = cellFaces(cel0.lo[0], cel0.lo[1], cel0.lo[2]).filter(function (f) {
+        return dot3(cam(f.n), N0) < -1e-6;
+      }).map(function (f) {
+        var sx = 0, sy = 0;
+        f.q.forEach(function (c) { var p = PT(c); sx += p.x / 4; sy += p.y / 4; });
+        var dx = sx - cel0.center.x, dy = sy - cel0.center.y;
+        return { k: f.k, color: COL[f.k], x: +sx.toFixed(2), y: +sy.toFixed(2),
+                 dx: +dx.toFixed(2), dy: +dy.toFixed(2),
+                 place: Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? '下' : '上') : (dx > 0 ? '右' : '左') };
+      });
+      return { cells: cells, shares: [share(0, 1, 0), share(0, 2, 1)],
+               faces: faces, wedges: wedges,
+               union: { bbox: [x0, y0, x1, y1], area: +(hits * g * g).toFixed(1),
+                        grid: g, cover: +(hits / tot).toFixed(4) },
+               colors: { u: COL.u, v: COL.v, w: COL.w },
+               /* —— 兼容旧字段：主格 = G 角那格（[4,5]³）—— */
+               lo: cel0.lo[0], hi: cel0.hi[0], center: cel0.center,
+               radiusPx: cel0.radiusPx, corners: cel0.corners };
+    })(),
+    /* 216 个格点 (u,v,w) 的坐标 / 屏幕位置 / 深度 */
+    pts: (function () {
+      var pm = {}, gs = [];
+      NPTS.forEach(function (p) {
+        var s = PT(p), key = Math.round(s.x * 2) + ',' + Math.round(s.y * 2);
+        if (!pm[key]) { pm[key] = { n: 0, rep: null }; gs.push(pm[key]); }
+        pm[key].n++;
+        var d = depthRel(rel(p));
+        if (!pm[key].rep || d < pm[key].rep.d)
+          pm[key].rep = { uvw: [p.u, p.v, p.w], x: +s.x.toFixed(2), y: +s.y.toFixed(2), d: +d.toFixed(4) };
+      });
+      var mx = 0;
+      gs.forEach(function (g) { if (g.n > mx) mx = g.n; });
+      return {
+        /* 先生 2026-09-28 20:4x「去掉所有的坐标点」⇒ 这层标注已整体移除：
+           annotated 永远是 false（= 画布上不再画任何 (u,v,w) 文字），也不再有任何开关按钮。
+           下面的 total/slots/maxOverlap/list/groups 只是【格点的几何数据】，留给核验脚本用。 */
+        total: NPTS.length, slots: gs.length, annotated: false, maxOverlap: mx,
+        list: NPTS.map(function (p) {
+          var s = PT(p);
+          return { uvw: [p.u, p.v, p.w], x: +s.x.toFixed(2), y: +s.y.toFixed(2),
+                   d: +depthRel(rel(p)).toFixed(4) };
+        }),
+        groups: gs.map(function (g) {
+          return { uvw: g.rep.uvw, x: g.rep.x, y: g.rep.y, n: g.n };
+        })
+      };
+    })(),
+    rankVec: anchors.map(function (a) { return a.name + ':' + rank[a.name]; }).join(' ')
+  };
+};
+
+draw();
+</script>
+</body>
+</html>

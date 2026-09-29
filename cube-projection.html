@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>立体投影涂色 · 三面方格</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#0B111B;color:#EAF1FA;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+    /* 平板（iPad / Android）兼容：manipulation = 允许滑动与双指缩放，但【禁掉双击缩放】。
+       好处是去掉 iOS/Android 双击缩放带来的约 300ms 点击延迟，也不会出现"点格子变成放大页面"。
+       弹窗 canvas 要单独设成 none（见 #mcv），否则拖拽旋转会被浏览器当成滚动手势中断。 */
+    touch-action:manipulation;
+    overscroll-behavior:none;
+    -webkit-text-size-adjust:100%}
+  button{font-family:inherit}
+
+  /* ---------- 页头 ---------- */
+  #hd{position:fixed;left:0;right:0;top:0;height:54px;z-index:20;
+    display:flex;align-items:center;gap:16px;padding:0 20px;
+    background:linear-gradient(180deg,#16202E,#0F1826);border-bottom:1px solid #1E2C3E}
+  #hd h1{margin:0;font-size:16.5px;font-weight:700;letter-spacing:.4px;white-space:nowrap;
+    background:linear-gradient(92deg,#FFD08A,#FFB347 55%,#FF8E5E);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  #hd .rule{font-size:12.5px;color:#8FA3BC;line-height:1.5;
+    display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow:hidden}
+  #hd .rule b{color:#FFC978;font-weight:700}
+  #hd .sp{flex:1 1 auto}
+  #hd .stat{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#8FA3BC;white-space:nowrap}
+  #hd .stat i{font-style:normal;color:#EAF1FA;font-weight:700;font-size:14px}
+
+  /* ---------- 主体：横版两列 ---------- */
+  #wrap{position:fixed;left:0;right:0;top:54px;bottom:0;z-index:10;
+    display:grid;grid-template-columns:340px minmax(0,1fr);gap:13px;padding:13px 16px}
+  #left{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:11px;min-height:0}
+  #right{display:grid;grid-template-rows:auto minmax(0,1fr);gap:11px;min-height:0}
+
+  .panel{background:linear-gradient(180deg,#141E2C,#101A27);border:1px solid #223449;
+    border-radius:15px;position:relative;overflow:hidden}
+
+  /* ---------- 缩略图 ---------- */
+  #thumbBox{cursor:zoom-in;min-height:190px}
+  #thumbBox:hover{border-color:#3A5677}
+  #tcv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+  #thumbHint{position:absolute;left:0;right:0;bottom:0;height:31px;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:11.5px;color:#9FB4CE;background:linear-gradient(0deg,rgba(11,17,27,.92),rgba(11,17,27,0))}
+  #thumbHint b{color:#FFC978}
+  #thumbTag{position:absolute;left:11px;top:9px;font-size:11.5px;color:#7C8DA4;
+    letter-spacing:.5px;pointer-events:none}
+  #thumbZoom{position:absolute;right:9px;top:8px;width:26px;height:26px;border-radius:9px;
+    background:rgba(255,179,71,.14);border:1px solid rgba(255,179,71,.42);color:#FFC978;
+    display:flex;align-items:center;justify-content:center;font-size:14px;pointer-events:none}
+
+  /* ---------- 左侧下方：选项 ---------- */
+  #opts{padding:12px 13px 13px;display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;align-items:center;gap:9px}
+  .lbl{font-size:12.5px;color:#8FA3BC;white-space:nowrap;flex:0 0 auto}
+  .seg{display:flex;gap:6px;flex:1 1 auto}
+  .seg button{flex:1 1 0;height:32px;border-radius:9px;cursor:pointer;
+    border:1px solid #2B3E55;background:#16202E;color:#C9D6E6;font-size:13px;font-weight:600}
+  .seg button:hover{background:#1D2A3C;border-color:#3B5372}
+  .seg button.on{background:#3A2A12;border-color:#B8792A;color:#FFC978;
+    box-shadow:0 0 0 1px rgba(255,179,71,.25) inset}
+  /* ⚠️ min-width:0 是必须的：<input type="range"> 的固有最小宽度约 129px，flex item 默认
+     min-width:auto 会按这个固有宽度撑住 ⇒ 窄屏平板（竖屏 iPad 768 / 安卓 600~800）上
+     「小方块数」这一行会比面板宽出 ~98px，把右边的「+」挤出面板被 overflow:hidden 裁掉。
+     加 min-width:0 才能让它跟着 flex 一起收缩。
+     flex-basis 用 0（不是 auto）：用 auto 时滑块会先占住固有 129px 再谈伸缩，
+     窄屏上后面的「＋」仍会被挤到下一行；用 0 则严格按剩余空间分配。 */
+  #rng{flex:1 1 0;min-width:0;height:24px;accent-color:#FFB347;cursor:pointer}
+  .step{width:30px;height:30px;flex:0 0 auto;border-radius:9px;cursor:pointer;font-size:15px;font-weight:700;
+    border:1px solid #2B3E55;background:#16202E;color:#C9D6E6;display:flex;
+    align-items:center;justify-content:center;line-height:1}
+  .step:hover{background:#1D2A3C;border-color:#3B5372}
+  .step:active{transform:translateY(1px)}
+  #knum{min-width:34px;text-align:center;font-size:15px;font-weight:800;color:#FFC978}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tools button{height:35px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;
+    border:1px solid #2B3E55;background:#16202E;color:#C9D6E6}
+  .tools button:hover{background:#1D2A3C;border-color:#3B5372}
+  .tools button:active{transform:translateY(1px)}
+  .tools #btnHint{border-color:#4A6B3F;color:#A6E08A}
+  .tools #btnHint:hover{background:#1B2A18;border-color:#5F8A4E}
+  .tools #btnUndo{border-color:#5A4630;color:#F0C08A}
+  .tools #btnUndo:hover{background:#231A10;border-color:#7A5C3A}
+  .tools #btnNew{border-color:#3A5677;color:#9FC6F0}
+  .tools #btnNew:hover{background:#16283C}
+  .tools #btnSnd{border-color:#3F5F45;color:#9CE8B4;font-size:12.5px}
+  .tools #btnSnd:hover{background:#132118;border-color:#548055}
+
+  /* ---------- 右侧上：3 个颜色方块 ---------- */
+  #palette{padding:11px 13px;display:flex;gap:11px;align-items:stretch}
+  .pal{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 10px;
+    border-radius:12px;background:#0F1A27;border:1px solid #1F3045}
+  .sw{width:44px;height:44px;border-radius:11px;flex:0 0 auto;
+    border:2px solid rgba(255,255,255,.22);box-shadow:inset 0 -8px 16px rgba(0,0,0,.22)}
+  .pcol{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .pcol .pn{font-size:12px;color:#9FB4CE;white-space:nowrap}
+  .pcol .pn em{font-style:normal;color:#EAF1FA;font-weight:700}
+  .pcol button{height:26px;border-radius:8px;cursor:pointer;font-size:11.5px;padding:0 9px;
+    border:1px solid #2B3E55;background:#16202E;color:#C9D6E6;white-space:nowrap}
+  .pcol button:hover{background:#1D2A3C;border-color:#3B5372}
+
+  /* ---------- 右侧下：三面网格 ---------- */
+  #board{min-height:0}
+  #bsvg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:hidden;
+    touch-action:manipulation}
+  /* ⚠️ 三面墙的归一化坐标跨度只有 ~7 个单位，直接当 viewBox 用会让 stroke-width:1
+     在屏幕上变成 150px 粗的白条、标签字变成 88px。两道保险：
+       ① viewBox 整体 ×100（见 buildBoard 的 USCALE），让 1 用户单位 ≈ 1 屏幕像素；
+       ② 所有描边一律 non-scaling-stroke ⇒ stroke-width 按屏幕像素解释，与 viewBox 无关。 */
+  /* ★ 先生 2026-09-29：「游戏区格子不要带颜色」⇒ 空网格一律透明，直接透出面板底色，只留格线；
+     已涂对 / 涂错仍然上色（那是玩家自己涂的，由 refreshBoard() 写 inline fill 盖过这里）。
+     注：SVG 里 transparent 仍算 painted（跟 none 不同）⇒ elementFromPoint 照常命中，点击不受影响。 */
+  #board .cellbg{fill:transparent;stroke:rgba(255,255,255,.33);stroke-width:1.15;
+    stroke-linejoin:round;vector-effect:non-scaling-stroke;transition:fill .1s}
+  /* ⚠️ 触摸设备（iPad / Android 平板）上 :hover 会「粘」在最后碰过的格子上 ——
+     表现为涂完的格子一直亮着金边，像是被选中了。所以这条悬停规则挪进了
+     文件末尾的 @media (hover:hover)，只有真正带指针的设备才生效。 */
+  #board g.wallgrid{cursor:pointer}
+  #board .cellbg.bad{stroke:#FF6B6B;stroke-width:2.4}
+  #board .wallname{font-size:13px;font-weight:700;pointer-events:none}
+  #board .vlab{font-size:14px;font-weight:800;pointer-events:none}
+  #board .hintpulse{fill:none;stroke:#FFD447;stroke-width:3.4;stroke-linejoin:round;
+    vector-effect:non-scaling-stroke;pointer-events:none;
+    animation:hp .72s ease-in-out 3}
+  @keyframes hp{0%,100%{opacity:.2}50%{opacity:1}}
+  #board .edge{stroke:rgba(255,255,255,.92);stroke-width:2.3;stroke-linecap:round;fill:none;
+    vector-effect:non-scaling-stroke;pointer-events:none}
+
+  /* ---------- 游戏区右下角：提示 / 撤销（先生 2026-09-29：移到这儿、做成 2 个小按钮；
+     后又要求「改为上下排列 然后大一点点」⇒ 竖排 + 加高加字）----------
+     浮在 SVG 之上（z-index 高于 svg），所以点按钮不会穿到下面的格子；SVG 的点击委托绑在 #bsvg 上，
+     按钮不在 svg 内 ⇒ 两者天然互不干扰。 */
+  #cornerTools{position:absolute;right:14px;bottom:14px;z-index:6;
+    display:flex;flex-direction:column;gap:9px;align-items:stretch}
+  #cornerTools button{height:40px;min-width:84px;padding:0 18px;border-radius:12px;cursor:pointer;
+    font-size:14.5px;font-weight:700;letter-spacing:.4px;
+    border:1px solid #2B3E55;background:rgba(22,32,46,.94);color:#C9D6E6;
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    box-shadow:0 4px 14px rgba(0,0,0,.34);
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #cornerTools button:hover{background:#1D2A3C;border-color:#3B5372}
+  #cornerTools button:active{transform:translateY(1px)}
+  #cornerTools #btnHint{border-color:#4A6B3F;color:#A6E08A}
+  #cornerTools #btnHint:hover{background:#1B2A18;border-color:#5F8A4E}
+  #cornerTools #btnUndo{border-color:#5A4630;color:#F0C08A}
+  #cornerTools #btnUndo:hover{background:#231A10;border-color:#7A5C3A}
+
+  /* ---------- 自选颜色浮层（先生 2026-09-29：「换个颜色是可以选择颜色的」）---------- */
+  #colorPop{position:fixed;z-index:70;display:none;width:236px;padding:11px 12px 12px;
+    border-radius:14px;border:1px solid #2B3E55;background:#131E2C;
+    box-shadow:0 18px 46px rgba(0,0,0,.55)}
+  #colorPop.on{display:block}
+  #colorPop .ph{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  #colorPop .ph b{font-size:12.5px;color:#EAF1FA;font-weight:700}
+  #colorPop .ph .tip{font-size:11.5px;color:#8FA3BC}
+  #colorPop .ph .sp{flex:1 1 auto}
+  #colorPop .ph button{width:22px;height:22px;border-radius:7px;cursor:pointer;font-size:12px;
+    border:1px solid #2B3E55;background:#16202E;color:#C9D6E6;
+    display:flex;align-items:center;justify-content:center}
+  #colorPop .pg{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  #colorPop .pcell{position:relative;height:36px;border-radius:10px;cursor:pointer;
+    border:2px solid rgba(255,255,255,.16);box-sizing:border-box}
+  #colorPop .pcell:hover{border-color:#FFD447;transform:translateY(-1px)}
+  #colorPop .pcell.used::after{content:'✓';position:absolute;right:4px;bottom:1px;
+    font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.85)}
+  #colorPop .pcell.cur{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.28)}
+  #colorPop .pmore{margin-top:10px;display:flex;align-items:center;gap:8px;cursor:pointer;
+    font-size:12px;color:#9FB4CE}
+  #colorPop .pmore input{width:36px;height:26px;padding:0;border:1px solid #2B3E55;
+    border-radius:8px;background:#16202E;cursor:pointer}
+
+  /* ---------- 通关对话框（先生 2026-09-29：「答对了 通关信息不要在最下面 弹出一个对话框显示」）----------
+     原来是底部 toast（bottom:28px）报通关，现在改成居中对话框；toast 只继续管"某一步"的即时反馈。 */
+  #winMask{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;
+    background:rgba(5,9,15,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  #winMask.on{display:flex}
+  #winBox{width:min(88vw,392px);padding:26px 26px 20px;border-radius:20px;text-align:center;
+    border:1px solid #2B3E55;background:linear-gradient(180deg,#16202E,#101A27);
+    box-shadow:0 28px 70px rgba(0,0,0,.55);
+    animation:winIn .26s cubic-bezier(.2,.9,.3,1.28) both}
+  @keyframes winIn{from{opacity:0;transform:translateY(12px) scale(.95)}
+                   to{opacity:1;transform:translateY(0) scale(1)}}
+  #winBox .chk{width:62px;height:62px;margin:0 auto 12px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(111,212,99,.16);border:1px solid rgba(111,212,99,.50)}
+  #winBox .chk svg{width:32px;height:32px;display:block}
+  #winBox .chk path{fill:none;stroke:#6FD463;stroke-width:4.4;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:41;stroke-dashoffset:41;animation:chkDraw .42s .13s ease-out forwards}
+  @keyframes chkDraw{to{stroke-dashoffset:0}}
+  #winBox h2{margin:0 0 6px;font-size:20px;font-weight:800;letter-spacing:.5px;color:#EAF1FA}
+  #winBox .sub{margin:0 0 15px;font-size:13px;color:#9FB4CE}
+  #winBox .meta{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:19px}
+  #winBox .meta i{font-style:normal;font-size:12.5px;padding:5px 11px;border-radius:9px;
+    background:rgba(255,255,255,.06);border:1px solid #223449;color:#C9D6E6}
+  #winBox .meta i b{color:#FFC978;font-weight:800}
+  #winBox .acts{display:flex;gap:10px}
+  #winBox .acts button{flex:1 1 0;height:40px;border-radius:11px;cursor:pointer;
+    font-size:14px;font-weight:700;border:1px solid #2B3E55;background:#16202E;color:#C9D6E6}
+  #winBox .acts button:hover{background:#1D2A3C;border-color:#3B5372}
+  #winBox .acts button:active{transform:translateY(1px)}
+  #winBox .acts #btnWinAgain{border-color:#4A6B3F;background:#1B2A18;color:#A6E08A}
+  #winBox .acts #btnWinAgain:hover{background:#22371D;border-color:#5F8A4E}
+
+  /* ---------- 弹窗 ---------- */
+  #modal{position:fixed;inset:0;z-index:60;display:none;background:rgba(5,9,15,.86);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  #modal.on{display:block}
+  #mcw{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(78vw,78vh);height:min(78vw,78vh);
+    background:radial-gradient(120% 120% at 50% 0%,#16202E 0%,#0C131E 78%);
+    border:1px solid #2B3E55;border-radius:20px;overflow:hidden;
+    box-shadow:0 30px 90px rgba(0,0,0,.7)}
+  /* touch-action:none 是平板能拖动的关键：不禁掉浏览器手势的话，手指一拖就被当成
+     滚动/页面缩放，pointermove 会被 pointercancel 打断 ⇒ 旋转卡住或干脆不动。 */
+  #mcv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;
+    touch-action:none;-webkit-user-drag:none}
+  #mcv.on{cursor:grabbing}
+  #mhead{position:absolute;left:0;right:0;top:0;height:46px;display:flex;align-items:center;
+    padding:0 14px 0 18px;gap:10px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(12,19,30,.92),rgba(12,19,30,0))}
+  #mhead .t{font-size:14px;font-weight:700;color:#FFC978}
+  #mhead .s{font-size:11.5px;color:#8FA3BC}
+  #mhead .sp{flex:1 1 auto}
+  #btnMClose{pointer-events:auto;width:32px;height:32px;border-radius:10px;cursor:pointer;
+    border:1px solid #2B3E55;background:#16202E;color:#C9D6E6;font-size:16px;line-height:1;
+    display:flex;align-items:center;justify-content:center}
+  #btnMClose:hover{background:#22344A;border-color:#3B5372}
+  #mfoot{position:absolute;left:0;right:0;bottom:0;height:42px;display:flex;align-items:center;
+    justify-content:center;gap:9px;pointer-events:none;
+    background:linear-gradient(0deg,rgba(12,19,30,.92),rgba(12,19,30,0))}
+  #mfoot button,#mfoot .z{pointer-events:auto}
+  #mfoot button{height:30px;border-radius:9px;cursor:pointer;padding:0 13px;font-size:12px;
+    border:1px solid #2B3E55;background:#16202E;color:#C9D6E6}
+  #mfoot button:hover{background:#22344A;border-color:#3B5372}
+  #mfoot .z{font-size:11.5px;color:#8FA3BC}
+
+  /* ---------- 提示条 ---------- */
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(10px);
+    z-index:80;padding:10px 20px;border-radius:12px;font-size:13.5px;font-weight:600;
+    background:#16202E;border:1px solid #2B3E55;color:#EAF1FA;opacity:0;pointer-events:none;
+    transition:opacity .18s,transform .18s}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.ok{border-color:#3F7A52;color:#9CE8B4}
+  #toast.no{border-color:#8A3B3B;color:#FFA3A3}
+  #segSkin button{font-size:13px}
+
+  /* ============================================================
+     白色底板皮肤（先生 2026-09-29：「再做一套白色底板的 左侧下面设置个按钮
+     左边是白 右边是黑 点击可以更换」）
+     做法：上面所有规则一条都不动，只在 body.skin-light 下整体覆盖。
+     canvas 与 SVG 里那些"写死在 JS 里的线色/底色"由 skinPal() 按皮肤分支给（见 JS）。
+     ============================================================ */
+  body.skin-light{background:#EEF2F8;color:#1D2733}
+  body.skin-light #hd{background:linear-gradient(180deg,#FFFFFF,#F5F8FC);border-bottom-color:#E1E7F0}
+  body.skin-light #hd h1{background:linear-gradient(92deg,#E0921C,#C97A1A 55%,#A8570C);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  body.skin-light #hd .rule{color:#5C6B7F}
+  body.skin-light #hd .rule b{color:#A8570C}
+  body.skin-light #hd .stat{color:#5C6B7F}
+  body.skin-light #hd .stat i{color:#1D2733}
+  body.skin-light .panel{background:linear-gradient(180deg,#FFFFFF,#FAFCFE);border-color:#E1E7F0}
+  body.skin-light #thumbBox:hover{border-color:#A9B8CC}
+  body.skin-light #thumbTag{color:#7A8798}
+  body.skin-light #thumbHint{color:#4E5D72;
+    background:linear-gradient(0deg,rgba(255,255,255,.97),rgba(255,255,255,0))}
+  body.skin-light #thumbHint b{color:#A8570C}
+  body.skin-light #thumbZoom{background:rgba(201,122,26,.12);border-color:rgba(201,122,26,.42);color:#A8570C}
+  body.skin-light .lbl{color:#5C6B7F}
+  body.skin-light #rng{accent-color:#C97A1A}
+  body.skin-light .seg button,body.skin-light .step,body.skin-light .tools button{
+    background:#F6F8FB;border-color:#DCE3EC;color:#33445C}
+  body.skin-light .seg button:hover,body.skin-light .step:hover,body.skin-light .tools button:hover{
+    background:#EDF3FA;border-color:#B9C6D6}
+  body.skin-light .seg button.on{background:#FDF0DC;border-color:#D9A252;color:#8A5310;
+    box-shadow:0 0 0 1px rgba(217,162,82,.22) inset}
+  body.skin-light #knum{color:#A8570C}
+  body.skin-light .tools #btnHint{border-color:#A8CFA0;color:#2F6B36}
+  body.skin-light .tools #btnHint:hover{background:#EFF8EC;border-color:#7FB673}
+  body.skin-light .tools #btnUndo{border-color:#DFC09A;color:#8A5310}
+  body.skin-light .tools #btnUndo:hover{background:#FBF3E8;border-color:#C79A5F}
+  body.skin-light .tools #btnNew{border-color:#B8CBE0;color:#2A5C8F}
+  body.skin-light .tools #btnNew:hover{background:#EDF4FC}
+  body.skin-light .tools #btnSnd{border-color:#A8CFA0;color:#2F6B36}
+  body.skin-light .pal{background:#F7F9FC;border-color:#E1E7F0}
+  body.skin-light .pcol .pn{color:#5C6B7F}
+  body.skin-light .pcol .pn em{color:#1D2733}
+  body.skin-light .pcol button{background:#FFFFFF;border-color:#DCE3EC;color:#33445C}
+  body.skin-light .pcol button:hover{background:#F1F5FA;border-color:#B9C6D6}
+  body.skin-light .sw{border-color:rgba(0,0,0,.15);box-shadow:inset 0 -8px 16px rgba(0,0,0,.12)}
+  body.skin-light #board .cellbg{stroke:rgba(30,45,70,.40)}
+  body.skin-light #board .cellbg.bad{stroke:#D64545}
+  body.skin-light #board .edge{stroke:rgba(22,36,58,.88)}
+  body.skin-light #cornerTools button{background:rgba(255,255,255,.95);border-color:#DCE3EC;color:#33445C;
+    box-shadow:0 4px 14px rgba(24,40,64,.14)}
+  body.skin-light #cornerTools button:hover{background:#F1F5FA;border-color:#B9C6D6}
+  body.skin-light #cornerTools #btnHint{border-color:#A8CFA0;color:#2F6B36}
+  body.skin-light #cornerTools #btnHint:hover{background:#EFF8EC;border-color:#7FB673}
+  body.skin-light #cornerTools #btnUndo{border-color:#DFC09A;color:#8A5310}
+  body.skin-light #cornerTools #btnUndo:hover{background:#FBF3E8;border-color:#C79A5F}
+  body.skin-light #colorPop{background:#FFFFFF;border-color:#DCE3EC;
+    box-shadow:0 18px 46px rgba(24,40,64,.22)}
+  body.skin-light #colorPop .ph b{color:#1D2733}
+  body.skin-light #colorPop .ph .tip{color:#5C6B7F}
+  body.skin-light #colorPop .ph button{background:#F6F8FB;border-color:#DCE3EC;color:#33445C}
+  body.skin-light #colorPop .pcell{border-color:rgba(0,0,0,.12)}
+  body.skin-light #colorPop .pcell.cur{border-color:#1D2733;box-shadow:0 0 0 2px rgba(29,39,51,.22)}
+  body.skin-light #colorPop .pmore{color:#5C6B7F}
+  body.skin-light #colorPop .pmore input{border-color:#DCE3EC;background:#F6F8FB}
+  body.skin-light #winMask{background:rgba(226,235,246,.74)}
+  body.skin-light #winBox{background:linear-gradient(180deg,#FFFFFF,#F5F9FD);border-color:#DCE3EC;
+    box-shadow:0 28px 70px rgba(24,40,64,.26)}
+  body.skin-light #winBox .chk{background:rgba(111,212,99,.20);border-color:rgba(88,176,78,.55)}
+  body.skin-light #winBox .chk path{stroke:#3F8F35}
+  body.skin-light #winBox h2{color:#1D2733}
+  body.skin-light #winBox .sub{color:#5C6B7F}
+  body.skin-light #winBox .meta i{background:#F2F6FA;border-color:#E1E7F0;color:#33445C}
+  body.skin-light #winBox .meta i b{color:#A8570C}
+  body.skin-light #winBox .acts button{background:#F6F8FB;border-color:#DCE3EC;color:#33445C}
+  body.skin-light #winBox .acts button:hover{background:#EDF3FA;border-color:#B9C6D6}
+  body.skin-light #winBox .acts #btnWinAgain{border-color:#8FC79A;background:#EFF8EC;color:#2F6B36}
+  body.skin-light #winBox .acts #btnWinAgain:hover{background:#E4F4DF;border-color:#7FB673}
+  body.skin-light #board .hintpulse{stroke:#C97A1A}
+  body.skin-light #modal{background:rgba(230,237,246,.90)}
+  body.skin-light #mcw{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#F1F5FB 78%);
+    border-color:#DCE3EC;box-shadow:0 30px 90px rgba(24,40,64,.20)}
+  body.skin-light #mhead{background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(255,255,255,0))}
+  body.skin-light #mhead .t{color:#A8570C}
+  body.skin-light #mhead .s{color:#5C6B7F}
+  body.skin-light #mfoot{background:linear-gradient(0deg,rgba(255,255,255,.97),rgba(255,255,255,0))}
+  body.skin-light #mfoot button,body.skin-light #btnMClose{background:#FFFFFF;border-color:#DCE3EC;color:#33445C}
+  body.skin-light #mfoot button:hover,body.skin-light #btnMClose:hover{background:#F1F5FA;border-color:#B9C6D6}
+  body.skin-light #mfoot .z{color:#5C6B7F}
+  body.skin-light #toast{background:#FFFFFF;border-color:#DCE3EC;color:#1D2733;
+    box-shadow:0 8px 26px rgba(24,40,64,.14)}
+  body.skin-light #toast.ok{border-color:#8FC79A;color:#2F6B36}
+  body.skin-light #toast.no{border-color:#E8A6A6;color:#B32B2B}
+
+  /* ============================================================
+     平板（iPad / Android）兼容修正 —— 2026-09-29
+     ============================================================ */
+  /* 触摸设备上 :hover 会「粘」在最后碰过的元素上：iPad 上点完一个格子，它会一直保持
+     悬停样式（金边），看着像被选中了。格子的悬停只对真正有指针的设备生效即可。 */
+  @media (hover:hover){
+    #board .cellbg:hover{stroke:#FFD447;stroke-width:1.8}
+    body.skin-light #board .cellbg:hover{stroke:#C97A1A;stroke-width:2}
+  }
+  /* 窄屏（竖屏 iPad 768 / Android 平板 600~800 宽）：两列布局按比例收窄左栏，
+     并把页头那行说明压短、把选项区控件收紧，避免「小方块数」那行把 + 按钮挤出面板。 */
+  @media (max-width:860px){
+    #wrap{grid-template-columns:clamp(236px,31vw,300px) minmax(0,1fr);gap:10px;padding:10px 11px}
+    #hd{padding:0 12px;gap:10px}
+    #hd h1{font-size:15px}
+    #hd .rule{font-size:11.5px;gap:7px}
+    #opts{padding:10px 11px;gap:8px}
+    .row{gap:6px}
+    .lbl{font-size:11.5px}
+    .step{width:28px;height:28px;font-size:13.5px}
+    .seg button{font-size:12.5px}
+    #knum{min-width:26px;font-size:14px}
+    /* 「小方块数」这一行在窄屏让标签独占一行：不然滑块只剩 60~80px（手指根本没法拖）。
+       换成两行后滑块能拿回 120px 以上。 */
+    #rowK{flex-wrap:wrap;row-gap:5px}
+    #rowK .lbl{flex:1 1 100%}
+  }
+  /* 矮屏（横屏 iPad 768 高 / 安卓平板 600~800 高）：选项区太占高度会挤扁缩略图 ⇒ 收紧留白 */
+  @media (max-height:820px){
+    #opts{padding:10px 11px;gap:8px}
+    #hd{height:48px}
+    #wrap{top:48px;gap:10px}
+    .seg button{height:30px}
+    #thumbBox{min-height:150px}
+  }
+  @media (max-height:640px){
+    #opts{padding:8px 10px;gap:6px}
+    .seg button{height:28px;font-size:12.5px}
+    #thumbBox{min-height:118px}
+    .tools button{height:32px}
+  }
+</style>
+</head>
+<body class="skin-light">
+<header id="hd">
+  <h1>立体投影涂色</h1>
+  <div class="rule">
+    看左边立体图，在右边三面方格上涂出<b>它的投影</b>　·　每面方格的格数 = 立方体每边的小方格数
+  </div>
+  <div class="sp"></div>
+  <div class="stat">已涂 <i id="stDone">0</i> / <i id="stNeed">0</i> 格　·　错 <i id="stBad">0</i> 格</div>
+</header>
+
+<main id="wrap">
+  <aside id="left">
+    <div class="panel" id="thumbBox" title="点一下放大 · 可 360° 旋转">
+      <canvas id="tcv"></canvas>
+      <div id="thumbTag">题目立体图</div>
+      <div id="thumbZoom">⤢</div>
+      <div id="thumbHint"><b>点这里放大</b> · 可拖动 360° 旋转看清形状</div>
+    </div>
+    <div class="panel" id="opts">
+      <div class="row">
+        <span class="lbl">底板</span>
+        <div class="seg" id="segSkin">
+          <button data-skin="light">白</button>
+          <button data-skin="dark">黑</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="lbl">难度</span>
+        <div class="seg" id="segDiff">
+          <button data-diff="easy">简单</button>
+          <button data-diff="hard">困难</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="lbl">网格边长</span>
+        <div class="seg" id="segN">
+          <button data-n="4">4×4</button>
+          <button data-n="5">5×5</button>
+          <button data-n="6">6×6</button>
+        </div>
+      </div>
+      <div class="row" id="rowK">
+        <span class="lbl">小方块数</span>
+        <button class="step" id="kMinus">−</button>
+        <input type="range" id="rng" min="3" max="30" step="1" value="7">
+        <span id="knum">7</span>
+        <button class="step" id="kPlus">+</button>
+      </div>
+      <div class="tools">
+        <button id="btnNew">换一道题</button>
+        <button id="btnSnd">🔊 声音开</button>
+      </div>
+    </div>
+  </aside>
+
+  <section id="right">
+    <div class="panel" id="palette">
+      <div class="pal" data-k="u">
+        <span class="sw" id="swu"></span>
+        <span class="pcol">
+          <span class="pn"><em id="nmu">右上</em>面网格</span>
+          <button data-k="u" class="btnSw">换个颜色</button>
+        </span>
+      </div>
+      <div class="pal" data-k="v">
+        <span class="sw" id="swv"></span>
+        <span class="pcol">
+          <span class="pn"><em id="nmv">左上</em>面网格</span>
+          <button data-k="v" class="btnSw">换个颜色</button>
+        </span>
+      </div>
+      <div class="pal" data-k="w">
+        <span class="sw" id="sww"></span>
+        <span class="pcol">
+          <span class="pn"><em id="nmw">下面</em>网格</span>
+          <button data-k="w" class="btnSw">换个颜色</button>
+        </span>
+      </div>
+    </div>
+    <div class="panel" id="board">
+      <svg id="bsvg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="cornerTools">
+        <button id="btnHint" title="帮我点亮一格">提示</button>
+        <button id="btnUndo" title="退回上一步">撤销</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 自选颜色浮层：点「换个颜色」弹出，10 个预设 + 系统取色器 -->
+<div id="colorPop">
+  <div class="ph"><b id="popName">右上网格</b><span class="tip">选一个颜色</span><span class="sp"></span>
+    <button id="popClose" title="关闭">✕</button></div>
+  <div class="pg" id="popGrid"></div>
+  <label class="pmore"><input type="color" id="popNative" value="#6FD463"><span>自定义颜色…</span></label>
+</div>
+
+<!-- 通关对话框（不再是底部那行小提示） -->
+<div id="winMask">
+  <div id="winBox">
+    <div class="chk"><svg viewBox="0 0 48 48"><path d="M13 25.5 L21 33.5 L35 15.5"/></svg></div>
+    <h2>通关了！</h2>
+    <p class="sub">三面投影全部还原出来了</p>
+    <div class="meta" id="winMeta"></div>
+    <div class="acts">
+      <button id="btnWinAgain">再来一题</button>
+      <button id="btnWinLook">看看这题</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal">
+  <div id="mcw">
+    <canvas id="mcv"></canvas>
+    <div id="mhead">
+      <span class="t">题目立体图 · 360° 旋转</span>
+      <span class="s">拖动旋转 · 滚轮缩放</span>
+      <span class="sp"></span>
+      <button id="btnMClose" title="关闭">✕</button>
+    </div>
+    <div id="mfoot">
+      <button id="btnMRot">自动旋转</button>
+      <button id="btnMReset">回到默认视角</button>
+      <span class="z" id="mzoom">100%</span>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   立体投影涂色 —— 随机连通立方体块 → 三面网格投影
+   ------------------------------------------------------------------
+   【几何基座与基准页 cube-5x5x5.html 完全同一套】
+     · 原点 A=(0,0,0)；u 沿 A→B、v 沿 A→D、w 沿 A→E，三个方向各长 N。
+       B(N,0,0) C(N,N,0) D(0,N,0) E(0,0,N) F(N,0,N) G(N,N,N) H(0,N,N)。
+     · 相机基 A0(右) / B0(上) / N0(指向屏幕里)，观察者在 −N0 一侧。
+     · 默认视角 M = 绕视线轴 N0 转 180°（= cube-5x5x5.html 那个固定视角）：
+       C 到最上面、E 到最下面，A 与 G 仍重合在画面正中。
+
+   【三面墙与轴色的对应（实测，不是推的）】
+     把三面墙的形心用过同一套 cam()/A0/B0 投影算出来：
+       u=N 墙 BCGF → (+1.7678, −1.0206) = 右上     轴色 COL.u = 绿
+       v=N 墙 DCGH → (−1.7678, −1.0206) = 左上     轴色 COL.v = 橙
+       w=N 墙 EFGH → ( 0.0000, +2.0412) = 正下     轴色 COL.w = 蓝
+     这正好对上先生 2026-09-29 那句「绿色平行于右上的网格面」
+     ⇒ 投影口径 = 每面网格涂【平行于它的那个立方体面】的颜色 = 该轴的轴色。
+
+   【投影索引（与基准页 cube-5x5x5.html 逐字同一套）】
+     一个格 (a,b,c) 沿某条坐标轴拍平到墙上，索引是它在墙上剩下的两个坐标：
+       w 墙格 (i,j) = (u,v)  →  答案键 a|b
+       v 墙格 (i,j) = (u,w)  →  答案键 a|c
+       u 墙格 (i,j) = (v,w)  →  答案键 b|c
+     （三面墙的 q0→q1 / q0→q3 方向实测分别为：w墙 +u/+v、v墙 +u/+w、u墙 +v/+w）
+
+   【为什么画家算法在这里成立（我复算过，这一步不确认就会画错遮挡）】
+     1×1×1 块的等轴投影是正六边形，外接圆半径 R=0.81651(×F.s)；
+     它的三个可见面（−u / −v / −w）投影各为平行四边形，面积各 0.57735，
+     三者之和 1.73205 恰好 = 六边形面积 ⇒ 三个可见面【不重叠地铺满整块六边形】。
+     ⇒ 任何被 A 遮住的块 X，其可见点投影 ⊆ A 的投影六边形 ⊆ A 三可见面之并
+     ⇒ 「按块中心深度远→近排序 + 每块只画 3 个朝向观察者的面」遮挡必然正确。
+     深度相同的两块（Δu+Δv+Δw=0）实测只相切(如 (1,2,3) 与 (2,2,2) 切于 (0,−0.81651))、
+     内部不重叠 ⇒ 顺序无关，但仍按 (a,b,c) 字典序钉死以保证渲染可复现。
+   ============================================================ */
+
+/* ---------- 全局状态 ---------- */
+var G = {
+  N: 5,                                   /* 网格档 4 / 5 / 6，默认 5 */
+  K: 7,                                   /* 小方块数 3~30 */
+  shape: [],                              /* [{lo:[a,b,c]}] 每个 1×1×1 格 */
+  ans: { w: {}, v: {}, u: {} },           /* 正确答案：每面墙上该涂的格 */
+  fill: { w: {}, v: {}, u: {} },          /* 玩家已涂（键 'i|j'） */
+  hist: [],                               /* 撤销栈：{k,key,prev} */
+  COL: { u: '#6FD463', v: '#FF8354', w: '#5AA9FF' },
+  skin: 'light',                          /* 'dark' | 'light' —— 底板皮肤（先生 2026-09-29：默认白底） */
+  diff: 'easy',                           /* 'easy' | 'hard' —— 题目立体图难度（先生 2026-09-29：默认简单） */
+  solved: false
+};
+/* 先生 2026-09-29：「把C点字母C换成A H点字母H换成B F点字母F换成C 记住 只是换字母
+   其余点的字母不要显示」⇒ 只改【显示名】，几何坐标一律不动。 */
+var LBL = { C: 'A', H: 'B', F: 'C' };
+var LBLLIST = ['C', 'H', 'F'];            /* 只给这三个顶点画标签 */
+var WALLNAME = { u: '右上', v: '左上', w: '正下' };
+var WALLFACE = { w: 1, v: 3, u: 5 };       /* 三面墙在 FACES 里的下标 */
+var DROP_FACES = ['A-B-C-D', 'A-B-F-E', 'A-D-H-E'];   /* 含 A 的近侧三面：不画 */
+
+/* ---------- 随 N 重建的几何 ---------- */
+var N = 5, VN = 5, CEN, HALF_DIAG, CORNER, FACES, EDGES;
+function rebuildGeometry(nn) {
+  N = nn; VN = nn;
+  CEN = { u: N / 2, v: N / 2, w: N / 2 };
+  HALF_DIAG = N * Math.sqrt(3) / 2;
+  CORNER = {
+    A: { u: 0, v: 0, w: 0 }, B: { u: N, v: 0, w: 0 },
+    C: { u: N, v: N, w: 0 }, D: { u: 0, v: N, w: 0 },
+    E: { u: 0, v: 0, w: N }, F: { u: N, v: 0, w: N },
+    G: { u: N, v: N, w: N }, H: { u: 0, v: N, w: N }
+  };
+  FACES = [
+    { k: 'w', n: { u: 0, v: 0, w: -1 }, q: ['A', 'B', 'C', 'D'] },
+    { k: 'w', n: { u: 0, v: 0, w: 1 },  q: ['E', 'F', 'G', 'H'] },
+    { k: 'v', n: { u: 0, v: -1, w: 0 }, q: ['A', 'B', 'F', 'E'] },
+    { k: 'v', n: { u: 0, v: 1, w: 0 },  q: ['D', 'C', 'G', 'H'] },
+    { k: 'u', n: { u: -1, v: 0, w: 0 }, q: ['A', 'D', 'H', 'E'] },
+    { k: 'u', n: { u: 1, v: 0, w: 0 },  q: ['B', 'C', 'G', 'F'] }
+  ];
+  /* 12 条棱自动去重，必须单独画一次（共享棱画两遍会让白色不透明度叠加、亮度翻倍） */
+  EDGES = (function () {
+    var m = {}, out = [];
+    FACES.forEach(function (f) {
+      for (var i = 0; i < 4; i++) {
+        var a = f.q[i], b = f.q[(i + 1) % 4], key = a < b ? a + b : b + a;
+        if (!m[key]) { m[key] = { a: a, b: b, fs: [] }; out.push(m[key]); }
+        m[key].fs.push(f);
+      }
+    });
+    return out;
+  })();
+}
+function faceKey(f) { return f.q.join('-'); }
+function isDropped(f) { return DROP_FACES.indexOf(faceKey(f)) >= 0; }
+function oppo(f) {
+  for (var i = 0; i < FACES.length; i++) {
+    var g = FACES[i];
+    if (g.k === f.k && g.n.u === -f.n.u && g.n.v === -f.n.v && g.n.w === -f.n.w) return g;
+  }
+  return null;
+}
+function faceOn(f) { return !isDropped(f); }
+function faceFront(f) { return dot3(cam(f.n), N0) < -1e-6; }
+function faceLoud(f) { return faceFront(f) || isDropped(oppo(f)); }
+function edgeOn(e) {
+  return !(e.fs.length && e.fs.every(function (f) { return isDropped(f); }));
+}
+function edgeFront(e) { return e.fs.some(faceFront); }
+function edgeLoud(e) {
+  return e.fs.some(function (f) { return faceOn(f) && faceLoud(f); });
+}
+
+/* ---------- 3D 基与投影（与两个基准页逐字相同） ---------- */
+var A0 = { x: -0.70711, y: 0.70711, z: 0 };
+var B0 = { x: -0.40825, y: -0.40825, z: 0.81650 };
+var N0 = { x: 0.57735, y: 0.57735, z: 0.57735 };
+function dot3(a, b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+function mm(A, B) {
+  var C = new Array(9), i, j, k, s;
+  for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) {
+    s = 0;
+    for (k = 0; k < 3; k++) s += A[i * 3 + k] * B[k * 3 + j];
+    C[i * 3 + j] = s;
+  }
+  return C;
+}
+function rotAxis(ax, ay, az, th) {
+  var n = Math.sqrt(ax * ax + ay * ay + az * az);
+  if (n < 1e-9) return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  ax /= n; ay /= n; az /= n;
+  var c = Math.cos(th), s = Math.sin(th), t = 1 - c;
+  return [t * ax * ax + c, t * ax * ay - s * az, t * ax * az + s * ay,
+          t * ax * ay + s * az, t * ay * ay + c, t * ay * az - s * ax,
+          t * ax * az - s * ay, t * ay * az + s * ax, t * az * az + c];
+}
+var ROTK = 0.0082;
+function applyRot(dxPix, dyPix) {
+  var R = mm(rotAxis(A0.x, A0.y, A0.z, dyPix * ROTK),
+             rotAxis(-B0.x, -B0.y, -B0.z, dxPix * ROTK));
+  M = mm(R, M);
+}
+function cv3(u, v, w) { return { u: u, v: v, w: w }; }
+/* 一格 [a,a+1]×[b,b+1]×[c,c+1] 的 6 个面（法向 + 环绕 4 角）；k 决定用哪个轴色 */
+function cellFaces(a, b, c) {
+  var p00 = cv3(a, b, c), p10 = cv3(a + 1, b, c),
+      p11 = cv3(a + 1, b + 1, c), p01 = cv3(a, b + 1, c),
+      q00 = cv3(a, b, c + 1), q10 = cv3(a + 1, b, c + 1),
+      q11 = cv3(a + 1, b + 1, c + 1), q01 = cv3(a, b + 1, c + 1);
+  return [
+    { k: 'w', n: { u: 0, v: 0, w: -1 }, q: [p00, p10, p11, p01] },
+    { k: 'w', n: { u: 0, v: 0, w: 1 },  q: [q00, q10, q11, q01] },
+    { k: 'v', n: { u: 0, v: -1, w: 0 }, q: [p00, p10, q10, q00] },
+    { k: 'v', n: { u: 0, v: 1, w: 0 },  q: [p01, p11, q11, q01] },
+    { k: 'u', n: { u: -1, v: 0, w: 0 }, q: [p00, p01, q01, q00] },
+    { k: 'u', n: { u: 1, v: 0, w: 0 },  q: [p10, p11, q11, q10] }
+  ];
+}
+/* 墙上的一格 (i,j) 的 4 个屏幕点：面是平行四边形 ⇒ 双线性插值 */
+function faceCellQuad(f, i, j) {
+  var p0 = CORNER[f.q[0]], p1 = CORNER[f.q[1]], p3 = CORNER[f.q[3]];
+  function at(a, b) {
+    var t = a / N, s = b / N;
+    return PT({ u: p0.u + (p1.u - p0.u) * t + (p3.u - p0.u) * s,
+                v: p0.v + (p1.v - p0.v) * t + (p3.v - p0.v) * s,
+                w: p0.w + (p1.w - p0.w) * t + (p3.w - p0.w) * s });
+  }
+  return [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
+}
+
+/* ---------- 出题：N×N×N 空间内的【整体连通】随机形状 ---------- */
+var DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+function kk(c) { return c[0] + '|' + c[1] + '|' + c[2]; }
+function ri(n) { return Math.floor(Math.random() * n); }
+/* 先生 2026-09-29：「这些小方格可以自定义数量 最小为3 最大30 在这个立方空间内做成随机形状
+   但要求组成的方格要相连出现至少1个共用面 不能出现有单独的方格不与任何其他方格相连」
+   ⇒ 用【连通生长】：每一步只能从"与已有块共面相邻"的位置里挑
+     ⇒ 生成结果天然整体连通（任意两块之间都能走通），不可能出现孤立块。
+   加权：新块与已有块的接触面越多权重越高 ⇒ 形状更紧凑、更像一个整体（但仍随机）。 */
+function genShape(n, K) {
+  K = Math.max(3, Math.min(30, Math.round(K)));
+  if (K > n * n * n) K = n * n * n;
+  for (var att = 0; att < 500; att++) {
+    /* ★ 先生 2026-09-29：「第一个方格必须在中心点放置」。
+       等轴投影下画面正中心是 A(0,0,0) 与 G(n,n,n) 的公共投影点；先生要的"中心点"
+       是【最里面那个角】= G（他 09-28 原话「中心点是最里面的角，现在中心点默认都有一个小方格」）
+       ⇒ 第一格固定 = 贴着 G 角、朝内那一格 [n-1, n-1, n-1]，
+         与基准真源 cube-5x5x5.html 的 SM_CELLS[0] 是同一格。
+       之后仍走连通生长 ⇒ 整块形状从中心点长出来，且天然整体连通。 */
+    var set = [[n - 1, n - 1, n - 1]], have = {}, cand = {};
+    have[kk(set[0])] = 1;
+    while (set.length < K) {
+      var list = [], ws = [], wsum = 0, i, d, j;
+      cand = {};
+      for (i = 0; i < set.length; i++) {
+        for (d = 0; d < 6; d++) {
+          var q = [set[i][0] + DIRS[d][0], set[i][1] + DIRS[d][1], set[i][2] + DIRS[d][2]];
+          if (q[0] < 0 || q[0] >= n || q[1] < 0 || q[1] >= n || q[2] < 0 || q[2] >= n) continue;
+          var kq = kk(q);
+          if (have[kq] || cand[kq]) continue;
+          cand[kq] = 1; list.push(q);
+        }
+      }
+      if (!list.length) break;
+      for (j = 0; j < list.length; j++) {
+        var nb = 0;
+        for (d = 0; d < 6; d++) {
+          if (have[kk([list[j][0] + DIRS[d][0], list[j][1] + DIRS[d][1], list[j][2] + DIRS[d][2]])]) nb++;
+        }
+        var w = 1 + nb * 2;
+        ws.push(w); wsum += w;
+      }
+      var r = Math.random() * wsum, pick = list.length - 1;
+      for (j = 0; j < list.length; j++) { r -= ws[j]; if (r <= 0) { pick = j; break; } }
+      set.push(list[pick]); have[kk(list[pick])] = 1;
+    }
+    if (set.length === K) {
+      /* ⚠️ 这里必须先把裸数组包成 {lo:[a,b,c]} 再交给 isConnected ——
+         isConnected 读的是 c.lo，而生长过程里的 set 元素是裸数组 [a,b,c]，
+         直接传进去会让 c.lo 为 undefined、kk() 立刻炸掉（第一次跑就踩了）。 */
+      var obj = set.map(function (c) { return { lo: c }; });
+      if (isConnected(obj)) return obj;
+    }
+  }
+  /* 兜底：沿 u 方向排成一条（一定连通） */
+  var out = [], lim = Math.min(K, n);
+  for (var t = 0; t < K; t++) out.push({ lo: [t % lim, 0, 0] });
+  return out;
+}
+/* 连通性硬校验：BFS 数出连通块数，必须恰好 1 */
+function isConnected(set) {
+  if (set.length <= 1) return true;
+  var have = {}, i, d;
+  set.forEach(function (c) { have[kk(c.lo)] = 1; });
+  var start = kk(set[0].lo), seen = {}, q = [set[0].lo];
+  seen[start] = 1;
+  while (q.length) {
+    var c = q.pop();
+    for (d = 0; d < 6; d++) {
+      var t = [c[0] + DIRS[d][0], c[1] + DIRS[d][1], c[2] + DIRS[d][2]], kt = kk(t);
+      if (have[kt] && !seen[kt]) { seen[kt] = 1; q.push(t); }
+    }
+  }
+  return Object.keys(seen).length === set.length;
+}
+/* 一对块是否共面相邻（"共用 1 个面"的判据） */
+function sharesFace(c1, c2) {
+  var d = 0, same = 0, i;
+  for (i = 0; i < 3; i++) {
+    var df = Math.abs(c1.lo[i] - c2.lo[i]);
+    if (df === 0) same++; else d += df;
+  }
+  return same === 2 && d === 1;
+}
+
+/* ---------- 答案：三面墙上的投影并集 ---------- */
+/* 先生 2026-09-29：「算面你可以计算平行于填充网格的那个面的颜色」
+   ⇒ 某格 (a,b,c) 沿 u 轴拍平到 u 墙 ⇒ 墙上格 (v,w) = (b,c)；颜色 = 平行于 u 墙的那个面
+     的轴色 = COL.u。另外两面同理。多块投到同一格 ⇒ 只算一格（并集）。 */
+function buildAns(shape) {
+  var A = { w: {}, v: {}, u: {} };
+  shape.forEach(function (c) {
+    var a = c.lo[0], b = c.lo[1], e = c.lo[2];
+    A.w[a + '|' + b] = 1;      /* w 墙（正下）格 (u,v) */
+    A.v[a + '|' + e] = 1;      /* v 墙（左上）格 (u,w) */
+    A.u[b + '|' + e] = 1;      /* u 墙（右上）格 (v,w) */
+  });
+  return A;
+}
+function ansCount(A) {
+  return Object.keys(A.w).length + Object.keys(A.v).length + Object.keys(A.u).length;
+}
+/* ============================================================
+   皮肤调色板
+   —— canvas 与 SVG 里那些"必须写死在 JS 里的线色 / 底色"全部从这里取，
+      页面壳子的配色则走 CSS 的 body.skin-light 覆盖（两套各管一段，别混）。
+   —— 带缓存：绘制一帧会问几十次，对象重建没必要。
+   ============================================================ */
+var _PAL = null, _PALKEY = null;
+function skinPal() {
+  if (_PALKEY !== G.skin) {
+    _PAL = (G.skin === 'light')
+      ? { /* 白底：线要深、且比黑底更实（白底的抗锯齿对比更弱，太淡就会像没画） */
+          grid: 'rgba(30,45,70,.30)', gridDim: 'rgba(30,45,70,.13)',
+          edge: 'rgba(22,36,58,.88)', edgeDim: 'rgba(22,36,58,.20)',
+          lead: 'rgba(22,36,58,.48)', labBg: '#FFFFFF', labEdge: '#BFCBDA', labInk: '#152034',
+          cellEdge: 'rgba(255,255,255,.82)',
+          badFill: '#F9D3CE' }
+      : { /* 黑底（cube-5x5x5.html 那套原味配色） */
+          grid: 'rgba(255,255,255,.34)', gridDim: 'rgba(255,255,255,.14)',
+          edge: 'rgba(255,255,255,.90)', edgeDim: 'rgba(255,255,255,.18)',
+          lead: 'rgba(255,255,255,.42)', labBg: '#FFFFFF', labEdge: '#22324A', labInk: '#152034',
+          cellEdge: 'rgba(12,20,32,.62)',
+          badFill: '#66241F' };
+    _PALKEY = G.skin;
+  }
+  return _PAL;
+}
+
+/* ============================================================
+   视图：缩略图与弹窗共用同一套绘制代码
+   —— 全局 M / F / ctx / VW / VH 在 useView() 里被切换到"当前正在画的视图"。
+      绘制是同步完成的，所以这种切换是安全的；弹窗转动只改 Vmodal.M，不动缩略图。
+   ============================================================ */
+var M = rotAxis(N0.x, N0.y, N0.z, Math.PI);          /* 默认视角（= cube-5x5x5.html） */
+var F = { s: 1, ox: 0, oy: 0 }, ctx = null, VW = 0, VH = 0, CUR = null;
+function defaultM() { return rotAxis(N0.x, N0.y, N0.z, Math.PI); }
+
+function cam(p) {
+  return { x: M[0] * p.u + M[1] * p.v + M[2] * p.w,
+           y: M[3] * p.u + M[4] * p.v + M[5] * p.w,
+           z: M[6] * p.u + M[7] * p.v + M[8] * p.w };
+}
+function rel(p) { return { u: p.u - CEN.u, v: p.v - CEN.v, w: p.w - CEN.w }; }
+function flatRel(rp) { var q = cam(rp); return { x: dot3(q, A0), y: -dot3(q, B0) }; }
+function depthRel(rp) { var q = cam(rp); return dot3(q, N0); }
+function PT(p) { var r = flatRel(rel(p)); return { x: F.ox + r.x * F.s, y: F.oy + r.y * F.s }; }
+function inQuad(px, py, q) {
+  var s = 0, i, A, B, cr, g;
+  for (i = 0; i < q.length; i++) {
+    A = q[i]; B = q[(i + 1) % q.length];
+    cr = (B[0] - A[0]) * (py - A[1]) - (B[1] - A[1]) * (px - A[0]);
+    if (Math.abs(cr) < 1e-9) continue;
+    g = cr > 0 ? 1 : -1;
+    if (s === 0) s = g; else if (s !== g) return false;
+  }
+  return true;
+}
+function scene() {
+  var out = [], i, j;
+  for (i = 0; i < FACES.length; i++) {
+    var f = FACES[i], pts = [], d = 0;
+    for (j = 0; j < 4; j++) { var c = CORNER[f.q[j]]; d += depthRel(rel(c)); pts.push(c); }
+    out.push({ f: f, d: d / 4, front: faceFront(f), scr: pts.map(PT) });
+  }
+  out.sort(function (a, b) { return b.d - a.d; });
+  return out;
+}
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+function makeView(cvEl) {
+  return { cv: cvEl, ctx: cvEl.getContext('2d'), VW: 0, VH: 0,
+           F: { s: 1, ox: 0, oy: 0 }, zoom: 1, M: defaultM() };
+}
+var Vthumb = null, Vmodal = null;
+function fitView(V) {
+  V.VW = V.cv.clientWidth; V.VH = V.cv.clientHeight;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (V.cv.width !== Math.round(V.VW * dpr) || V.cv.height !== Math.round(V.VH * dpr)) {
+    V.cv.width = Math.round(V.VW * dpr); V.cv.height = Math.round(V.VH * dpr);
+  }
+  V.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  /* 大小用外接球定死 ⇒ 任意角度下都一样大。
+     缩略图框是竖长的(340×622)，而三面墙图形是横宽的六边形 ⇒ 必须按【较短边】定尺寸，
+     否则会横向溢出。0.44 是让六边形宽(7.08 单位)加上两侧 A/B/C 标签刚好填满框宽。 */
+  V.F.s = Math.min(V.VW, V.VH) * 0.44 / HALF_DIAG * V.zoom;
+  V.F.ox = V.VW / 2; V.F.oy = V.VH / 2;
+}
+function useView(V) {
+  fitView(V);
+  CUR = V; M = V.M; F = V.F; ctx = V.ctx; VW = V.VW; VH = V.VH;
+}
+
+/* ---------- 绘制单个视图 ---------- */
+function drawStage(V) {
+  useView(V);
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+  ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.clearRect(0, 0, VW, VH);
+
+  /* ★ 先生 2026-09-29：「困难模式缩略图里面的网格只显示最外侧的六边形 里面的网格隐藏」
+     要隐藏的两样（就是"里面的网格"的全部组成）：
+       ① 三面墙的 N×N 分格线（wireFace）
+       ② 内角那 3 条棱 C–G / G–H / F–G（wireEdges(false)）
+     要留的：最外侧六边形 = 外框 6 条棱（wireEdges(true)）+ 题目小方块 + A/B/C 三个标签。
+     缩略图与 360° 弹窗同步生效（弹窗就是缩略图的放大）；游戏区不受影响 —— 否则没法答题。 */
+  var hard = (G.diff === 'hard');
+  var sc = scene(), i;
+  /* ① 三面墙的格线：远的先画、近的（这里不存在）后画。
+        三面墙（u=N/v=N/w=N）在默认视角下全是几何背面，但它们是唯一的墙 ⇒ 一律亮档。 */
+  if (!hard) sc.forEach(function (it) { if (!it.front && faceOn(it.f)) wireFace(it); });
+  if (!hard) wireEdges(false);            /* 内角 3 条棱（C–G / G–H / F–G）画在方块之下 */
+  drawShape();                            /* ② 题目：小方块集合 */
+  if (!hard) sc.forEach(function (it) { if (it.front && faceOn(it.f)) wireFace(it); });
+  wireEdges(true);                        /* ③ 外框 6 条棱 —— 困难模式只留它 */
+  drawLabels();                           /* ④ A / B / C 三个网格定位标签 */
+}
+function wireFace(it) {
+  var ps = it.scr, t, f, sk = skinPal();
+  ctx.beginPath();
+  for (t = 1; t < N; t++) {
+    f = t / N;
+    ctx.moveTo(ps[0].x + (ps[1].x - ps[0].x) * f, ps[0].y + (ps[1].y - ps[0].y) * f);
+    ctx.lineTo(ps[3].x + (ps[2].x - ps[3].x) * f, ps[3].y + (ps[2].y - ps[3].y) * f);
+    ctx.moveTo(ps[0].x + (ps[3].x - ps[0].x) * f, ps[0].y + (ps[3].y - ps[0].y) * f);
+    ctx.lineTo(ps[1].x + (ps[2].x - ps[1].x) * f, ps[1].y + (ps[2].y - ps[1].y) * f);
+  }
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = faceLoud(it.f) ? sk.grid : sk.gridDim;
+  ctx.lineWidth = faceLoud(it.f) ? 1.15 : 1.0;
+  ctx.stroke();
+}
+/* 12 条棱实际画 9 条（A–B / A–D / A–E 两侧的面都被去掉 ⇒ 跟着消失），每条只画一次 */
+function wireEdges(near) {
+  var sk = skinPal();
+  [false, true].forEach(function (loud) {
+    ctx.beginPath();
+    var any = false;
+    EDGES.forEach(function (e) {
+      if (!edgeOn(e)) return;
+      if (edgeFront(e) !== near) return;
+      if (edgeLoud(e) !== loud) return;
+      var p1 = PT(CORNER[e.a]), p2 = PT(CORNER[e.b]);
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      any = true;
+    });
+    if (!any) return;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
+    ctx.strokeStyle = loud ? sk.edge : sk.edgeDim;
+    ctx.lineWidth = loud ? 2.2 : 1.5;
+    ctx.stroke();
+  });
+}
+/* 题目：所有小方块。每块只画 3 个朝向观察者的面（背面永远被本块正面盖住）；
+   块之间按中心深度远→近画，同深度按 (a,b,c) 钉死顺序 —— 正确性证明见文件头长注释。 */
+function drawShape() {
+  var sk = skinPal();
+  var cells = G.shape.map(function (c, ci) {
+    var f6 = cellFaces(c.lo[0], c.lo[1], c.lo[2]);
+    f6.forEach(function (f) {
+      var t = 0;
+      f.q.forEach(function (p) { t += depthRel(rel(p)); });
+      f.d = t / 4;
+    });
+    return { ci: ci, lo: c.lo, faces: f6,
+             d: depthRel(rel(cv3(c.lo[0] + .5, c.lo[1] + .5, c.lo[2] + .5))) };
+  });
+  cells.sort(function (a, b) {
+    if (Math.abs(b.d - a.d) > 1e-9) return b.d - a.d;
+    for (var i = 0; i < 3; i++) if (a.lo[i] !== b.lo[i]) return a.lo[i] - b.lo[i];
+    return 0;
+  });
+  cells.forEach(function (c) {
+    c.faces.filter(function (f) { return dot3(cam(f.n), N0) < -1e-6; })
+      .sort(function (a, b) { return b.d - a.d; })
+      .forEach(function (f) {
+        var ps = f.q.map(PT), i;
+        ctx.beginPath();
+        ctx.moveTo(ps[0].x, ps[0].y);
+        for (i = 1; i < 4; i++) ctx.lineTo(ps[i].x, ps[i].y);
+        ctx.closePath();
+        ctx.fillStyle = G.COL[f.k];
+        ctx.fill();
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = sk.cellEdge;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      });
+  });
+}
+/* A / B / C 三个网格定位标签（只画这三个顶点，其余顶点一律不显示） */
+function drawLabels() {
+  var sk = skinPal();
+  var k = Math.max(0.60, Math.min(1.20, Math.min(VW, VH) / 520));
+  var off = 46 * k, bw = 40 * k, bh = 30 * k;
+  /* 弹窗里上方有标题栏(46px)、下方有按钮条(42px)；缩略图下方有提示条(31px)。
+     标签必须夹在这两条安全线之间，否则 A 会被顶到标题栏上叠字。 */
+  var padT = (CUR === Vmodal ? 50 : 6) + bh * .6;
+  var padB = (CUR === Vmodal ? 46 : 34) + bh * .6;
+  var arr = LBLLIST.map(function (n) {
+    var p = PT(CORNER[n]);
+    var vx = p.x - VW / 2, vy = p.y - VH / 2, len = Math.hypot(vx, vy);
+    if (len < 2) { vx = 0; vy = -1; len = 1; }
+    return { txt: LBL[n], ax: p.x, ay: p.y,
+             x: Math.max(bw * .6 + 4, Math.min(VW - bw * .6 - 4, p.x + vx / len * off)),
+             y: Math.max(padT, Math.min(VH - padB, p.y + vy / len * off)) };
+  });
+  /* 三个标签之间再互推一次，避免小画布上挤在一起 */
+  for (var it = 0; it < 40; it++) {
+    for (var i = 0; i < arr.length; i++) for (var j = i + 1; j < arr.length; j++) {
+      var dx = arr[j].x - arr[i].x, dy = arr[j].y - arr[i].y, d = Math.hypot(dx, dy);
+      if (d >= bw * 1.08) continue;
+      if (d < 1e-6) { dx = 1; dy = 0; d = 1; }
+      var push = (bw * 1.08 - d) / 2, ux = dx / d, uy = dy / d;
+      arr[i].x -= ux * push; arr[i].y -= uy * push;
+      arr[j].x += ux * push; arr[j].y += uy * push;
+    }
+  }
+  ctx.lineCap = 'round';
+  arr.forEach(function (b) {
+    ctx.beginPath(); ctx.moveTo(b.ax, b.ay); ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = sk.lead; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(b.ax, b.ay, 3.2 * k, 0, Math.PI * 2);
+    ctx.fillStyle = sk.labBg; ctx.fill();
+  });
+  arr.forEach(function (b) {
+    var x = b.x - bw / 2, y = b.y - bh / 2;
+    roundRect(ctx, x, y, bw, bh, 9 * k);
+    ctx.fillStyle = sk.labBg; ctx.fill();
+    ctx.strokeStyle = sk.labEdge; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = sk.labInk;
+    ctx.font = '700 ' + Math.round(19 * k) + 'px -apple-system,"Segoe UI","PingFang SC",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(b.txt, b.x, b.y + 0.5);
+  });
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function renderThumb() { if (Vthumb && Vthumb.cv.clientWidth) drawStage(Vthumb); }
+function renderModal() { if (Vmodal && modalOn) drawStage(Vmodal); }
+function renderAll() { renderThumb(); renderModal(); }
+/* ============================================================
+   游戏区：SVG 三面网格（可点击涂色）
+   坐标用「归一化投影」：临时把 F 设成 {s:1,ox:0,oy:0} ⇒ PT() 直接给出与缩放无关的坐标，
+   交给 SVG viewBox 去适配任意大小。视角与缩略图同为 cube-5x5x5.html 的固定视角。
+   ============================================================ */
+var cellEls = [], USCALE = 100;
+function PX(p) { return (p.x * USCALE).toFixed(2) + ',' + (p.y * USCALE).toFixed(2); }
+/* ⚠️ 踩过的坑：unitQuad 必须【在 withUnit 里】算。
+   它依赖全局 F（PT 用 F.s / F.ox / F.oy），而 F 是"当前正在画的视图"的取景参数 ——
+   canvas 画过一帧之后 F 就变成缩略图那套（F.s≈34.5、F.ox≈170）。
+   第一版把 unitQuad 放在 withUnit 外面调用，首帧恰好正确（F 初值就是 {s:1,ox:0,oy:0}），
+   之后每次重建棋盘格子坐标都被乘了 34.5 倍 ⇒ 屏幕点跑到 (11076, 28033)、完全点不中。 */
+function unitQuad(k, i, j) {
+  return withUnit(function () {
+    var f = FACES[WALLFACE[k]];
+    return faceCellQuad(f, i, j).map(PX).join(' ');
+  });
+}
+function withUnit(fn) {
+  var sm = M, sf = F;
+  M = defaultM(); F = { s: 1, ox: 0, oy: 0 };
+  var r = fn();
+  M = sm; F = sf;
+  return r;
+}
+function buildBoard() {
+  var svg = document.getElementById('bsvg'), i, j, k;
+  var box = withUnit(function () {
+    var xs = [], ys = [];
+    ['u', 'v', 'w'].forEach(function (k2) {
+      FACES[WALLFACE[k2]].q.forEach(function (nm) {
+        var p = PT(CORNER[nm]); xs.push(p.x); ys.push(p.y);
+      });
+    });
+    return { x0: Math.min.apply(null, xs), x1: Math.max.apply(null, xs),
+             y0: Math.min.apply(null, ys), y1: Math.max.apply(null, ys) };
+  });
+  var w = box.x1 - box.x0, h = box.y1 - box.y0, pad = Math.max(w, h) * 0.13;
+  var S = USCALE;
+  svg.setAttribute('viewBox', [(box.x0 - pad) * S, (box.y0 - pad) * S,
+                               (w + pad * 2) * S, (h + pad * 2) * S].join(' '));
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+  var parts = [];
+  ['w', 'v', 'u'].forEach(function (k2) {
+    parts.push('<g class="wallgrid">');
+    for (i = 0; i < N; i++) for (j = 0; j < N; j++) {
+      parts.push('<polygon class="cellbg" data-k="' + k2 + '" data-i="' + i + '" data-j="' + j +
+                 '" points="' + unitQuad(k2, i, j) + '"/>');
+    }
+    parts.push('</g>');
+  });
+  /* 9 条棱（三面墙的 6 条外框 + 3 条内角），每条只画一次 */
+  EDGES.forEach(function (e) {
+    if (!edgeOn(e)) return;
+    var r = withUnit(function () { return [PT(CORNER[e.a]), PT(CORNER[e.b])]; });
+    parts.push('<line class="edge" x1="' + (r[0].x * S).toFixed(2) + '" y1="' + (r[0].y * S).toFixed(2) +
+               '" x2="' + (r[1].x * S).toFixed(2) + '" y2="' + (r[1].y * S).toFixed(2) + '"/>');
+  });
+  /* 顶点标签 A / B / C（只这三个；位置 = 原 C / H / F，只是换了字母）。
+     ⚠️ 单位口径：位置是「归一化坐标」要 ×S 变成 viewBox 单位；
+        而 fs / r / width / font-size 这些【尺寸】本身就是 viewBox 单位，绝不能再 ×S
+        （第一版就是这么写错的：圆点 r 变成 352 单位 ≈ 屏幕上 312px 的白色巨圆）。 */
+  var cx = box.x0 + w / 2, cy = box.y0 + h / 2;
+  var fs = 15;
+  LBLLIST.forEach(function (nm) {
+    var p = withUnit(function () { return PT(CORNER[nm]); });
+    var px = p.x * S, py = p.y * S, pcx = cx * S, pcy = cy * S;
+    var vx = px - pcx, vy = py - pcy, len = Math.hypot(vx, vy);
+    if (len < 1e-6) { vx = 0; vy = -1; len = 1; }
+    var lx = px + vx / len * fs * 2.3, ly = py + vy / len * fs * 2.3;
+    parts.push('<line x1="' + px.toFixed(2) + '" y1="' + py.toFixed(2) +
+               '" x2="' + lx.toFixed(2) + '" y2="' + ly.toFixed(2) +
+               '" stroke="rgba(255,255,255,.45)" stroke-width="1.4" vector-effect="non-scaling-stroke"/>');
+    parts.push('<circle cx="' + px.toFixed(2) + '" cy="' + py.toFixed(2) +
+               '" r="' + (fs * 0.23).toFixed(2) + '" fill="#fff"/>');
+    parts.push('<rect x="' + (lx - fs * 0.92).toFixed(2) + '" y="' + (ly - fs * 0.74).toFixed(2) +
+               '" width="' + (fs * 1.84).toFixed(2) + '" height="' + (fs * 1.48).toFixed(2) +
+               '" rx="' + (fs * 0.46).toFixed(2) + '" fill="#fff"/>');
+    parts.push('<text x="' + lx.toFixed(2) + '" y="' + ly.toFixed(2) +
+               '" font-size="' + fs.toFixed(2) + '" font-weight="800" fill="#152034" ' +
+               'text-anchor="middle" dominant-baseline="central">' + LBL[nm] + '</text>');
+  });
+  svg.innerHTML = parts.join('');
+  cellEls = Array.prototype.slice.call(svg.querySelectorAll('.cellbg'));
+  refreshBoard();
+}
+/* 一个格子的状态：0 = 空　1 = 涂对　2 = 涂错 */
+function cellState(k, i, j) {
+  var key = i + '|' + j;
+  if (!G.fill[k][key]) return 0;
+  return G.ans[k][key] ? 1 : 2;
+}
+/* 注：这里原来有个 tintOf()，给空格子混一点该墙的淡彩底（好一眼看出"哪块配哪个色块"）。
+   先生 2026-09-29 说「游戏区格子不要带颜色」⇒ 整体撤掉，空格子一律透明、只留格线。
+   skinPal() 里的 tintBase / tintA 两个字段也一并删掉，不留死字段。 */
+function refreshBoard() {
+  var sk = skinPal();
+  cellEls.forEach(function (el) {
+    var k = el.getAttribute('data-k'), i = +el.getAttribute('data-i'), j = +el.getAttribute('data-j');
+    var st = cellState(k, i, j);
+    if (st === 1) el.style.fill = G.COL[k];
+    else if (st === 2) el.style.fill = sk.badFill;
+    else el.style.fill = '';   /* ★ 空格一律清掉 inline 底 => 回落 CSS 的 transparent（先生：格子不要带颜色）*/
+    el.setAttribute('class', 'cellbg' + (st === 2 ? ' bad' : ''));
+  });
+}
+function updateStat() {
+  var need = ansCount(G.ans), done = 0, bad = 0;
+  ['w', 'v', 'u'].forEach(function (k) {
+    Object.keys(G.fill[k]).forEach(function (key) {
+      if (G.ans[k][key]) done++; else bad++;
+    });
+  });
+  document.getElementById('stDone').textContent = done;
+  document.getElementById('stNeed').textContent = need;
+  document.getElementById('stBad').textContent = bad;
+}
+function showHintPulse(k, i, j) {
+  var svg = document.getElementById('bsvg');
+  var old = svg.querySelector('.hintpulse');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  var pts = withUnit(function () { return unitQuad(k, i, j); });
+  var el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  el.setAttribute('class', 'hintpulse');
+  el.setAttribute('points', pts);
+  svg.appendChild(el);
+  setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 2400);
+}
+/* ============================================================
+   音效（WebAudio）—— AudioContext 必须在用户手势里创建 / resume，
+   否则会停在 suspended，表现为「点了没声音」。每个按钮的第一次点击都会 ac()。
+   ============================================================ */
+var AC = null, muted = false;
+function ac() {
+  if (!AC) {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    try { AC = new Ctx(); } catch (e) { return null; }
+  }
+  if (AC.state === 'suspended') { try { AC.resume(); } catch (e) {} }
+  return AC;
+}
+function tone(freq, t0, dur, type, vol) {
+  var a = ac(); if (!a) return;
+  var t = a.currentTime + t0;
+  var o = a.createOscillator(), g = a.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function sndOK()   { if (muted) return; tone(784, 0, .15, 'sine', .17); tone(1046.5, .055, .20, 'sine', .12); }
+function sndBad()  { if (muted) return; tone(196, 0, .22, 'triangle', .15); tone(146.8, .07, .28, 'triangle', .12); }
+function sndWin()  { if (muted) return;
+  [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { tone(f, i * .085, .36, 'sine', .16); }); }
+function sndTap()  { if (muted) return; tone(660, 0, .06, 'sine', .09); }
+
+/* ============================================================
+   出题 / 涂色 / 撤销 / 提示
+   ============================================================ */
+function toast(msg, cls) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (cls ? ' ' + cls : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function () { el.className = ''; }, 1900);
+}
+/* ---------- 通关对话框 ----------
+   先生 2026-09-29：「答对了 通关信息不要在最下面 弹出一个对话框显示」
+   ⇒ 原来只在底部 toast 里报一句，现在改成居中的对话框；toast 继续管"某一步"的即时反馈
+     （涂错、撤销、换题…），通关这件大事走对话框。 */
+function showWin() {
+  var n = 0;
+  ['w', 'v', 'u'].forEach(function (k) { n += Object.keys(G.ans[k]).length; });
+  document.getElementById('winMeta').innerHTML =
+    '<i>网格 <b>' + G.N + '×' + G.N + '</b></i>' +
+    '<i>小方块 <b>' + G.shape.length + '</b> 个</i>' +
+    '<i>涂对 <b>' + n + '</b> 格</i>';
+  document.getElementById('winMask').classList.add('on');
+}
+function hideWin() { document.getElementById('winMask').classList.remove('on'); }
+function newPuzzle() {
+  hideWin();                             /* 换题时先把通关对话框收掉，免得盖在新题上 */
+  G.shape = genShape(G.N, G.K);
+  G.ans = buildAns(G.shape);
+  G.fill = { w: {}, v: {}, u: {} };
+  G.hist = [];
+  G.solved = false;
+  buildBoard();
+  updateStat();
+  renderAll();
+}
+function repaint() {                     /* 只改 N / K 后重开一局，不动配色 */
+  newPuzzle();
+}
+function paint(k, i, j) {
+  if (G.solved) { toast('这题已经完成啦，点「换一道题」继续', 'ok'); return; }
+  var key = i + '|' + j, was = G.fill[k][key] ? 1 : 0;
+  if (was) { delete G.fill[k][key]; }
+  else { G.fill[k][key] = 1; }
+  G.hist.push({ k: k, key: key, prev: was });
+  /* 先生要「正确和错误的提示音」⇒ 涂上的那一刻就反馈 */
+  if (!was) {
+    if (G.ans[k][key]) { sndOK(); }
+    else { sndBad(); toast('这一格不该涂 —— ' + WALLNAME[k] + '网格上没有它的投影', 'no'); }
+  }
+  refreshBoard(); updateStat();
+  if (!G.solved && checkSolved()) {
+    G.solved = true;
+    sndWin();
+    showWin();                 /* ★ 通关走对话框，不再用底部 toast（先生 2026-09-29） */
+  }
+}
+function checkSolved() {
+  var ok = true;
+  ['w', 'v', 'u'].forEach(function (k) {
+    Object.keys(G.ans[k]).forEach(function (key) { if (!G.fill[k][key]) ok = false; });
+    Object.keys(G.fill[k]).forEach(function (key) { if (!G.ans[k][key]) ok = false; });
+  });
+  return ok;
+}
+function doUndo() {
+  var h = G.hist.pop();
+  if (!h) { toast('还没有可以撤销的步骤'); return; }
+  if (h.prev) G.fill[h.k][h.key] = 1; else delete G.fill[h.k][h.key];
+  G.solved = false;
+  refreshBoard(); updateStat();
+  toast('撤销了 1 步');
+}
+function doHint() {
+  var found = null;
+  ['w', 'v', 'u'].forEach(function (k) {
+    if (found) return;
+    Object.keys(G.ans[k]).sort().forEach(function (key) {
+      if (!found && !G.fill[k][key]) {
+        var ij = key.split('|');
+        found = { k: k, i: +ij[0], j: +ij[1] };
+      }
+    });
+  });
+  if (!found) { toast('没有漏涂的格子了 —— 检查一下有没有涂错（红色格）', 'ok'); return; }
+  showHintPulse(found.k, found.i, found.j);
+  toast('看 ' + WALLNAME[found.k] + ' 网格上闪动的黄框', 'ok');
+}
+/* ---------- 颜色：三面网格各一个色块，点「换个颜色」自己挑（先生 2026-09-29）----------
+   旧版是"点一下自动跳到下一个预设色"，先生要求"**是可以选择颜色的**" ⇒ 改成弹一个小调色板：
+   10 个预设色块 + 一个系统取色器（<input type="color">）随手调任意色。
+   口径变化：不再强制三色互不相同（既然让人自己挑，硬拦会很难用）——
+   但已在别面用掉的色块上会打 ✓，选到重复色时给一句提醒，不阻止。 */
+var PALETTE = ['#6FD463', '#FF8354', '#5AA9FF', '#FFD447', '#B98CFF',
+               '#4ED9D0', '#FF7BAF', '#FF6B6B', '#9CE86B', '#7FB2FF'];
+var popK = null;                 /* 当前正在给哪面墙挑色 */
+function setColor(k, hex) {
+  if (!k || !hex) return;
+  G.COL[k] = String(hex).toUpperCase();
+  refreshPalette();
+  if (popK) syncColorPop();
+}
+function buildColorPop() {
+  document.getElementById('popGrid').innerHTML = PALETTE.map(function (c) {
+    return '<span class="pcell" data-c="' + c + '" style="background:' + c +
+           '" title="' + c + '"></span>';
+  }).join('');
+}
+function syncColorPop() {
+  if (!popK) return;
+  document.getElementById('popName').textContent = WALLNAME[popK] + '网格';
+  var used = {};
+  Object.keys(G.COL).forEach(function (x) { if (x !== popK) used[G.COL[x].toUpperCase()] = 1; });
+  Array.prototype.forEach.call(document.querySelectorAll('#popGrid .pcell'), function (el) {
+    var c = el.getAttribute('data-c');
+    el.classList.toggle('used', !!used[c]);
+    el.classList.toggle('cur', c === G.COL[popK].toUpperCase());
+  });
+  var nat = document.getElementById('popNative');
+  if (/^#[0-9A-F]{6}$/.test(G.COL[popK])) nat.value = G.COL[popK];
+}
+function openColorPop(k, anchor) {
+  popK = k;
+  var pop = document.getElementById('colorPop');
+  pop.classList.add('on');
+  syncColorPop();
+  /* 摆到按钮边上：默认贴按钮右下，碰到视口底边就翻到按钮上方；右边越界就往左挪 */
+  var r = anchor.getBoundingClientRect();
+  var pw = pop.offsetWidth || 236, ph = pop.offsetHeight || 200;
+  pop.style.left = Math.min(Math.max(8, r.right - pw), Math.max(8, window.innerWidth - pw - 8)) + 'px';
+  var top = r.bottom + 8;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 8);
+  pop.style.top = top + 'px';
+}
+function closeColorPop() {
+  document.getElementById('colorPop').classList.remove('on');
+  popK = null;
+}
+function refreshPalette() {
+  ['u', 'v', 'w'].forEach(function (k) {
+    document.getElementById('sw' + k).style.background = G.COL[k];
+  });
+  refreshBoard();
+  renderAll();
+}
+/* ---------- 底板皮肤：白 / 黑（先生 2026-09-29：「左侧下面设置个按钮 左边是白 右边是黑」）----------
+   两段分工，别混：
+     · 页面壳子（背景/面板/按钮/文字）→ 只切 CSS 的 body.skin-light，一行 JS 都不用改样式；
+     · canvas 线色 + SVG 里 inline 的底色 → 走 skinPal()，所以必须【整幅重画】才生效。 */
+function applySkin(s) {
+  G.skin = (s === 'light') ? 'light' : 'dark';
+  document.body.classList.toggle('skin-light', G.skin === 'light');
+  refreshPalette();          /* 里面含 refreshBoard() + renderAll() */
+  syncSkinUI();
+}
+function syncSkinUI() {
+  Array.prototype.forEach.call(document.querySelectorAll('#segSkin button'), function (b) {
+    b.classList.toggle('on', b.getAttribute('data-skin') === G.skin);
+  });
+}
+/* ---------- 难度（先生 2026-09-29）----------
+   简单 = 现在这套（网格 + 内角 3 条棱 + 外框都在）；困难 = 题目立体图只留最外侧那个六边形。
+   只影响题目立体图的画法（缩略图 + 360° 弹窗），**不动题目本身、不动游戏区**。 */
+function setDiff(d) {
+  G.diff = (d === 'hard') ? 'hard' : 'easy';
+  syncDiffUI();
+  renderAll();            /* 只重画，不重建题目 —— 切换难度不该把玩家的作答清掉 */
+}
+function syncDiffUI() {
+  Array.prototype.forEach.call(document.querySelectorAll('#segDiff button'), function (b) {
+    b.classList.toggle('on', b.getAttribute('data-diff') === G.diff);
+  });
+}
+/* ============================================================
+   弹窗：360° 旋转看立体图
+   ============================================================ */
+var modalOn = false, autoRot = false, autoRaf = 0;
+function openModal() {
+  modalOn = true;
+  document.getElementById('modal').classList.add('on');
+  Vmodal.M = defaultM(); Vmodal.zoom = 1;
+  setAuto(false);
+  renderModal();
+  updateZoomLbl();
+  sndTap();
+}
+function closeModal() {
+  modalOn = false;
+  document.getElementById('modal').classList.remove('on');
+  setAuto(false);
+  renderThumb();
+}
+function updateZoomLbl() {
+  document.getElementById('mzoom').textContent = Math.round(Vmodal.zoom * 100) + '%';
+}
+function setAuto(v) {
+  autoRot = !!v;
+  document.getElementById('btnMRot').textContent = autoRot ? '停止旋转' : '自动旋转';
+  document.getElementById('btnMRot').style.color = autoRot ? '#FFC978' : '';
+  document.getElementById('btnMRot').style.borderColor = autoRot ? '#B8792A' : '';
+  cancelAnimationFrame(autoRaf);
+  if (autoRot) autoRaf = requestAnimationFrame(autoTick);
+}
+function autoTick() {
+  if (!autoRot) return;
+  Vmodal.M = mm(rotAxis(-B0.x, -B0.y, -B0.z, 0.0075), Vmodal.M);
+  renderModal();
+  autoRaf = requestAnimationFrame(autoTick);
+}
+/* 弹窗里的旋转：直接算矩阵，不碰全局 M ⇒ 不会影响缩略图 */
+function modalRot(dx, dy) {
+  Vmodal.M = mm(mm(rotAxis(A0.x, A0.y, A0.z, dy * ROTK),
+                   rotAxis(-B0.x, -B0.y, -B0.z, dx * ROTK)), Vmodal.M);
+}
+/* ============================================================
+   事件绑定与启动
+   ============================================================ */
+function bindUI() {
+  /* —— 左侧：底板 白 / 黑（左白右黑，点击即换）—— */
+  document.getElementById('segSkin').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    applySkin(b.getAttribute('data-skin'));
+    sndTap();
+  });
+  document.getElementById('segDiff').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    ac(); sndTap();
+    setDiff(b.getAttribute('data-diff'));
+  });
+  /* —— 左侧：网格档 —— */
+  document.getElementById('segN').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    G.N = +b.getAttribute('data-n');
+    if (G.K > G.N * G.N * G.N) { G.K = G.N * G.N * G.N; setKUI(); }
+    rebuildGeometry(G.N);
+    syncSeg();
+    sndTap();
+    repaint();
+    toast('网格改成 ' + G.N + '×' + G.N + '，换了一道新题');
+  });
+  function syncSeg() {
+    Array.prototype.forEach.call(document.querySelectorAll('#segN button'), function (b) {
+      b.classList.toggle('on', +b.getAttribute('data-n') === G.N);
+    });
+  }
+  /* —— 左侧：小方块数量 3~30 —— */
+  var rng = document.getElementById('rng');
+  function setKUI() {
+    rng.value = G.K;
+    document.getElementById('knum').textContent = G.K;
+  }
+  function applyK(v) {
+    v = Math.max(3, Math.min(30, Math.round(v)));
+    if (v === G.K) return;
+    G.K = v; setKUI(); sndTap(); repaint();
+  }
+  rng.addEventListener('input', function () { applyK(+rng.value); });
+  document.getElementById('kMinus').addEventListener('click', function () { applyK(G.K - 1); });
+  document.getElementById('kPlus').addEventListener('click', function () { applyK(G.K + 1); });
+  /* —— 工具 —— */
+  document.getElementById('btnHint').addEventListener('click', function () { ac(); doHint(); });
+  document.getElementById('btnUndo').addEventListener('click', function () { ac(); doUndo(); });
+  document.getElementById('btnNew').addEventListener('click', function () {
+    ac(); rebuildGeometry(G.N); newPuzzle(); toast('换了一道新题');
+  });
+  var bs = document.getElementById('btnSnd');
+  bs.addEventListener('click', function () {
+    muted = !muted;
+    bs.textContent = muted ? '🔇 静音中' : '🔊 声音开';
+    bs.style.color = muted ? '#8FA3BC' : '#9CE8B4';
+    if (!muted) { ac(); sndTap(); }
+  });
+  /* —— 换色：点按钮弹出调色板自己挑（先生 2026-09-29）—— */
+  Array.prototype.forEach.call(document.querySelectorAll('.btnSw'), function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      ac(); sndTap();
+      var k = b.getAttribute('data-k');
+      if (popK === k && document.getElementById('colorPop').classList.contains('on')) closeColorPop();
+      else openColorPop(k, b);
+    });
+  });
+  document.getElementById('popGrid').addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('.pcell') : null;
+    if (!el || !popK) return;
+    var c = el.getAttribute('data-c');
+    var dup = ['u', 'v', 'w'].filter(function (x) {
+      return x !== popK && G.COL[x].toUpperCase() === c;
+    });
+    setColor(popK, c);
+    sndTap();
+    if (dup.length) {
+      toast('这个颜色已经在「' + dup.map(function (x) { return WALLNAME[x]; }).join('、') +
+            '」网格上用着了', 'no');
+    }
+  });
+  document.getElementById('popNative').addEventListener('input', function () {
+    if (popK) setColor(popK, this.value);
+  });
+  document.getElementById('popClose').addEventListener('click', function () { closeColorPop(); sndTap(); });
+  /* 点浮层外面就收起（注意别把"点 .btnSw 自己"当成外面，否则会开了又立刻关） */
+  document.addEventListener('mousedown', function (e) {
+    var pop = document.getElementById('colorPop');
+    if (!pop.classList.contains('on')) return;
+    if (pop.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.btnSw')) return;
+    closeColorPop();
+  });
+  /* —— 游戏区涂色（事件委托）—— */
+  document.getElementById('bsvg').addEventListener('click', function (e) {
+    var el = e.target;
+    if (!el || !el.classList || !el.classList.contains('cellbg')) return;
+    ac();
+    paint(el.getAttribute('data-k'), +el.getAttribute('data-i'), +el.getAttribute('data-j'));
+  });
+  /* —— 缩略图点开弹窗 —— */
+  document.getElementById('thumbBox').addEventListener('click', openModal);
+  document.getElementById('btnMClose').addEventListener('click', closeModal);
+  document.getElementById('modal').addEventListener('click', function (e) {
+    if (e.target.id === 'modal') closeModal();
+  });
+  document.getElementById('btnMRot').addEventListener('click', function () { ac(); setAuto(!autoRot); });
+  document.getElementById('btnMReset').addEventListener('click', function () {
+    Vmodal.M = defaultM(); Vmodal.zoom = 1; renderModal(); updateZoomLbl(); sndTap();
+  });
+  /* —— 通关对话框（先生 2026-09-29）—— */
+  document.getElementById('btnWinAgain').addEventListener('click', function () {
+    ac(); sndTap(); hideWin(); rebuildGeometry(G.N); newPuzzle(); toast('换了一道新题');
+  });
+  document.getElementById('btnWinLook').addEventListener('click', function () {
+    hideWin(); sndTap();            /* 只关框，棋盘与成绩都留着让玩家回看 */
+  });
+  document.getElementById('winMask').addEventListener('click', function (e) {
+    if (e.target.id === 'winMask') hideWin();
+  });
+  /* ESC：由外到里关掉最上层的浮层 */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('winMask').classList.contains('on')) { hideWin(); return; }
+    if (document.getElementById('colorPop').classList.contains('on')) { closeColorPop(); return; }
+    if (modalOn) closeModal();
+  });
+  /* 弹窗拖动旋转 + 双指缩放 */
+  var mcv = document.getElementById('mcv'), mp = {}, mlast = null, mpinch = 0;
+  mcv.addEventListener('pointerdown', function (e) {
+    mcv.setPointerCapture(e.pointerId);
+    mp[e.pointerId] = { x: e.clientX, y: e.clientY };
+    mlast = { x: e.clientX, y: e.clientY };
+    mpinch = 0; setAuto(false); mcv.classList.add('on');
+  });
+  mcv.addEventListener('pointermove', function (e) {
+    if (!mp[e.pointerId]) return;
+    mp[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(mp);
+    if (ids.length >= 2) {
+      var a = mp[ids[0]], b = mp[ids[1]];
+      var d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (mpinch > 0) {
+        Vmodal.zoom = Math.max(0.5, Math.min(3, Vmodal.zoom * (d / mpinch)));
+        renderModal(); updateZoomLbl();
+      }
+      mpinch = d; return;
+    }
+    var dx = e.clientX - mlast.x, dy = e.clientY - mlast.y;
+    mlast = { x: e.clientX, y: e.clientY };
+    if (Math.abs(dx) > 26) dx = 26 * Math.sign(dx);
+    if (Math.abs(dy) > 26) dy = 26 * Math.sign(dy);
+    modalRot(dx, dy);
+    renderModal();
+  });
+  function mup(e) {
+    delete mp[e.pointerId]; mpinch = 0;
+    if (!Object.keys(mp).length) { mlast = null; mcv.classList.remove('on'); }
+    else mlast = mp[Object.keys(mp)[0]];
+  }
+  mcv.addEventListener('pointerup', mup);
+  mcv.addEventListener('pointercancel', mup);
+  mcv.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    Vmodal.zoom = Math.max(0.5, Math.min(3, Vmodal.zoom * (e.deltaY > 0 ? 0.92 : 1.08)));
+    renderModal(); updateZoomLbl();
+  }, { passive: false });
+  window.addEventListener('resize', renderAll);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modalOn) closeModal();
+    if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); }
+  });
+}
+/* ---------- 探针：给外部脚本做数值核验 ---------- */
+/* ---------- 难度验收用的采样点（2026-09-29）----------
+   困难模式的产物是 canvas，没有 DOM 可查 ⇒ 只能"按线该在的位置去点像素"。三种线的中点：
+     · outline = 最外侧六边形的 6 条边（外框棱）中点 —— 困难模式必须还有墨
+     · grid    = 三面墙每条 N×N 分格线的中点 —— 困难模式必须变成全透明
+     · inner   = 内角 3 条棱（C–G / G–H / F–G）的中点 —— 困难模式必须变成全透明
+   ⚠️ 有些采样点会被题目小方块盖住（方块画在格线之上），那种点要由外部按
+      "简单模式下它是不是方块色" 先剔除，不能当成格线来判（第一版就吃了这个假 FAIL）。 */
+function diffSamplesOf(V) {
+  if (!V || !V.VW) return null;
+  var sM = M, sF = F, sCUR = CUR;
+  useView(V);
+  var out = { outline: [], grid: [] };
+  EDGES.forEach(function (e) {
+    if (!edgeOn(e) || !edgeFront(e)) return;
+    var p1 = PT(CORNER[e.a]), p2 = PT(CORNER[e.b]);
+    out.outline.push([+((p1.x + p2.x) / 2).toFixed(2), +((p1.y + p2.y) / 2).toFixed(2)]);
+  });
+  scene().forEach(function (it) {                    /* 逐字复刻 wireFace 的两条格线 */
+    if (!faceOn(it.f)) return;
+    var ps = it.scr;
+    for (var t = 1; t < N; t++) {
+      var f = t / N;
+      var a1 = { x: ps[0].x + (ps[1].x - ps[0].x) * f, y: ps[0].y + (ps[1].y - ps[0].y) * f };
+      var a2 = { x: ps[3].x + (ps[2].x - ps[3].x) * f, y: ps[3].y + (ps[2].y - ps[3].y) * f };
+      var b1 = { x: ps[0].x + (ps[3].x - ps[0].x) * f, y: ps[0].y + (ps[3].y - ps[0].y) * f };
+      var b2 = { x: ps[1].x + (ps[2].x - ps[1].x) * f, y: ps[1].y + (ps[2].y - ps[1].y) * f };
+      out.grid.push([+((a1.x + a2.x) / 2).toFixed(2), +((a1.y + a2.y) / 2).toFixed(2)]);
+      out.grid.push([+((b1.x + b2.x) / 2).toFixed(2), +((b1.y + b2.y) / 2).toFixed(2)]);
+    }
+  });
+  out.inner = EDGES.filter(function (e) { return edgeOn(e) && !edgeFront(e); }).map(function (e) {
+    var p1 = PT(CORNER[e.a]), p2 = PT(CORNER[e.b]);
+    return [+((p1.x + p2.x) / 2).toFixed(2), +((p1.y + p2.y) / 2).toFixed(2)];
+  });
+  out.space = { VW: VW, VH: VH, cw: V.cv.width, ch: V.cv.height };
+  M = sM; F = sF; CUR = sCUR;
+  return out;
+}
+window.__probe = function () {
+  function scr(p) { var s = PT(p); return [+s.x.toFixed(2), +s.y.toFixed(2)]; }
+  var savedM = M, savedF = F;
+  M = defaultM(); F = { s: 1, ox: 0, oy: 0 };
+  var unit = {};
+  LBLLIST.forEach(function (nm) { unit[nm] = { txt: LBL[nm], pos: scr(CORNER[nm]) }; });
+  /* 画面正中心 = A(0,0,0) 与 G(N,N,N) 的公共投影点（二者都在过体心、方向 N0 的直线上）。
+     出题第一格固定贴在 G 角上 ⇒ 它正好落在中心点。这里把两点算出来供判据核验。 */
+  var centerProj = { A: scr(CORNER.A), G: scr(CORNER.G) };
+  var walls = {};
+  ['w', 'v', 'u'].forEach(function (k) {
+    var f = FACES[WALLFACE[k]];
+    walls[k] = { q: f.q.slice(), name: WALLNAME[k], color: G.COL[k],
+                 need: Object.keys(G.ans[k]).sort(),
+                 filled: Object.keys(G.fill[k]).sort(),
+                 wrong: Object.keys(G.fill[k]).filter(function (x) { return !G.ans[k][x]; }).sort(),
+                 quad: f.q.map(function (nm) { return scr(CORNER[nm]); }) };
+  });
+  M = savedM; F = savedF;
+  var sharePairs = 0, tot = 0;
+  for (var i = 0; i < G.shape.length; i++) for (var j = i + 1; j < G.shape.length; j++) {
+    tot++; if (sharesFace(G.shape[i], G.shape[j])) sharePairs++;
+  }
+  return {
+    skin: G.skin,
+    N: G.N, K: G.K, blocks: G.shape.length,
+    firstCell: G.shape.length ? G.shape[0].lo.slice() : null,
+    centerCell: [G.N - 1, G.N - 1, G.N - 1],
+    connected: isConnected(G.shape),
+    sharePairs: sharePairs, pairsTotal: tot,
+    isolated: G.shape.filter(function (c) {
+      return !G.shape.some(function (o) { return o !== c && sharesFace(c, o); });
+    }).length,
+    solved: G.solved,
+    walls: walls,
+    centerProj: centerProj,
+    labels: unit,
+    labelList: LBLLIST.map(function (n) { return LBL[n]; }),
+    ansTotal: ansCount(G.ans),
+    ansPerWall: { w: Object.keys(G.ans.w).length, v: Object.keys(G.ans.v).length,
+                  u: Object.keys(G.ans.u).length },
+    cells: cellEls.length,
+    cellsPerWall: G.N * G.N,
+    edgesDrawn: EDGES.filter(edgeOn).length,
+    edgesTotal: EDGES.length,
+    gridPerFace: (N - 1) * 2,
+    colors: G.COL,
+    /* ===== 本轮三条改动对应的判据 ===== */
+    /* ① 空格子是否真的不带颜色：取第一个空格的 computed fill（应为 rgba(0,0,0,0)） */
+    emptyCellFill: (function () {
+      for (var i = 0; i < cellEls.length; i++) {
+        var el = cellEls[i];
+        var kk2 = el.getAttribute('data-k'), a = +el.getAttribute('data-i'), b = +el.getAttribute('data-j');
+        if (cellState(kk2, a, b) === 0) return getComputedStyle(el).fill;
+      }
+      return null;
+    })(),
+    /* ② 提示/撤销是否真在游戏区右下角、是否真在 #board 范围内 */
+    cornerTools: (function () {
+      var box = document.getElementById('board').getBoundingClientRect(), out = {};
+      [['hint', 'btnHint'], ['undo', 'btnUndo']].forEach(function (p) {
+        var r = document.getElementById(p[1]).getBoundingClientRect();
+        out[p[0]] = { left: Math.round(r.left), top: Math.round(r.top),
+                      w: Math.round(r.width), h: Math.round(r.height),
+                      fromRight: Math.round(window.innerWidth - r.right),
+                      fromBottom: Math.round(window.innerHeight - r.bottom),
+                      inBoard: r.left >= box.left - 1 && r.right <= box.right + 1 &&
+                               r.top >= box.top - 1 && r.bottom <= box.bottom + 1 };
+      });
+      out.board = { left: Math.round(box.left), top: Math.round(box.top),
+                    right: Math.round(box.right), bottom: Math.round(box.bottom) };
+      out.panel = document.getElementById('board').querySelectorAll('#cornerTools').length;
+      out.stillInLeftPanel = document.getElementById('opts').contains(document.getElementById('btnHint'));
+      return out;
+    })(),
+    /* ③ 颜色浮层状态 */
+    colorPop: (function () {
+      var pop = document.getElementById('colorPop');
+      var on = pop.classList.contains('on');
+      var r = pop.getBoundingClientRect();
+      return { on: on, k: popK, presets: document.querySelectorAll('#popGrid .pcell').length,
+               cur: popK ? G.COL[popK] : null,
+               usedMarked: document.querySelectorAll('#popGrid .pcell.used').length,
+               curMarked: document.querySelectorAll('#popGrid .pcell.cur').length,
+               hasNative: !!document.getElementById('popNative'),
+               box: on ? { left: Math.round(r.left), top: Math.round(r.top),
+                           w: Math.round(r.width), h: Math.round(r.height) } : null };
+    })(),
+    /* 通关对话框状态（本轮） */
+    win: (function () {
+      var mask = document.getElementById('winMask');
+      var on = mask.classList.contains('on');
+      var bx = document.getElementById('winBox').getBoundingClientRect();
+      return { on: on,
+               title: (document.querySelector('#winBox h2') || {}).textContent || '',
+               sub: (document.querySelector('#winBox .sub') || {}).textContent || '',
+               meta: (document.getElementById('winMeta') || {}).textContent || '',
+               hasAgain: !!document.getElementById('btnWinAgain'),
+               hasLook: !!document.getElementById('btnWinLook'),
+               box: { left: Math.round(bx.left), top: Math.round(bx.top),
+                      w: Math.round(bx.width), h: Math.round(bx.height),
+                      cx: Math.round(bx.left + bx.width / 2),
+                      cy: Math.round(bx.top + bx.height / 2) } };
+    })(),
+    modal: { on: modalOn, zoom: Vmodal ? +Vmodal.zoom.toFixed(3) : null, auto: autoRot,
+             M: Vmodal ? Vmodal.M.map(function (x) { return +x.toFixed(4); }) : null },
+    thumb: Vthumb ? { W: Vthumb.VW, H: Vthumb.VH, s: +Vthumb.F.s.toFixed(3),
+                      zoom: Vthumb.zoom } : null,
+    /* —— 本轮：难度 + "困难模式下里面的网格是否真没了"的采样点 ——
+       缩略图是 canvas，没法用 DOM 查元素，只能按"线该在的位置"去点像素：
+         · outline = 最外侧六边形的 6 条边各自的中点（困难模式必须还有墨）
+         · grid    = 三面墙每条 N×N 分格线的中点（困难模式必须变成全透明）
+       坐标是 canvas 内部像素坐标，附 px/空间尺寸 供外部按比例换算。 */
+    diff: G.diff,
+    diffSamples: diffSamplesOf(Vthumb),
+    modalSamples: modalOn ? diffSamplesOf(Vmodal) : null,
+    shapeList: G.shape.map(function (c) { return c.lo.slice(); }),
+    defM: defaultM().map(function (x) { return +x.toFixed(5); })
+  };
+};
+function init() {
+  rebuildGeometry(G.N);
+  Vthumb = makeView(document.getElementById('tcv'));
+  Vmodal = makeView(document.getElementById('mcv'));
+  window.__audio = function () { return AC ? { state: AC.state, muted: muted } : null; };
+  buildColorPop();
+  bindUI();
+  applySkin(G.skin);
+  syncDiffUI();
+  newPuzzle();
+  refreshPalette();
+  setKUI2();
+}
+function setKUI2() {
+  document.getElementById('rng').value = G.K;
+  document.getElementById('knum').textContent = G.K;
+  Array.prototype.forEach.call(document.querySelectorAll('#segN button'), function (b) {
+    b.classList.toggle('on', +b.getAttribute('data-n') === G.N);
+  });
+  ['u', 'v', 'w'].forEach(function (k) {
+    document.getElementById('sw' + k).style.background = G.COL[k];
+  });
+}
+init();
+</script>
+</body>
+</html>

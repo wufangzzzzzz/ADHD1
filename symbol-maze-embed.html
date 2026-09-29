@@ -133,6 +133,9 @@ var isEmbed=false,embedSide='L',embedPath=null,embedSymbolType='math';
   if(!params.has('embed'))return;
   isEmbed=true;
   embedSide=params.get('side')||'L';
+  // ⚠ html 也必须挂 embed-mode：CSS 写的是 html.embed-mode,body.embed-mode{height:100%;overflow:hidden}，
+  //   只给 body 加 class 时 html 那半条规则永不生效，html 高度退化成 auto（见双人协调页翻转溢出的同类根因）
+  document.documentElement.classList.add('embed-mode');
   document.body.classList.add('embed-mode');
 
   window.addEventListener('message',function(ev){

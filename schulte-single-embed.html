@@ -8171,6 +8171,8 @@
         game.embedMode = true;
         game.embedSide = params.get('side') || 'L';
         window.__embedGame = game; // 调试句柄（仅 embed 模式）
+        // ⚠ html 也必须挂 embed-mode：CSS 里 html.embed-mode 那半条规则否则永不生效
+        document.documentElement.classList.add('embed-mode');
         document.body.classList.add('embed-mode');
 
         // 等比缩放 game-container（原生 600×600 渲染）到半屏面板，避免固定画布在窄面板溢出/裁切

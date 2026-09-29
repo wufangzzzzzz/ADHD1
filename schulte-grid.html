@@ -2527,6 +2527,7 @@
             <button class="mode-btn" data-mode="chaos" id="chaos-btn" onclick="game.toggleModeMenu('chaos')">混沌 ▾</button>
             <div class="mode-menu" id="chaos-menu" onclick="event.stopPropagation()">
               <div class="mode-menu-item" data-sub="1" onclick="game.setChaosSub(1)">混沌1</div>
+              <div class="mode-menu-item" data-sub="11" onclick="game.setChaosSub(11)">混沌1.1</div>
               <div class="mode-menu-item" data-sub="2" onclick="game.setChaosSub(2)">混沌2</div>
               <div class="mode-menu-item" data-sub="3" onclick="game.setChaosSub(3)">混沌3</div>
               <div class="mode-menu-item" data-sub="4" onclick="game.setChaosSub(4)">混沌4</div>
@@ -3331,6 +3332,12 @@
         this.reset();
       };
 
+      // 混沌子模式 → 显示名（内部标识 11 = 混沌1.1，用整数避免浮点比较；显示名单独映射）
+      SchulteGridGame.prototype._chaosLabel = function(sub) {
+        if (sub === 11) return '混沌1.1';
+        return '混沌' + sub;
+      };
+
       // 混沌类统一入口：单按钮循环切换 1(动) → 2(转) → 3(混沌3：碰撞大小互换) → 1
       // 混沌下拉：再次点同一项退出，否则切换
       SchulteGridGame.prototype.setChaosSub = function(sub) {
@@ -3346,7 +3353,7 @@
         this.chaosSub = sub;
         this._applyChaosSub(sub);
         var cb2 = document.getElementById('chaos-btn');
-        if (cb2) { cb2.textContent = '混沌' + sub + ' ▾'; }
+        if (cb2) { cb2.textContent = this._chaosLabel(sub) + ' ▾'; }
         this.closeAllModeMenus();
         this.reset();
       };
@@ -3397,7 +3404,7 @@
         var cb = document.getElementById('chaos-btn');
         if (cb) {
           cb.classList.add('active');
-          cb.textContent = '混沌' + sub;
+          cb.textContent = this._chaosLabel(sub);
         }
       };
 
@@ -10599,7 +10606,7 @@
 
       // ========== 跳动模式 ==========
       SchulteGridGame.prototype.enterBounceMode = function(subMode) {
-        this.bounceSubMode = (subMode === 3) ? 3 : (subMode === 4) ? 4 : 1;
+        this.bounceSubMode = (subMode === 3) ? 3 : (subMode === 4) ? 4 : (subMode === 11) ? 11 : 1;
         // 如果当前在马赛克模式，先退出
         if (this.isMosaicMode) {
           this.exitMosaicMode();
@@ -10639,8 +10646,14 @@
         this.currentMode = 'bounce';
 
         var c = document.getElementById('bounce-canvas');
-        c.style.background = '#FFFFFF';
-        c.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
+        if (this.bounceSubMode === 11) {
+          // 混沌1.1 用加色法混色，必须是黑底：白底上"三色相交=白"看不出来（白叠白仍是白）
+          c.style.background = '#000000';
+          c.style.boxShadow = '0 4px 24px rgba(0,0,0,0.35)';
+        } else {
+          c.style.background = '#FFFFFF';
+          c.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
+        }
 
         document.getElementById('grid-container').style.display = 'none';
         document.getElementById('circular-container').style.display = 'none';
@@ -10653,7 +10666,7 @@
         var cb = document.getElementById('chaos-btn');
         if (cb) {
           cb.classList.add('active');
-          cb.textContent = (this.bounceSubMode === 3 ? '混沌3' : '混沌1');
+          cb.textContent = this._chaosLabel(this.bounceSubMode);
         }
 
         this.currentNumber = this.getNumberStart();
@@ -11284,14 +11297,48 @@
         this.bounceRMin = rMin; this.bounceRMax = rMax;
         var isC3 = (this.bounceSubMode === 3);
         var isC4 = (this.bounceSubMode === 4);
+        var isC11 = (this.bounceSubMode === 11);
         var canvas = document.getElementById('bounce-canvas');
         var W = 600, H = 600;
 
+        // 混沌1.1：5 色加色混色调色板（先生 09-27 选定：红·黄绿·青绿·天蓝·紫）
+        //   为什么加颜色能变出更多色：加色法是"逐通道相加、饱和到 255"，
+        //   所以能混出什么颜色，只取决于调色板里出现过哪些通道值。
+        //   用满强度纯原色(红/绿/蓝)时每通道只有 {0,255} 两个取值 → 立方体 8 个顶点、去黑 = 7 种，封顶；
+        //   再加黄/青也没用（黄=红+绿，本来就在集合里）。
+        //   下面这 5 个色相(0°/90°/150°/210°/270°)的通道里带中间值 128，可达集合扩成更细的栅格。
+        //   实测（_chaos11_verify.js：判据 12 穷举多重集 + 判据 11 同局球 A/B 对照 + 判据 3 像素实测）：
+        //     · 可达颜色 7 种 → 14 种；实战运行帧里像素 ≥200 的显著颜色 7 种 → 12 种
+        //     · 相交混色面积 4.64% → 6.78%（40 球、半径 34 的同局对照）
+        //     · 不同色相交不会撞上任何纯色 ⇒ 不会出现"看着像 1 个球、其实是两个叠在一起"
+        //     · 只有「红」与自身叠加外观不变（红通道已满，255+255 仍是 255）—— 旧三原色方案里
+        //       红/绿/蓝都有这个性质，现在只剩 1 个
+        var C11 = ['#FF0000', '#80FF00', '#00FF80', '#0080FF', '#8000FF'];
+        var C11_RADIUS = 34;     // 混沌1.1 球半径（混沌1 是 28）：加大后覆盖面积 +47%，相交区显著变多
+        var C11_SPEED = 72;      // 混沌1.1 每轴速度幅度（混沌1 是 120，即 ±60px/s）→ 本模式 ±36px/s，慢 40%，
+                                 //   让球在重叠处停留更久、混色区"看得住"而不是一闪而过
+        var c11List = [];
+        if (isC11) {
+          // 数量按 1:1:1:1:1 均分再随机打乱 —— 均分保证各色相交概率均衡，打乱保证每局配色不同
+          for (var q = 0; q < total; q++) c11List.push(C11[q % C11.length]);
+          for (var q2 = c11List.length - 1; q2 > 0; q2--) {
+            var qj = Math.floor(Math.random() * (q2 + 1));
+            var qt = c11List[q2]; c11List[q2] = c11List[qj]; c11List[qj] = qt;
+          }
+        }
+
         this._bounceBalls = [];
         for (var i = 1; i <= total; i++) {
-          var br = (isC3 || isC4) ? (rMin + Math.random() * (rMax - rMin)) : midR;  // 混沌3/混沌4：开局尺寸均匀分布在 [rMin,rMax]
+          var br = isC11 ? C11_RADIUS
+                 : ((isC3 || isC4) ? (rMin + Math.random() * (rMax - rMin)) : midR);  // 混沌3/混沌4：开局尺寸均匀分布在 [rMin,rMax]
           var x, y, overlapping;
           var attempts = 0;
+          // 混沌1.1 取消了碰撞体积，球本来就要互相穿透 → 初始位置不必再互相避让，
+          // 直接随机落点，开局就能看到三原色相交的混色（否则要等球自己漂到一起）
+          if (isC11) {
+            x = br + Math.random() * (W - 2 * br);
+            y = br + Math.random() * (H - 2 * br);
+          } else {
           do {
             overlapping = false;
             x = br + Math.random() * (W - 2 * br);
@@ -11303,6 +11350,7 @@
             }
             attempts++;
           } while (overlapping && attempts < 200);
+          }
 
           var ratio2 = (i - 1) / total;
           var pIdx = Math.min(Math.floor(ratio2 * 9), 8);
@@ -11319,6 +11367,7 @@
           ];
           var palette = palettes[pIdx];
           var isC4b = (self.bounceSubMode === 4);
+          var c11 = isC11 ? c11List[i - 1] : null;
           this._bounceBalls.push({
             num: this.getNumberByIndex(i - 1),
             x: x, y: y,
@@ -11327,10 +11376,13 @@
             baseR: br,
             phase: Math.random() * Math.PI * 2,
             period: 4.5 + Math.random() * 3.0,
-            vx: isC4b ? 0 : (Math.random() - 0.5) * 120,
-            vy: isC4b ? 0 : (Math.random() - 0.5) * 120,
-            color: palette[Math.floor(Math.random() * palette.length)],
+            // 混沌1.1 没有碰撞交换速度 → 初速即恒速，所以快慢只由这一处决定
+            vx: isC4b ? 0 : (Math.random() - 0.5) * (isC11 ? C11_SPEED : 120),
+            vy: isC4b ? 0 : (Math.random() - 0.5) * (isC11 ? C11_SPEED : 120),
+            color: c11 || palette[Math.floor(Math.random() * palette.length)],
             palette: palette,
+            rgb: c11 ? this._hexToRgb(c11) : null,   // 混沌1.1：预存 R/G/B 分量，供加色渐变拼 rgba 用
+            fadeT: 0,                                 // 混沌1.1：点对后消散进度 0→1
             clicked: false
           });
         }
@@ -11349,7 +11401,14 @@
         // 物理更新
         for (var i = 0; i < balls.length; i++) {
           var b = balls[i];
-          if (b.clicked) continue;
+          if (b.clicked) {
+            // 混沌1.1：点对后原地消散（0→1），消散完毕不再绘制
+            // 用每帧增量而不是 Date.now() 差值，避免低帧率下动画跳变
+            if (self.bounceSubMode === 11 && b.fadeT < 1) {
+              b.fadeT = Math.min(1, b.fadeT + dt / 0.34);
+            }
+            continue;
+          }
           if (self.bounceSubMode === 4) {
             // 混沌4：位置固定不动，只做原地呼吸缩放
             var tt = Date.now() * 0.001;
@@ -11367,8 +11426,9 @@
           }
         }
 
-        // 球间碰撞（混沌4 位置固定，跳过碰撞）
-        if (self.bounceSubMode !== 4) {
+        // 球间碰撞（混沌4 位置固定，跳过碰撞；混沌1.1 无碰撞体积 —— 球互相穿透，
+        // 交叠处交给加色混合出黄/品红/青/白，这正是 1.1 与混沌1 的根本区别）
+        if (self.bounceSubMode !== 4 && self.bounceSubMode !== 11) {
         for (var i = 0; i < balls.length; i++) {
           for (var j = i + 1; j < balls.length; j++) {
             var a = balls[i], b2 = balls[j];
@@ -11404,6 +11464,12 @@
 
         // 渲染
         ctx.clearRect(0, 0, W, H);
+        if (self.bounceSubMode === 11) {
+          // 混沌1.1：三原色加色法（球互相穿透、交叠处混色）
+          this._bounceDraw11(ctx, balls);
+          this._bounceAnimId = requestAnimationFrame(function() { self._bounceAnimate(); });
+          return;
+        }
         var destroyActive = self.destroyMode > 0;
         for (var i = 0; i < balls.length; i++) {
           var b = balls[i];
@@ -11440,10 +11506,69 @@
 
       SchulteGridGame.prototype._bounceStart = function() {
         var c = document.getElementById('bounce-canvas');
-        c.style.background = '#FFFFFF';
-        c.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
+        if (this.bounceSubMode === 11) {
+          c.style.background = '#000000';   // 加色法必须黑底，否则"三色相交=白"不可见
+          c.style.boxShadow = '0 4px 24px rgba(0,0,0,0.35)';
+        } else {
+          c.style.background = '#FFFFFF';
+          c.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
+        }
         this._bounceInit();
         this._bounceAnimate();
+      };
+
+      // ========== 混沌1.1：三原色加色法绘制 ==========
+      // canvas 没有 CSS 的 mix-blend-mode，加色只能用 globalCompositeOperation='lighter'（真加法，饱和到 255）。
+      // 红+绿=黄、红+蓝=品红、绿+蓝=青、三色叠加=白 —— 与图案12 的加色法完全同一套原理。
+      // 柔边用径向渐变而不是 ctx.filter（canvas 的 filter 在部分内核/无头环境下不生效，
+      // 图案12 的 SVG 版本就踩过 filter:url(#f) 不生效的坑，这里直接规避）。
+      SchulteGridGame.prototype._bounceDraw11 = function(ctx, balls) {
+        var i, b;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (i = 0; i < balls.length; i++) {
+          b = balls[i];
+          if (b.clicked && b.fadeT >= 1) continue;                 // 已消散完，不画
+          var a = b.clicked ? Math.max(0, 1 - b.fadeT) : 1;        // 消散时整体降透明度
+          var rr = b.r * (b.clicked ? (1 + 0.35 * b.fadeT) : 1);   // 消散时略微涨大
+          var g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, rr);
+          // 渐隐带只占 15%（与图案12 定稿的"边缘模糊15%"同一标准）：
+          // 渐隐带越大，满强度区越小 → 混色区越小。实测 40% 渐隐带时满强度混色区只占画布 0.15%
+          // （黄 542px / 青 264px / 品红 0），肉眼几乎看不到相交颜色；收到 15% 后混色区约放大 5 倍。
+          g.addColorStop(0,    'rgba(' + b.rgb.r + ',' + b.rgb.g + ',' + b.rgb.b + ',' + a + ')');
+          g.addColorStop(0.85, 'rgba(' + b.rgb.r + ',' + b.rgb.g + ',' + b.rgb.b + ',' + a + ')');
+          g.addColorStop(1,    'rgba(' + b.rgb.r + ',' + b.rgb.g + ',' + b.rgb.b + ',0)');
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, rr, 0, Math.PI * 2);
+          ctx.fillStyle = g;
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // 数字单独一层、普通合成模式，且画在所有球之上（不被后排球盖住）
+        // ⚠ 按先生要求用白色（与混沌1 的球上白字一致）。
+        //   但 5 色调色板实测下来，白字的可读性成了功能问题（不是审美问题）：
+        //     40 球局里 23/40（57%）的数字落在白字对比度 <3.0 的浅色底上，
+        //     其中黄绿底(1.29)/青绿底(1.34) 长期存在，甚至有 4 个数字压在"白底"上（对比度 1.00，完全看不见）。
+        //     原因：5 色方案为了扩色域，调色板里有 3 个色相的 G 通道是满值 255（黄绿/青绿/浅混色），
+        //     它们的亮度天然很高，白字压上去就没对比了。
+        //   → 数字仍是白色（不改先生定的颜色），但在白字外描一圈半透明深色（halo）把字与底色隔开：
+        //     黑底上这圈 halo 看不出来（本来就是黑的），只在浅色底上起作用。
+        //     不再是"白色描边"——那确实与白字同色、没有意义；这里用的是深色。
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        for (i = 0; i < balls.length; i++) {
+          b = balls[i];
+          if (b.clicked && b.fadeT >= 0.35) continue;              // 消散过半就不再画字，避免半透明残影
+          ctx.font = 'bold ' + Math.floor(b.r * 0.9) + 'px "JetBrains Mono", "Microsoft YaHei", sans-serif';
+          ctx.lineWidth = Math.max(2.5, b.r * 0.10);
+          ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+          ctx.strokeText(b.num, b.x, b.y);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(b.num, b.x, b.y);
+        }
       };
 
       
@@ -11697,24 +11822,32 @@
         var my = (ev.clientY - rect.top) * scaleY;
 
         var balls = this._bounceBalls;
+        // 命中的球 = 所有"盘面覆盖点击点"的球里，圆心离点击点最近的那一个。
+        //   为什么不能按数组顺序取第一个覆盖的球：混沌1.1 取消了碰撞体积，球会大量互相穿透
+        //   （40 球、半径 34 时画布覆盖约 40%，约 1/3 的球心落在别的球盘面里），
+        //   而数字层是统一画在所有球之上的 → 常出现"某球的数字压在另一个球的盘面上"。
+        //   按数组顺序取第一个，玩家明明点在自己看到的那个数字上，却会被判成点错球（响错误音）。
+        //   就近取圆心既符合直觉（数字就画在球心），又对所有模式公平：
+        //   不重叠时（混沌1/2/3 有碰撞解算）候选只有一个，行为与改造前完全一致。
+        var best = null, bestDist2 = Infinity;
         for (var i = 0; i < balls.length; i++) {
           var b = balls[i];
           if (b.clicked) continue;
           var dx = mx - b.x, dy = my - b.y;
-          if (Math.sqrt(dx * dx + dy * dy) <= b.r) {
-            if (b.num === this.currentNumber) {
-              b.clicked = true;
-              this.currentNumber += this.getNumberStep();
-              this.updateUI();
-              this.playSound('correct');
-              if (this.currentNumber > this.getMaxNumber()) {
-                this.completeGame();
-              }
-            } else {
-              this.playSound('wrong');
-            }
-            return;
+          var d2 = dx * dx + dy * dy;
+          if (d2 <= b.r * b.r && d2 < bestDist2) { best = b; bestDist2 = d2; }
+        }
+        if (!best) return;
+        if (best.num === this.currentNumber) {
+          best.clicked = true;
+          this.currentNumber += this.getNumberStep();
+          this.updateUI();
+          this.playSound('correct');
+          if (this.currentNumber > this.getMaxNumber()) {
+            this.completeGame();
           }
+        } else {
+          this.playSound('wrong');
         }
       };
 
@@ -11724,6 +11857,11 @@
         var W = 600, H = 600;
         ctx.clearRect(0, 0, W, H);
         var balls = this._bounceBalls;
+        if (this.bounceSubMode === 11) {
+          // 混沌1.1 开局前的静态预览帧也必须走加色，否则会先闪一帧"实心色球"再变混色
+          this._bounceDraw11(ctx, balls);
+          return;
+        }
         for (var i = 0; i < balls.length; i++) {
           var b = balls[i];
           ctx.beginPath();

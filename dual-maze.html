@@ -7,7 +7,8 @@
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;margin:0;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei",sans-serif;}
-#app{height:100vh;display:flex;flex-direction:column;background:#0f1226;color:#eef;}
+/* height:100dvh 兜底移动端地址栏；overflow:hidden 防内容被推出可视区 */
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;background:#0f1226;color:#eef;overflow:hidden;}
 
 .topbar{flex:0 0 auto;height:56px;display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(135deg,#1b1f3b,#2a2f5a);box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:20;}
 .topbar .title{font-size:17px;font-weight:800;letter-spacing:.5px;}
@@ -22,8 +23,9 @@ html,body{height:100%;margin:0;overflow:hidden;font-family:"PingFang SC","Micros
 .btn-start:disabled{opacity:.4;cursor:not-allowed;}
 .btn-start.replay{background:linear-gradient(135deg,#1565c0,#1e88e5);}
 
-.arena{flex:1 1 auto;display:flex;min-height:0;position:relative;}
-.board-wrap{flex:1 1 0;min-width:0;position:relative;transition:transform .35s ease;}
+.arena{flex:1 1 auto;display:flex;min-height:0;position:relative;overflow:hidden;}
+/* padding 5px：翻转后信息栏不再贴死在屏幕最底边（旧版余量 0px）；overflow:hidden 防旋转后溢出 */
+.board-wrap{flex:1 1 0;min-width:0;position:relative;transition:transform .35s ease;padding:5px;overflow:hidden;}
 .board-wrap.flipped{transform:rotate(180deg);}
 .board-wrap iframe{width:100%;height:100%;border:0;display:block;background:#0f1226;}
 .board-tag{position:absolute;top:8px;left:10px;z-index:5;font-size:12px;font-weight:800;color:#1b1f3b;background:rgba(255,255,255,.7);padding:3px 10px;border-radius:10px;pointer-events:none;}
