@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>魔方投影 · 专注力视觉游戏</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#0B111B;color:#EAF1FA;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;overscroll-behavior:none}
+button{font-family:inherit}
+/* ★先生 2026-10-08：左侧魔方区放大、右侧游戏区缩小一点★
+   原来左栏写死 320px：缩略图可用高约 700px 而可用宽只有 298px ⇒【宽度是瓶颈】，
+   3D 只能画到 ~298px（fitCanvas 按 #cubeWrap 的 clientWidth/Height 定画布）。
+   改成 clamp(340px,30vw,520px)：1440 宽的窗口左栏 432px（3D 298 → ~410，+38%），
+   右栏 1075 → 963（−10%）。右栏变窄不亏：棋盘是正方形、本来就受高度约束。 */
+#app{display:grid;grid-template-columns:clamp(340px,30vw,520px) minmax(0,1fr);gap:13px;padding:13px 16px;height:100vh}
+.panel{background:linear-gradient(180deg,#141E2C,#101A27);border:1px solid #223449;
+  border-radius:15px;position:relative;overflow:hidden;min-height:0}
+#left{display:grid;grid-template-rows:minmax(0,1fr) auto auto auto;gap:11px;padding:11px}
+#cubeWrap{position:relative;min-height:140px;border-radius:12px;overflow:hidden;
+  background:radial-gradient(120% 120% at 50% 0%,#16202E 0%,#0C131E 78%);
+  border:1px solid #223449;cursor:grab;touch-action:none}
+#cubeWrap:hover{border-color:#3A5677}
+#cubeWrap.dragging{cursor:grabbing}
+#cubeCv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#cubeTag{font-size:12px;color:#8FA3BC;text-align:center;line-height:1.55}
+#cubeTag b{color:#FFC978;font-weight:700}
+#leftTools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#leftTools button{padding:8px 4px;font-size:12.5px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid #2B3E55;background:#16202E;
+  color:#C9D6E6;padding:8px 10px;font-size:13px;font-weight:600;transition:.15s}
+button:hover{background:#1D2A3C;border-color:#3B5372}
+button.on{background:#3A2A12;border-color:#B8792A;color:#FFC978}
+#right{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:11px;padding:11px}
+#hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#lvl{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+#lvl button{padding:8px 0}
+#stat{margin-left:auto;font-size:13px;color:#8FA3BC;white-space:nowrap}
+#btnBack{padding:8px 11px;font-size:12.5px}
+#stat b{color:#FFC978;font-size:15px}
+/* ★右侧游戏区 = 棋盘 + 右边一列"辅助转动"箭头（先生 2026-10-08 第 3 条）★
+   箭头列只占 56px + 9px 间隙；棋盘在右栏里本来就是【高度】约束，所以几乎不损失棋盘尺寸。 */
+/* ★右侧游戏区 = 棋盘 + 紧贴它右边的一列"辅助转动"箭头★
+   先生 2026-10-08 第 2 次澄清：「我说的是上下箭头靠近游戏一些 还是太远 尤其是电脑游览器模式下」
+   —— 上一轮我把"边缘"当成了屏幕边缘、给右边加留白，方向反了。
+   ★病根：棋盘是正方形、却在整列里居中 ⇒ 两侧各留 28.35px 空白（可见内容 696 宽 vs 容器 753），
+     箭头又被推到列的最右边 ⇒ 箭头左缘离【看得见的圆线】足有 82.9px（1440 视口）。
+   ★改法：把容器收缩成正方形（#boardWrap 的 aspect-ratio:1/1）+ boardRow 改 flex 居中，
+     箭头就紧跟在棋盘容器右缘之后，只差一个 gap。gap=4px ⇒ 视觉距离 82.9 → 32.4px。 */
+/* ★min-width:0 不能省★：#boardRow 是 #right 单列 grid 的 item，隐式列是 auto 轨道；
+   不写它，行宽会按 max-content 撑到"棋盘边长 + 4 + 箭头宽"，超出面板 ⇒ 箭头被推到面板外、
+   再被 .panel 的 overflow:hidden 裁掉（实测 1024x768 箭头顶到 1042 > 视口 1024；390x844 更甚）。 */
+#boardRow{min-height:0;min-width:0;display:flex;align-items:stretch;justify-content:center;gap:4px}
+/* aspect-ratio:1/1 是关键：容器高度=棋盘边长(受高度约束)，宽度跟着等于高度 ⇒ 容器正好包住棋盘。
+   min-width:0 允许窄屏（棋盘的瓶颈换成宽度）时被 flex 收缩，此时 svg 的 meet 会自己缩，不会溢出。 */
+#boardWrap{min-height:0;min-width:0;aspect-ratio:1/1;display:grid;place-items:center}
+#board{width:100%;height:100%;display:block;touch-action:none}
+#arrowCol{flex:0 0 auto;display:grid;grid-template-rows:auto auto;gap:9px;align-content:center;width:56px}
+#arrowCol button{height:76px;padding:0;font-size:21px;line-height:1;display:grid;place-items:center}
+/* 没选中层 / 正在转 ⇒ 置灰不可点（否则先生按了没反应会以为坏了） */
+#arrowCol button:disabled,#arrowCol button:disabled:hover{background:#16202E;border-color:#2B3E55;
+  color:#6B7C92;opacity:.7;cursor:not-allowed}
+body.skin-light #arrowCol button:disabled,body.skin-light #arrowCol button:disabled:hover{
+  background:#F1F4F9;border-color:#E4E9F1;color:#A9B5C4}
+#tip{font-size:12.5px;color:#8FA3BC;text-align:center;line-height:1.6}
+#tip b{color:#FFC978}
+#win{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(5,9,15,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:50}
+#win.show{display:flex}
+#winCard{background:linear-gradient(180deg,#16202E,#101A27);border:1px solid #2B3E55;border-radius:16px;
+  padding:24px 32px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+#winCard h2{margin:0 0 6px;font-size:22px;font-weight:800;
+  background:linear-gradient(92deg,#FFD08A,#FFB347 55%,#FF8E5E);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+#winCard p{margin:0 0 16px;color:#8FA3BC;font-size:13.5px}
+g.hit{cursor:pointer}
+.line{fill:none;stroke:rgba(255,255,255,.34);stroke-width:1.4;transition:.12s}
+.line.sel{stroke:#FFC978;stroke-width:3}
+.line.hot{stroke:rgba(255,201,120,.70);stroke-width:2.2}
+.ball{stroke:#0B111B;stroke-width:1.6}
+#segSkin{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:104px}
+#segSkin button{padding:8px 0}
+/* ============================================================
+   ★自定义每面颜色（先生 2026-10-07 第 3 条）★
+   6 个色块按平面图上的【真实方位角】环摆 —— 方位角就是 geo 里各面心的 deg：
+     AB-0 210 左上 / AB-1 30 右下 / BC-0 90 下 / BC-1 270 上 / AC-0 150 左下 / AC-1 330 右上
+   屏幕位置 = (中心 + r*cos 角度, 中心 + r*sin 角度)，y 向下为正 —— 与 geo 同一口径，不另立一套。
+   ============================================================ */
+#facePop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(5,9,15,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:60}
+#facePop.show{display:flex}
+#faceCard{background:linear-gradient(180deg,#16202E,#101A27);border:1px solid #2B3E55;border-radius:16px;
+  padding:18px 20px 15px;box-shadow:0 24px 70px rgba(0,0,0,.6);width:326px}
+#faceCard h3{margin:0 0 5px;font-size:15px;font-weight:800;color:#EAF1FA;text-align:center}
+#faceCard p.fcSub{margin:0 0 10px;font-size:11.5px;color:#8FA3BC;line-height:1.45;text-align:center}
+#faceRing{position:relative;width:270px;height:270px;margin:0 auto 6px}
+#faceRing .fd{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:13px;
+  border:2px solid #2B3E55;cursor:pointer;transition:.15s;display:grid;place-items:center;
+  font-size:11px;font-weight:800;color:#0B111B;text-shadow:0 0 5px rgba(255,255,255,.72)}
+#faceRing .fd:hover{border-color:#5B7CA6}
+#faceRing .fd.on{border-color:#FFC978;box-shadow:0 0 0 3px rgba(255,201,120,.3)}
+#faceSw{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin:0 0 11px}
+#faceSw i{width:100%;aspect-ratio:1/1;border-radius:7px;border:2px solid transparent;cursor:pointer}
+#faceSw i.on{border-color:#FFC978;box-shadow:0 0 0 2px rgba(255,201,120,.25)}
+#faceRow{display:flex;align-items:center;gap:8px}
+#faceRow .fcLab{font-size:11.5px;color:#8FA3BC;white-space:nowrap}
+#faceRow .gro{flex:1}
+#faceColor{width:36px;height:30px;padding:0;border:1px solid #2B3E55;border-radius:8px;
+  background:#16202E;cursor:pointer}
+#faceRow button{padding:6px 10px;font-size:12px}
+
+
+/* ============================================================
+   白色底板皮肤（照抄本体 cube-projection.html 的 body.skin-light 口径）
+   做法与本体一样：上面的规则一条不动，只在 body.skin-light 下整体覆盖；
+   canvas 与 SVG 里"写死在 JS 里的颜色"由 skinPal() 按皮肤分支给。
+   ============================================================ */
+body.skin-light{background:#EEF2F8;color:#1D2733}
+body.skin-light .panel{background:linear-gradient(180deg,#FFFFFF,#FAFCFE);border-color:#E1E7F0}
+body.skin-light #cubeWrap{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDF1F7 78%);
+  border-color:#E1E7F0}
+body.skin-light #cubeWrap:hover{border-color:#A9B8CC}
+body.skin-light #cubeTag{color:#7A8798}
+body.skin-light #cubeTag b{color:#A8570C}
+body.skin-light #stat{color:#5C6B7F}
+body.skin-light #stat b{color:#A8570C}
+body.skin-light #tip{color:#5C6B7F}
+body.skin-light #tip b{color:#A8570C}
+body.skin-light button{background:#F6F8FB;border-color:#DCE3EC;color:#33445C}
+body.skin-light button:hover{background:#EDF3FA;border-color:#B9C6D6}
+body.skin-light button.on{background:#FDF0DC;border-color:#D9A252;color:#8A5310;
+  box-shadow:0 0 0 1px rgba(217,162,82,.22) inset}
+body.skin-light .line{stroke:rgba(30,45,70,.42);stroke-width:1.6}
+body.skin-light .line.sel{stroke:#C97A1A;stroke-width:3}
+body.skin-light .ball{stroke:#FFFFFF;stroke-width:1.7}
+body.skin-light #win{background:rgba(226,235,246,.74)}
+body.skin-light #winCard{background:linear-gradient(180deg,#FFFFFF,#F5F9FD);border-color:#DCE3EC;
+  box-shadow:0 28px 70px rgba(24,40,64,.26)}
+body.skin-light #winCard h2{background:linear-gradient(92deg,#E0921C,#C97A1A 55%,#A8570C);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+body.skin-light #winCard p{color:#5C6B7F}
+body.skin-light #facePop{background:rgba(226,235,246,.76)}
+body.skin-light #faceCard{background:linear-gradient(180deg,#FFFFFF,#F5F9FD);border-color:#DCE3EC;
+  box-shadow:0 28px 70px rgba(24,40,64,.26)}
+body.skin-light #faceCard h3{color:#1D2733}
+body.skin-light #faceCard p.fcSub{color:#5C6B7F}
+body.skin-light #faceRing .fd{border-color:#DCE3EC}
+body.skin-light #faceRing .fd.on{border-color:#D9A252;box-shadow:0 0 0 3px rgba(217,162,82,.25)}
+body.skin-light #faceSw i.on{border-color:#D9A252;box-shadow:0 0 0 2px rgba(217,162,82,.22)}
+body.skin-light #faceRow .fcLab{color:#5C6B7F}
+body.skin-light #faceColor{background:#F6F8FB;border-color:#DCE3EC}
+
+@media (max-width:860px){
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:236px minmax(0,1fr);padding:10px}
+  #left{grid-template-rows:minmax(0,1fr) auto auto;grid-template-columns:minmax(0,1fr)}
+  #cubeTag{display:none}
+  #faceCard{transform:scale(.92)}
+  #arrowCol{width:46px}
+  #arrowCol button{height:60px;font-size:18px}
+}
+</style></head><body>
+<div id="app">
+  <aside class="panel" id="left">
+    <div id="cubeWrap" title="按住拖动可 360&deg; 旋转看各个面">
+      <canvas id="cubeCv"></canvas>
+    </div>
+    <div id="lvl" title="阶数（2 / 3 / 4）">
+      <button data-n="2">2 阶</button>
+      <button data-n="3" class="on">3 阶</button>
+      <button data-n="4">4 阶</button>
+    </div>
+    <div id="cubeTag">左侧 = <b>当前魔方</b>的立体图<br>按住拖动可转视角</div>
+    <div id="leftTools">
+      <button id="btnResetView">&#8634; 复位视角</button>
+      <button id="btnUndo">&#8630; 撤销</button>
+      <button id="btnFace" title="自定义每一面的颜色">&#127912; 配色</button>
+    </div>
+  </aside>
+  <main class="panel" id="right">
+    <div id="hud">
+      <button id="btnBack" onclick="location.href='index.html'" title="返回游戏主页">&#8592; 返回</button>
+      <div class="seg" id="segSkin" title="底板颜色">
+        <button data-skin="light" class="on">白底</button>
+        <button data-skin="dark">黑底</button>
+      </div>
+      <button id="btnNew">重新打乱</button>
+      <div id="stat">步数 <b>0</b></div>
+    </div>
+    <div id="boardRow">
+      <div id="boardWrap"><svg id="board" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div id="arrowCol" title="先点一条圆线或一颗球选中它（线会变金），再按这里转那一层">
+        <button id="btnUp" title="顺时针转这一层（等于在线上往上滑）" aria-label="顺时针转一层">&#9650;</button>
+        <button id="btnDown" title="逆时针转这一层（等于在线上往下滑）" aria-label="逆时针转一层">&#9660;</button>
+      </div>
+    </div>
+    <div id="tip"></div>
+  </main>
+</div>
+<div id="facePop"><div id="faceCard">
+  <h3>自定义每面颜色</h3>
+  <p class="fcSub">6 个色块按平面图上的方位摆放 &middot; 先点一个面，再从下面挑颜色</p>
+  <div id="faceRing"></div>
+  <div id="faceSw"></div>
+  <div id="faceRow">
+    <span class="fcLab">自选</span>
+    <input type="color" id="faceColor">
+    <span class="gro"></span>
+    <button id="faceReset">恢复默认</button>
+    <button id="faceClose">关闭</button>
+  </div>
+</div></div>
+<div id="win"><div id="winCard">
+  <h2>&#127881; 复原完成</h2><p>每一面都同色了</p>
+  <button id="winNext">再来一题</button>
+</div></div>
+<script>
+var GEO={"2":{"N":2,"maxR":106.34073732380344,"faces":[{"pair":[0,1],"which":0,"axis":1,"axname":"v","side":0,"near":true,"nrm":[0,-1,0],"cx":-71.263,"cy":-41.144,"deg":210.0,"az":"左上","name":"AB-0","slots":[0,2,4,6],"axOf":[2,0]},{"pair":[0,1],"which":1,"axis":1,"axname":"v","side":2,"near":false,"nrm":[0,1,0],"cx":26.143,"cy":15.094,"deg":30.0,"az":"右下","name":"AB-1","slots":[1,3,5,7],"axOf":[2,0]},{"pair":[1,2],"which":0,"axis":2,"axname":"w","side":0,"near":true,"nrm":[0,0,-1],"cx":-0.0,"cy":82.287,"deg":90.0,"az":"下","name":"BC-0","slots":[8,10,12,14],"axOf":[0,1]},{"pair":[1,2],"which":1,"axis":2,"axname":"w","side":2,"near":false,"nrm":[0,0,1],"cx":0.0,"cy":-30.187,"deg":270.0,"az":"上","name":"BC-1","slots":[9,11,13,15],"axOf":[0,1]},{"pair":[0,2],"which":0,"axis":0,"axname":"u","side":2,"near":false,"nrm":[1,0,0],"cx":-26.143,"cy":15.094,"deg":150.0,"az":"左下","name":"AC-0","slots":[16,18,20,22],"axOf":[2,1]},{"pair":[0,2],"which":1,"axis":0,"axname":"u","side":0,"near":true,"nrm":[-1,0,0],"cx":71.263,"cy":-41.144,"deg":330.0,"az":"右上","name":"AC-1","slots":[17,19,21,23],"axOf":[2,1]}],"slots":[{"x":-71.263,"y":-41.144,"face":0,"i":1,"j":1,"circles":[0,2]},{"x":26.143,"y":15.094,"face":1,"i":1,"j":1,"circles":[0,2]},{"x":-71.385,"y":-62.225,"face":0,"i":1,"j":2,"circles":[0,3]},{"x":44.462,"y":4.659,"face":1,"i":1,"j":2,"circles":[0,3]},{"x":-89.581,"y":-30.709,"face":0,"i":2,"j":1,"circles":[1,2]},{"x":26.266,"y":36.175,"face":1,"i":2,"j":1,"circles":[1,2]},{"x":-92.094,"y":-53.17,"face":0,"i":2,"j":2,"circles":[1,3]},{"x":46.974,"y":27.12,"face":1,"i":2,"j":2,"circles":[1,3]},{"x":-0.0,"y":82.287,"face":2,"i":1,"j":1,"circles":[2,4]},{"x":0.0,"y":-30.187,"face":3,"i":1,"j":1,"circles":[2,4]},{"x":-18.196,"y":92.934,"face":2,"i":1,"j":2,"circles":[2,5]},{"x":-18.196,"y":-40.834,"face":3,"i":1,"j":2,"circles":[2,5]},{"x":18.196,"y":92.934,"face":2,"i":2,"j":1,"circles":[3,4]},{"x":18.196,"y":-40.834,"face":3,"i":2,"j":1,"circles":[3,4]},{"x":-0.0,"y":106.341,"face":2,"i":2,"j":2,"circles":[3,5]},{"x":0.0,"y":-54.241,"face":3,"i":2,"j":2,"circles":[3,5]},{"x":-26.143,"y":15.094,"face":4,"i":1,"j":1,"circles":[0,4]},{"x":71.263,"y":-41.144,"face":5,"i":1,"j":1,"circles":[0,4]},{"x":-44.462,"y":4.659,"face":4,"i":1,"j":2,"circles":[0,5]},{"x":71.385,"y":-62.225,"face":5,"i":1,"j":2,"circles":[0,5]},{"x":-26.266,"y":36.175,"face":4,"i":2,"j":1,"circles":[1,4]},{"x":89.581,"y":-30.709,"face":5,"i":2,"j":1,"circles":[1,4]},{"x":-46.974,"y":27.12,"face":4,"i":2,"j":2,"circles":[1,5]},{"x":92.094,"y":-53.17,"face":5,"i":2,"j":2,"circles":[1,5]}],"circles":[{"fam":0,"k":1,"R":72.1,"cx":0.0,"cy":-52.1,"members":[17,0,2,16,18,3,1,19],"axis":2,"level":0,"cw":-1},{"fam":0,"k":2,"R":92.1,"cx":0.0,"cy":-52.1,"members":[21,4,6,20,22,7,5,23],"axis":2,"level":1,"cw":-1},{"fam":1,"k":1,"R":72.1,"cx":-45.12,"cy":26.05,"members":[0,8,10,1,5,11,9,4],"axis":0,"level":0,"cw":-1},{"fam":1,"k":2,"R":92.1,"cx":-45.12,"cy":26.05,"members":[2,12,14,3,7,15,13,6],"axis":0,"level":1,"cw":-1},{"fam":2,"k":1,"R":72.1,"cx":45.12,"cy":26.05,"members":[8,17,21,9,13,20,16,12],"axis":1,"level":0,"cw":-1},{"fam":2,"k":2,"R":92.1,"cx":45.12,"cy":26.05,"members":[10,19,23,11,15,22,18,14],"axis":1,"level":1,"cw":-1}],"tiles":[{"face":0,"slot":0,"pts":[[0,0,0],[0,0,1],[1,0,1],[1,0,0]]},{"face":0,"slot":2,"pts":[[1,0,0],[1,0,1],[2,0,1],[2,0,0]]},{"face":0,"slot":4,"pts":[[0,0,1],[0,0,2],[1,0,2],[1,0,1]]},{"face":0,"slot":6,"pts":[[1,0,1],[1,0,2],[2,0,2],[2,0,1]]},{"face":1,"slot":1,"pts":[[0,2,0],[0,2,1],[1,2,1],[1,2,0]]},{"face":1,"slot":3,"pts":[[1,2,0],[1,2,1],[2,2,1],[2,2,0]]},{"face":1,"slot":5,"pts":[[0,2,1],[0,2,2],[1,2,2],[1,2,1]]},{"face":1,"slot":7,"pts":[[1,2,1],[1,2,2],[2,2,2],[2,2,1]]},{"face":2,"slot":8,"pts":[[0,0,0],[1,0,0],[1,1,0],[0,1,0]]},{"face":2,"slot":10,"pts":[[0,1,0],[1,1,0],[1,2,0],[0,2,0]]},{"face":2,"slot":12,"pts":[[1,0,0],[2,0,0],[2,1,0],[1,1,0]]},{"face":2,"slot":14,"pts":[[1,1,0],[2,1,0],[2,2,0],[1,2,0]]},{"face":3,"slot":9,"pts":[[0,0,2],[1,0,2],[1,1,2],[0,1,2]]},{"face":3,"slot":11,"pts":[[0,1,2],[1,1,2],[1,2,2],[0,2,2]]},{"face":3,"slot":13,"pts":[[1,0,2],[2,0,2],[2,1,2],[1,1,2]]},{"face":3,"slot":15,"pts":[[1,1,2],[2,1,2],[2,2,2],[1,2,2]]},{"face":4,"slot":16,"pts":[[2,0,0],[2,0,1],[2,1,1],[2,1,0]]},{"face":4,"slot":18,"pts":[[2,1,0],[2,1,1],[2,2,1],[2,2,0]]},{"face":4,"slot":20,"pts":[[2,0,1],[2,0,2],[2,1,2],[2,1,1]]},{"face":4,"slot":22,"pts":[[2,1,1],[2,1,2],[2,2,2],[2,2,1]]},{"face":5,"slot":17,"pts":[[0,0,0],[0,0,1],[0,1,1],[0,1,0]]},{"face":5,"slot":19,"pts":[[0,1,0],[0,1,1],[0,2,1],[0,2,0]]},{"face":5,"slot":21,"pts":[[0,0,1],[0,0,2],[0,1,2],[0,1,1]]},{"face":5,"slot":23,"pts":[[0,1,1],[0,1,2],[0,2,2],[0,2,1]]}]},"3":{"N":3,"maxR":128.6687239250226,"faces":[{"pair":[0,1],"which":0,"axis":1,"axname":"v","side":0,"near":true,"nrm":[0,-1,0],"cx":-92.094,"cy":-53.17,"deg":210.0,"az":"左上","name":"AB-0","slots":[0,2,4,6,8,10,12,14,16],"axOf":[2,0]},{"pair":[0,1],"which":1,"axis":1,"axname":"v","side":3,"near":false,"nrm":[0,1,0],"cx":46.974,"cy":27.12,"deg":30.0,"az":"右下","name":"AB-1","slots":[1,3,5,7,9,11,13,15,17],"axOf":[2,0]},{"pair":[1,2],"which":0,"axis":2,"axname":"w","side":0,"near":true,"nrm":[0,0,-1],"cx":-0.0,"cy":106.341,"deg":90.0,"az":"下","name":"BC-0","slots":[18,20,22,24,26,28,30,32,34],"axOf":[0,1]},{"pair":[1,2],"which":1,"axis":2,"axname":"w","side":3,"near":false,"nrm":[0,0,1],"cx":0.0,"cy":-54.241,"deg":270.0,"az":"上","name":"BC-1","slots":[19,21,23,25,27,29,31,33,35],"axOf":[0,1]},{"pair":[0,2],"which":0,"axis":0,"axname":"u","side":3,"near":false,"nrm":[1,0,0],"cx":-46.974,"cy":27.12,"deg":150.0,"az":"左下","name":"AC-0","slots":[36,38,40,42,44,46,48,50,52],"axOf":[2,1]},{"pair":[0,2],"which":1,"axis":0,"axname":"u","side":0,"near":true,"nrm":[-1,0,0],"cx":92.094,"cy":-53.17,"deg":330.0,"az":"右上","name":"AC-1","slots":[37,39,41,43,45,47,49,51,53],"axOf":[2,1]}],"slots":[{"x":-71.263,"y":-41.144,"face":0,"i":1,"j":1,"circles":[0,3]},{"x":26.143,"y":15.094,"face":1,"i":1,"j":1,"circles":[0,3]},{"x":-71.385,"y":-62.225,"face":0,"i":1,"j":2,"circles":[0,4]},{"x":44.462,"y":4.659,"face":1,"i":1,"j":2,"circles":[0,4]},{"x":-64.477,"y":-84.366,"face":0,"i":1,"j":3,"circles":[0,5]},{"x":60.182,"y":-12.394,"face":1,"i":1,"j":3,"circles":[0,5]},{"x":-89.581,"y":-30.709,"face":0,"i":2,"j":1,"circles":[1,3]},{"x":26.266,"y":36.175,"face":1,"i":2,"j":1,"circles":[1,3]},{"x":-92.094,"y":-53.17,"face":0,"i":2,"j":2,"circles":[1,4]},{"x":46.974,"y":27.12,"face":1,"i":2,"j":2,"circles":[1,4]},{"x":-88.592,"y":-77.278,"face":0,"i":2,"j":3,"circles":[1,5]},{"x":66.1,"y":12.034,"face":1,"i":2,"j":3,"circles":[1,5]},{"x":-105.302,"y":-13.656,"face":0,"i":3,"j":1,"circles":[2,3]},{"x":19.357,"y":58.316,"face":1,"i":3,"j":1,"circles":[2,3]},{"x":-111.22,"y":-38.084,"face":0,"i":3,"j":2,"circles":[2,4]},{"x":43.472,"y":51.228,"face":1,"i":3,"j":2,"circles":[2,4]},{"x":-111.43,"y":-64.334,"face":0,"i":3,"j":3,"circles":[2,5]},{"x":66.31,"y":38.284,"face":1,"i":3,"j":3,"circles":[2,5]},{"x":-0.0,"y":82.287,"face":2,"i":1,"j":1,"circles":[3,6]},{"x":0.0,"y":-30.187,"face":3,"i":1,"j":1,"circles":[3,6]},{"x":-18.196,"y":92.934,"face":2,"i":1,"j":2,"circles":[3,7]},{"x":-18.196,"y":-40.834,"face":3,"i":1,"j":2,"circles":[3,7]},{"x":-40.825,"y":98.022,"face":2,"i":1,"j":3,"circles":[3,8]},{"x":-40.825,"y":-45.922,"face":3,"i":1,"j":3,"circles":[3,8]},{"x":18.196,"y":92.934,"face":2,"i":2,"j":1,"circles":[4,6]},{"x":18.196,"y":-40.834,"face":3,"i":2,"j":1,"circles":[4,6]},{"x":-0.0,"y":106.341,"face":2,"i":2,"j":2,"circles":[4,7]},{"x":0.0,"y":-54.241,"face":3,"i":2,"j":2,"circles":[4,7]},{"x":-22.629,"y":115.362,"face":2,"i":2,"j":3,"circles":[4,8]},{"x":-22.629,"y":-63.262,"face":3,"i":2,"j":3,"circles":[4,8]},{"x":40.825,"y":98.022,"face":2,"i":3,"j":1,"circles":[5,6]},{"x":40.825,"y":-45.922,"face":3,"i":3,"j":1,"circles":[5,6]},{"x":22.629,"y":115.362,"face":2,"i":3,"j":2,"circles":[5,7]},{"x":22.629,"y":-63.262,"face":3,"i":3,"j":2,"circles":[5,7]},{"x":-0.0,"y":128.669,"face":2,"i":3,"j":3,"circles":[5,8]},{"x":0.0,"y":-76.569,"face":3,"i":3,"j":3,"circles":[5,8]},{"x":-26.143,"y":15.094,"face":4,"i":1,"j":1,"circles":[0,6]},{"x":71.263,"y":-41.144,"face":5,"i":1,"j":1,"circles":[0,6]},{"x":-44.462,"y":4.659,"face":4,"i":1,"j":2,"circles":[0,7]},{"x":71.385,"y":-62.225,"face":5,"i":1,"j":2,"circles":[0,7]},{"x":-60.182,"y":-12.394,"face":4,"i":1,"j":3,"circles":[0,8]},{"x":64.477,"y":-84.366,"face":5,"i":1,"j":3,"circles":[0,8]},{"x":-26.266,"y":36.175,"face":4,"i":2,"j":1,"circles":[1,6]},{"x":89.581,"y":-30.709,"face":5,"i":2,"j":1,"circles":[1,6]},{"x":-46.974,"y":27.12,"face":4,"i":2,"j":2,"circles":[1,7]},{"x":92.094,"y":-53.17,"face":5,"i":2,"j":2,"circles":[1,7]},{"x":-66.1,"y":12.034,"face":4,"i":2,"j":3,"circles":[1,8]},{"x":88.592,"y":-77.278,"face":5,"i":2,"j":3,"circles":[1,8]},{"x":-19.357,"y":58.316,"face":4,"i":3,"j":1,"circles":[2,6]},{"x":105.302,"y":-13.656,"face":5,"i":3,"j":1,"circles":[2,6]},{"x":-43.472,"y":51.228,"face":4,"i":3,"j":2,"circles":[2,7]},{"x":111.22,"y":-38.084,"face":5,"i":3,"j":2,"circles":[2,7]},{"x":-66.31,"y":38.284,"face":4,"i":3,"j":3,"circles":[2,8]},{"x":111.43,"y":-64.334,"face":5,"i":3,"j":3,"circles":[2,8]}],"circles":[{"fam":0,"k":1,"R":72.1,"cx":0.0,"cy":-52.1,"members":[37,0,2,4,36,38,40,5,3,1,41,39],"axis":2,"level":0,"cw":-1},{"fam":0,"k":2,"R":92.1,"cx":0.0,"cy":-52.1,"members":[43,6,8,10,42,44,46,11,9,7,47,45],"axis":2,"level":1,"cw":-1},{"fam":0,"k":3,"R":112.1,"cx":0.0,"cy":-52.1,"members":[49,12,14,16,48,50,52,17,15,13,53,51],"axis":2,"level":2,"cw":-1},{"fam":1,"k":1,"R":72.1,"cx":-45.12,"cy":26.05,"members":[0,18,20,22,1,7,13,23,21,19,12,6],"axis":0,"level":0,"cw":-1},{"fam":1,"k":2,"R":92.1,"cx":-45.12,"cy":26.05,"members":[2,24,26,28,3,9,15,29,27,25,14,8],"axis":0,"level":1,"cw":-1},{"fam":1,"k":3,"R":112.1,"cx":-45.12,"cy":26.05,"members":[4,30,32,34,5,11,17,35,33,31,16,10],"axis":0,"level":2,"cw":-1},{"fam":2,"k":1,"R":72.1,"cx":45.12,"cy":26.05,"members":[18,37,43,49,19,25,31,48,42,36,30,24],"axis":1,"level":0,"cw":-1},{"fam":2,"k":2,"R":92.1,"cx":45.12,"cy":26.05,"members":[20,39,45,51,21,27,33,50,44,38,32,26],"axis":1,"level":1,"cw":-1},{"fam":2,"k":3,"R":112.1,"cx":45.12,"cy":26.05,"members":[22,41,47,53,23,29,35,52,46,40,34,28],"axis":1,"level":2,"cw":-1}],"tiles":[{"face":0,"slot":0,"pts":[[0,0,0],[0,0,1],[1,0,1],[1,0,0]]},{"face":0,"slot":2,"pts":[[1,0,0],[1,0,1],[2,0,1],[2,0,0]]},{"face":0,"slot":4,"pts":[[2,0,0],[2,0,1],[3,0,1],[3,0,0]]},{"face":0,"slot":6,"pts":[[0,0,1],[0,0,2],[1,0,2],[1,0,1]]},{"face":0,"slot":8,"pts":[[1,0,1],[1,0,2],[2,0,2],[2,0,1]]},{"face":0,"slot":10,"pts":[[2,0,1],[2,0,2],[3,0,2],[3,0,1]]},{"face":0,"slot":12,"pts":[[0,0,2],[0,0,3],[1,0,3],[1,0,2]]},{"face":0,"slot":14,"pts":[[1,0,2],[1,0,3],[2,0,3],[2,0,2]]},{"face":0,"slot":16,"pts":[[2,0,2],[2,0,3],[3,0,3],[3,0,2]]},{"face":1,"slot":1,"pts":[[0,3,0],[0,3,1],[1,3,1],[1,3,0]]},{"face":1,"slot":3,"pts":[[1,3,0],[1,3,1],[2,3,1],[2,3,0]]},{"face":1,"slot":5,"pts":[[2,3,0],[2,3,1],[3,3,1],[3,3,0]]},{"face":1,"slot":7,"pts":[[0,3,1],[0,3,2],[1,3,2],[1,3,1]]},{"face":1,"slot":9,"pts":[[1,3,1],[1,3,2],[2,3,2],[2,3,1]]},{"face":1,"slot":11,"pts":[[2,3,1],[2,3,2],[3,3,2],[3,3,1]]},{"face":1,"slot":13,"pts":[[0,3,2],[0,3,3],[1,3,3],[1,3,2]]},{"face":1,"slot":15,"pts":[[1,3,2],[1,3,3],[2,3,3],[2,3,2]]},{"face":1,"slot":17,"pts":[[2,3,2],[2,3,3],[3,3,3],[3,3,2]]},{"face":2,"slot":18,"pts":[[0,0,0],[1,0,0],[1,1,0],[0,1,0]]},{"face":2,"slot":20,"pts":[[0,1,0],[1,1,0],[1,2,0],[0,2,0]]},{"face":2,"slot":22,"pts":[[0,2,0],[1,2,0],[1,3,0],[0,3,0]]},{"face":2,"slot":24,"pts":[[1,0,0],[2,0,0],[2,1,0],[1,1,0]]},{"face":2,"slot":26,"pts":[[1,1,0],[2,1,0],[2,2,0],[1,2,0]]},{"face":2,"slot":28,"pts":[[1,2,0],[2,2,0],[2,3,0],[1,3,0]]},{"face":2,"slot":30,"pts":[[2,0,0],[3,0,0],[3,1,0],[2,1,0]]},{"face":2,"slot":32,"pts":[[2,1,0],[3,1,0],[3,2,0],[2,2,0]]},{"face":2,"slot":34,"pts":[[2,2,0],[3,2,0],[3,3,0],[2,3,0]]},{"face":3,"slot":19,"pts":[[0,0,3],[1,0,3],[1,1,3],[0,1,3]]},{"face":3,"slot":21,"pts":[[0,1,3],[1,1,3],[1,2,3],[0,2,3]]},{"face":3,"slot":23,"pts":[[0,2,3],[1,2,3],[1,3,3],[0,3,3]]},{"face":3,"slot":25,"pts":[[1,0,3],[2,0,3],[2,1,3],[1,1,3]]},{"face":3,"slot":27,"pts":[[1,1,3],[2,1,3],[2,2,3],[1,2,3]]},{"face":3,"slot":29,"pts":[[1,2,3],[2,2,3],[2,3,3],[1,3,3]]},{"face":3,"slot":31,"pts":[[2,0,3],[3,0,3],[3,1,3],[2,1,3]]},{"face":3,"slot":33,"pts":[[2,1,3],[3,1,3],[3,2,3],[2,2,3]]},{"face":3,"slot":35,"pts":[[2,2,3],[3,2,3],[3,3,3],[2,3,3]]},{"face":4,"slot":36,"pts":[[3,0,0],[3,0,1],[3,1,1],[3,1,0]]},{"face":4,"slot":38,"pts":[[3,1,0],[3,1,1],[3,2,1],[3,2,0]]},{"face":4,"slot":40,"pts":[[3,2,0],[3,2,1],[3,3,1],[3,3,0]]},{"face":4,"slot":42,"pts":[[3,0,1],[3,0,2],[3,1,2],[3,1,1]]},{"face":4,"slot":44,"pts":[[3,1,1],[3,1,2],[3,2,2],[3,2,1]]},{"face":4,"slot":46,"pts":[[3,2,1],[3,2,2],[3,3,2],[3,3,1]]},{"face":4,"slot":48,"pts":[[3,0,2],[3,0,3],[3,1,3],[3,1,2]]},{"face":4,"slot":50,"pts":[[3,1,2],[3,1,3],[3,2,3],[3,2,2]]},{"face":4,"slot":52,"pts":[[3,2,2],[3,2,3],[3,3,3],[3,3,2]]},{"face":5,"slot":37,"pts":[[0,0,0],[0,0,1],[0,1,1],[0,1,0]]},{"face":5,"slot":39,"pts":[[0,1,0],[0,1,1],[0,2,1],[0,2,0]]},{"face":5,"slot":41,"pts":[[0,2,0],[0,2,1],[0,3,1],[0,3,0]]},{"face":5,"slot":43,"pts":[[0,0,1],[0,0,2],[0,1,2],[0,1,1]]},{"face":5,"slot":45,"pts":[[0,1,1],[0,1,2],[0,2,2],[0,2,1]]},{"face":5,"slot":47,"pts":[[0,2,1],[0,2,2],[0,3,2],[0,3,1]]},{"face":5,"slot":49,"pts":[[0,0,2],[0,0,3],[0,1,3],[0,1,2]]},{"face":5,"slot":51,"pts":[[0,1,2],[0,1,3],[0,2,3],[0,2,2]]},{"face":5,"slot":53,"pts":[[0,2,2],[0,2,3],[0,3,3],[0,3,2]]}]},"4":{"N":4,"maxR":150.20555766859576,"faces":[{"pair":[0,1],"which":0,"axis":1,"axname":"v","side":0,"near":true,"nrm":[0,-1,0],"cx":-92.094,"cy":-53.17,"deg":210.0,"az":"左上","name":"AB-0","slots":[0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30],"axOf":[2,0]},{"pair":[0,1],"which":1,"axis":1,"axname":"v","side":4,"near":false,"nrm":[0,1,0],"cx":46.974,"cy":27.12,"deg":30.0,"az":"右下","name":"AB-1","slots":[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],"axOf":[2,0]},{"pair":[1,2],"which":0,"axis":2,"axname":"w","side":0,"near":true,"nrm":[0,0,-1],"cx":-0.0,"cy":106.341,"deg":90.0,"az":"下","name":"BC-0","slots":[32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62],"axOf":[0,1]},{"pair":[1,2],"which":1,"axis":2,"axname":"w","side":4,"near":false,"nrm":[0,0,1],"cx":0.0,"cy":-54.241,"deg":270.0,"az":"上","name":"BC-1","slots":[33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63],"axOf":[0,1]},{"pair":[0,2],"which":0,"axis":0,"axname":"u","side":4,"near":false,"nrm":[1,0,0],"cx":-46.974,"cy":27.12,"deg":150.0,"az":"左下","name":"AC-0","slots":[64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94],"axOf":[2,1]},{"pair":[0,2],"which":1,"axis":0,"axname":"u","side":0,"near":true,"nrm":[-1,0,0],"cx":92.094,"cy":-53.17,"deg":330.0,"az":"右上","name":"AC-1","slots":[65,67,69,71,73,75,77,79,81,83,85,87,89,91,93,95],"axOf":[2,1]}],"slots":[{"x":-71.263,"y":-41.144,"face":0,"i":1,"j":1,"circles":[0,4]},{"x":26.143,"y":15.094,"face":1,"i":1,"j":1,"circles":[0,4]},{"x":-71.385,"y":-62.225,"face":0,"i":1,"j":2,"circles":[0,5]},{"x":44.462,"y":4.659,"face":1,"i":1,"j":2,"circles":[0,5]},{"x":-64.477,"y":-84.366,"face":0,"i":1,"j":3,"circles":[0,6]},{"x":60.182,"y":-12.394,"face":1,"i":1,"j":3,"circles":[0,6]},{"x":-47.863,"y":-106.022,"face":0,"i":1,"j":4,"circles":[0,7]},{"x":70.629,"y":-37.61,"face":1,"i":1,"j":4,"circles":[0,7]},{"x":-89.581,"y":-30.709,"face":0,"i":2,"j":1,"circles":[1,4]},{"x":26.266,"y":36.175,"face":1,"i":2,"j":1,"circles":[1,4]},{"x":-92.094,"y":-53.17,"face":0,"i":2,"j":2,"circles":[1,5]},{"x":46.974,"y":27.12,"face":1,"i":2,"j":2,"circles":[1,5]},{"x":-88.592,"y":-77.278,"face":0,"i":2,"j":3,"circles":[1,6]},{"x":66.1,"y":12.034,"face":1,"i":2,"j":3,"circles":[1,6]},{"x":-77.378,"y":-102.051,"face":0,"i":2,"j":4,"circles":[1,7]},{"x":81.948,"y":-10.064,"face":1,"i":2,"j":4,"circles":[1,7]},{"x":-105.302,"y":-13.656,"face":0,"i":3,"j":1,"circles":[2,4]},{"x":19.357,"y":58.316,"face":1,"i":3,"j":1,"circles":[2,4]},{"x":-111.22,"y":-38.084,"face":0,"i":3,"j":2,"circles":[2,5]},{"x":43.472,"y":51.228,"face":1,"i":3,"j":2,"circles":[2,5]},{"x":-111.43,"y":-64.334,"face":0,"i":3,"j":3,"circles":[2,6]},{"x":66.31,"y":38.284,"face":1,"i":3,"j":3,"circles":[2,6]},{"x":-104.843,"y":-91.779,"face":0,"i":3,"j":4,"circles":[2,7]},{"x":86.784,"y":18.857,"face":1,"i":3,"j":4,"circles":[2,7]},{"x":-115.749,"y":11.56,"face":0,"i":4,"j":1,"circles":[3,4]},{"x":2.743,"y":79.972,"face":1,"i":4,"j":1,"circles":[3,4]},{"x":-127.068,"y":-15.986,"face":0,"i":4,"j":2,"circles":[3,5]},{"x":32.258,"y":76.001,"face":1,"i":4,"j":2,"circles":[3,5]},{"x":-131.904,"y":-44.907,"face":0,"i":4,"j":3,"circles":[3,6]},{"x":59.723,"y":65.729,"face":1,"i":4,"j":3,"circles":[3,6]},{"x":-130.082,"y":-75.103,"face":0,"i":4,"j":4,"circles":[3,7]},{"x":84.962,"y":49.053,"face":1,"i":4,"j":4,"circles":[3,7]},{"x":-0.0,"y":82.287,"face":2,"i":1,"j":1,"circles":[4,8]},{"x":0.0,"y":-30.187,"face":3,"i":1,"j":1,"circles":[4,8]},{"x":-18.196,"y":92.934,"face":2,"i":1,"j":2,"circles":[4,9]},{"x":-18.196,"y":-40.834,"face":3,"i":1,"j":2,"circles":[4,9]},{"x":-40.825,"y":98.022,"face":2,"i":1,"j":3,"circles":[4,10]},{"x":-40.825,"y":-45.922,"face":3,"i":1,"j":3,"circles":[4,10]},{"x":-67.886,"y":94.461,"face":2,"i":1,"j":4,"circles":[4,11]},{"x":-67.886,"y":-42.361,"face":3,"i":1,"j":4,"circles":[4,11]},{"x":18.196,"y":92.934,"face":2,"i":2,"j":1,"circles":[5,8]},{"x":18.196,"y":-40.834,"face":3,"i":2,"j":1,"circles":[5,8]},{"x":-0.0,"y":106.341,"face":2,"i":2,"j":2,"circles":[5,9]},{"x":0.0,"y":-54.241,"face":3,"i":2,"j":2,"circles":[5,9]},{"x":-22.629,"y":115.362,"face":2,"i":2,"j":3,"circles":[5,10]},{"x":-22.629,"y":-63.262,"face":3,"i":2,"j":3,"circles":[5,10]},{"x":-49.69,"y":118.037,"face":2,"i":2,"j":4,"circles":[5,11]},{"x":-49.69,"y":-65.937,"face":3,"i":2,"j":4,"circles":[5,11]},{"x":40.825,"y":98.022,"face":2,"i":3,"j":1,"circles":[6,8]},{"x":40.825,"y":-45.922,"face":3,"i":3,"j":1,"circles":[6,8]},{"x":22.629,"y":115.362,"face":2,"i":3,"j":2,"circles":[6,9]},{"x":22.629,"y":-63.262,"face":3,"i":3,"j":2,"circles":[6,9]},{"x":-0.0,"y":128.669,"face":2,"i":3,"j":3,"circles":[6,10]},{"x":0.0,"y":-76.569,"face":3,"i":3,"j":3,"circles":[6,10]},{"x":-27.061,"y":136.686,"face":2,"i":3,"j":4,"circles":[6,11]},{"x":-27.061,"y":-84.586,"face":3,"i":3,"j":4,"circles":[6,11]},{"x":67.886,"y":94.461,"face":2,"i":4,"j":1,"circles":[7,8]},{"x":67.886,"y":-42.361,"face":3,"i":4,"j":1,"circles":[7,8]},{"x":49.69,"y":118.037,"face":2,"i":4,"j":2,"circles":[7,9]},{"x":49.69,"y":-65.937,"face":3,"i":4,"j":2,"circles":[7,9]},{"x":27.061,"y":136.686,"face":2,"i":4,"j":3,"circles":[7,10]},{"x":27.061,"y":-84.586,"face":3,"i":4,"j":3,"circles":[7,10]},{"x":-0.0,"y":150.206,"face":2,"i":4,"j":4,"circles":[7,11]},{"x":0.0,"y":-98.106,"face":3,"i":4,"j":4,"circles":[7,11]},{"x":-26.143,"y":15.094,"face":4,"i":1,"j":1,"circles":[0,8]},{"x":71.263,"y":-41.144,"face":5,"i":1,"j":1,"circles":[0,8]},{"x":-44.462,"y":4.659,"face":4,"i":1,"j":2,"circles":[0,9]},{"x":71.385,"y":-62.225,"face":5,"i":1,"j":2,"circles":[0,9]},{"x":-60.182,"y":-12.394,"face":4,"i":1,"j":3,"circles":[0,10]},{"x":64.477,"y":-84.366,"face":5,"i":1,"j":3,"circles":[0,10]},{"x":-70.629,"y":-37.61,"face":4,"i":1,"j":4,"circles":[0,11]},{"x":47.863,"y":-106.022,"face":5,"i":1,"j":4,"circles":[0,11]},{"x":-26.266,"y":36.175,"face":4,"i":2,"j":1,"circles":[1,8]},{"x":89.581,"y":-30.709,"face":5,"i":2,"j":1,"circles":[1,8]},{"x":-46.974,"y":27.12,"face":4,"i":2,"j":2,"circles":[1,9]},{"x":92.094,"y":-53.17,"face":5,"i":2,"j":2,"circles":[1,9]},{"x":-66.1,"y":12.034,"face":4,"i":2,"j":3,"circles":[1,10]},{"x":88.592,"y":-77.278,"face":5,"i":2,"j":3,"circles":[1,10]},{"x":-81.948,"y":-10.064,"face":4,"i":2,"j":4,"circles":[1,11]},{"x":77.378,"y":-102.051,"face":5,"i":2,"j":4,"circles":[1,11]},{"x":-19.357,"y":58.316,"face":4,"i":3,"j":1,"circles":[2,8]},{"x":105.302,"y":-13.656,"face":5,"i":3,"j":1,"circles":[2,8]},{"x":-43.472,"y":51.228,"face":4,"i":3,"j":2,"circles":[2,9]},{"x":111.22,"y":-38.084,"face":5,"i":3,"j":2,"circles":[2,9]},{"x":-66.31,"y":38.284,"face":4,"i":3,"j":3,"circles":[2,10]},{"x":111.43,"y":-64.334,"face":5,"i":3,"j":3,"circles":[2,10]},{"x":-86.784,"y":18.857,"face":4,"i":3,"j":4,"circles":[2,11]},{"x":104.843,"y":-91.779,"face":5,"i":3,"j":4,"circles":[2,11]},{"x":-2.743,"y":79.972,"face":4,"i":4,"j":1,"circles":[3,8]},{"x":115.749,"y":11.56,"face":5,"i":4,"j":1,"circles":[3,8]},{"x":-32.258,"y":76.001,"face":4,"i":4,"j":2,"circles":[3,9]},{"x":127.068,"y":-15.986,"face":5,"i":4,"j":2,"circles":[3,9]},{"x":-59.723,"y":65.729,"face":4,"i":4,"j":3,"circles":[3,10]},{"x":131.904,"y":-44.907,"face":5,"i":4,"j":3,"circles":[3,10]},{"x":-84.962,"y":49.053,"face":4,"i":4,"j":4,"circles":[3,11]},{"x":130.082,"y":-75.103,"face":5,"i":4,"j":4,"circles":[3,11]}],"circles":[{"fam":0,"k":1,"R":72.1,"cx":0.0,"cy":-52.1,"members":[67,65,0,2,4,6,64,66,68,70,7,5,3,1,71,69],"axis":2,"level":0,"cw":-1},{"fam":0,"k":2,"R":92.1,"cx":0.0,"cy":-52.1,"members":[75,73,8,10,12,14,72,74,76,78,15,13,11,9,79,77],"axis":2,"level":1,"cw":-1},{"fam":0,"k":3,"R":112.1,"cx":0.0,"cy":-52.1,"members":[83,81,16,18,20,22,80,82,84,86,23,21,19,17,87,85],"axis":2,"level":2,"cw":-1},{"fam":0,"k":4,"R":132.1,"cx":0.0,"cy":-52.1,"members":[91,89,24,26,28,30,88,90,92,94,31,29,27,25,95,93],"axis":2,"level":3,"cw":-1},{"fam":1,"k":1,"R":72.1,"cx":-45.12,"cy":26.05,"members":[8,0,32,34,36,38,1,9,17,25,39,37,35,33,24,16],"axis":0,"level":0,"cw":-1},{"fam":1,"k":2,"R":92.1,"cx":-45.12,"cy":26.05,"members":[10,2,40,42,44,46,3,11,19,27,47,45,43,41,26,18],"axis":0,"level":1,"cw":-1},{"fam":1,"k":3,"R":112.1,"cx":-45.12,"cy":26.05,"members":[12,4,48,50,52,54,5,13,21,29,55,53,51,49,28,20],"axis":0,"level":2,"cw":-1},{"fam":1,"k":4,"R":132.1,"cx":-45.12,"cy":26.05,"members":[14,6,56,58,60,62,7,15,23,31,63,61,59,57,30,22],"axis":0,"level":3,"cw":-1},{"fam":2,"k":1,"R":72.1,"cx":45.12,"cy":26.05,"members":[40,32,65,73,81,89,33,41,49,57,88,80,72,64,56,48],"axis":1,"level":0,"cw":-1},{"fam":2,"k":2,"R":92.1,"cx":45.12,"cy":26.05,"members":[42,34,67,75,83,91,35,43,51,59,90,82,74,66,58,50],"axis":1,"level":1,"cw":-1},{"fam":2,"k":3,"R":112.1,"cx":45.12,"cy":26.05,"members":[44,36,69,77,85,93,37,45,53,61,92,84,76,68,60,52],"axis":1,"level":2,"cw":-1},{"fam":2,"k":4,"R":132.1,"cx":45.12,"cy":26.05,"members":[46,38,71,79,87,95,39,47,55,63,94,86,78,70,62,54],"axis":1,"level":3,"cw":-1}],"tiles":[{"face":0,"slot":0,"pts":[[0,0,0],[0,0,1],[1,0,1],[1,0,0]]},{"face":0,"slot":2,"pts":[[1,0,0],[1,0,1],[2,0,1],[2,0,0]]},{"face":0,"slot":4,"pts":[[2,0,0],[2,0,1],[3,0,1],[3,0,0]]},{"face":0,"slot":6,"pts":[[3,0,0],[3,0,1],[4,0,1],[4,0,0]]},{"face":0,"slot":8,"pts":[[0,0,1],[0,0,2],[1,0,2],[1,0,1]]},{"face":0,"slot":10,"pts":[[1,0,1],[1,0,2],[2,0,2],[2,0,1]]},{"face":0,"slot":12,"pts":[[2,0,1],[2,0,2],[3,0,2],[3,0,1]]},{"face":0,"slot":14,"pts":[[3,0,1],[3,0,2],[4,0,2],[4,0,1]]},{"face":0,"slot":16,"pts":[[0,0,2],[0,0,3],[1,0,3],[1,0,2]]},{"face":0,"slot":18,"pts":[[1,0,2],[1,0,3],[2,0,3],[2,0,2]]},{"face":0,"slot":20,"pts":[[2,0,2],[2,0,3],[3,0,3],[3,0,2]]},{"face":0,"slot":22,"pts":[[3,0,2],[3,0,3],[4,0,3],[4,0,2]]},{"face":0,"slot":24,"pts":[[0,0,3],[0,0,4],[1,0,4],[1,0,3]]},{"face":0,"slot":26,"pts":[[1,0,3],[1,0,4],[2,0,4],[2,0,3]]},{"face":0,"slot":28,"pts":[[2,0,3],[2,0,4],[3,0,4],[3,0,3]]},{"face":0,"slot":30,"pts":[[3,0,3],[3,0,4],[4,0,4],[4,0,3]]},{"face":1,"slot":1,"pts":[[0,4,0],[0,4,1],[1,4,1],[1,4,0]]},{"face":1,"slot":3,"pts":[[1,4,0],[1,4,1],[2,4,1],[2,4,0]]},{"face":1,"slot":5,"pts":[[2,4,0],[2,4,1],[3,4,1],[3,4,0]]},{"face":1,"slot":7,"pts":[[3,4,0],[3,4,1],[4,4,1],[4,4,0]]},{"face":1,"slot":9,"pts":[[0,4,1],[0,4,2],[1,4,2],[1,4,1]]},{"face":1,"slot":11,"pts":[[1,4,1],[1,4,2],[2,4,2],[2,4,1]]},{"face":1,"slot":13,"pts":[[2,4,1],[2,4,2],[3,4,2],[3,4,1]]},{"face":1,"slot":15,"pts":[[3,4,1],[3,4,2],[4,4,2],[4,4,1]]},{"face":1,"slot":17,"pts":[[0,4,2],[0,4,3],[1,4,3],[1,4,2]]},{"face":1,"slot":19,"pts":[[1,4,2],[1,4,3],[2,4,3],[2,4,2]]},{"face":1,"slot":21,"pts":[[2,4,2],[2,4,3],[3,4,3],[3,4,2]]},{"face":1,"slot":23,"pts":[[3,4,2],[3,4,3],[4,4,3],[4,4,2]]},{"face":1,"slot":25,"pts":[[0,4,3],[0,4,4],[1,4,4],[1,4,3]]},{"face":1,"slot":27,"pts":[[1,4,3],[1,4,4],[2,4,4],[2,4,3]]},{"face":1,"slot":29,"pts":[[2,4,3],[2,4,4],[3,4,4],[3,4,3]]},{"face":1,"slot":31,"pts":[[3,4,3],[3,4,4],[4,4,4],[4,4,3]]},{"face":2,"slot":32,"pts":[[0,0,0],[1,0,0],[1,1,0],[0,1,0]]},{"face":2,"slot":34,"pts":[[0,1,0],[1,1,0],[1,2,0],[0,2,0]]},{"face":2,"slot":36,"pts":[[0,2,0],[1,2,0],[1,3,0],[0,3,0]]},{"face":2,"slot":38,"pts":[[0,3,0],[1,3,0],[1,4,0],[0,4,0]]},{"face":2,"slot":40,"pts":[[1,0,0],[2,0,0],[2,1,0],[1,1,0]]},{"face":2,"slot":42,"pts":[[1,1,0],[2,1,0],[2,2,0],[1,2,0]]},{"face":2,"slot":44,"pts":[[1,2,0],[2,2,0],[2,3,0],[1,3,0]]},{"face":2,"slot":46,"pts":[[1,3,0],[2,3,0],[2,4,0],[1,4,0]]},{"face":2,"slot":48,"pts":[[2,0,0],[3,0,0],[3,1,0],[2,1,0]]},{"face":2,"slot":50,"pts":[[2,1,0],[3,1,0],[3,2,0],[2,2,0]]},{"face":2,"slot":52,"pts":[[2,2,0],[3,2,0],[3,3,0],[2,3,0]]},{"face":2,"slot":54,"pts":[[2,3,0],[3,3,0],[3,4,0],[2,4,0]]},{"face":2,"slot":56,"pts":[[3,0,0],[4,0,0],[4,1,0],[3,1,0]]},{"face":2,"slot":58,"pts":[[3,1,0],[4,1,0],[4,2,0],[3,2,0]]},{"face":2,"slot":60,"pts":[[3,2,0],[4,2,0],[4,3,0],[3,3,0]]},{"face":2,"slot":62,"pts":[[3,3,0],[4,3,0],[4,4,0],[3,4,0]]},{"face":3,"slot":33,"pts":[[0,0,4],[1,0,4],[1,1,4],[0,1,4]]},{"face":3,"slot":35,"pts":[[0,1,4],[1,1,4],[1,2,4],[0,2,4]]},{"face":3,"slot":37,"pts":[[0,2,4],[1,2,4],[1,3,4],[0,3,4]]},{"face":3,"slot":39,"pts":[[0,3,4],[1,3,4],[1,4,4],[0,4,4]]},{"face":3,"slot":41,"pts":[[1,0,4],[2,0,4],[2,1,4],[1,1,4]]},{"face":3,"slot":43,"pts":[[1,1,4],[2,1,4],[2,2,4],[1,2,4]]},{"face":3,"slot":45,"pts":[[1,2,4],[2,2,4],[2,3,4],[1,3,4]]},{"face":3,"slot":47,"pts":[[1,3,4],[2,3,4],[2,4,4],[1,4,4]]},{"face":3,"slot":49,"pts":[[2,0,4],[3,0,4],[3,1,4],[2,1,4]]},{"face":3,"slot":51,"pts":[[2,1,4],[3,1,4],[3,2,4],[2,2,4]]},{"face":3,"slot":53,"pts":[[2,2,4],[3,2,4],[3,3,4],[2,3,4]]},{"face":3,"slot":55,"pts":[[2,3,4],[3,3,4],[3,4,4],[2,4,4]]},{"face":3,"slot":57,"pts":[[3,0,4],[4,0,4],[4,1,4],[3,1,4]]},{"face":3,"slot":59,"pts":[[3,1,4],[4,1,4],[4,2,4],[3,2,4]]},{"face":3,"slot":61,"pts":[[3,2,4],[4,2,4],[4,3,4],[3,3,4]]},{"face":3,"slot":63,"pts":[[3,3,4],[4,3,4],[4,4,4],[3,4,4]]},{"face":4,"slot":64,"pts":[[4,0,0],[4,0,1],[4,1,1],[4,1,0]]},{"face":4,"slot":66,"pts":[[4,1,0],[4,1,1],[4,2,1],[4,2,0]]},{"face":4,"slot":68,"pts":[[4,2,0],[4,2,1],[4,3,1],[4,3,0]]},{"face":4,"slot":70,"pts":[[4,3,0],[4,3,1],[4,4,1],[4,4,0]]},{"face":4,"slot":72,"pts":[[4,0,1],[4,0,2],[4,1,2],[4,1,1]]},{"face":4,"slot":74,"pts":[[4,1,1],[4,1,2],[4,2,2],[4,2,1]]},{"face":4,"slot":76,"pts":[[4,2,1],[4,2,2],[4,3,2],[4,3,1]]},{"face":4,"slot":78,"pts":[[4,3,1],[4,3,2],[4,4,2],[4,4,1]]},{"face":4,"slot":80,"pts":[[4,0,2],[4,0,3],[4,1,3],[4,1,2]]},{"face":4,"slot":82,"pts":[[4,1,2],[4,1,3],[4,2,3],[4,2,2]]},{"face":4,"slot":84,"pts":[[4,2,2],[4,2,3],[4,3,3],[4,3,2]]},{"face":4,"slot":86,"pts":[[4,3,2],[4,3,3],[4,4,3],[4,4,2]]},{"face":4,"slot":88,"pts":[[4,0,3],[4,0,4],[4,1,4],[4,1,3]]},{"face":4,"slot":90,"pts":[[4,1,3],[4,1,4],[4,2,4],[4,2,3]]},{"face":4,"slot":92,"pts":[[4,2,3],[4,2,4],[4,3,4],[4,3,3]]},{"face":4,"slot":94,"pts":[[4,3,3],[4,3,4],[4,4,4],[4,4,3]]},{"face":5,"slot":65,"pts":[[0,0,0],[0,0,1],[0,1,1],[0,1,0]]},{"face":5,"slot":67,"pts":[[0,1,0],[0,1,1],[0,2,1],[0,2,0]]},{"face":5,"slot":69,"pts":[[0,2,0],[0,2,1],[0,3,1],[0,3,0]]},{"face":5,"slot":71,"pts":[[0,3,0],[0,3,1],[0,4,1],[0,4,0]]},{"face":5,"slot":73,"pts":[[0,0,1],[0,0,2],[0,1,2],[0,1,1]]},{"face":5,"slot":75,"pts":[[0,1,1],[0,1,2],[0,2,2],[0,2,1]]},{"face":5,"slot":77,"pts":[[0,2,1],[0,2,2],[0,3,2],[0,3,1]]},{"face":5,"slot":79,"pts":[[0,3,1],[0,3,2],[0,4,2],[0,4,1]]},{"face":5,"slot":81,"pts":[[0,0,2],[0,0,3],[0,1,3],[0,1,2]]},{"face":5,"slot":83,"pts":[[0,1,2],[0,1,3],[0,2,3],[0,2,2]]},{"face":5,"slot":85,"pts":[[0,2,2],[0,2,3],[0,3,3],[0,3,2]]},{"face":5,"slot":87,"pts":[[0,3,2],[0,3,3],[0,4,3],[0,4,2]]},{"face":5,"slot":89,"pts":[[0,0,3],[0,0,4],[0,1,4],[0,1,3]]},{"face":5,"slot":91,"pts":[[0,1,3],[0,1,4],[0,2,4],[0,2,3]]},{"face":5,"slot":93,"pts":[[0,2,3],[0,2,4],[0,3,4],[0,3,3]]},{"face":5,"slot":95,"pts":[[0,3,3],[0,3,4],[0,4,4],[0,4,3]]}]}}, RHO=52.1, GAP=20.0, VB=700, NS='http://www.w3.org/2000/svg';
+/* 球色 = 本体 PALETTE 的前 6 个（与投影游戏同一套色，深蓝底上更协调） */
+var PAL10=['#6FD463','#FF8354','#5AA9FF','#FFD447','#B98CFF','#4ED9D0','#FF7BAF','#FF6B6B','#9CE86B','#7FB2FF'];
+var FCOL=PAL10.slice(0,6);   /* 6 个面的【默认】颜色 = 本体 PALETTE 前 6 个；实际用 G.fcol */
+var svg=document.getElementById('board');
+function el(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e;}
+
+/* =========================================================
+   ★球粒模型（做"沿圆弧转圈"动画的前提）★
+   G.pid[slot]  = 这个位置上现在是谁（球粒 id）
+   G.at[pid]    = 这个球粒现在在哪（slot）
+   G.pcol[pid]  = 球粒自己的颜色 —— 球粒=魔方贴纸，转动时是【贴纸在走】，颜色跟着球粒走
+   转动 = 环上 pid 整体位移；于是每颗球粒的"旧 slot -> 新 slot"都在同一条圆上
+        ⇒ 可以沿【该圆的弧】插值，视觉上就是"跟着那条圆线转圈"，而不是直线平移。
+   ========================================================= */
+var G={n:0,s:1,ox:VB/2,oy:VB/2,ballRArr:[],data:null,
+       slots:[],circles:[],faces:[],tiles:[],
+       pid:[],pcol:[],at:[],prevAt:[],prevPid:[],hist:[],moves:0,sel:-1,busy:false,
+       skin:'light',spin:null,fcol:null,faceSel:0};
+/* ★fcol = 6 个面各自的颜色（先生 2026-10-07 第 3 条：可自定义）★
+   fcol 的索引 = 面号 0..5；球的 fill 与 3D 的贴纸色都读它。
+   isSolved 判的是【球粒的面号】而不是色值 ⇒ 换色不影响胜负判定。 */
+G.fcol=FCOL.slice();
+
+/* ---- 皮肤：画在 canvas / SVG 里的颜色不能靠 CSS，得按皮肤分支给 ---- */
+function skinPal(){
+  return G.skin==='light'
+    ? {boardLine:'rgba(30,45,70,.42)', ballStroke:'#FFFFFF',
+       cubeGap:'rgba(255,255,255,.94)', shadeBase:0.88, shadeAmp:0.12}
+    : {boardLine:'rgba(255,255,255,.34)', ballStroke:'#0B111B',
+       cubeGap:'rgba(11,17,27,.88)', shadeBase:0.70, shadeAmp:0.30};
+}
+function applySkin(){
+  document.body.classList.toggle('skin-light', G.skin==='light');
+  document.querySelectorAll('#segSkin button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.skin===G.skin);
+  });
+  /* ★圆线/球的描边一律交给 CSS★：内联 stroke 会盖掉 body.skin-light 的规则
+     （第一版就是这么错的：白底下量到的还是 rgba(255,255,255,.34)） */
+  drawCube();
+}
+function setSkin(s){ G.skin = (s==='light')?'light':'dark'; applySkin(); }
+
+/* ================= 载入某一阶 ================= */
+function loadLevel(n){
+  var d=GEO[String(n)]; G.n=n; G.data=d;
+  G.slots=d.slots; G.circles=d.circles; G.faces=d.faces; G.tiles=d.tiles;
+  /* ★平面图缩放：必须按【圆的最外点】算★
+     圆心离图心 RHO，最外圆半径 RHO+GAP*N ⇒ 最远点 = 2*RHO + GAP*N
+     ✗ 曾写 RHO+GAP*N 当最大半径 ⇒ 圆线被 SVG 边框裁掉（先生："游戏内容超过容积了"） */
+  G.s=(VB/2-12)/(2*RHO+GAP*n);
+  G.ox=VB/2; G.oy=VB/2;
+  /* 球半径：逐点按"该点到最近邻的距离"定（一处极值不能拖累全部，同一阶里密度也不均匀） */
+  var cnt=G.slots.length, arr=new Array(cnt), i, j;
+  for(i=0;i<cnt;i++){
+    var best=1e9;
+    for(j=0;j<cnt;j++){ if(i===j) continue;
+      var dd=Math.hypot(G.slots[i].x-G.slots[j].x, G.slots[i].y-G.slots[j].y);
+      if(dd<best) best=dd;
+    }
+    arr[i]=Math.max(4.6, Math.min(11, best*G.s*0.46));
+  }
+  G.ballRArr=arr;
+  /* 球粒初始态：pid==at==slot（buildBoard / paintBalls 都要读它） */
+  G.pcol=G.slots.map(function(s){return s.face;});
+  G.pid=[]; G.at=[];
+  for(i=0;i<cnt;i++){ G.pid[i]=i; G.at[i]=i; }
+  document.querySelectorAll('#lvl button').forEach(function(b){
+    b.classList.toggle('on', +b.dataset.n===n);
+  });
+  document.getElementById('tip').innerHTML=
+    '点住一条圆线或一颗球 → <b>往上滑 = 顺时针转一层</b> · <b>往下滑 = 逆时针转一层</b>；'
+    +'沿该圆走 <b>'+n+' 格 = 该层 90&deg;</b>，左边那颗 3D 会跟着一起转'
+    +'<br>也可以<b>先点一下选中一层</b>，再按右边的 <b>&#9650; &#9660;</b> 转它';
+  renderFacePop();   /* 6 个面心的方位角与阶数无关 ⇒ 换阶只重绘色块的选中态 */
+}
+function pxp(s){return {x:G.ox+s.x*G.s, y:G.oy+s.y*G.s};}
+
+/* ================= 打乱 / 转动 / 胜负 ================= */
+function applyTurn(ci,d){
+  var seq=G.circles[ci].members, m=seq.length, tmp=[], i;
+  for(i=0;i<m;i++) tmp[i]=G.pid[seq[i]];
+  for(i=0;i<m;i++) G.pid[seq[(i+d+m)%m]]=tmp[i];
+  for(i=0;i<m;i++) G.at[G.pid[seq[i]]]=seq[i];
+}
+function newPuzzle(){
+  var d=G.data, m=d.slots.length, i;
+  G.pcol=d.slots.map(function(s){return s.face;});
+  var steps=Math.max(6,3*G.n), tries=0;
+  do{
+    for(i=0;i<m;i++){ G.pid[i]=i; G.at[i]=i; }
+    for(var t=0;t<steps;t++)
+      applyTurn(Math.floor(Math.random()*d.circles.length), Math.random()<.5?1:-1);
+    tries++;
+  }while(isSolved() && tries<20);
+  G.hist=[]; G.moves=0; G.sel=-1; G.busy=false; G.spin=null;
+  G.prevAt=G.at.slice(); G.prevPid=G.pid.slice();
+  paintBalls(); drawCube(); highlight(); updateHUD();
+}
+function isSolved(){
+  for(var f=0;f<6;f++){
+    var ss=G.faces[f].slots, c0=G.pcol[G.pid[ss[0]]];
+    for(var j=1;j<ss.length;j++) if(G.pcol[G.pid[ss[j]]]!==c0) return false;
+  }
+  return true;
+}
+function turn(ci,d){
+  if(G.busy) return;
+  G.prevAt=G.at.slice(); G.prevPid=G.pid.slice();
+  applyTurn(ci,d);
+  G.hist.push([ci,d]); G.moves++; G.sel=ci; highlight();
+  G.spin=spinOf(ci,d); G.busy=true; arrowState(); drawCube();
+  animArc(ci,d,function(){ G.spin=null; G.busy=false; arrowState(); drawCube(); updateHUD(); });
+}
+function undo(){
+  if(G.busy || !G.hist.length) return;
+  var h=G.hist.pop();
+  G.prevAt=G.at.slice(); G.prevPid=G.pid.slice();
+  applyTurn(h[0],-h[1]); G.moves++; G.sel=h[0]; highlight();
+  G.spin=spinOf(h[0],-h[1]); G.busy=true; arrowState(); drawCube();
+  animArc(h[0],-h[1],function(){ G.spin=null; G.busy=false; arrowState(); drawCube(); updateHUD(); });
+}
+
+/* ================= ★沿圆弧转圈★ ================= */
+/* 拆成两半：arcPrepare = "这条环上哪些球粒要动、各自起点角、角差多少"
+             arcSet     = "按缓动值 ez 把它们的屏幕坐标摆到弧上"
+   animArc 用 rAF 跑这两半；验收脚本也能用同一对函数在任意 t 定格 ——
+   定格出来的是【真正动画用的那套坐标】，不是另写一份近似。 */
+function arcPrepare(ci,d){
+  var c=G.circles[ci], o=pxp({x:c.cx,y:c.cy}), R=c.R*G.s, T=Math.PI*2;
+  /* ★方向上不能再"看 d 的正负"★：环序下 d=+N 与 d=-N 谁是顺时针取决于该圆的 cw
+     （实测每条圆 cw 都是 -1）。正解：dir = sign(d*cw)，cw=1 表示"d 为正 = 顺时针"。 */
+  var dir=(d*(c.cw||1))>=0 ? 1 : -1, items=[], pid;
+  for(pid=0; pid<G.at.length; pid++){
+    var b=G.prevAt[pid], a=G.at[pid];
+    if(b===a) continue;                       // 没动的球粒（不在环上）不参与
+    var pb=pxp(G.slots[b]), pa=pxp(G.slots[a]);
+    var a0=Math.atan2(pb.y-o.y, pb.x-o.x);
+    var a1=Math.atan2(pa.y-o.y, pa.x-o.x);
+    var da=((a1-a0)%T+T)%T;                   // 先取正向(顺时针)角差 ∈(0,T)
+    if(dir<0) da-=T;                          // 逆时针 => 取负向
+    items.push({el:G.elByPid[pid], a0:a0, da:da, pid:pid});
+  }
+  return {o:o, R:R, items:items, ci:ci, d:d, dir:dir};
+}
+function arcSet(ap, ez){
+  for(var i=0;i<ap.items.length;i++){
+    var it=ap.items[i], ang=it.a0+it.da*ez;
+    it.el.style.transform='translate('+(ap.o.x+ap.R*Math.cos(ang))+'px,'+(ap.o.y+ap.R*Math.sin(ang))+'px)';
+  }
+}
+function animArc(ci,d,done){
+  var ap=arcPrepare(ci,d), i;
+  for(i=0;i<ap.items.length;i++) ap.items[i].el.style.transition='none';
+  if(!ap.items.length){ paintBalls(); done&&done(); return; }
+  var t0=performance.now(), DUR=330;
+  function step(now){
+    var t=Math.min(1,(now-t0)/DUR);
+    var ez=t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+    arcSet(ap, ez);
+    /* ★左边 3D 用同一个缓动值一起转★（同一时刻、同一进度、同时结束） */
+    if(G.spin){ G.spin.ez=ez; drawCube(); }
+    if(t<1) requestAnimationFrame(step);
+    else { paintBalls(); done&&done(); }
+  }
+  requestAnimationFrame(step);
+}
+
+/* ================= 平面图渲染 ================= */
+var gLine=el('g',{}), gHit=el('g',{}), gBall=el('g',{});
+svg.appendChild(gLine); svg.appendChild(gHit); svg.appendChild(gBall);
+var gEls=[], hitEls=[], lineEls=[];
+function buildBoard(){
+  svg.setAttribute('viewBox','0 0 '+VB+' '+VB);
+  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  while(gLine.firstChild) gLine.removeChild(gLine.firstChild);
+  while(gHit.firstChild)  gHit.removeChild(gHit.firstChild);
+  while(gBall.firstChild) gBall.removeChild(gBall.firstChild);
+  gEls=[]; hitEls=[]; lineEls=[];
+  var i;
+  for(i=0;i<G.circles.length;i++){
+    var c=G.circles[i], o=pxp({x:c.cx,y:c.cy});
+    var ln=el('circle',{cx:o.x,cy:o.y,r:c.R*G.s,class:'line'});
+    gLine.appendChild(ln); lineEls.push(ln);
+  }
+  for(i=0;i<G.circles.length;i++){
+    var c2=G.circles[i], o2=pxp({x:c2.cx,y:c2.cy});
+    var ht=el('circle',{cx:o2.x,cy:o2.y,r:c2.R*G.s,fill:'none',stroke:'transparent',
+      'stroke-width':24,'pointer-events':'stroke','class':'hit'});
+    ht.dataset.ci=i; gHit.appendChild(ht); hitEls.push(ht);
+  }
+  /* 球元素按【球粒】建（pid 与初始 slot 一一对应） */
+  for(i=0;i<G.at.length;i++){
+    var s=G.slots[G.at[i]], p=pxp(s);
+    var b=el('circle',{r:G.ballRArr[G.at[i]],cx:0,cy:0,class:'ball'});
+    b.style.transform='translate('+p.x+'px,'+p.y+'px)';
+    b.dataset.si=i;
+    gBall.appendChild(b); gEls.push(b);
+  }
+  G.elByPid=gEls;
+  applySkin();                 /* 元素是新建的 ⇒ 皮肤要重新刷到它们身上 */
+}
+function paintBalls(){
+  for(var pid=0; pid<G.at.length; pid++){
+    var at=G.at[pid], s=G.slots[at], p=pxp(s), b=gEls[pid];
+    b.style.transition='none';
+    b.style.transform='translate('+p.x+'px,'+p.y+'px)';
+    b.setAttribute('r',G.ballRArr[at]);
+    b.setAttribute('fill',G.fcol[G.pcol[pid]]);
+  }
+}
+function highlight(){
+  for(var i=0;i<lineEls.length;i++)
+    lineEls[i].setAttribute('class','line'+(i===G.sel?' sel':''));
+  arrowState();   /* 选中层变了 ⇒ 上/下箭头的可点状态跟着变 */
+}
+function updateHUD(){
+  var solved=isSolved();
+  document.getElementById('stat').innerHTML=
+    (solved?'<b>🎉 已复原</b> · ':'')+'步数 <b>'+G.moves+'</b>';
+  document.getElementById('win').classList.toggle('show',solved&&G.moves>0);
+}
+
+/* ================= 3D 魔方（照本体口径） ================= */
+var A0={x:-0.70711,y:0.70711,z:0}, B0={x:-0.40825,y:-0.40825,z:0.81650};
+var N0={x:0.57735,y:0.57735,z:0.57735}, ROTK=0.0082;
+function dot3(a,b){return a.x*b.x+a.y*b.y+a.z*b.z;}
+function mm(A,B){var C=[],i,j,k,s;
+  for(i=0;i<3;i++)for(j=0;j<3;j++){s=0;for(k=0;k<3;k++)s+=A[i*3+k]*B[k*3+j];C[i*3+j]=s;}return C;}
+function rotAxis(ax,ay,az,th){
+  var nx=Math.hypot(ax,ay,az); if(nx<1e-9) return [1,0,0,0,1,0,0,0,1];
+  ax/=nx;ay/=nx;az/=nx;
+  var c=Math.cos(th),s=Math.sin(th),t=1-c;
+  return [t*ax*ax+c,t*ax*ay-s*az,t*ax*az+s*ay,
+          t*ax*ay+s*az,t*ay*ay+c,t*ay*az-s*ax,
+          t*ax*az-s*ay,t*ay*az+s*ax,t*az*az+c];
+}
+/* ★默认视角 = 单位阵（从 (0,0,0) 角看的标准等轴视角）★
+   不用本体 rotAxis(N0,PI)：那会把画面绕视线转 180°，3D 里 w=0 面跑到"下"，
+   而平面图里 w=0 面(BC-0)在"下" —— 左右方位会反。用单位阵后方位角逐一吻合(误差 0°)。 */
+function defaultM(){return [1,0,0,0,1,0,0,0,1];}
+var M=defaultM();
+function cam(p){return {x:M[0]*p.u+M[1]*p.v+M[2]*p.w,
+                        y:M[3]*p.u+M[4]*p.v+M[5]*p.w,
+                        z:M[6]*p.u+M[7]*p.v+M[8]*p.w};}
+function scr(u,v,w,cen){
+  var q=cam({u:u-cen,v:v-cen,w:w-cen});
+  return {x:dot3(q,A0), y:-dot3(q,B0), z:dot3(q,N0)};
+}
+var cv=document.getElementById('cubeCv'), ctx=cv.getContext('2d'), CW=0, CH=0, CDPR=0;
+function fitCanvas(){
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var w=cv.clientWidth, h=cv.clientHeight;
+  /* ★尺寸没变就别重设 width★ —— 赋值 canvas.width 会清空画布并重分配，
+     跟着动画每秒调 60 次会白白闪烁+掉帧 */
+  if(w===CW && h===CH && dpr===CDPR) return;
+  CW=w; CH=h; CDPR=dpr;
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+/* 绕【过立方体中心的某根轴】转 ph：与 geo 里 ring_ang 的测角方向一致（+ph = 绕轴角 +ph） */
+function rotPtAbout(p, ax, ph, cen){
+  var a0=p[0]-cen, a1=p[1]-cen, a2=p[2]-cen, C=Math.cos(ph), S=Math.sin(ph), o;
+  /* ★四分之一/半圈要【精确】★：Math.cos(Math.PI/2)=6.1e-17 这个残差会让
+     "转过来的坐标"与"静止摆放的坐标"差最后一位 ⇒ 屏幕上差 ~1e-14px ⇒ 抗锯齿边缘翻采样。
+     把 |C|、|S∓1| 的浮点噪声按 1e-9 的门槛夹到 0/±1，整格旋转就变成【精确置换】。 */
+  if(Math.abs(C)<1e-9) C=0; if(Math.abs(S)<1e-9) S=0;
+  if(Math.abs(S-1)<1e-9) S=1; else if(Math.abs(S+1)<1e-9) S=-1;
+  if(ax===0)      o=[a0, a1*C-a2*S, a1*S+a2*C];
+  else if(ax===1) o=[a0*C+a2*S, a1, a2*C-a0*S];
+  else            o=[a0*C-a1*S, a0*S+a1*C, a2];
+  return [o[0]+cen, o[1]+cen, o[2]+cen];
+}
+function rotVecAbout(v, ax, ph){
+  var o=rotPtAbout([v[0],v[1],v[2]], ax, ph, 0);
+  return [o[0],o[1],o[2]];
+}
+/* ============================================================
+   ★ 3D 魔方：转动时左边这一颗要【跟着转】★
+   先生 2026-10-07：「动的时候左边的3D魔方要跟着转」
+   G.spin = {axis, rot, ez, set} —— 该层绕自己的轴，按同一个缓动值转 rot*ez。
+   为什么可以这么转（而且不是"看起来差不多"）：几何里已经验证过
+     ⌈圆上走 N 格 ⟺ 该层绕轴严格 ±90°，且绕轴 ±90° 后每张贴纸 4 个角精确落到目标贴纸⌋，
+   所以 ez=1 时 3D 的落点【就是】平面图那一手的结果，不会"转完再跳一下"。
+   ============================================================ */
+function drawCube(){
+  if(!G.data) return;
+  fitCanvas();
+  ctx.clearRect(0,0,CW,CH);
+  var N=G.n, cen=N/2, HD=N*Math.sqrt(3)/2;
+  var sc=Math.min(CW,CH)*0.44/HD, ox=CW/2, oy=CH/2, i, k;
+  /* ★不透明立方体只画【外法向朝观察者】的 3 个面★（等轴投影下 6 面互不重叠，全画会看穿） */
+  var Lc=[-0.5,-0.3,-0.8], Ln=Math.hypot(Lc[0],Lc[1],Lc[2]);
+  Lc=[Lc[0]/Ln,Lc[1]/Ln,Lc[2]/Ln];
+  var pal=skinPal();
+  function shadeHex(h,kk){
+    if(!h) return '#888888';
+    function cc(a,b){return Math.min(255,Math.round(parseInt(h.slice(a,b),16)*kk));}
+    return 'rgb('+cc(1,3)+','+cc(3,5)+','+cc(5,7)+')';
+  }
+  for(i=0;i<G.faces.length;i++){
+    var nf=G.faces[i].nrm, qn=cam({u:nf[0],v:nf[1],w:nf[2]});
+    G.faces[i]._vis = dot3(qn,N0) < 0;
+    G.faces[i]._k = pal.shadeBase + pal.shadeAmp*Math.max(0, dot3(qn,{x:Lc[0],y:Lc[1],z:Lc[2]}));
+  }
+  var sp = G.spin, ph = sp ? sp.rot*sp.ez : 0;
+  var list=[];
+  for(i=0;i<G.tiles.length;i++){
+    var t=G.tiles[i], F=G.faces[t.face], pts=t.pts;
+    var col=G.fcol[G.pcol[G.pid[t.slot]]], nr=F.nrm, kk=F._k;
+    if(sp && sp.set[t.slot]){
+      /* 这一层的贴纸：位置绕轴转，颜色用【转动前】的 —— 贴纸带着自己的颜色在走 */
+      col = G.fcol[G.pcol[G.prevPid[t.slot]]];
+      nr = rotVecAbout(F.nrm, sp.axis, ph);
+      var np=[];
+      for(k=0;k<4;k++) np.push(rotPtAbout(pts[k], sp.axis, ph, cen));
+      pts = np;
+      var qn2=cam({u:nr[0],v:nr[1],w:nr[2]});
+      kk = pal.shadeBase + pal.shadeAmp*Math.max(0, dot3(qn2,{x:Lc[0],y:Lc[1],z:Lc[2]}));
+    }
+    var qv=cam({u:nr[0],v:nr[1],w:nr[2]});
+    if(dot3(qv,N0) >= 0) continue;              /* 转动的贴纸法向也在转 ⇒ 逐张贴纸判可见 */
+    var cx=0,cy=0,cs=[], wx=0,wy=0,wz=0;
+    for(k=0;k<4;k++){
+      var s=scr(pts[k][0],pts[k][1],pts[k][2],cen);
+      cs.push(s); cx+=s.x; cy+=s.y;
+      wx+=pts[k][0]; wy+=pts[k][1]; wz+=pts[k][2];
+    }
+    cx/=4; cy/=4; wx/=4; wy/=4; wz/=4;
+    var q=[];
+    for(k=0;k<4;k++) q.push({x:ox+(cx+(cs[k].x-cx)*0.86)*sc,
+                             y:oy+(cy+(cs[k].y-cy)*0.86)*sc});
+    /* ★把四边形的【起笔角 + 绕向】都规范化★
+       同一个四边形，"转过来的顶点顺序"与"原位顶点顺序"可能从不同的角起笔、且绕向相反。
+       形状一样，但光栅器在顶点上的边缘取样会差一点点 —— 实测两者逐像素差 33 个点、最大 17 级。
+       先取 (y,x) 字典序最小的角当起笔，再让有向面积为正：这与"原来从哪个角、往哪绕"无关。 */
+    var k0=0;
+    for(k=1;k<4;k++) if(q[k].y<q[k0].y || (q[k].y===q[k0].y && q[k].x<q[k0].x)) k0=k;
+    var qr=[];
+    for(k=0;k<4;k++) qr.push(q[(k0+k)%4]);
+    var area=0;
+    for(k=0;k<4;k++){ var n2=qr[(k+1)%4]; area += qr[k].x*n2.y - n2.x*qr[k].y; }
+    if(area<0) q=[qr[0], qr[3], qr[2], qr[1]]; else q=qr;
+    /* ★排序键一律用【世界坐标】，不用屏幕浮点★
+       贴纸中心的三个世界坐标都是半整数 ⇒ 量化后精确；且"转过来的位置"与
+       "静止摆放的位置"在世界坐标里是同一个数 ⇒ 两条路径的绘制顺序【逐项相同】
+       ⇒ 描边叠压顺序相同 ⇒ ez=1 与静止重绘逐像素一致。
+       （此前用屏幕 z 排序：转动路径 cos90° 的 6e-17 残差会让 z 在末位翻序，
+         等深贴纸的画序一变，共用边上的描边叠压就变，冒出 ~2.5 万像素的 1~42 级色差） */
+    list.push({z:Math.round((wx+wy+wz)*1e3), wx:Math.round(wx*1e3), wy:Math.round(wy*1e3),
+               q:q, col:shadeHex(col,kk)});
+  }
+  /* 深度大的先画（远的在下）；同深度按世界位置定序 ⇒ 与路径无关 */
+  list.sort(function(a,b){return (b.z-a.z)||(a.wx-b.wx)||(a.wy-b.wy);});
+  ctx.lineJoin='round';
+  for(i=0;i<list.length;i++){
+    var it=list[i];
+    ctx.beginPath();
+    ctx.moveTo(it.q[0].x,it.q[0].y);
+    for(var k2=1;k2<4;k2++) ctx.lineTo(it.q[k2].x,it.q[k2].y);
+    ctx.closePath();
+    ctx.fillStyle=it.col; ctx.fill();
+    ctx.strokeStyle=pal.cubeGap; ctx.lineWidth=1.4; ctx.stroke();
+  }
+  G.lastQuads=list;                 /* 供验收脚本比对（动画 ez=1 vs 静止重绘） */
+}
+/* 由"转多少格"算出 3D 这层要绕轴转多少弧度 */
+function spinOf(ci,d){
+  var c=G.circles[ci], n=G.n;
+  var k=Math.round(d/n)%4;            // d 必须是 N 的整数倍
+  if(k===3) k=-1; else if(k===-2) k=2;
+  var set={}, mem=c.members, i;
+  for(i=0;i<mem.length;i++) set[mem[i]]=1;
+  return {axis:c.axis, rot:k*Math.PI/2, ez:0, set:set, ci:ci, d:d};
+}
+
+/* ================= 交互：平面图 ================= */
+/* ★★2026-10-08 修：si 是【球粒 id (pid)】，不是槽位 index★★
+   证据链：buildBoard 里 `b.dataset.si=i`，这个 i 是 gEls / G.at 的下标 ⇒ 就是 pid；
+   而球粒会到处跑（newPuzzle 一开始就用 steps=max(6,3n) 步随机转动打乱 G.at），
+   所以必须先用 G.at[pid] 取它【当前所在的槽位】，再拿那个槽位去判属于哪条圆。
+
+   ✗ 原写法 `var s=G.slots[si]`：把 pid 直接当槽位用。
+     初始化/重开题那一瞬 pid==slot 才对，之后 at 一被打乱就查错位置
+     ⇒ 点一颗球却转了另一条线，而且【从第一步起就错】。
+     实测（_mirror_bug_repro.js 真鼠标手势）：全新题 36/54 颗球判错层；
+     真手势点 pid=0（用户指向 ci=3）实际转动 ci=0。先生 2026-10-08 报的"严重 BUG"即此。
+
+   判圆口径（未改）：球落在两条圆的交点上，取【切线最接近竖直】的那条
+   —— 因为手势是上下滑，切线越竖直，球沿线滑动越自然。 */
+function ballCircle(si){
+  var s=G.slots[G.at[si]], best=-1, bs=-1;
+  for(var i=0;i<s.circles.length;i++){
+    var c=G.circles[s.circles[i]];
+    var tx=-(s.y-c.cy), ty=(s.x-c.cx);
+    var a=Math.abs(ty)/Math.hypot(tx,ty);
+    if(a>bs){bs=a;best=s.circles[i];}
+  }
+  return best;
+}
+function target(ev){
+  var t=ev.target;
+  if(t.dataset.si!==undefined) return {si:+t.dataset.si, ci:null};
+  if(t.dataset.ci!==undefined) return {si:null, ci:+t.dataset.ci};
+  return null;
+}
+var sw=null;
+svg.addEventListener('pointerdown',function(ev){
+  if(G.busy) return;
+  var tg=target(ev); if(!tg) return;
+  sw={y:ev.clientY, tg:tg, cix:null};
+  svg.setPointerCapture(ev.pointerId);
+});
+svg.addEventListener('pointermove',function(ev){
+  if(!sw) return;
+  var dy=ev.clientY-sw.y;
+  if(Math.abs(dy)>8 && sw.cix===null){
+    sw.cix = sw.tg.si!==null ? ballCircle(sw.tg.si) : sw.tg.ci;
+    G.sel=sw.cix; highlight();
+  }
+});
+svg.addEventListener('pointerup',function(ev){
+  if(!sw) return;
+  var dy=ev.clientY-sw.y, st=sw; sw=null;
+  if(Math.abs(dy)<12){
+    G.sel=(st.tg.si!==null? ballCircle(st.tg.si) : st.tg.ci);
+    highlight(); return;
+  }
+  var ci = st.cix!==null ? st.cix : (st.tg.si!==null? ballCircle(st.tg.si) : st.tg.ci);
+  /* ★一次滑动 = 该层转 90°（= 沿该圆走 N 格）★
+     不是"走 1 格"：只有走 N 格才在 3D 里是【严格的绕轴 90° 刚体转动】
+     （几何自检：绕轴 ±90° 后每张贴纸 4 个角精确落到目标贴纸，误差 0），
+     所以左边那颗 3D 才能真的跟着转整层。c.cw 是该圆的顺时针符号。 */
+  turn(ci, (dy<0?1:-1) * G.circles[ci].cw * G.n);
+});
+svg.addEventListener('pointercancel',function(){sw=null;});
+
+/* ================= 交互：缩略图拖动转视角 ================= */
+var cu=document.getElementById('cubeWrap');
+cu.addEventListener('pointerdown',function(ev){
+  cu.classList.add('dragging'); cu.setPointerCapture(ev.pointerId);
+  cu._d={x:ev.clientX,y:ev.clientY};
+});
+cu.addEventListener('pointermove',function(ev){
+  if(!cu._d) return;
+  var dx=ev.clientX-cu._d.x, dy=ev.clientY-cu._d.y;
+  cu._d={x:ev.clientX,y:ev.clientY};
+  M=mm(mm(rotAxis(A0.x,A0.y,A0.z,dy*ROTK),rotAxis(-B0.x,-B0.y,-B0.z,dx*ROTK)),M);
+  drawCube();
+});
+['pointerup','pointercancel'].forEach(function(t){
+  cu.addEventListener(t,function(){cu.classList.remove('dragging');cu._d=null;});
+});
+
+/* =========================================================
+   ★自定义每面颜色 —— 浮层（先生 2026-10-07 第 3 条）★
+   ① 颜色存 G.fcol[6]（索引 = 面号）：球 fill 与 3D 贴纸色都读它；
+      isSolved 判【球粒的面号】，与色值无关 ⇒ 换色不影响胜负、不重新出题。
+   ② 6 个色块按平面图上的【真实方位角】环摆 —— 方位角就是 geo 里各面心的 deg
+      (AB-0 210 左上 / AB-1 30 右下 / BC-0 90 下 / BC-1 270 上 / AC-0 150 左下 / AC-1 330 右上)。
+      屏幕位置 = (中心 + r*cos 角度, 中心 + r*sin 角度)，y 向下为正，与 geo 同一口径。
+   ③ 撞色 ⇒ 与持有该色的面【交换】，保证 6 面的色始终互不相同。
+   ========================================================= */
+var FRING=100, FRINGC=135;
+var facePopEl=document.getElementById('facePop'), faceRingEl=document.getElementById('faceRing'),
+    faceSwEl=document.getElementById('faceSw'), faceColorEl=document.getElementById('faceColor');
+function renderFacePop(){
+  var i, h='';
+  for(i=0;i<6;i++){
+    var f=G.faces[i], a=f.deg*Math.PI/180;
+    var x=FRINGC+FRING*Math.cos(a), y=FRINGC+FRING*Math.sin(a);
+    h+='<div class="fd'+(i===G.faceSel?' on':'')+'" data-f="'+i+'" title="'+f.az+'（'+f.name+'）"'
+      +' style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px;background:'+G.fcol[i]+'">'+f.az+'</div>';
+  }
+  faceRingEl.innerHTML=h;
+  h='';
+  for(i=0;i<PAL10.length;i++)
+    h+='<i data-c="'+PAL10[i]+'" class="'+(G.fcol[G.faceSel]===PAL10[i]?'on':'')
+      +'" style="background:'+PAL10[i]+'"></i>';
+  faceSwEl.innerHTML=h;
+  if(faceColorEl) faceColorEl.value=String(G.fcol[G.faceSel]).toLowerCase();
+}
+function setFaceColor(c){
+  c=String(c||'').toUpperCase();
+  if(!/^#[0-9A-F]{6}$/.test(c)) return;
+  var fi=G.faceSel, j=G.fcol.indexOf(c);
+  if(j===fi) return;
+  if(j>=0){ var oldc=G.fcol[fi]; G.fcol[fi]=c; G.fcol[j]=oldc; }   /* 撞色 ⇒ 交换 */
+  else G.fcol[fi]=c;
+  renderFacePop(); paintBalls(); drawCube();      /* ★只刷外观，绝不 newPuzzle★ */
+}
+function resetFaceColors(){ G.fcol=FCOL.slice(); renderFacePop(); paintBalls(); drawCube(); }
+function openFacePop(v){ facePopEl.classList.toggle('show',!!v); if(v) renderFacePop(); }
+faceRingEl.addEventListener('click',function(ev){
+  var t=ev.target.closest?ev.target.closest('.fd'):null; if(!t) return;
+  G.faceSel=+t.dataset.f; renderFacePop();
+});
+faceSwEl.addEventListener('click',function(ev){
+  var t=ev.target.closest?ev.target.closest('i'):null; if(!t) return;
+  setFaceColor(t.dataset.c);
+});
+if(faceColorEl) faceColorEl.addEventListener('input',function(){ setFaceColor(this.value); });
+document.getElementById('faceReset').addEventListener('click',resetFaceColors);
+document.getElementById('faceClose').addEventListener('click',function(){ openFacePop(false); });
+facePopEl.addEventListener('click',function(ev){ if(ev.target===facePopEl) openFacePop(false); });
+
+/* ================= 按钮 ================= */
+document.querySelectorAll('#lvl button').forEach(function(b){
+  b.addEventListener('click',function(){ if(G.busy) return; start(+b.dataset.n); });
+});
+document.getElementById('btnNew').addEventListener('click',function(){ if(G.busy) return; newPuzzle(); });
+document.getElementById('btnResetView').addEventListener('click',function(){ M=defaultM(); drawCube(); });
+document.getElementById('btnUndo').addEventListener('click',undo);
+document.getElementById('btnFace').addEventListener('click',function(){ if(G.busy) return; openFacePop(true); });
+document.getElementById('win').addEventListener('click',function(){
+  document.getElementById('win').classList.remove('show'); newPuzzle();
+});
+document.querySelectorAll('#segSkin button').forEach(function(b){
+  b.addEventListener('click',function(){ setSkin(b.dataset.skin); });
+});
+window.addEventListener('resize',function(){ drawCube(); });
+
+/* ================= 启动 ================= */
+/* =========================================================
+   ★上/下箭头：辅助转动（先生 2026-10-08 第 3 条）★
+   与"在圆线上往上/往下滑"【完全等价】：都是转【当前选中的那一层】。
+     上箭头 = 往上滑 = 顺时针 ； 下箭头 = 往下滑 = 逆时针
+   口径照抄 pointerup 那一行：turn(ci,(dy<0?1:-1)*cw*n)，即上滑取 +1。
+   选中方式：点一下某条圆线或某颗球（单击即选中、线变金）；
+   两种转动方式可随时混用。
+   ★必须放在 start(3) 之前★ —— start → newPuzzle → highlight → arrowState 会用到这两个元素。
+   ========================================================= */
+var btnUp=document.getElementById('btnUp'), btnDown=document.getElementById('btnDown');
+function arrowState(){
+  if(!btnUp || !btnDown) return;          /* 防御：任何早期调用都不炸 */
+  var ok=(G.sel>=0 && !G.busy);
+  btnUp.disabled=!ok; btnDown.disabled=!ok;
+}
+function turnSel(sgn){
+  if(G.busy || G.sel<0) return;
+  turn(G.sel, sgn*G.circles[G.sel].cw*G.n);
+}
+btnUp.addEventListener('click',function(){ turnSel(1); });
+btnDown.addEventListener('click',function(){ turnSel(-1); });
+function start(n){ loadLevel(n); buildBoard(); newPuzzle(); }
+start(3);
+window.__MIRROR__={G:G, isSolved:isSolved, turn:turn, start:start, undo:undo,
+  applyTurn:applyTurn, newPuzzle:newPuzzle, animArc:animArc,
+  arcPrepare:arcPrepare, arcSet:arcSet, highlight:highlight, updateHUD:updateHUD,
+  sc:function(){return G.s;}, ballCircle:ballCircle,
+  setSkin:setSkin, skinPal:skinPal, spinOf:spinOf, rotPtAbout:rotPtAbout,
+  turnSel:turnSel, arrowState:arrowState,
+  isBusy:function(){return G.busy;}, paintBalls:paintBalls, drawCube:drawCube,
+  setFaceColor:setFaceColor, resetFaceColors:resetFaceColors, renderFacePop:renderFacePop,
+  openFacePop:openFacePop, PAL10:PAL10, DEFCOL:FCOL};
+</script>
+</body></html>

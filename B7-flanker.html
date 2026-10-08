@@ -27,7 +27,6 @@ body{
 }
 .panel-title{color:#1DE9B6;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
 .diff-group{margin-bottom:2px;}
-.diff-label{color:rgba(214,247,240,0.45);font-size:11px;margin-bottom:3px;}
 .diff-btns{display:flex;gap:5px;}
 .diff-btn{
   flex:1;padding:6px 0;border-radius:8px;
@@ -195,16 +194,7 @@ body{
     </div>
     <div class="panel-title" style="margin-top:2px;">难度选择</div>
     <div class="diff-group">
-      <div class="diff-label">初级</div>
-      <div class="diff-btns" id="diff-easy"></div>
-    </div>
-    <div class="diff-group">
-      <div class="diff-label">中级</div>
-      <div class="diff-btns" id="diff-medium"></div>
-    </div>
-    <div class="diff-group">
-      <div class="diff-label">高级</div>
-      <div class="diff-btns" id="diff-hard"></div>
+      <div class="diff-btns" id="diff-row"></div>
     </div>
     <div class="params-row" id="params-row"></div>
     <div class="guide-card">
@@ -267,6 +257,10 @@ const DIFF_CONFIG = {
   }
 };
 
+// 三档固定顺序：本页 DIFF_CONFIG 本就只有 easy/medium/hard 三档（儿童/成人各一套），
+// 此前 buildDiffBtns 双层循环把它渲染成 3 排共 9 颗按钮，这里只渲染一排三颗。
+const DIFF_ORDER = ['easy','medium','hard'];
+
 // ===== 状态 =====
 const GRACE_MS = 150; // 宽限期：刺激窗口到期后仍显示，期间点击仍算有效（避免“还亮着却点不动”）
 let state = {
@@ -307,17 +301,28 @@ function playBeep(freq,dur,vol=0.15){
 
 // ===== 难度按钮 =====
 function buildDiffBtns(){
-  ['easy','medium','hard'].forEach(lvl=>{
-    const container=document.getElementById('diff-'+lvl);
-    container.innerHTML='';
-    ['easy','medium','hard'].forEach(sub=>{
-      const cfg=DIFF_CONFIG[state.mode][sub];
-      const btn=document.createElement('button');
-      btn.className='diff-btn'+(state.level===sub?' active':'');
-      btn.textContent=cfg.label;
-      btn.onclick=()=>{state.level=sub;document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');updateParams();};
-      container.appendChild(btn);
-    });
+  const c=document.getElementById('diff-row');if(!c)return;
+  c.innerHTML='';
+  DIFF_ORDER.forEach(key=>{
+    const cfg=DIFF_CONFIG[state.mode][key];
+    const btn=document.createElement('button');
+    btn.className='diff-btn';
+    btn.type='button';
+    btn.textContent=cfg.label;
+    btn.dataset.key=key;
+    btn.setAttribute('aria-pressed',state.level===key?'true':'false');
+    btn.onclick=()=>selectDiff(key);
+    if(state.level===key)btn.classList.add('active');
+    c.appendChild(btn);
+  });
+  updateParams();
+}
+function selectDiff(key){
+  state.level=key;
+  document.querySelectorAll('#diff-row .diff-btn').forEach(b=>{
+    const on=b.dataset.key===key;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
   });
   updateParams();
 }

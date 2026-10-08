@@ -36,8 +36,6 @@ body{
   text-transform:uppercase;
   letter-spacing:0.5px;
 }
-.diff-group{margin-bottom:2px;}
-.diff-label{color:rgba(240,230,211,0.45);font-size:11px;margin-bottom:3px;}
 .diff-btns{display:flex;gap:4px;}
 .diff-btn{
   flex:1;padding:5px 0;
@@ -310,15 +308,10 @@ body{
 <div class="container">
   <div class="left-panel">
     <div class="panel-title">难度选择</div>
-    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
-    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
-    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="diff-btns" id="diff-row"></div>
     <div class="panel-title">难度差异</div>
-    <table class="diff-table">
+    <table class="diff-table" id="diff-table">
       <tr><th>难度</th><th>抑制比例</th><th>窗口</th><th>题数</th></tr>
-      <tr><td>简单</td><td>20%</td><td>3.0s</td><td>20</td></tr>
-      <tr><td>中等</td><td>30%</td><td>2.5s</td><td>30</td></tr>
-      <tr><td>困难</td><td>40%</td><td>2.0s</td><td>40</td></tr>
     </table>
     <div class="guide-card">
       <div class="guide-title">玩法说明</div>
@@ -387,27 +380,21 @@ body{
 </div>
 
 <script>
+// 2026-09-30 修改：原「3主档 × 3子档 = 9档」砍到 3 档，
+// 口径与 B4-stroop 一致 —— 每个主档保留其 medium 子档的数值，label 去掉「·子档」后缀。
+//   初级 = 原 easy-medium ／ 中级 = 原 medium-medium ／ 高级 = 原 hard-medium
+// （原 9 档里 easy-hard 与 medium-easy 数值完全相同、medium-hard 与 hard-easy 完全相同，
+//   压成 3 档后这组重复配置自然消失）
 const DIFF_CONFIG = {
-  'easy-easy':{suppressRatio:0.2,timeout:3000,total:20,label:'初级·简单'},
-  'easy-medium':{suppressRatio:0.25,timeout:2800,total:25,label:'初级·中等'},
-  'easy-hard':{suppressRatio:0.3,timeout:2500,total:30,label:'初级·困难'},
-  'medium-easy':{suppressRatio:0.3,timeout:2500,total:30,label:'中级·简单'},
-  'medium-medium':{suppressRatio:0.35,timeout:2200,total:35,label:'中级·中等'},
-  'medium-hard':{suppressRatio:0.4,timeout:2000,total:40,label:'中级·困难'},
-  'hard-easy':{suppressRatio:0.4,timeout:2000,total:40,label:'高级·简单'},
-  'hard-medium':{suppressRatio:0.45,timeout:1800,total:45,label:'高级·中等'},
-  'hard-hard':{suppressRatio:0.5,timeout:1500,total:50,label:'高级·困难'},
+  'easy':   {suppressRatio:0.25, timeout:2800, total:25, label:'初级'},
+  'medium': {suppressRatio:0.35, timeout:2200, total:35, label:'中级'},
+  'hard':   {suppressRatio:0.45, timeout:1800, total:45, label:'高级'},
 };
+const DIFF_ORDER = ['easy','medium','hard'];
 const ADULT_DIFF = {
-  'easy-easy':{suppressRatio:0.3,timeout:2500,total:30,label:'初级·简单'},
-  'easy-medium':{suppressRatio:0.35,timeout:2200,total:35,label:'初级·中等'},
-  'easy-hard':{suppressRatio:0.4,timeout:2000,total:40,label:'初级·困难'},
-  'medium-easy':{suppressRatio:0.4,timeout:2000,total:40,label:'中级·简单'},
-  'medium-medium':{suppressRatio:0.45,timeout:1800,total:45,label:'中级·中等'},
-  'medium-hard':{suppressRatio:0.5,timeout:1500,total:50,label:'中级·困难'},
-  'hard-easy':{suppressRatio:0.5,timeout:1500,total:50,label:'高级·简单'},
-  'hard-medium':{suppressRatio:0.55,timeout:1300,total:55,label:'高级·中等'},
-  'hard-hard':{suppressRatio:0.6,timeout:1200,total:60,label:'高级·困难'},
+  'easy':   {suppressRatio:0.35, timeout:2200, total:35, label:'初级'},
+  'medium': {suppressRatio:0.45, timeout:1800, total:45, label:'中级'},
+  'hard':   {suppressRatio:0.55, timeout:1300, total:55, label:'高级'},
 };
 const ACTIONS=['clap','wave','hair','nose'];
 const ACTION_LABELS={clap:'拍手',wave:'挥手',hair:'摸摸头发',nose:'摸摸鼻子'};
@@ -420,7 +407,6 @@ let state={
   userMode:'child',
   gameMode:'train',
   level:'easy',
-  subLevel:'easy',
   running:false,
   trials:[],
   currentTrial:0,
@@ -468,31 +454,49 @@ function playAudioBuffer(url){
 }
 function playBeep(freq,dur,vol=0.12){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(vol,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
 
-function getConfig(){const key=state.level+'-'+state.subLevel;return state.userMode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];}
+function getConfig(){const table=state.userMode==='adult'?ADULT_DIFF:DIFF_CONFIG;return table[state.level]||table['easy'];}
 
 function buildDiffBtns(){
-  ['easy','medium','hard'].forEach(lvl=>{
-    const c=document.getElementById('diff-'+lvl);c.innerHTML='';
-    ['easy','medium','hard'].forEach(sub=>{
-      const key=lvl+'-'+sub;
-      const cfg=state.userMode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
-      const btn=document.createElement('button');
-      btn.className='diff-btn';btn.textContent=cfg.label.split('·')[1];
-      btn.dataset.key=key;
-      btn.addEventListener('click',()=>selectDiff(lvl,sub));
-      if(state.level===lvl&&state.subLevel===sub)btn.classList.add('active');
-      c.appendChild(btn);
-    });
+  const c=document.getElementById('diff-row');if(!c)return;
+  c.innerHTML='';
+  const table=state.userMode==='adult'?ADULT_DIFF:DIFF_CONFIG;
+  DIFF_ORDER.forEach(key=>{
+    const cfg=table[key];
+    const btn=document.createElement('button');
+    btn.className='diff-btn';
+    btn.type='button';
+    btn.textContent=cfg.label;
+    btn.dataset.key=key;
+    btn.setAttribute('aria-pressed',state.level===key?'true':'false');
+    btn.addEventListener('click',()=>selectDiff(key));
+    if(state.level===key)btn.classList.add('active');
+    c.appendChild(btn);
+  });
+  updateParams();
+  buildDiffTable();
+}
+
+function selectDiff(key){
+  state.level=key;
+  document.querySelectorAll('#diff-row .diff-btn').forEach(b=>{
+    const on=b.dataset.key===key;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
   });
   updateParams();
 }
 
-function selectDiff(lvl,sub){
-  state.level=lvl;state.subLevel=sub;
-  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
-  const target=document.querySelector('.diff-btn[data-key="'+lvl+'-'+sub+'"]');
-  if(target)target.classList.add('active');
-  updateParams();
+// 难度差异表从配置渲染（单一数据源），保证表里的数字永远和按钮实际用的一致
+function buildDiffTable(){
+  const table=document.getElementById('diff-table');
+  if(!table)return;
+  const cfg=state.userMode==='adult'?ADULT_DIFF:DIFF_CONFIG;
+  let html='<tr><th>难度</th><th>抑制比例</th><th>窗口</th><th>题数</th></tr>';
+  DIFF_ORDER.forEach(key=>{
+    const c=cfg[key];
+    html+=`<tr><td>${c.label}</td><td>${Math.round(c.suppressRatio*100)}%</td><td>${(c.timeout/1000).toFixed(1)}s</td><td>${c.total}</td></tr>`;
+  });
+  table.innerHTML=html;
 }
 
 function updateParams(){
@@ -683,7 +687,7 @@ function nextTrial(){
 function resetToIdle(){
   state.running=false;clearTimeout(state.timeoutId);clearTimeout(state.graceTimer);
   document.getElementById('start-btn').disabled=false;
-  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.querySelectorAll('#diff-row .diff-btn').forEach(b=>b.disabled=false);
   document.getElementById('instruction-display').innerHTML='<span class="prefix"></span><span id="cmd-text"></span>';
   document.getElementById('progress-fill').style.width='0%';
   document.getElementById('trial-info').textContent='';
@@ -719,7 +723,7 @@ function endGame(){
   overlay.querySelector('.btn-home').addEventListener('click',()=>{location.href='index.html';});
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   document.body.appendChild(overlay);
-  try{const data=JSON.parse(localStorage.getItem('b2_reverse')||'{}');data[state.level+'-'+state.subLevel]={goAcc,nogoAcc,impulseRate,avgRT,date:new Date().toISOString()};localStorage.setItem('b2_reverse',JSON.stringify(data));}catch(e){}
+  try{const data=JSON.parse(localStorage.getItem('b2_reverse')||'{}');data[state.level]={goAcc,nogoAcc,impulseRate,avgRT,date:new Date().toISOString()};localStorage.setItem('b2_reverse',JSON.stringify(data));}catch(e){}
 }
 
 // ========== 实际练习模式 ==========
@@ -806,8 +810,8 @@ function showRulesPopup(){
       <div class="rd-note">
         按钮 1-4 对应：拍手 / 挥手 / 摸摸头发 / 摸摸鼻子<br>
         键盘快捷键 1-4 也可作答<br><br>
-        <strong>👦 儿童建议：</strong>初级·简单（抑制题少、时间长）<br>
-        <strong>👨 成人建议：</strong>中级·中等起步
+        <strong>👦 儿童建议：</strong>初级（抑制题少、时间长）<br>
+        <strong>👨 成人建议：</strong>中级起步
       </div>
       <button onclick="document.getElementById('rules-overlay').remove();localStorage.setItem('b2_visited','1');">我知道了</button>
     </div>

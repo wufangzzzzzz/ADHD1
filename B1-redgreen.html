@@ -39,12 +39,6 @@ body{
   padding-bottom:3px;
   border-bottom:1px solid rgba(255,255,255,0.1);
 }
-.diff-group{margin-bottom:2px;}
-.diff-label{
-  color:rgba(255,255,255,0.6);
-  font-size:11px;font-weight:600;
-  margin-bottom:4px;
-}
 .diff-btns{display:flex;gap:5px;}
 .diff-btn{
   flex:1;
@@ -773,18 +767,7 @@ body{
     </div>
     <div class="panel-title">难度选择</div>
     <div id="gonogo-diff-section">
-    <div class="diff-group">
-      <div class="diff-label">初级</div>
-      <div class="diff-btns" id="diff-easy"></div>
-    </div>
-    <div class="diff-group">
-      <div class="diff-label">中级</div>
-      <div class="diff-btns" id="diff-medium"></div>
-    </div>
-    <div class="diff-group">
-      <div class="diff-label">高级</div>
-      <div class="diff-btns" id="diff-hard"></div>
-    </div>
+    <div class="diff-btns" id="diff-row"></div>
     </div>
     <div id="cpt-diff-section" style="display:none;">
       <div class="cpt-diff-row" id="cpt-diff-btns"></div>
@@ -806,8 +789,8 @@ body{
       </div>
       <div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,0.4);line-height:1.6;">
         <div style="color:rgba(255,255,255,0.55);font-weight:700;margin-bottom:3px;">难度建议</div>
-        <div style="margin-bottom:4px;"><strong style="color:#66BB6A;">👦 儿童模式：</strong>间隔更长、红点更少、窗口更宽<br><span style="color:rgba(255,255,255,0.3);">建议从 初级·简单 开始，逐步到 初级·中等</span></div>
-        <div><strong style="color:#FF9800;">👨 成人模式：</strong>间隔更短、红点更多、窗口更窄<br><span style="color:rgba(255,255,255,0.3);">建议从 中级·中等 开始，逐步到 高级·困难</span></div>
+        <div style="margin-bottom:4px;"><strong style="color:#66BB6A;">👦 儿童模式：</strong>间隔更长、红点更少、窗口更宽<br><span style="color:rgba(255,255,255,0.3);">建议从 初级 开始，逐步到 中级</span></div>
+        <div><strong style="color:#FF9800;">👨 成人模式：</strong>间隔更短、红点更多、窗口更窄<br><span style="color:rgba(255,255,255,0.3);">建议从 中级 开始，逐步到 高级</span></div>
       </div>
     </div>
     <div class="mode-switch">
@@ -849,31 +832,23 @@ body{
 
 <script>
 // ===== 难度配置 =====
+// 2026-09-30 修改：原「3主档 × 3子档 = 9档」砍到 3 档，
+// 口径与 B4-stroop 一致 —— 每个主档保留其 medium 子档的数值，label 去掉「·子档」后缀。
+//   初级 = 原 easy-medium ／ 中级 = 原 medium-medium ／ 高级 = 原 hard-medium
 const DIFF_CONFIG = {
-  'easy-easy':   {isi:1500, goRatio:0.80, window:1200, total:30, label:'初级·简单'},
-  'easy-medium': {isi:1200, goRatio:0.75, window:1000, total:40, label:'初级·中等'},
-  'easy-hard':   {isi:1000, goRatio:0.70, window:800,  total:40, label:'初级·困难'},
-  'medium-easy': {isi:900,  goRatio:0.70, window:800,  total:50, label:'中级·简单'},
-  'medium-medium':{isi:800, goRatio:0.65, window:700,  total:50, label:'中级·中等'},
-  'medium-hard': {isi:700,  goRatio:0.60, window:600,  total:60, label:'中级·困难'},
-  'hard-easy':   {isi:600,  goRatio:0.60, window:550,  total:60, label:'高级·简单'},
-  'hard-medium': {isi:500,  goRatio:0.55, window:500,  total:80, label:'高级·中等'},
-  'hard-hard':   {isi:400,  goRatio:0.50, window:450,  total:100,label:'高级·困难'},
+  'easy':   {isi:1200, goRatio:0.75, window:1000, total:40, label:'初级'},
+  'medium': {isi:800,  goRatio:0.65, window:700,  total:50, label:'中级'},
+  'hard':   {isi:700,  goRatio:0.60, window:600,  total:60, label:'高级'},
 };
+const DIFF_ORDER = ['easy','medium','hard'];
 
 // 宽限期：绿块窗口到期后仍亮在屏幕上，这段时间内点击仍算命中（避免“还亮着却点不动”）
 const GRACE_MS = 150;
 
 const ADULT_DIFF = {
-  'easy-easy':   {isi:900,  goRatio:0.70, window:700,  total:50, label:'初级·简单'},
-  'easy-medium': {isi:800,  goRatio:0.65, window:600,  total:50, label:'初级·中等'},
-  'easy-hard':   {isi:700,  goRatio:0.60, window:500,  total:60, label:'初级·困难'},
-  'medium-easy': {isi:600,  goRatio:0.60, window:550,  total:60, label:'中级·简单'},
-  'medium-medium':{isi:500, goRatio:0.55, window:500,  total:80, label:'中级·中等'},
-  'medium-hard': {isi:400,  goRatio:0.50, window:450,  total:100,label:'中级·困难'},
-  'hard-easy':   {isi:350,  goRatio:0.50, window:400,  total:100,label:'高级·简单'},
-  'hard-medium': {isi:300,  goRatio:0.45, window:350,  total:120,label:'高级·中等'},
-  'hard-hard':   {isi:250,  goRatio:0.40, window:300,  total:150,label:'高级·困难'},
+  'easy':   {isi:800,  goRatio:0.65, window:600,  total:50, label:'初级'},
+  'medium': {isi:500,  goRatio:0.55, window:500,  total:80, label:'中级'},
+  'hard':   {isi:300,  goRatio:0.45, window:350,  total:120,label:'高级'},
 };
 
 const CPT_CONFIG = {
@@ -896,7 +871,6 @@ let state = {
   paradigm: 'gonogo',
   mode: 'child',
   level: 'easy',
-  subLevel: 'easy',
   cptLevel: 'easy',
   running: false,
   trials: [],
@@ -957,15 +931,10 @@ function buildDiffTable(){
     document.getElementById('diff-table').innerHTML=html;
   }else{
     const cfg = state.mode==='adult'?ADULT_DIFF:DIFF_CONFIG;
-    const levels = [
-      {key:'easy',label:'初级',sub:'easy'},
-      {key:'medium',label:'中级',sub:'easy'},
-      {key:'hard',label:'高级',sub:'easy'},
-    ];
     let html='<tr><th>等级</th><th>ISI</th><th>绿:红</th><th>窗口</th><th>题数</th></tr>';
-    levels.forEach(l=>{
-      const c=cfg[l.key+'-'+l.sub];
-      html+=`<tr><td>${l.label}</td><td>${c.isi}ms</td><td>${Math.round(c.goRatio*100)}:${Math.round((1-c.goRatio)*100)}</td><td>${c.window}ms</td><td>${c.total}</td></tr>`;
+    DIFF_ORDER.forEach(key=>{
+      const c=cfg[key];
+      html+=`<tr><td>${c.label}</td><td>${c.isi}ms</td><td>${Math.round(c.goRatio*100)}:${Math.round((1-c.goRatio)*100)}</td><td>${c.window}ms</td><td>${c.total}</td></tr>`;
     });
     document.getElementById('diff-table').innerHTML=html;
   }
@@ -988,31 +957,34 @@ function buildDiffBtns(){
       container.appendChild(btn);
     });
   }else{
-    ['easy','medium','hard'].forEach(lvl=>{
-      const container = document.getElementById('diff-'+lvl);
-      container.innerHTML = '';
-      ['easy','medium','hard'].forEach(sub=>{
-        const key = lvl+'-'+sub;
-        const cfg = state.mode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
-        const btn = document.createElement('button');
-        btn.className = 'diff-btn';
-        btn.textContent = cfg.label.split('·')[1];
-        btn.dataset.key = key;
-        btn.onclick = ()=>selectDiff(lvl,sub);
-        if(state.level===lvl && state.subLevel===sub) btn.classList.add('active');
-        container.appendChild(btn);
-      });
+    const container = document.getElementById('diff-row');
+    container.innerHTML = '';
+    const table = state.mode==='adult'?ADULT_DIFF:DIFF_CONFIG;
+    DIFF_ORDER.forEach(key=>{
+      const cfg = table[key];
+      const btn = document.createElement('button');
+      btn.className = 'diff-btn';
+      btn.type = 'button';
+      btn.style.flex='1';
+      btn.textContent = cfg.label;
+      btn.dataset.key = key;
+      btn.setAttribute('aria-pressed', state.level===key?'true':'false');
+      btn.onclick = ()=>selectDiff(key);
+      if(state.level===key) btn.classList.add('active');
+      container.appendChild(btn);
     });
   }
   updateParams();
   buildDiffTable();
 }
 
-function selectDiff(lvl,sub){
-  state.level=lvl;state.subLevel=sub;
-  document.querySelectorAll('#gonogo-diff-section .diff-btn').forEach(b=>b.classList.remove('active'));
-  const key=lvl+'-'+sub;
-  document.querySelector(`#gonogo-diff-section .diff-btn[data-key="${key}"]`)?.classList.add('active');
+function selectDiff(key){
+  state.level=key;
+  document.querySelectorAll('#diff-row .diff-btn').forEach(b=>{
+    const on=b.dataset.key===key;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
   updateParams();
 }
 
@@ -1047,8 +1019,8 @@ function updateParams(){
 }
 
 function getConfig(){
-  const key=state.level+'-'+state.subLevel;
-  return state.mode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
+  const table=state.mode==='adult'?ADULT_DIFF:DIFF_CONFIG;
+  return table[state.level]||table['easy'];
 }
 
 function getCPTConfig(){
@@ -1104,8 +1076,8 @@ function updateRulesCard(){
       </div>
       <div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,0.4);line-height:1.6;">
         <div style="color:rgba(255,255,255,0.55);font-weight:700;margin-bottom:3px;">难度建议</div>
-        <div style="margin-bottom:4px;"><strong style="color:#66BB6A;">👦 儿童模式：</strong>间隔更长、红点更少、窗口更宽<br><span style="color:rgba(255,255,255,0.3);">建议从 初级·简单 开始，逐步到 初级·中等</span></div>
-        <div><strong style="color:#FF9800;">👨 成人模式：</strong>间隔更短、红点更多、窗口更窄<br><span style="color:rgba(255,255,255,0.3);">建议从 中级·中等 开始，逐步到 高级·困难</span></div>
+        <div style="margin-bottom:4px;"><strong style="color:#66BB6A;">👦 儿童模式：</strong>间隔更长、红点更少、窗口更宽<br><span style="color:rgba(255,255,255,0.3);">建议从 初级 开始，逐步到 中级</span></div>
+        <div><strong style="color:#FF9800;">👨 成人模式：</strong>间隔更短、红点更多、窗口更窄<br><span style="color:rgba(255,255,255,0.3);">建议从 中级 开始，逐步到 高级</span></div>
       </div>
     `;
   }
@@ -1312,7 +1284,7 @@ function resetToIdle(){
   const btn=document.getElementById('start-btn');
   btn.textContent='开始训练';
   btn.classList.remove('stop-mode');
-  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.querySelectorAll('#diff-row .diff-btn, #cpt-diff-btns .diff-btn').forEach(b=>b.disabled=false);
   document.getElementById('stimulus-content').innerHTML='';
   document.getElementById('hint-bar').style.opacity='0.3';
   document.getElementById('score').textContent='0';
@@ -1476,7 +1448,7 @@ function endGame(){
   area.appendChild(card);
   try{
     const data=JSON.parse(localStorage.getItem('b1_redgreen')||'{}');
-    const key=state.paradigm==='cpt'?'cpt-'+state.mode+'-'+state.cptLevel:state.level+'-'+state.subLevel;
+    const key=state.paradigm==='cpt'?'cpt-'+state.mode+'-'+state.cptLevel:state.level;
     data[key]={hitRate,faRate,avgRT,dprime,paradigm:state.paradigm,date:new Date().toISOString()};
     localStorage.setItem('b1_redgreen',JSON.stringify(data));
   }catch(e){}
@@ -1546,8 +1518,8 @@ function showRulesPopup(){
         <div style="color:rgba(255,255,255,0.6);font-size:11px;line-height:1.5;">在左侧切换到「CPT 持续注意」范式，字符快速闪现，看到目标字符才点击。测试长时间保持注意力的能力！</div>
       </div>
       <div class="rd-note" style="margin-bottom:8px;">
-        <strong>👦 儿童建议：</strong>初级·简单 → 初级·中等<br>
-        <strong>👨 成人建议：</strong>中级·中等 → 高级·困难
+        <strong>👦 儿童建议：</strong>初级 → 中级<br>
+        <strong>👨 成人建议：</strong>中级 → 高级
       </div>
       <button onclick="document.getElementById('rules-overlay').remove();localStorage.setItem('b1_visited','1');">我知道了</button>
     </div>

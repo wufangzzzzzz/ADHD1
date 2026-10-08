@@ -34,25 +34,43 @@
   /* ---------- 主体：横版两列 ---------- */
   #wrap{position:fixed;left:0;right:0;top:54px;bottom:0;z-index:10;
     display:grid;grid-template-columns:340px minmax(0,1fr);gap:13px;padding:13px 16px}
-  #left{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:11px;min-height:0}
+  #left{display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:11px;min-height:0}
   #right{display:grid;grid-template-rows:auto minmax(0,1fr);gap:11px;min-height:0}
 
   .panel{background:linear-gradient(180deg,#141E2C,#101A27);border:1px solid #223449;
     border-radius:15px;position:relative;overflow:hidden}
 
   /* ---------- 缩略图 ---------- */
-  #thumbBox{cursor:zoom-in;min-height:190px}
+  /* 缩略图：主页面直接按住拖动 = 360° 转视角看各个面（先生 2026-09-29）
+     ⚠️ cursor 从 zoom-in 改成 grab —— 整块可点弹窗已取消，现在只有右上角 ⤢ 才弹窗，
+        缩略图本体改成"按住拖动转视角"。 */
+  #thumbBox{cursor:grab;min-height:190px}
   #thumbBox:hover{border-color:#3A5677}
-  #tcv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+  #thumbBox.dragging{cursor:grabbing}
+  /* ⚠️ touch-action 必须是 none：平板上手指拖动时，若沿用 manipulation，
+     浏览器会把它当滚动手势吞掉 ⇒ pointermove 收不到，拖动"完全没反应"。 */
+  #tcv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
   #thumbHint{position:absolute;left:0;right:0;bottom:0;height:31px;pointer-events:none;
     display:flex;align-items:center;justify-content:center;gap:6px;
     font-size:11.5px;color:#9FB4CE;background:linear-gradient(0deg,rgba(11,17,27,.92),rgba(11,17,27,0))}
   #thumbHint b{color:#FFC978}
   #thumbTag{position:absolute;left:11px;top:9px;font-size:11.5px;color:#7C8DA4;
     letter-spacing:.5px;pointer-events:none}
-  #thumbZoom{position:absolute;right:9px;top:8px;width:26px;height:26px;border-radius:9px;
+  /* 右上角放大图标：唯一触发弹窗的入口（原来 pointer-events:none 点不动，2026-09-29 激活） */
+  #thumbZoom{position:absolute;right:9px;top:8px;width:26px;height:26px;border-radius:9px;cursor:pointer;
     background:rgba(255,179,71,.14);border:1px solid rgba(255,179,71,.42);color:#FFC978;
-    display:flex;align-items:center;justify-content:center;font-size:14px;pointer-events:none}
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    transition:background .12s,border-color .12s,transform .1s}
+  #thumbZoom:hover{background:rgba(255,179,71,.3);border-color:rgba(255,179,71,.8)}
+  #thumbZoom:active{transform:scale(.94)}
+
+  /* 缩略图下方的复位按钮：把缩略图视角搬回默认（先生 2026-09-29）
+     ⚠️ 必须静态写在 HTML 里，不用 JS 重建 ⇒ 位置在整个生命周期内不变（规则R）。 */
+  #btnThumbReset{height:34px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;
+    border:1px solid #3A5677;color:#9FC6F0;background:#16202E;
+    display:flex;align-items:center;justify-content:center;gap:7px}
+  #btnThumbReset:hover{background:#16283C;border-color:#4E739B}
+  #btnThumbReset:active{transform:translateY(1px)}
 
   /* ---------- 左侧下方：选项 ---------- */
   #opts{padding:12px 13px 13px;display:flex;flex-direction:column;gap:10px}
@@ -88,8 +106,17 @@
   .tools #btnUndo:hover{background:#231A10;border-color:#7A5C3A}
   .tools #btnNew{border-color:#3A5677;color:#9FC6F0}
   .tools #btnNew:hover{background:#16283C}
-  .tools #btnSnd{border-color:#3F5F45;color:#9CE8B4;font-size:12.5px}
-  .tools #btnSnd:hover{background:#132118;border-color:#548055}
+  .tools #btnMode{border-color:#5A4E86;color:#C9B8FF;font-size:12.5px}
+  .tools #btnMode:hover{background:#1E1830;border-color:#7A69B0}
+  /* 打印（先生 2026-10-06）：跟"换一道题"同族但换个色，别和模式切换混成一片 */
+  .tools #btnPrint{border-color:#4A6076;color:#BFD8EE}
+  .tools #btnPrint:hover{background:#16222F;border-color:#66839C}
+  .tools #btnBall{border-color:#4A6B3F;color:#A6E08A;font-size:12.5px}
+  .tools #btnBall:hover{background:#1B2A18;border-color:#5F8A4E}
+  /* 立体模式下圆形没有对应物 ⇒ 直接禁用（点下去什么都不发生比"点了没反应"更让人困惑） */
+  .tools #btnBall[disabled]{border-color:#2C3A4A;color:#5C6B7C;cursor:default;background:transparent}
+  .tools #btnBall[disabled]:hover{background:transparent;border-color:#2C3A4A}
+  .tools #btnBall[disabled]:active{transform:none}
 
   /* ---------- 右侧上：3 个颜色方块 ---------- */
   #palette{padding:11px 13px;display:flex;gap:11px;align-items:stretch}
@@ -103,6 +130,24 @@
   .pcol button{height:26px;border-radius:8px;cursor:pointer;font-size:11.5px;padding:0 9px;
     border:1px solid #2B3E55;background:#16202E;color:#C9D6E6;white-space:nowrap}
   .pcol button:hover{background:#1D2A3C;border-color:#3B5372}
+  /* ★ 先生 2026-10-06：「圆球可以换颜色 因为是球体 只有一种颜色」
+     ⇒ 第 4 个色块只在圆形模式下出现，且独占一整行（4 个挤一行会把字压到换行）。
+     方形模式下一律 display:none（不是"灰掉"）—— 那时它没有对应物，露出来只会让人问"这是干嘛的"。 */
+  .pal[data-k="ball"]{display:none;flex:1 1 100%}
+  body.ball-on #palette{flex-wrap:wrap}
+  body.ball-on .pal[data-k="ball"]{display:flex}
+  /* ★ 先生 2026-10-06 追加：「圆形模式下 游戏区上面的选择颜色就不需要出现方形模式下的那三个了
+     因为模式不一样了 你应该是替换那三个选项只出现圆球的颜色选择才对」
+     ⇒ 是【替换】而不是并列。理由也站得住：三面网格色在圆形模式里没有任何用武之地
+        （格子层不填色、缩略图画的是球不是方块），四行一起摆只会让人问"这三个跟我的球什么关系"。
+        切回方形模式自动恢复（颜色值一直留着，不丢）。 */
+  body.ball-on .pal[data-k="u"],
+  body.ball-on .pal[data-k="v"],
+  body.ball-on .pal[data-k="w"]{display:none}
+  /* 「彩色」开关与我挑的色并列一行 */
+  .pbtns{display:flex;gap:6px;flex-wrap:wrap}
+  .pcol button.on{border-color:#7A69B0;background:#241C3A;color:#DDD2FF}
+  body.skin-light .pcol button.on{border-color:#7A5CC0;background:#F1EBFF;color:#4A2E8C}
 
   /* ---------- 右侧下：三面网格 ---------- */
   #board{min-height:0}
@@ -116,12 +161,17 @@
      已涂对 / 涂错仍然上色（那是玩家自己涂的，由 refreshBoard() 写 inline fill 盖过这里）。
      注：SVG 里 transparent 仍算 painted（跟 none 不同）⇒ elementFromPoint 照常命中，点击不受影响。 */
   #board .cellbg{fill:transparent;stroke:rgba(255,255,255,.33);stroke-width:1.15;
-    stroke-linejoin:round;vector-effect:non-scaling-stroke;transition:fill .1s}
+    stroke-linejoin:round;vector-effect:non-scaling-stroke;transition:fill .1s,stroke .22s}
   /* ⚠️ 触摸设备（iPad / Android 平板）上 :hover 会「粘」在最后碰过的格子上 ——
      表现为涂完的格子一直亮着金边，像是被选中了。所以这条悬停规则挪进了
      文件末尾的 @media (hover:hover)，只有真正带指针的设备才生效。 */
   #board g.wallgrid{cursor:pointer}
   #board .cellbg.bad{stroke:#FF6B6B;stroke-width:2.4}
+  /* ★ 圆形模式：格子里的"涂色"不是填满整格，而是【球投到这面墙上的像】= 一个椭圆。
+     椭圆整层画在 wallgrid 【之前】⇒ 透明的 cellbg 与它上面的 hover 金边都压在椭圆之上，
+     点哪儿都照常命中（cellbg 仍是命中层，椭圆 pointer-events:none 完全不参与点击）。
+     transition 是给"涂错 2 秒后自动消除"用的：让那一格淡出去，而不是啪地消失（先生 2026-10-06）。 */
+  #board .ballp{pointer-events:none;transition:fill-opacity .22s ease, fill .22s ease}
   #board .wallname{font-size:13px;font-weight:700;pointer-events:none}
   #board .vlab{font-size:14px;font-weight:800;pointer-events:none}
   #board .hintpulse{fill:none;stroke:#FFD447;stroke-width:3.4;stroke-linejoin:round;
@@ -270,6 +320,9 @@
     background:linear-gradient(0deg,rgba(255,255,255,.97),rgba(255,255,255,0))}
   body.skin-light #thumbHint b{color:#A8570C}
   body.skin-light #thumbZoom{background:rgba(201,122,26,.12);border-color:rgba(201,122,26,.42);color:#A8570C}
+  body.skin-light #thumbZoom:hover{background:rgba(201,122,26,.26);border-color:rgba(201,122,26,.82)}
+  body.skin-light #btnThumbReset{background:#F6F8FB;border-color:#B8CBE0;color:#2A5C8F}
+  body.skin-light #btnThumbReset:hover{background:#EDF4FC;border-color:#8FAECF}
   body.skin-light .lbl{color:#5C6B7F}
   body.skin-light #rng{accent-color:#C97A1A}
   body.skin-light .seg button,body.skin-light .step,body.skin-light .tools button{
@@ -285,7 +338,13 @@
   body.skin-light .tools #btnUndo:hover{background:#FBF3E8;border-color:#C79A5F}
   body.skin-light .tools #btnNew{border-color:#B8CBE0;color:#2A5C8F}
   body.skin-light .tools #btnNew:hover{background:#EDF4FC}
-  body.skin-light .tools #btnSnd{border-color:#A8CFA0;color:#2F6B36}
+  body.skin-light .tools #btnMode{border-color:#BFB0E8;color:#5A4694}
+  body.skin-light .tools #btnPrint{border-color:#A9BFD4;color:#2A5C8F}
+  body.skin-light .tools #btnPrint:hover{background:#EDF4FC;border-color:#8FAECF}
+  body.skin-light .tools #btnBall{border-color:#A8CFA0;color:#2F6B36}
+  body.skin-light .tools #btnBall:hover{background:#EFF8EC;border-color:#7FB673}
+  body.skin-light .tools #btnBall[disabled]{border-color:#D8DEE6;color:#9AA6B4;background:transparent}
+  body.skin-light .tools #btnBall[disabled]:hover{background:transparent;border-color:#D8DEE6}
   body.skin-light .pal{background:#F7F9FC;border-color:#E1E7F0}
   body.skin-light .pcol .pn{color:#5C6B7F}
   body.skin-light .pcol .pn em{color:#1D2733}
@@ -341,6 +400,48 @@
   body.skin-light #toast.no{border-color:#E8A6A6;color:#B32B2B}
 
   /* ============================================================
+     立体模式 —— 2026-10-02（先生：「缩略图展示的和实际游戏区的填充反过来，增加一个立体模式」）
+     左缩略图 = 三面投影（题面）；右游戏区 = 3D 空间，点格位摆方块。
+     ============================================================ */
+  /* 三面墙的格线在立体模式里只作背景参考，不可点 —— 可点的是 .pick3d 那些六边形 */
+  #board .wallbg{fill:transparent;stroke:rgba(255,255,255,.33);stroke-width:1.15;
+    stroke-linejoin:round;vector-effect:non-scaling-stroke;pointer-events:none}
+  body.skin-light #board .wallbg{stroke:rgba(30,45,70,.40)}
+  /* ★ 拾取说明（2026-10-02 改）：立体模式【不再有透明拾取面】。
+     上一版每个屏幕位置铺一个 .pick3d 六边形靠 elementFromPoint 命中 —— 那是错的：
+     等轴投影下相邻位置的六边形本来就重叠（相邻中心距 0.81650 = 外接圆半径 R，
+     一个六边形的顶点正好落在相邻六边形的中心上），实测 61 个位置里 29 个的中心被盖住，
+     重叠处命中的是 DOM 里靠后的那个、与远近无关 ⇒ 拖 A 落 B。
+     现在改成"取离指针最近的中心"（pickIndexAt），每个位置各自拥有一整块可点区域。 */
+  body.mode-solid #bsvg{cursor:pointer}
+  #board .cubef{stroke-linejoin:round;vector-effect:non-scaling-stroke;pointer-events:none}
+  #board .ghostf{pointer-events:none}
+  /* 圆形模式下游戏区的球（先生 2026-10-06「立体模式支持圆形」）。
+     与 .cubef 一样 pointer-events:none：命中走几何拾取（pickIndexAt），不靠 DOM。 */
+  #board .ballf{pointer-events:none}
+  /* 立体模式下题面必须固定正向（要逐格对照），所以把转动/放大那几颗按钮收掉 */
+  body.mode-solid #thumbBox{cursor:default}
+  body.mode-solid #btnThumbReset,
+  body.mode-solid #thumbZoom,
+  body.mode-solid #btnMRot,
+  body.mode-solid #btnMReset{display:none}
+  /* ---------- 放错时"闪一下再消失"的那一块（先生 2026-10-02）----------
+     先生原话：「点击就放上去了 但是放错了要有提示然后错误的消失」。
+     所以错误的方块【必须先真的出现】，再消失 —— 只给一行文字提示，孩子看不出
+     自己那一块究竟落在哪个位置、为什么不行。出现 → 抖动 → 淡出，共 520ms。
+     用 CSS 动画而不是 JS 逐帧：pointerup 之后不需要再有任何计时器参与布局。 */
+  .wrongf{animation:wrongShake 520ms cubic-bezier(.36,.07,.19,.97) both}
+  @keyframes wrongShake{
+    0%{opacity:0;transform:translate(0,0)}
+    14%{opacity:.95;transform:translate(-3px,0)}
+    30%{opacity:.95;transform:translate(3px,0)}
+    46%{opacity:.95;transform:translate(-2.5px,0)}
+    62%{opacity:.95;transform:translate(2.5px,0)}
+    78%{opacity:.8;transform:translate(-1.5px,0)}
+    100%{opacity:0;transform:translate(0,-9px)}
+  }
+
+  /* ============================================================
      平板（iPad / Android）兼容修正 —— 2026-09-29
      ============================================================ */
   /* 触摸设备上 :hover 会「粘」在最后碰过的元素上：iPad 上点完一个格子，它会一直保持
@@ -348,6 +449,8 @@
   @media (hover:hover){
     #board .cellbg:hover{stroke:#FFD447;stroke-width:1.8}
     body.skin-light #board .cellbg:hover{stroke:#C97A1A;stroke-width:2}
+    /* 立体模式：悬停的落点预览靠 ghost 方块（见 renderCubes），不再用 CSS :hover 亮格 ——
+       因为拾取已经是几何计算，CSS 的 :hover 命中的是 DOM，两者会不一致。 */
   }
   /* 窄屏（竖屏 iPad 768 / Android 平板 600~800 宽）：两列布局按比例收窄左栏，
      并把页头那行说明压短、把选项区控件收紧，避免「小方块数」那行把 + 按钮挤出面板。 */
@@ -374,33 +477,129 @@
     #wrap{top:48px;gap:10px}
     .seg button{height:30px}
     #thumbBox{min-height:150px}
+    #btnThumbReset{height:31px}
   }
   @media (max-height:640px){
     #opts{padding:8px 10px;gap:6px}
     .seg button{height:28px;font-size:12.5px}
     #thumbBox{min-height:118px}
+    #btnThumbReset{height:28px;font-size:12.5px}
     .tools button{height:32px}
+  }
+
+  /* ============================================================
+     打印（先生 2026-10-06：「这个游戏做一个打印按钮 支持打印
+     要注意打印时候只显示缩略图和游戏区 合理排版」）
+     ------------------------------------------------------------
+     两道开关，分工写清楚，别混：
+       ① body/html 上的 .paper 类 —— 由 beforeprint（或点按钮）加上。
+          它是一套【屏幕上就生效】的版式，尺寸全部用 mm。
+          为什么必须有它：canvas 的位图是按 clientWidth/clientHeight 画的，
+          而 beforeprint 触发时 @media print 还没生效、量不到纸上尺寸。
+          先在屏幕媒体下把盒子摆成纸上的尺寸 → 量到的就是纸上尺寸 → 位图不会糊。
+          mm 在屏幕媒体下同样有效（1mm = 96/25.4 px），所以两边尺寸严格相等。
+       ② @media print —— 页面尺寸 + 隐藏 + 兜底。
+          兜底那份几何与 .paper 那组【必须保持一致】（万一 beforeprint 没派发）。
+     ============================================================ */
+  /* ---------- 打印页头：只在纸上出现（屏幕上两栏已经能看清，不需要重复一行标题）---------- */
+  #printHead{display:none}
+  #printHead .pt{font-size:17px;font-weight:800;letter-spacing:.5px;color:#14202E}
+  #printHead .ps{font-size:11.5px;color:#41506A;margin-top:3px;line-height:1.5}
+  #printHead .ps b{color:#8A5310;font-weight:800}
+  #printHead .pm{margin-top:5px;display:flex;gap:7mm;flex-wrap:wrap;
+    font-size:11px;color:#41506A;border-top:1px solid #D8E0EA;padding-top:4px}
+  #printHead .pm i{font-style:normal}
+  #printHead .pm i b{color:#14202E;font-weight:800}
+
+  /* ---------- 纸面版式（屏幕 + 打印共用这一份）---------- */
+  /* html 这一层也要刷白：html 的背景是"画布背景"，页面没铺满时露出来的那一条
+     就是它（屏幕上 #0B111B、纸上会整条印成深色带）。只改 body 不够。 */
+  html.paper{height:auto!important;overflow:visible!important;background:#FFFFFF!important}
+  body.paper{height:auto!important;overflow:visible!important;background:#FFFFFF!important;color:#14202E}
+  body.paper #printHead{display:block;margin-bottom:5mm}
+  /* 只留「缩略图 + 游戏区」：页头、选项区（难度/边长/小方块数/换一题/模式）、
+     颜色面板、角上两颗按钮、以及所有浮层，一律不上纸 */
+  body.paper #hd,
+  body.paper #opts,
+  body.paper #btnThumbReset,
+  body.paper #palette,
+  body.paper #cornerTools,
+  body.paper #thumbHint,
+  body.paper #thumbZoom,
+  body.paper #toast,
+  body.paper #colorPop,
+  body.paper #winMask,
+  body.paper #modal{display:none}
+  /* 两栏横排：左缩略图（100mm）· 右游戏区（余下 170mm）。
+     纸面 A4 横向留 11mm 边距 ⇒ 内容 275×188mm；这一行占 160mm，其余给页头。 */
+  body.paper #wrap{position:static;display:flex;gap:5mm;padding:0;height:160mm}
+  body.paper #left{display:flex;flex-direction:column;flex:0 0 100mm;min-width:0}
+  body.paper #right{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
+  body.paper #thumbBox{flex:1 1 auto;min-height:0;height:auto;cursor:default}
+  body.paper #board{flex:1 1 auto;min-height:0}
+  /* 纸上不铺深色底、不留阴影（深色皮肤那块面板整块打出来就是一整张黑） */
+  body.paper #thumbBox,
+  body.paper #board{background:#FFFFFF;border:1px solid #C8D2DE;border-radius:4px;box-shadow:none}
+  /* ★ 纸面线色 ★：深色皮肤下格线是 rgba(255,255,255,.33)，打在白纸上等于没有线；
+     而且 non-scaling-stroke 的 stroke-width 是 CSS 像素（96dpi）⇒ 1.15 只有 0.30mm，
+     纸上一根发丝。这里统一加深加粗到 1.7 / 2.4（≈0.45 / 0.63mm）。 */
+  body.paper #board .cellbg,
+  body.paper #board .wallbg{stroke:rgba(20,32,50,.62);stroke-width:1.7}
+  body.paper #board .edge{stroke:rgba(20,32,50,.92);stroke-width:2.4}
+  body.paper #board .hintpulse{display:none}
+  /* 玩家自己涂的颜色（格子填充 / 椭圆）是"内容"，一律原样印出来，不覆盖 */
+  body.paper #thumbTag{color:#5C6B7F}
+
+  @media print{
+    @page{size:A4 landscape;margin:11mm}
+    html,body{height:auto!important;overflow:visible!important;background:#FFFFFF!important}
+    #hd,#opts,#btnThumbReset,#palette,#cornerTools,#thumbHint,#thumbZoom,
+    #toast,#colorPop,#winMask,#modal{display:none!important}
+    #printHead{display:block!important;margin-bottom:5mm}
+    /* ↓ 与上面 body.paper 那组保持一致（beforeprint 没派发时的兜底） */
+    #wrap{position:static!important;display:flex!important;gap:5mm!important;
+      padding:0!important;height:160mm!important}
+    #left{display:flex!important;flex-direction:column!important;flex:0 0 100mm!important;min-width:0!important}
+    #right{display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-width:0!important}
+    #thumbBox,#board{flex:1 1 auto!important;min-height:0!important;height:auto!important;
+      background:#FFFFFF!important;border:1px solid #C8D2DE!important;border-radius:4px!important;
+      box-shadow:none!important;break-inside:avoid!important;page-break-inside:avoid!important}
+    #board{overflow:hidden!important}
+    #board .cellbg,#board .wallbg{stroke:rgba(20,32,50,.62)!important;stroke-width:1.7!important}
+    #board .edge{stroke:rgba(20,32,50,.92)!important;stroke-width:2.4!important}
+    #board .hintpulse{display:none!important}
   }
 </style>
 </head>
 <body class="skin-light">
 <header id="hd">
   <h1>立体投影涂色</h1>
-  <div class="rule">
+  <div class="rule" id="ruleBar">
     看左边立体图，在右边三面方格上涂出<b>它的投影</b>　·　每面方格的格数 = 立方体每边的小方格数
   </div>
   <div class="sp"></div>
-  <div class="stat">已涂 <i id="stDone">0</i> / <i id="stNeed">0</i> 格　·　错 <i id="stBad">0</i> 格</div>
+  <div class="stat" id="statBar"></div>
 </header>
+
+<!-- 打印页头（先生 2026-10-06）：只在纸上出现。
+     为什么要有它 —— 一张只有两个图形的纸，孩子拿到手里不知道这是哪道题、要干什么；
+     这一行把"题号要素（网格边长 / 小方块数 / 难度 / 模式）"钉在纸头上。
+     屏幕上它 display:none（两栏版式已经够清楚，不必重复一行标题）。 -->
+<div id="printHead">
+  <div class="pt">立体投影涂色</div>
+  <div class="ps">看左边的立体图，在右边三面方格上涂出<b>它的投影</b>　·　每面方格的格数 = 立方体每边的小方格数</div>
+  <div class="pm" id="printMeta"></div>
+</div>
 
 <main id="wrap">
   <aside id="left">
-    <div class="panel" id="thumbBox" title="点一下放大 · 可 360° 旋转">
+    <div class="panel" id="thumbBox" title="按住拖动可 360° 旋转看各个面 · 点右上角放大">
       <canvas id="tcv"></canvas>
       <div id="thumbTag">题目立体图</div>
-      <div id="thumbZoom">⤢</div>
-      <div id="thumbHint"><b>点这里放大</b> · 可拖动 360° 旋转看清形状</div>
+      <div id="thumbZoom" title="放大成大图 · 自由旋转各角度">⤢</div>
+      <div id="thumbHint"><b>按住拖动</b>转视角 · 点右上角放大</div>
     </div>
+    <button id="btnThumbReset" title="把缩略图搬回默认视角">↺ 复位视角</button>
     <div class="panel" id="opts">
       <div class="row">
         <span class="lbl">底板</span>
@@ -433,7 +632,9 @@
       </div>
       <div class="tools">
         <button id="btnNew">换一道题</button>
-        <button id="btnSnd">🔊 声音开</button>
+        <button id="btnPrint" title="打印成一页纸：只印「题目立体图」和「游戏区」，方便孩子在纸上作答">🖨 打印</button>
+        <button id="btnMode" title="换一种玩法：看三面投影，自己在立体空间里点格位摆方块">🧊 立体模式</button>
+        <button id="btnBall" title="把方块换成圆球：球投到墙上是一个椭圆，涂格子时涂的是那个椭圆">⚪ 圆形模式</button>
       </div>
     </div>
   </aside>
@@ -461,6 +662,18 @@
           <button data-k="w" class="btnSw">换个颜色</button>
         </span>
       </div>
+      <!-- 圆形模式专用：球只有一种颜色（先生 2026-10-06）⇒ 一个色块 + 一个「彩色」开关；
+           这一行出现时，上面那三行网格色会被藏起来（是替换，不是并列） -->
+      <div class="pal" data-k="ball">
+        <span class="sw" id="swball"></span>
+        <span class="pcol">
+          <span class="pn"><em id="nmball">圆球</em>颜色</span>
+          <span class="pbtns">
+            <button data-k="ball" class="btnSw">换个颜色</button>
+            <button id="btnRainbow" title="让每一颗球都是不一样的颜色（墙上的椭圆也跟着各自的球）">🎨 彩色</button>
+          </span>
+        </span>
+      </div>
     </div>
     <div class="panel" id="board">
       <svg id="bsvg" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -471,6 +684,7 @@
     </div>
   </section>
 </main>
+
 
 <!-- 自选颜色浮层：点「换个颜色」弹出，10 个预设 + 系统取色器 -->
 <div id="colorPop">
@@ -560,7 +774,27 @@ var G = {
   COL: { u: '#6FD463', v: '#FF8354', w: '#5AA9FF' },
   skin: 'light',                          /* 'dark' | 'light' —— 底板皮肤（先生 2026-09-29：默认白底） */
   diff: 'easy',                           /* 'easy' | 'hard' —— 题目立体图难度（先生 2026-09-29：默认简单） */
-  solved: false
+  solved: false,
+  /* ★ 先生 2026-10-02 新增「立体模式」：「缩略图展示的和实际游戏区的填充反过来」
+       flat  = 原版    —— 缩略图＝立体（题面）　游戏区＝三面方格，涂投影
+       solid = 立体模式 —— 缩略图＝三面投影（题面）　游戏区＝3D 空间，点格位摆方块
+     两个模式共用同一个 genShape 出的立体、同一套 G.ans（三面投影），只是把"题面"和"作答"对调。 */
+  mode: 'flat',
+  /* ★ 先生 2026-10-06 新增「圆形模式」：「圆形在三个维度的投影都是圆形的 所以圆形模式
+     游戏区点击对应位置是一个圆形的投影 … 这个圆形模式改为按钮 默认是目前的方形模式」。
+     实现口径（先生同日拍板「1 椭圆才是对的」）：
+       · 缩略图：方块 → 单色圆球（球的正交投影恒为正圆，前后关系靠"谁身上有影子"给）；
+       · 游戏区：涂一格 = 显示"那颗球投到这面墙上的像" = 【椭圆】（不是正圆）；
+       · 球只有一种颜色 ⇒ 取色器只多一个「圆球颜色」，球与椭圆同色。
+     只作用于 flat（投影模式）—— 立体模式的游戏区是 3D 空间里摆方块，没有"墙上的投影"这个东西。 */
+  ball: false,
+  ballColor: '#6FD463',                   /* 球与它的投影同色（默认绿，与右上墙同色系） */
+  /* ★ 先生 2026-10-06 追加：「在圆球选择颜色那加一个彩色按钮 点击后圆球模式下所有圆球颜色都不一样」
+     开 = 每颗球按【球的身份】各取一色（黄金角配色），墙上椭圆也跟着各自那颗球走。
+     关 = 全部用 G.ballColor。 */
+  rainbow: false,
+  place: {},                              /* 立体模式：玩家已放的方块，键 'i|j|k' */
+  phist: []                               /* 立体模式的撤销栈（键的 LIFO 数组） */
 };
 /* 先生 2026-09-29：「把C点字母C换成A H点字母H换成B F点字母F换成C 记住 只是换字母
    其余点的字母不要显示」⇒ 只改【显示名】，几何坐标一律不动。 */
@@ -684,6 +918,124 @@ function faceCellQuad(f, i, j) {
 var DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 function kk(c) { return c[0] + '|' + c[1] + '|' + c[2]; }
 function ri(n) { return Math.floor(Math.random() * n); }
+/* 这个候选位置是否与已放置的某一格【沿视线重合】(Δ=(t,t,t))？
+   —— 纯整数比较，O(K)，几乎零成本。
+   为什么必须在【生长时】就避开、而不是等整题算完再拒：
+   大 K（N=5 K>=20）时，从最里面那格出发的紧凑生长几乎必然长出一条 (t,t,t) 链，
+   事后整题拒绝根本拒不过来（实测 500 次重试后仍有 88% 的题带重合）。
+   而在这里只排除掉极少数候选位置，形状风格（连通、紧凑、随机）完全不变。 */
+function coinWith(set, q) {
+  for (var i = 0; i < set.length; i++) {
+    var du = q[0] - set[i][0], dv = q[1] - set[i][1], dw = q[2] - set[i][2];
+    if (du === dv && dv === dw && du !== 0) return true;
+  }
+  return false;
+}
+/* ============================================================
+   ★★ 可见性闸门（先生 2026-10-06 拍板：「可以」）★★
+   问题（flat 模式原有，不是圆球模式带来的）：
+     默认视角 M = rotAxis(N0, π) 是【绕视线轴 N0 转 180°】⇒ 视线方向仍是 N0。
+     于是差为 Δ=(t,t,t) 的两格屏幕【完全重合】，远的那块被 100% 盖住；
+     更常见的还有 `(4,4,4)` 被 `(3,4,4)(4,3,4)(4,4,3)` 三块正交邻格【联合封死】。
+     后果：flat 玩法是"看左图把投影涂到三面墙上"，图上少一块 ⇒ 孩子照图涂必然漏涂。
+     他只能靠"按住拖动转视角"才发现（缩略图提示条写了可以转，但没说有块被挡住）。
+   实测（直接驱动本函数的生成器抽样 400 题，N=5 K=7）：
+     · 含 Δ=(t,t,t) 重合格对 = 123 题（30.75%）
+     · 默认视角下有块【完全看不见】= 269 题（67.25%）
+       其中 123 题含重合，另有 146 题（36.5%）只是被多块联合封死
+   ⇒ 所以闸门【不能只禁重合】，必须直接按"可见面积"卡。
+   ---- 口径：
+   ① 按 defaultM() 判（= 玩家第一眼看到的视角；转视角是额外动作，不作为判据）。
+   ② 用与渲染同一套 PT() / depthRel() 算（避免"两套公式打架"——上一轮圆球就栽在这）。
+   ③ 不改动任何既有规则：连通性、首格在中心点、50% 配对生长 全部照旧。
+   ============================================================ */
+var VIS_MIN = 0.06;          /* 每块至少露出 6% 面积才算出题成功。
+                                ⚠️ 实测（改前/改后都用 40×40 复核过）：可见比例的几何取值
+                                【离散在 1/6 的倍数上】——六边形可拆成 6 个等边三角形，
+                                邻格重叠正好吃掉整数个 ⇒「完全看不见」= 0、「只露一角」= 16.7%，
+                                中间没有别的取值。取 6% 就是一条干净的二分线：0 一律拒、16.7% 一律过。 */
+var VIS_G = 16;              /* 每块 16×16 = 256 采样点（六边形内约 190 点）⇒ 1/6 ≈ 32 点，够判。
+                                先用 24 时 K=30 单题要 450ms（太慢），降到 16 后与 40×40 复核结论一致。 */
+var HEX_C = [[1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1], [1, 0, 1]];
+/* visOK 的副产物：本次校验里【第一个不合格块】的可见比例（全部合格时 = 1）。
+   用途：K 大时可见性几乎不可能全满足，genShape 要靠它挑出"最接近合格"的候选，
+   避免退化成"沿 u 排一条"的直线兜底题。早退所以只到第一个不合格块为止——
+   而 order[0] 恒是首格 [n-1,n-1,n-1]（sum 最大、最远），各题之间可比。 */
+var VIS_LAST = 1;
+/* cHex 用的同一套角序（必须绕一圈，否则多边形自交） */
+function visInPoly(px, py, poly) {          /* 凸多边形同侧法 */
+  var n = poly.length, sign = 0, i, x1, y1, x2, y2, cr;
+  for (i = 0; i < n; i++) {
+    x1 = poly[i].x; y1 = poly[i].y;
+    x2 = poly[(i + 1) % n].x; y2 = poly[(i + 1) % n].y;
+    cr = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
+    if (cr > 1e-9) { if (sign === -1) return false; sign = 1; }
+    else if (cr < -1e-9) { if (sign === 1) return false; sign = -1; }
+  }
+  return true;
+}
+function visOK(obj) {
+  var cells = [], i;
+  for (i = 0; i < obj.length; i++) cells.push(obj[i].lo);
+  if (cells.length < 2) return true;
+  var keepM = M, keepF = F, ok = true;
+  M = defaultM(); F = { s: 1, ox: 0, oy: 0 };   /* 缩放/平移不影响"谁盖住谁" */
+  try {
+    var polys = [], dep = [], bb = [], order = [], k, a, b, m, oi, j, du, dv, dw;
+    VIS_LAST = 1;
+    /* ---- 便宜前置判据：Δ=(t,t,t) 重合格对 ----
+       纯整数比较、O(K²)，先干掉最大的一类（大 K 时尤其划算：省掉整套采样）。 */
+    for (i = 0; i < cells.length; i++) {
+      for (j = i + 1; j < cells.length; j++) {
+        du = cells[j][0] - cells[i][0];
+        dv = cells[j][1] - cells[i][1];
+        dw = cells[j][2] - cells[i][2];
+        if (du === dv && dv === dw && du !== 0) { ok = false; VIS_LAST = 0; }
+      }
+    }
+    for (i = 0; i < cells.length; i++) {
+      var lo = cells[i], q = [];
+      for (k = 0; k < 6; k++) q.push(PT(cv3(lo[0] + HEX_C[k][0], lo[1] + HEX_C[k][1], lo[2] + HEX_C[k][2])));
+      polys.push(q);
+      dep.push(depthRel(rel(cv3(lo[0] + .5, lo[1] + .5, lo[2] + .5))));
+      var x0 = q[0].x, x1 = q[0].x, y0 = q[0].y, y1 = q[0].y;
+      for (k = 1; k < 6; k++) {
+        if (q[k].x < x0) x0 = q[k].x; if (q[k].x > x1) x1 = q[k].x;
+        if (q[k].y < y0) y0 = q[k].y; if (q[k].y > y1) y1 = q[k].y;
+      }
+      bb.push([x0, x1, y0, y1]);
+      order.push(i);
+    }
+    /* 从【最远】的块查起：最里面那格最容易被封死 ⇒ 一旦不合格立刻早退，
+       平均只算几块就返回，大 K 时这是最省的一步。 */
+    order.sort(function (p, q) { return dep[q] - dep[p]; });
+    for (oi = 0; oi < order.length && ok; oi++) {
+      i = order[oi];
+      var poly = polys[i], tot = 0, vis = 0;
+      for (a = 0; a < VIS_G; a++) {
+        var py = bb[i][2] + (bb[i][3] - bb[i][2]) * (a + .5) / VIS_G;
+        for (b = 0; b < VIS_G; b++) {
+          var px = bb[i][0] + (bb[i][1] - bb[i][0]) * (b + .5) / VIS_G;
+          if (!visInPoly(px, py, poly)) continue;
+          tot++;
+          var hid = false;
+          for (m = 0; m < cells.length; m++) {
+            if (m === i || dep[m] >= dep[i]) continue;      /* 只有更近的才可能挡住 */
+            if (px < bb[m][0] || px > bb[m][1] || py < bb[m][2] || py > bb[m][3]) continue;
+            if (visInPoly(px, py, polys[m])) { hid = true; break; }
+          }
+          if (!hid) vis++;
+        }
+      }
+      if (!tot || vis / tot < VIS_MIN) {
+        ok = false;
+        VIS_LAST = tot ? vis / tot : 0;   /* 记下"差多少"，供 genShape 挑最优候选 */
+      }
+    }
+  } catch (e) { ok = true; }    /* 自检本身出错绝不连累出题 */
+  M = keepM; F = keepF;
+  return ok;
+}
 /* 先生 2026-09-29：「这些小方格可以自定义数量 最小为3 最大30 在这个立方空间内做成随机形状
    但要求组成的方格要相连出现至少1个共用面 不能出现有单独的方格不与任何其他方格相连」
    ⇒ 用【连通生长】：每一步只能从"与已有块共面相邻"的位置里挑
@@ -692,6 +1044,29 @@ function ri(n) { return Math.floor(Math.random() * n); }
 function genShape(n, K) {
   K = Math.max(3, Math.min(30, Math.round(K)));
   if (K > n * n * n) K = n * n * n;
+  /* ★ 先生 2026-09-29：「方格要有 50% 概率出现所有的小方格每个都是只共用一面的情况」
+     ⇒ 一半的题目直接走"配对生长"（每块的共面邻居数恰好 = 1）。
+     ⚠️ 这个分支的数学后果必须记住：共面邻居恒为 1 ⇒ 共面关系是 1-正则图 ⇒
+        共面 BFS 必然数出 K/2 个连通块（两两贴成一组，组间最多共棱/共角）。
+        所以这里【不能】再过 isConnected（那是"共面连通"判据），
+        改由 genSpread 自己保证"整片不散"（见 looseConnected）。
+     ⚠️ K 为奇数时无法两两配对、或拒绝采样凑不齐 ⇒ genSpread 返回 null，
+        静默退回下面这种普通形状（绝不冒"出不了题"的风险）。 */
+  if (Math.random() < 0.5) {
+    /* ★ 先生 09-29 要的"一半题目每块只共用一面"必须保住 ⇒ 不是"一次不成就不走这条路"，
+       而是多给几次机会让可见性闸门筛（闸门会拒掉其中一部分形状）。
+       genSpread 返回 null = 这次配不出来（K 为奇数 / 空间不够）⇒ 立刻退回普通形状，
+       绝不在这里死循环。 */
+    for (var sa = 0; sa < 40; sa++) {
+      var sp = genSpread(n, K);
+      if (!sp) break;
+      if (visOK(sp)) return sp;
+    }
+  }
+  /* ★ 大 K（如 N=5 K=30）时"每块都露出 VIS_MIN"几乎不可能全部满足 ⇒ 500 次会全失败。
+     若就这样落到底部"沿 u 排成一条"的兜底，题目会退化成一个直线（实测单题 441ms、
+     形状全是一条线），那比"有两块被挡"更糟。所以在这里记下"最接近合格"的候选。 */
+  var visBest = null, visScore = -1;
   for (var att = 0; att < 500; att++) {
     /* ★ 先生 2026-09-29：「第一个方格必须在中心点放置」。
        等轴投影下画面正中心是 A(0,0,0) 与 G(n,n,n) 的公共投影点；先生要的"中心点"
@@ -701,6 +1076,15 @@ function genShape(n, K) {
        之后仍走连通生长 ⇒ 整块形状从中心点长出来，且天然整体连通。 */
     var set = [[n - 1, n - 1, n - 1]], have = {}, cand = {};
     have[kk(set[0])] = 1;
+    /* ★ 大 K 时的"透气"生长（K > 12 才启用）。
+       为什么需要：K=20/30 时 30 块挤在 N=5 的 125 格里，而"接触面越多权重越高"的紧凑生长
+       会把块堆成一团 ⇒ 里面的块必然被外面的挡死。实测：不启用时 N=5 K=30 有 98% 的题
+       至少一块完全看不见（500 次重试也救不回来，因为"紧凑"是加权本身的性质，不是运气）。
+       实现：候选位置若在屏幕上压到某个更近…（更远）的已放置块，就给它降权。
+       为什么只在 K > 12 启用：K<=12（含默认 7）本来就能在前几次尝试内通过闸门，
+       不需要这条 ⇒ 形状风格与改动前完全一致，不让先生看到"题目怎么变样了"。 */
+    var airy = (K > 12), keepM = M, keepF = F, setScr = [];
+    if (airy) { M = defaultM(); F = { s: 1, ox: 0, oy: 0 }; }
     while (set.length < K) {
       var list = [], ws = [], wsum = 0, i, d, j;
       cand = {};
@@ -710,34 +1094,166 @@ function genShape(n, K) {
           if (q[0] < 0 || q[0] >= n || q[1] < 0 || q[1] >= n || q[2] < 0 || q[2] >= n) continue;
           var kq = kk(q);
           if (have[kq] || cand[kq]) continue;
+          if (coinWith(set, q)) continue;   /* ★ 生长时就避开"沿视线重合"的位置（见 coinWith 注释） */
           cand[kq] = 1; list.push(q);
         }
       }
       if (!list.length) break;
+      if (airy) {          /* 每步只算一次"已放置块的屏幕坐标+深度"，候选那边就比较，省掉大量 PT 调用 */
+        setScr = [];
+        for (i = 0; i < set.length; i++) {
+          var pcc = cv3(set[i][0] + .5, set[i][1] + .5, set[i][2] + .5);
+          var pss = PT(pcc);
+          setScr.push([pss.x, pss.y, depthRel(rel(pcc))]);
+        }
+      }
       for (j = 0; j < list.length; j++) {
         var nb = 0;
         for (d = 0; d < 6; d++) {
           if (have[kk([list[j][0] + DIRS[d][0], list[j][1] + DIRS[d][1], list[j][2] + DIRS[d][2]])]) nb++;
         }
         var w = 1 + nb * 2;
+        /* 会挡住已有块的位置降权 ⇒ 形状长得舒展。0.25 是实测调出来的：
+           再低就完全随机（形状散成树枝、不好看），再高挡不住。 */
+        if (airy) {
+          var qcc = cv3(list[j][0] + .5, list[j][1] + .5, list[j][2] + .5);
+          var qss = PT(qcc), qdp = depthRel(rel(qcc)), blk = false;
+          for (i = 0; i < setScr.length; i++) {
+            if (qdp >= setScr[i][2]) continue;          /* 候选更远就挡不住它 */
+            var ddx = qss.x - setScr[i][0], ddy = qss.y - setScr[i][1];
+            if (ddx * ddx + ddy * ddy < 0.8165 * 0.8165) { blk = true; break; }  /* 六边形外接圆相交 */
+          }
+          if (blk) w *= 0.25;
+        }
         ws.push(w); wsum += w;
       }
       var r = Math.random() * wsum, pick = list.length - 1;
       for (j = 0; j < list.length; j++) { r -= ws[j]; if (r <= 0) { pick = j; break; } }
       set.push(list[pick]); have[kk(list[pick])] = 1;
     }
+    if (airy) { M = keepM; F = keepF; }   /* 恢复视图口径，后面的 visOK 自己会再切 */
     if (set.length === K) {
       /* ⚠️ 这里必须先把裸数组包成 {lo:[a,b,c]} 再交给 isConnected ——
          isConnected 读的是 c.lo，而生长过程里的 set 元素是裸数组 [a,b,c]，
          直接传进去会让 c.lo 为 undefined、kk() 立刻炸掉（第一次跑就踩了）。 */
       var obj = set.map(function (c) { return { lo: c }; });
-      if (isConnected(obj)) return obj;
+      /* ★ 可见性闸门（先生 2026-10-06 拍板）：形状连通还不够，还必须"每块在默认视角下
+         都至少露出 VIS_MIN 面积"——否则孩子照着一张少一块的图涂，必然漏涂。
+         放在 isConnected 之后算：绝大多数形状先被连通性挡掉，这里只算通过的少数 ⇒ 便宜。 */
+      if (isConnected(obj)) {
+        if (visOK(obj)) return obj;
+        if (VIS_LAST > visScore) { visScore = VIS_LAST; visBest = obj; }
+      }
     }
   }
+  if (visBest) return visBest;   /* 有"最接近合格"的就用它 ⇒ 绝不退化成一条直线 */
   /* 兜底：沿 u 方向排成一条（一定连通） */
   var out = [], lim = Math.min(K, n);
   for (var t = 0; t < K; t++) out.push({ lo: [t % lim, 0, 0] });
   return out;
+}
+/* ★ 先生 2026-09-29：「每个小方格只共用一面」= 每块【共面邻居数恰好为 1】。
+   构造方式：维持一张"当前还没有共面邻居的格子"清单 free；
+   每轮从 free 里随机取一格 q，再给 q 配一个位置 p，p 必须满足
+   ① 未占用；② 6 个共面邻居里【只有 q 一个】已被占用。
+   ⇒ p 加入后：p 的共面邻居数 = 1，q 从 0 变成 1，其余已存在的块完全不受影响。
+   逐对生长 ⇒ 最终每块的共面邻居数严格等于 1。
+   第一格仍固定 [n-1,n-1,n-1]（贴 G 角 = 先生要的"中心点"），这条老规则不变。
+   返回 null 表示这次配不出来（K 为奇数 / 空间不够），由 genShape 退回普通形状。 */
+function genSpread(n, K) {
+  if (K % 2 !== 0) return null;
+  var have, near, x, y, z, d, a, b, e;
+  function inB(c) { return c[0] >= 0 && c[0] < n && c[1] >= 0 && c[1] < n && c[2] >= 0 && c[2] < n; }
+  /* 这一格是否已经"面贴"着某个已占格 —— 有过就绝不能要（否则它/对方共面邻居数会变 2） */
+  function faceTouch(c) {
+    for (var f = 0; f < 6; f++) {
+      if (have[kk([c[0] + DIRS[f][0], c[1] + DIRS[f][1], c[2] + DIRS[f][2]])]) return true;
+    }
+    return false;
+  }
+  /* 已占格周围一圈 26 个位置（含共棱、共角）—— 用来优先挑"擦得到整体"的候选，
+     让形状尽量连成一片，而不是散成互不相干的小岛。 */
+  function markNear(c) {
+    for (a = -1; a <= 1; a++) for (b = -1; b <= 1; b++) for (e = -1; e <= 1; e++) {
+      if (!a && !b && !e) continue;
+      var t = [c[0] + a, c[1] + b, c[2] + e];
+      if (inB(t)) near[kk(t)] = 1;
+    }
+  }
+  /* ⚠️ 第一版算法在这里翻过车：原写法是"先在中心角放一格，接着给它配一个共面邻居，
+     然后从'当前没有共面邻居的格'里继续挑"——但配对完成后两端都已有 1 个共面邻居，
+     于是可挑集合立刻为空，第二对永远放不下去 ⇒ 400 次尝试全废、100% 返回 null。
+     （真机验收实测：N=5/K=8 时 genSpread 失败 5000/5000。）
+     正确做法是【一轮直接放一整对】：先找两端都"没面贴过任何已占格"的空位对，
+     一次把这对落下去 ⇒ 每块共面邻居数恒为 1，且不会回头改动已放好的块。 */
+  /* ⚠️ 重试次数按"空间紧张程度"分档（2026-09-29 用 _cp34_feas.js 实测得）：
+     n³ 里要塞的块数不到四成时，一次尝试就成的概率很高 ⇒ 60 次绰绰有余；
+     但 N=4 且 K≥26 这种"贴着网格上限"的配置，单次尝试成功率只有千分之几
+     （实测：每局 60 次 ⇒ K26 仅 13%、K28 1.5%、K30 0%）⇒ 这一档给 200 次，
+     K26 回到 44.5%（K28 5.5%、K30 1.8%）。
+     代价只落在"空间紧张"的那一档：最坏多跑 140 次枚举 ≈ 几十毫秒，一局只发生一次。
+     N=5（n³=125）/ N=6（n³=216）永远达不到这个阈值 ⇒ 恒定走 60 次，零额外开销。 */
+  var maxAtt = (K * 2.5 >= n * n * n) ? 200 : 60;
+  for (var att = 0; att < maxAtt; att++) {
+    have = {}; near = {};
+    var list = [], seed = [n - 1, n - 1, n - 1], sd = [];
+    /* ① 第一对必须含中心角 [n-1,n-1,n-1]（先生老规则：第一格在中心点） */
+    for (d = 0; d < 6; d++) {
+      var s1 = [seed[0] + DIRS[d][0], seed[1] + DIRS[d][1], seed[2] + DIRS[d][2]];
+      if (inB(s1)) sd.push(s1);
+    }
+    if (!sd.length) return null;                 /* 只有 n=1 才会走到这里，实际不会发生 */
+    var mate = sd[Math.floor(Math.random() * sd.length)];
+    have[kk(seed)] = 1; have[kk(mate)] = 1; markNear(seed); markNear(mate);
+    list.push(seed, mate);
+    /* ② 之后每轮再落一整对，直到凑满 K 块 */
+    while (list.length < K) {
+      var cdsT = [], cdsA = [];
+      for (x = 0; x < n; x++) for (y = 0; y < n; y++) for (z = 0; z < n; z++) {
+        var c0 = [x, y, z];
+        if (have[kk(c0)] || faceTouch(c0)) continue;
+        for (d = 0; d < 6; d++) {
+          var c1 = [x + DIRS[d][0], y + DIRS[d][1], z + DIRS[d][2]];
+          if (!inB(c1) || have[kk(c1)] || faceTouch(c1)) continue;
+          /* 注意：c1 的 faceTouch 不会把 c0 算成冲突 —— c0 还没进 have。
+             所以这对骨牌的两端各自只跟"对方"共面 ⇒ 共面邻居数 = 1。 */
+          (near[kk(c0)] || near[kk(c1)] ? cdsT : cdsA).push([c0, c1]);
+        }
+      }
+      var pool = cdsT.length ? cdsT : cdsA;      /* 优先挑能擦到整体的，保证连成一片 */
+      if (!pool.length) break;                   /* 实在放不下 ⇒ 本次尝试作废，重开一局 */
+      var pr = pool[Math.floor(Math.random() * pool.length)];
+      have[kk(pr[0])] = 1; have[kk(pr[1])] = 1;
+      markNear(pr[0]); markNear(pr[1]);
+      list.push(pr[0], pr[1]);
+    }
+    if (list.length === K) {
+      var obj = list.map(function (c) { return { lo: c }; });
+      /* 组与组之间必须"贴住"（共棱或共角也算），否则视觉上会散成 K/2 个孤立小岛 */
+      if (looseConnected(obj)) return obj;
+    }
+  }
+  return null;
+}
+/* 宽松连通判据：共面 / 共边 / 共角 任一接触即算相邻 —— 只给"配对生长"分支用。
+   ⚠️ 与 isConnected 的区别：isConnected 是"共面连通"（普通形状的判据）；
+      配对生长后共面图是 1-正则的，共面 BFS 必然失败，所以这里换成宽松判据，
+      只用来保证"整片不散成孤立小岛"。判据：各轴偏移量的最大值 ≤ 1 且不是同一格。 */
+function looseConnected(set) {
+  if (set.length <= 1) return true;
+  var i, j, d, nb = [], seen = {}, q;
+  for (i = 0; i < set.length; i++) nb.push([]);
+  for (i = 0; i < set.length; i++) for (j = i + 1; j < set.length; j++) {
+    var a = set[i].lo, b = set[j].lo, mx = 0;
+    for (d = 0; d < 3; d++) { var df = Math.abs(a[d] - b[d]); if (df > mx) mx = df; }
+    if (mx <= 1) { nb[i].push(j); nb[j].push(i); }
+  }
+  seen[0] = 1; q = [0];
+  while (q.length) {
+    var c = q.pop();
+    for (j = 0; j < nb[c].length; j++) if (!seen[nb[c][j]]) { seen[nb[c][j]] = 1; q.push(nb[c][j]); }
+  }
+  return Object.keys(seen).length === set.length;
 }
 /* 连通性硬校验：BFS 数出连通块数，必须恰好 1 */
 function isConnected(set) {
@@ -765,6 +1281,108 @@ function sharesFace(c1, c2) {
   return same === 2 && d === 1;
 }
 
+/* ============================================================
+   ★★ 立体模式的出题：小方块【互不共面】且【每块都完整可见】（2026-10-02 先生）
+   ============================================================
+   先生原话：「这个新模式我希望所有的小方块不要出现共用一面 改为分散」。
+
+   一条要求推出两条约束，第二条是【几何必然】，不是我加的偏好：
+
+   ① 【互不共面】任意两块曼哈顿距离 >= 2（= 不许面贴面）。
+      这就是先生说的"分散"。注意它与原版【正好相反】——原版是先生 2026-09-29 定的
+      「要相连、要出现共用面」，所以两个模式必须各出各的题，不能共用一道（见 newPuzzle）。
+
+   ② 【每块都占屏幕上不重合的位置】即"每条视线上最多 1 块"。
+      为什么是必然：同一条视线上的格位在屏幕上【完全重合】
+      （屏幕位移 f = Δi²+Δj²+Δk²−ΔiΔj−ΔjΔk−ΔkΔi，f=0 ⟺ Δi=Δj=Δk）。
+      两块同视线 ⇒ 前面那块把后面那块【完全挡住】，于是：
+        · 孩子看不见自己放了几块（画面块数对不上）；
+        · 后面那块永远点不到（拾取只命中最靠前的那块）；
+        · 更要命的是"放到第几层"无法由拖动动作表达 —— 屏幕位置根本区分不出层。
+      而"层"恰恰是【三视图】才能告诉孩子的信息（(0,0,0) 与 (2,2,2) 屏幕完全重合，
+      但投影分别在 (0,0)/(2,2) 处）。所以层必须唯一，否则题目无从作答。
+
+   两条合起来 ⇒ 可用格位 = 每条视线【最靠前】的那一格 = 至少一个坐标为 0 的格，
+   数量正好 N³−(N−1)³（N=4→37、5→61、6→91），与"屏幕上的位置数""直接可见格位数"
+   是同一个数（数学上是同一件事）。于是：
+       61 个屏幕位置 ⟷ 61 个可用格位【一一对应】，拖动即定，不需要"连点往里推"。
+
+   第一格仍固定贴 G 角 [n-1,n-1,n-1]（先生 2026-09-29 老规则："第一个方格必须在中心点"）。
+
+   ★ 块数上限为什么按网格边长收窄（实测 _cp_shell_cap.py / _cp_shell_fine.py）：
+      外壳层里两两不共面的最大集合只有 N=4→19、N=5→31、N=6→46；
+      再按"单次随机生成成功率 >= 60%"留安全裕量，取 14 / 23 / 30。
+      （N=5 要 30 块时单次成功率 0.2% —— 不是算法差，是 31 的上限已经顶到天花板。）
+   ============================================================ */
+var SOLID_TRIES = 300;
+function solidKMax(n) {
+  if (n <= 3) return 6;
+  if (n === 4) return 14;
+  if (n === 5) return 23;
+  return 30;
+}
+function shellCells(n) {
+  var out = [], i, j, k;
+  for (i = 0; i < n; i++) for (j = 0; j < n; j++) for (k = 0; k < n; k++) {
+    if (i === 0 || j === 0 || k === 0) out.push([i, j, k]);   /* 每条视线最靠前的那一格 */
+  }
+  return out;
+}
+var _shellChk = -1;
+function shellCheck(n) {
+  /* 外壳层的两条不变量，一次算完缓存。错了就当场炸：分组一旦静默错掉，
+     后面全部拾取都会歪，而画面看上去仍然正常（老毛病）。 */
+  if (_shellChk === n) return;
+  var cells = shellCells(n), seen = {}, i;
+  if (cells.length !== n * n * n - (n - 1) * (n - 1) * (n - 1)) {
+    throw new Error('外壳层格位数不对：' + cells.length + ' ≠ N³−(N−1)³');
+  }
+  for (i = 0; i < cells.length; i++) {
+    var key = rayKeyOf(cells[i]);         /* 与拾取同一套整数键 */
+    if (seen[key]) throw new Error('外壳层里有两个格位占同一屏幕位置：' + key);
+    seen[key] = 1;
+  }
+  _shellChk = n;
+}
+/* 生长的两种严格度：
+   strict = true  ⇒ 切比雪夫距离 >= 2（连棱、连角都不许挨）—— 视觉上真正"散开"
+   strict = false ⇒ 只要曼哈顿距离 >= 2（不共面）—— 先生字面要求的下限
+   为什么分两档：等轴投影下【共棱】的两块在屏幕上会沿水平方向并排贴着，
+   看起来就像"挨在一起"，与先生要的"分散"观感不符（第一版就是这样，
+   截图里左下两块明显贴着）。但"不共棱"的容量小得多（实测上限 N=4→8、N=5→21、N=6→27），
+   所以先按严格档挑，凑不够 K 才逐格放宽 —— 能散的尽量散。 */
+function growScatter(pool, seed, K, strict) {
+  var sel = seed.slice(), x, q;
+  for (x = 0; x < pool.length && sel.length < K; x++) {
+    var c = pool[x], ok = true;
+    for (q = 0; q < sel.length; q++) {
+      var di = Math.abs(c[0] - sel[q][0]), dj = Math.abs(c[1] - sel[q][1]), dk = Math.abs(c[2] - sel[q][2]);
+      if (di + dj + dk < 2) { ok = false; break; }                 /* 共面：任何档都不允许 */
+      if (strict && Math.max(di, dj, dk) < 2) { ok = false; break; } /* 共棱/共角：严格档不允许 */
+    }
+    if (ok) sel.push(c);
+  }
+  return sel;
+}
+function genScatter(n, K) {
+  shellCheck(n);
+  K = Math.max(3, Math.min(30, Math.round(K)));
+  var cap = solidKMax(n);
+  if (K > cap) K = cap;
+  var poolAll = shellCells(n), best = null;
+  for (var att = 0; att < SOLID_TRIES; att++) {
+    var pool = poolAll.slice(), x, t;
+    for (x = pool.length - 1; x > 0; x--) {          /* Fisher-Yates：每局形状都不同 */
+      var r = ri(x + 1); t = pool[x]; pool[x] = pool[r]; pool[r] = t;
+    }
+    var sel = growScatter(pool, [], K, true);        /* 先要"连棱角都不挨"的 */
+    if (sel.length < K) sel = growScatter(pool, sel, K, false);   /* 不够再放宽到"不共面" */
+    if (sel.length >= K) return sel.map(function (v) { return { lo: v }; });
+    if (!best || sel.length > best.length) best = sel;    /* 兜底：记下这次最好的一次 */
+  }
+  return best.map(function (v) { return { lo: v }; });
+}
+
 /* ---------- 答案：三面墙上的投影并集 ---------- */
 /* 先生 2026-09-29：「算面你可以计算平行于填充网格的那个面的颜色」
    ⇒ 某格 (a,b,c) 沿 u 轴拍平到 u 墙 ⇒ 墙上格 (v,w) = (b,c)；颜色 = 平行于 u 墙的那个面
@@ -779,6 +1397,19 @@ function buildAns(shape) {
   });
   return A;
 }
+/* ★ 与 buildAns【逐字同口径】的"这一格是谁投的"表：键 → 球的序号。
+   「彩色」模式下墙上的椭圆要跟各自那颗球同色，就必须知道这件事。
+   一个格被多颗球投到同一处时取【第一颗】（按 G.shape 的顺序 ⇒ 与随机数种子绑定，每次一样）。 */
+function buildAnsColor(shape) {
+  var A = { w: {}, v: {}, u: {} };
+  shape.forEach(function (c, i) {
+    var a = c.lo[0], b = c.lo[1], e = c.lo[2];
+    if (A.w[a + '|' + b] === undefined) A.w[a + '|' + b] = i;
+    if (A.v[a + '|' + e] === undefined) A.v[a + '|' + e] = i;
+    if (A.u[b + '|' + e] === undefined) A.u[b + '|' + e] = i;
+  });
+  return A;
+}
 function ansCount(A) {
   return Object.keys(A.w).length + Object.keys(A.v).length + Object.keys(A.u).length;
 }
@@ -789,22 +1420,35 @@ function ansCount(A) {
    —— 带缓存：绘制一帧会问几十次，对象重建没必要。
    ============================================================ */
 var _PAL = null, _PALKEY = null;
+/* ★ 纸面开关（先生 2026-10-06 打印）★
+   为真时无视 G.skin，一律用"白底深线"那一套 —— 纸上不能有整块黑底。
+   用独立变量而不是临时改 G.skin：G.skin 是玩家的设置，不能因为打一次印就被改掉。 */
+var PAPER = false;
 function skinPal() {
-  if (_PALKEY !== G.skin) {
-    _PAL = (G.skin === 'light')
-      ? { /* 白底：线要深、且比黑底更实（白底的抗锯齿对比更弱，太淡就会像没画） */
-          grid: 'rgba(30,45,70,.30)', gridDim: 'rgba(30,45,70,.13)',
-          edge: 'rgba(22,36,58,.88)', edgeDim: 'rgba(22,36,58,.20)',
-          lead: 'rgba(22,36,58,.48)', labBg: '#FFFFFF', labEdge: '#BFCBDA', labInk: '#152034',
-          cellEdge: 'rgba(255,255,255,.82)',
-          badFill: '#F9D3CE' }
-      : { /* 黑底（cube-5x5x5.html 那套原味配色） */
+  var key = PAPER ? 'paper' : G.skin;
+  if (_PALKEY !== key) {
+    _PAL = (key === 'dark')
+      ? { /* 黑底（cube-5x5x5.html 那套原味配色） */
           grid: 'rgba(255,255,255,.34)', gridDim: 'rgba(255,255,255,.14)',
           edge: 'rgba(255,255,255,.90)', edgeDim: 'rgba(255,255,255,.18)',
           lead: 'rgba(255,255,255,.42)', labBg: '#FFFFFF', labEdge: '#22324A', labInk: '#152034',
           cellEdge: 'rgba(12,20,32,.62)',
-          badFill: '#66241F' };
-    _PALKEY = G.skin;
+          badFill: '#66241F',
+          /* A/B/C 标签的三件套：引线 + 角上的圆点 + 标签框。
+             ★原来这三样在 buildBoard 里是写死的 rgba(255,255,255,.45) / #fff★，
+               白底皮肤和纸面上全部看不见（同色盖同色）。现在按皮肤给。 */
+          labLead: 'rgba(255,255,255,.45)', labDot: '#FFFFFF', labDotEdge: 'none',
+          labBox: '#FFFFFF', labBoxEdge: 'none' }
+      : { /* 白底：线要深、且比黑底更实（白底的抗锯齿对比更弱，太淡就会像没画）
+             —— paper（打印）与 light 共用这一套，只在线宽/网格透明度上另有覆盖（见 CSS） */
+          grid: 'rgba(30,45,70,.30)', gridDim: 'rgba(30,45,70,.13)',
+          edge: 'rgba(22,36,58,.88)', edgeDim: 'rgba(22,36,58,.20)',
+          lead: 'rgba(22,36,58,.48)', labBg: '#FFFFFF', labEdge: '#BFCBDA', labInk: '#152034',
+          cellEdge: 'rgba(255,255,255,.82)',
+          badFill: '#F9D3CE',
+          labLead: 'rgba(22,36,58,.50)', labDot: '#FFFFFF', labDotEdge: 'rgba(22,36,58,.80)',
+          labBox: '#FFFFFF', labBoxEdge: '#BFCBDA' };
+    _PALKEY = key;
   }
   return _PAL;
 }
@@ -865,7 +1509,11 @@ function makeView(cvEl) {
 var Vthumb = null, Vmodal = null;
 function fitView(V) {
   V.VW = V.cv.clientWidth; V.VH = V.cv.clientHeight;
-  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  /* ★ 打印时把位图倍率【定死 4】★：缩略图是 canvas（位图），屏幕上 dpr≤2 够用，
+     但纸面 100mm 宽的框 ≈ 378 CSS px、按 300dpi 需要 ~1180 像素 —— 屏幕上 dpr 2 只有 756，印出来发虚。
+     ⚠️ 不能写成 Math.min(dpr, PAPER?4:2)：屏幕上 dpr=2 ⇒ min(2,4)=2，倍率根本提不上去。
+        纸面这条路要【无视屏幕 dpr】直接给 4。代价是一次性画一张 ~1500×2400 的位图（≈15MB），可接受。 */
+  var dpr = PAPER ? 4 : Math.min(window.devicePixelRatio || 1, 2);
   if (V.cv.width !== Math.round(V.VW * dpr) || V.cv.height !== Math.round(V.VH * dpr)) {
     V.cv.width = Math.round(V.VW * dpr); V.cv.height = Math.round(V.VH * dpr);
   }
@@ -896,13 +1544,18 @@ function drawStage(V) {
      要留的：最外侧六边形 = 外框 6 条棱（wireEdges(true)）+ 题目小方块 + A/B/C 三个标签。
      缩略图与 360° 弹窗同步生效（弹窗就是缩略图的放大）；游戏区不受影响 —— 否则没法答题。 */
   var hard = (G.diff === 'hard');
+  var solid = (G.mode === 'solid');
+  /* ★ 立体模式下网格必须留着：网格一旦按「困难」藏掉，孩子就没法数格子去对照摆方块，题就废了。
+     ⇒ 困难的"藏网格"只对原版生效。 */
+  var grid = (!hard) || solid;
   var sc = scene(), i;
   /* ① 三面墙的格线：远的先画、近的（这里不存在）后画。
         三面墙（u=N/v=N/w=N）在默认视角下全是几何背面，但它们是唯一的墙 ⇒ 一律亮档。 */
-  if (!hard) sc.forEach(function (it) { if (!it.front && faceOn(it.f)) wireFace(it); });
-  if (!hard) wireEdges(false);            /* 内角 3 条棱（C–G / G–H / F–G）画在方块之下 */
-  drawShape();                            /* ② 题目：小方块集合 */
-  if (!hard) sc.forEach(function (it) { if (it.front && faceOn(it.f)) wireFace(it); });
+  if (solid) drawViews();                 /* 立体模式：题面＝三面投影，先铺色块（必须在格线之下） */
+  if (grid) sc.forEach(function (it) { if (!it.front && faceOn(it.f)) wireFace(it); });
+  if (grid) wireEdges(false);             /* 内角 3 条棱（C–G / G–H / F–G）画在方块之下 */
+  if (!solid) drawShape();                /* 原版：题目＝小方块集合 */
+  if (grid) sc.forEach(function (it) { if (it.front && faceOn(it.f)) wireFace(it); });
   wireEdges(true);                        /* ③ 外框 6 条棱 —— 困难模式只留它 */
   drawLabels();                           /* ④ A / B / C 三个网格定位标签 */
 }
@@ -942,6 +1595,228 @@ function wireEdges(near) {
     ctx.stroke();
   });
 }
+/* ============================================================
+   ★★ 圆形模式：圆球 + 球在墙上的投影（先生 2026-10-06）★★
+   ------------------------------------------------------------
+   【为什么缩略图里的球是正圆，墙面上的投影却是椭圆】—— 这两句必须是同一套口径推出来的，
+   否则同一个人在两处会看到两种"球"，那才是真矛盾：
+     ① 球投到墙上：正交投影打到与该面平行的平面上，仍是【半径 = 球半径的正圆】（半径不变）；
+     ② 但墙不是正对观众的 —— 等轴投影把"墙平面上那个正圆"整体压扁 ⇒ 变成【椭圆】。
+   屏幕映射（本体口径）：屏幕X = 0.70711(u−v)、屏幕Y = −0.40825(u+v) + 0.81650w。
+     拿 w=N 面（墙平面 = u-v 平面）代进去：圆 P(θ)=C+ρ(cosθ·u + sinθ·v) 映成
+       dx = 0.70711ρ(cosθ−sinθ) = ρcosφ
+       dy = −0.40825ρ(cosθ+sinθ) = −(ρ/√3)sinφ      （φ=θ+45°）
+     ⇒ 长半轴 = ρ、短半轴 = ρ/√3、长轴【水平】。
+     另两面同样推，得长轴角：u=N 面 60°、v=N 面 −60°、w=N 面 0°。
+   ⇒ ★不手抄这三个角度★：ballEllipse() 直接把"面上圆的两根参数方向"过一遍本体的
+      flatRel()，解 2×2 的奇异值/奇异向量 —— 符号、象限全由本体几何决定，
+      改视角、改 A0/B0 都不会悄悄失同步（这条是上一轮圆球栽过的坑）。
+   ------------------------------------------------------------
+   【球色：单色 / 彩色（先生 2026-10-06 两条追加要求）】
+     ① 圆形模式下右侧【只留】"圆球颜色"这一项 —— 三面网格色在这里没有用武之地
+        （格子层不填色、缩略图画的是球不是方块），四行一起摆只会让人问"这三个跟我的球什么关系"。
+     ② 多一个「彩色」按钮：一按下去 K 颗球两两不同色。
+        ★ 墙上那个椭圆也必须跟着【各自那颗球】的颜色走 ★ ——
+        否则"缩略图是彩球、涂出来全是一个色"，两边对不上，彩色就沦为纯装饰。
+        做法的代价只有一处：椭圆颜色不能再从 G.ballColor 取，得先知道"这一格是谁投的"，
+        于是多一个与 buildAns 逐字同口径的 ansColor 表（键→球的序号）。
+   ============================================================ */
+/* ★ 球半径（世界单位）：格子的内切球 ⇒ 半径 0.5。
+   正交投影把 3D 单位向量映成屏幕向量、长度最大值 = 1（发生在 ⊥ 视线的方向）
+   ⇒ 【球的投影半径 = 球的真实半径，不被轴向缩短】⇒ 屏幕半径 = 0.5 × F.s。
+   ✗ 写成 0.5 × 0.81650 就是把"沿轴距离的缩短系数"误乘进了半径（少 18.35%），
+     后果是"邻球恰好相切、零重叠"，等于亲手抹掉唯一的遮挡线索。 */
+var BALL_RS = 0.5;
+var BR = BALL_RS;                       /* 几何计算里用的球半径（世界单位） */
+/* ★★ 光照：★同一个光源★ —— 高光与影子同源 ★★
+   高光焦点落在球的 (28%,28%)（= 左上偏内）⇒ 高光处法线 n 的屏幕分量 = (−0.44,−0.44)
+   ⇒ 光传播方向 d 的屏幕分量 = (+0.44,+0.44)，沿视线分量 = +√(1−2×0.44²) = +0.783
+   ⇒ d·N0 > 0 表示光【从观察者这一侧往前照】，与视线夹角 arccos(0.783) = 38.5°。
+   由此推出一条可判真伪的结论：★影子只能落在比施影球【更深】的球上★
+     （受影必须满足 (P−施影球心)·d > 0）⇒ 孩子看到谁身上有影子，谁就是后面那颗。
+   ⚠️ 旧版错在"高光按光偏视线 38.5° 画、影子却按光平行于屏幕平面平移固定量"= 两个光源；
+      而"光平行于屏幕平面"的模型里影子位移与【深度无关】⇒ 影子完全不含前后信息，
+      这正是先生那句"圆没有前后关系"的根。 */
+var EK = 0.44;
+/* ★ 球色一律走 ballColorAt() 取：不在任何地方直接读 G.ballColor，也不留写死的绿
+   （原来那个无参的 ballC() 在改成彩色后就没有调用者了 —— 留着就是一颗定时炸弹：
+   下一个人可能顺手用它，于是彩色模式下球又变回单色，而且不报错。） */
+/* ★「彩色」的取色法（先生 2026-10-06）—— 为什么不用 PALETTE 那 10 个预设色：
+   K 最大 30 > 10，必然重复；而且那 10 色里本来就有好几对色相很近
+   （#6FD463 / #9CE86B 都是绿、#5AA9FF / #7FB2FF 都是蓝…），凑在一个画面里并不"都不一样"。
+   改用【黄金角】在色相环上取样：hue_k = (h0 + k × 137.508°) mod 360。
+   黄金角的意义正是"不管取多少个，任意两个都分得开"，K 一路到 30 也不会撞色。
+   S/L 固定（取自 #6FD463 的实测 S≈57%、L≈60%）⇒ 明度一致，球面明暗渐变的观感才统一。 */
+var RAINBOW_H0 = 113.6, RAINBOW_S = 0.57, RAINBOW_L = 0.60, GOLDEN = 137.508;
+function hsl2hex(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  var c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  var m = l - c / 2, r, g, b;
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+  function hx(v) { var t = Math.round((v + m) * 255); return (t < 16 ? '0' : '') + t.toString(16); }
+  return '#' + hx(r) + hx(g) + hx(b);
+}
+function rainbowColor(i) { return hsl2hex(RAINBOW_H0 + i * GOLDEN, RAINBOW_S, RAINBOW_L); }
+/* 第 i 颗球的颜色（i = 球在 G.shape 里的原始序号，不是排序后的下标） */
+function ballColorAt(i) {
+  if (!G.rainbow || typeof i !== 'number' || i < 0) return G.ballColor;
+  return rainbowColor(i);
+}
+/* 屏幕正交基 {ex,ey,N0}（随视角 M 旋转，用本体自己的 cam() 求 ⇒ 不靠手抄符号）
+   ex = cam(A0) ⇒ 屏幕X 方向；ey = −cam(B0) ⇒ 屏幕Y(向下) 方向；N0 ⇒ 视线（+ = 更远） */
+function screenBasis() {
+  var ex = cam({ u: A0.x, v: A0.y, w: A0.z });
+  var ey = cam({ u: -B0.x, v: -B0.y, w: -B0.z });
+  return { ex: [ex.x, ex.y, ex.z], ey: [ey.x, ey.y, ey.z], en: [N0.x, N0.y, N0.z] };
+}
+function lightDir() {                   /* 光传播方向 d（世界系单位向量） */
+  var b = screenBasis(), az = Math.sqrt(1 - 2 * EK * EK), v = [0, 0, 0], i;
+  for (i = 0; i < 3; i++) v[i] = EK * b.ex[i] + EK * b.ey[i] + az * b.en[i];
+  var nn = Math.hypot(v[0], v[1], v[2]);
+  return [v[0] / nn, v[1] / nn, v[2] / nn];
+}
+var SHADOW_ON = location.search.indexOf('shadow=0') < 0;   /* 自检用：?shadow=0 关掉球间影子做像素差 */
+var AMB = (function () {                                   /* 影子最深压掉多少亮度；?amb=xx 可调 */
+  var m = /[?&]amb=([\d.]+)/.exec(location.search);
+  return m ? Math.max(0, Math.min(0.9, +m[1])) : 0.45;
+})();
+var SHADOW_STAT = {};                   /* 自检用：每格实际被打上阴影的像素数 */
+/* 给一颗球叠上"其它球投来的影子"。
+   逐像素 → 反推球面点 P → 对每颗"施影球"两条判据：
+     ① (P − 施影球心)·d > 0                    —— P 在光的【下游】：影子只能往深里走
+     ② |(P − 施影球心) 中垂直于 d 的分量| < r  —— P 落在施影球的"光柱"里（半径 = 球半径）
+   两条都满足 ⇒ P 被挡光；边缘 0.25r 软化 ⇒ 半影（光源不是点光源）。 */
+function castShadow(g, sx, sy, Cw, others, key) {
+  /* ⚠️ 画布 ctx 上有 setTransform(dpr,0,0,dpr,0,0)，而 getImageData/putImageData
+     【不认变换、只认设备像素】⇒ 必须自己做 CSS↔设备 坐标换算，
+     否则压暗会被写到别的地方（首版踩过：影子跑到墙上和 A 标签上）。 */
+  var T = g.getTransform();
+  var kx = T.a || 1, ky = T.d || 1, tfx = T.e, tfy = T.f;
+  var s = F.s, r = BR, rad = Math.ceil(BR * s) + 2, i;
+  var x0 = Math.max(0, Math.floor((sx - rad) * kx + tfx));
+  var y0 = Math.max(0, Math.floor((sy - rad) * ky + tfy));
+  var x1 = Math.min(g.canvas.width, Math.ceil((sx + rad) * kx + tfx));
+  var y1 = Math.min(g.canvas.height, Math.ceil((sy + rad) * ky + tfy));
+  var w = x1 - x0, h = y1 - y0;
+  if (w <= 0 || h <= 0) return;
+  var b = screenBasis(), d = lightDir();
+  var id = g.getImageData(x0, y0, w, h), dt = id.data, hit = 0;
+  for (var yy = 0; yy < h; yy++) {
+    for (var xx = 0; xx < w; xx++) {
+      var cx = (x0 + xx + 0.5 - tfx) / kx, cy = (y0 + yy + 0.5 - tfy) / ky;   /* → CSS */
+      var dx = (cx - sx) / s, dy = (cy - sy) / s;                             /* → 世界屏幕单位 */
+      var q = (dx * dx + dy * dy) / (r * r);
+      if (q >= 1) continue;                       /* 球外 */
+      var nz = -Math.sqrt(1 - q);                 /* 取朝向观察者那面（n·N0 < 0） */
+      var au = dx / r, av = dy / r;
+      var P = [0, 0, 0], k;
+      for (k = 0; k < 3; k++) P[k] = Cw[k] + r * (au * b.ex[k] + av * b.ey[k] + nz * b.en[k]);
+      var sh = 0;
+      for (i = 0; i < others.length; i++) {
+        var Q = others[i];
+        var wv = [P[0] - Q[0], P[1] - Q[1], P[2] - Q[2]];
+        var t = wv[0] * d[0] + wv[1] * d[1] + wv[2] * d[2];
+        if (t <= 0) continue;                     /* 判据① */
+        var px = wv[0] - t * d[0], py = wv[1] - t * d[1], pz = wv[2] - t * d[2];
+        var dist = Math.sqrt(px * px + py * py + pz * pz);
+        if (dist >= r) continue;                  /* 判据② */
+        var u = 1 - dist / r;
+        if (u > sh) sh = u;
+      }
+      if (sh > 0) {
+        var f = 1 - AMB * Math.min(1, sh / 0.25);
+        var o = (yy * w + xx) * 4;
+        dt[o] *= f; dt[o + 1] *= f; dt[o + 2] *= f;
+        hit++;
+      }
+    }
+  }
+  g.putImageData(id, x0, y0);
+  if (key) SHADOW_STAT[key] = hit;
+}
+function mixHex(h, t, k) {              /* 把 h 往 t 混 k（0~1）：球面的高光/暗部都靠它 */
+  function cv(x) { return [parseInt(x.substr(1, 2), 16), parseInt(x.substr(3, 2), 16),
+                           parseInt(x.substr(5, 2), 16)]; }
+  var a = cv(h), b = cv(t), o = '#', i, v;
+  for (i = 0; i < 3; i++) {
+    v = Math.round(a[i] + (b[i] - a[i]) * k);
+    o += (v < 16 ? '0' : '') + v.toString(16);
+  }
+  return o;
+}
+/* 球面明暗：高光焦点落在左上 (28%,28%)，与 lightDir() 的假设同一处 */
+function ball2d(g, x, y, R, ci) {
+  var C = ballColorAt(ci);
+  var gr = g.createRadialGradient(x - 0.44 * R, y - 0.44 * R, Math.max(R * 0.06, 0.4),
+                                  x, y, R * 1.06);
+  gr.addColorStop(0, mixHex(C, '#FFFFFF', 0.86));
+  gr.addColorStop(0.16, mixHex(C, '#FFFFFF', 0.34));
+  gr.addColorStop(0.55, C);
+  gr.addColorStop(0.85, mixHex(C, '#000000', 0.42));
+  gr.addColorStop(1, mixHex(C, '#000000', 0.68));
+  g.beginPath(); g.arc(x, y, R, 0, Math.PI * 2);
+  g.fillStyle = gr; g.fill();
+  g.lineWidth = Math.max(0.8, R * 0.02);
+  g.strokeStyle = mixHex(C, '#000000', 0.50);
+  g.stroke();
+}
+/* 同一个球在 SVG 里怎么画（立体模式的游戏区是 SVG，不是 canvas）：
+   canvas 版用 createRadialGradient(球心−0.44R, 半径 1.06R)，SVG 版用 objectBoundingBox 的
+   径向渐变 —— 球 bbox 是 1×1、中心 (0.5,0.5) ⇒ 焦点 0.5−0.22 = **0.28**（与 EK=0.44 同一个数）、
+   半径 1.06R 换成 bbox 单位是 **0.53**。stop 与 ball2d 逐字一致 ⇒ 两边同一个光源、同一种明暗。 */
+function ballGradSvg(color, uid) {
+  return '<radialGradient id="bg' + uid + '" gradientUnits="objectBoundingBox" ' +
+         'cx="0.28" cy="0.28" r="0.53" fx="0.28" fy="0.28">' +
+         '<stop offset="0" stop-color="' + mixHex(color, '#FFFFFF', 0.86) + '"/>' +
+         '<stop offset="0.16" stop-color="' + mixHex(color, '#FFFFFF', 0.34) + '"/>' +
+         '<stop offset="0.55" stop-color="' + color + '"/>' +
+         '<stop offset="0.85" stop-color="' + mixHex(color, '#000000', 0.42) + '"/>' +
+         '<stop offset="1" stop-color="' + mixHex(color, '#000000', 0.68) + '"/>' +
+         '</radialGradient>';
+}
+/* 立体模式（圆形）里"我要摆的那颗球"取什么色：
+   · 单色 ⇒ 就是 G.ballColor；
+   · 彩色 ⇒ 优先用【答案里同格位那一块的序号】，这样"摆对了 ⇒ 球的颜色和题面上那三处
+     同色的椭圆对上"，孩子能自己核对；非答案格位（摆错/还没摆对）退回按格位算一个稳定序号。 */
+function loIdx(lo) { return lo[0] * 64 + lo[1] * 8 + lo[2]; }   /* N ≤ 6 ⇒ 每轴 0..5，八进制够用 */
+function solidBallColor(lo) {
+  if (!G.rainbow) return G.ballColor;
+  var key = kk(lo);
+  for (var t = 0; t < G.shape.length; t++) {
+    if (kk(G.shape[t].lo) === key) return rainbowColor(t);
+  }
+  return rainbowColor(loIdx(lo));
+}
+/* ---------- 球在墙上的投影：椭圆（游戏区用）----------
+   每面墙的两根面内轴（面法向那根轴不在面内）：
+     w 面（法向 w）→ u, v      v 面（法向 v）→ u, w      u 面（法向 u）→ v, w
+   面上那个半径 ρ 的圆 P(θ)=C+ρ(cosθ·E1+sinθ·E2) 过投影后仍是同一组 cosθ/sinθ 的组合
+   （flatRel 是线性的）⇒ 屏幕点 = ρ·M·[cosθ,sinθ]ᵀ，M 的两列 = 两根面内轴在屏幕上的像。
+   ⇒ 椭圆半轴 = ρ × M 的奇异值；长轴方向 = M × (AᵀA 的最大特征向量)。 */
+var FACE_AX = { w: [[1, 0, 0], [0, 1, 0]], v: [[1, 0, 0], [0, 0, 1]], u: [[0, 1, 0], [0, 0, 1]] };
+function ballEllipse(k) {
+  var ax = FACE_AX[k];
+  var v0 = flatRel(cv3(ax[0][0], ax[0][1], ax[0][2]));
+  var v1 = flatRel(cv3(ax[1][0], ax[1][1], ax[1][2]));
+  var a = v0.x, c = v0.y, b = v1.x, d = v1.y;         /* M = [[a,b],[c,d]] */
+  var A11 = a * a + c * c, A12 = a * b + c * d, A22 = b * b + d * d;
+  var tr = A11 + A22, det = A11 * A22 - A12 * A12;
+  var rr = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+  var l1 = tr / 2 + rr, l2 = Math.max(0, tr / 2 - rr);
+  var e1x, e1y;                                       /* AᵀA 的最大特征向量 */
+  if (Math.abs(A12) > 1e-12) { e1x = A12; e1y = l1 - A11; }
+  else { e1x = (A11 >= A22) ? 1 : 0; e1y = (A11 >= A22) ? 0 : 1; }
+  var en = Math.hypot(e1x, e1y) || 1; e1x /= en; e1y /= en;
+  var ux = a * e1x + b * e1y, uy = c * e1x + d * e1y;  /* 长轴在屏幕上的方向 */
+  var un = Math.hypot(ux, uy) || 1; ux /= un; uy /= un;
+  return { ra: BALL_RS * Math.sqrt(l1), rb: BALL_RS * Math.sqrt(l2),
+           ang: Math.atan2(uy, ux) * 180 / Math.PI };
+}
 /* 题目：所有小方块。每块只画 3 个朝向观察者的面（背面永远被本块正面盖住）；
    块之间按中心深度远→近画，同深度按 (a,b,c) 钉死顺序 —— 正确性证明见文件头长注释。 */
 function drawShape() {
@@ -961,6 +1836,38 @@ function drawShape() {
     for (var i = 0; i < 3; i++) if (a.lo[i] !== b.lo[i]) return a.lo[i] - b.lo[i];
     return 0;
   });
+  if (G.ball) {
+    /* ★★ 圆球摆在等轴投影下的几何事实 ★★
+       屏幕距离 = 0.81650 × √Q，Q = du²+dv²+dw²−dudv−dudw−dvdw；球直径 2R = 1.00000。
+       ▶ Q = 1（共面相邻 (±1,0,0)、或共棱同向 (1,1,0)）→ 屏幕距 0.81650 < 1
+         ⇒ 【邻球投影重叠】：重叠深度 2R−d = 0.1835 = 36.7%R，重叠面积 ≈ 球的 9.0%。
+         ⇒ 这就是"前面的球压住后面球一小边"的遮挡线索 ★本来就该有★。
+       ▶ Q ≥ 3（共棱异向 (1,−1,0) 等）→ 屏幕距 ≥ 1.41421 ⇒ 分开 ≥ 41%。
+       ▶ Q = 0（沿视线 (t,t,t)）→ 屏幕距 0 ⇒ 【完全重合】，近球整颗盖住远球。
+         ⇒ 这也正是 flat 出题必须过"可见性闸门"的同一个理由（见 visOK）。 */
+    var R = BALL_RS * F.s;
+    var pts = cells.map(function (c) {
+      var s2 = PT(cv3(c.lo[0] + .5, c.lo[1] + .5, c.lo[2] + .5));
+      return { x: s2.x, y: s2.y,
+               w: [c.lo[0] + .5, c.lo[1] + .5, c.lo[2] + .5] };
+    });
+    SHADOW_STAT = {};
+    /* 远的先画、近的后画（与方块同一套排序） */
+    cells.forEach(function (c, i) {
+      var p = pts[i];
+      ball2d(ctx, p.x, p.y, R, c.ci);          /* ★ 用 c.ci（原始序号），不是排序后的 i */
+      if (SHADOW_ON) {
+        /* 影子必须【后画】：先画会被球自己的填充整块盖掉 = 等于没画 */
+        var others = pts.filter(function (q, j) { return j !== i; })
+                        .map(function (q) { return q.w; });
+        castShadow(ctx, p.x, p.y, p.w, others, c.lo.join(','));
+        ctx.lineWidth = Math.max(0.8, R * 0.02);        /* 压暗会盖到描边 ⇒ 补描一次 */
+        ctx.strokeStyle = mixHex(ballColorAt(c.ci), '#000000', 0.50);
+        ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI * 2); ctx.stroke();
+      }
+    });
+    return;
+  }
   cells.forEach(function (c) {
     c.faces.filter(function (f) { return dot3(cam(f.n), N0) < -1e-6; })
       .sort(function (a, b) { return b.d - a.d; })
@@ -977,6 +1884,55 @@ function drawShape() {
         ctx.lineWidth = 1.8;
         ctx.stroke();
       });
+  });
+}
+/* ★ 立体模式的题面：把三面投影（G.ans）直接涂在三面墙上。
+   口径与游戏区逐字一致（buildAns 里定的 w:a|b / v:a|c / u:b|c，faceCellQuad 同一套），
+   所以孩子的目标就是"我摆出来的立体，投影要跟这张图一模一样"。 */
+function drawViews() {
+  var sc = scene();
+  /* ★ 圆形模式（先生 2026-10-06「立体模式支持圆形」）★
+     立体模式的题面 = 三面投影。方形时是"涂满整格"，圆形时球投到墙上是一个【椭圆】，
+     所以这里也要从格块换成椭圆 —— 与 flat 那边游戏区的椭圆是【同一个 ballEllipse()】，
+     两边不会漂移。
+     ⚠️ 前提：立体模式下缩略图视角是固定正向的。本体已经在几处挡着
+        （`if (G.mode === 'solid') return;` 见 thumbRot / thumbZoom / autoRot），
+        ballEllipse() 给的固定长短轴与长轴角只在默认视角下成立；哪天放开旋转，这里要改成
+        "把面内圆采样后投影"（也就是拿格四角做仿射插值）才通用。 */
+  var ball = !!G.ball;
+  sc.forEach(function (it) {
+    if (!faceOn(it.f)) return;
+    var cells = Object.keys(G.ans[it.f.k]);
+    if (!cells.length) return;
+    var col = G.COL[it.f.k];
+    if (ball) {
+      var e = ballEllipse(it.f.k);
+      ctx.save();
+      ctx.fillStyle = col;
+      ctx.strokeStyle = mixHex(col, '#000000', 0.50);
+      ctx.lineWidth = Math.max(0.8, e.ra * F.s * 0.02);
+      cells.forEach(function (key) {
+        var ij = key.split('|');
+        var q = faceCellQuad(it.f, +ij[0], +ij[1]);
+        var cx = (q[0].x + q[1].x + q[2].x + q[3].x) / 4;
+        var cy = (q[0].y + q[1].y + q[2].y + q[3].y) / 4;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, e.ra * F.s, e.rb * F.s, e.ang * Math.PI / 180, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      });
+      ctx.restore();
+      return;
+    }
+    ctx.beginPath();
+    cells.forEach(function (key) {
+      var ij = key.split('|');
+      var q = faceCellQuad(it.f, +ij[0], +ij[1]);
+      ctx.moveTo(q[0].x, q[0].y);
+      for (var t = 1; t < 4; t++) ctx.lineTo(q[t].x, q[t].y);
+      ctx.closePath();
+    });
+    ctx.fillStyle = col;
+    ctx.fill();
   });
 }
 /* A / B / C 三个网格定位标签（只画这三个顶点，其余顶点一律不显示） */
@@ -1034,7 +1990,7 @@ function renderAll() { renderThumb(); renderModal(); }
    坐标用「归一化投影」：临时把 F 设成 {s:1,ox:0,oy:0} ⇒ PT() 直接给出与缩放无关的坐标，
    交给 SVG viewBox 去适配任意大小。视角与缩略图同为 cube-5x5x5.html 的固定视角。
    ============================================================ */
-var cellEls = [], USCALE = 100;
+var cellEls = [], ballEls = [], USCALE = 100;
 function PX(p) { return (p.x * USCALE).toFixed(2) + ',' + (p.y * USCALE).toFixed(2); }
 /* ⚠️ 踩过的坑：unitQuad 必须【在 withUnit 里】算。
    它依赖全局 F（PT 用 F.s / F.ox / F.oy），而 F 是"当前正在画的视图"的取景参数 ——
@@ -1055,6 +2011,8 @@ function withUnit(fn) {
   return r;
 }
 function buildBoard() {
+  /* 立体模式走另一条完全不同的渲染路径（3D 空间 + 61 个拾取六边形） */
+  if (G.mode === 'solid') { ballEls = []; buildSolidBoard(); return; }
   var svg = document.getElementById('bsvg'), i, j, k;
   var box = withUnit(function () {
     var xs = [], ys = [];
@@ -1073,6 +2031,28 @@ function buildBoard() {
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
   var parts = [];
+  /* ★ 圆形模式：先铺"球在墙上的投影"这一层（椭圆），再铺透明的格子层。
+     顺序不能反 —— 格子层带着 hover 金边和 .bad 红描边，必须压在椭圆【之上】；
+     而 SVG 的 transparent 仍算 painted ⇒ 点在椭圆上照样命中它上面的 cellbg，点击不受影响。 */
+  if (G.ball) {
+    parts.push('<g class="balllayer">');
+    ['w', 'v', 'u'].forEach(function (k2) {
+      var e = ballEllipse(k2), f = FACES[WALLFACE[k2]];
+      e.ang = e.ang.toFixed(3);
+      for (i = 0; i < N; i++) for (j = 0; j < N; j++) {
+        /* 格心 = 四个角的平均（PT 是仿射的 ⇒ 平行四边形四角平均即中心） */
+        var q4 = withUnit(function () { return faceCellQuad(f, i, j); });
+        var cx2 = (q4[0].x + q4[1].x + q4[2].x + q4[3].x) / 4 * S;
+        var cy2 = (q4[0].y + q4[1].y + q4[2].y + q4[3].y) / 4 * S;
+        parts.push('<ellipse class="ballp" data-k="' + k2 + '" data-i="' + i + '" data-j="' + j +
+                   '" cx="' + cx2.toFixed(2) + '" cy="' + cy2.toFixed(2) +
+                   '" rx="' + (e.ra * S).toFixed(2) + '" ry="' + (e.rb * S).toFixed(2) +
+                   '" transform="rotate(' + e.ang + ' ' + cx2.toFixed(2) + ' ' + cy2.toFixed(2) +
+                   ')" fill="' + ballColorAt() + '" fill-opacity="0"/>');
+      }
+    });
+    parts.push('</g>');
+  }
   ['w', 'v', 'u'].forEach(function (k2) {
     parts.push('<g class="wallgrid">');
     for (i = 0; i < N; i++) for (j = 0; j < N; j++) {
@@ -1094,6 +2074,9 @@ function buildBoard() {
         （第一版就是这么写错的：圆点 r 变成 352 单位 ≈ 屏幕上 312px 的白色巨圆）。 */
   var cx = box.x0 + w / 2, cy = box.y0 + h / 2;
   var fs = 15;
+  /* ⚠️ 标签三件套（引线 / 角上圆点 / 标签框）原来写死成白色 —— 白底皮肤与纸面上全部看不见。
+     现在走 skinPal()：白底给深引线 + 细描边的白框，黑底维持原样（引线白、点白、框白无描边）。 */
+  var lp = skinPal();
   LBLLIST.forEach(function (nm) {
     var p = withUnit(function () { return PT(CORNER[nm]); });
     var px = p.x * S, py = p.y * S, pcx = cx * S, pcy = cy * S;
@@ -1102,18 +2085,21 @@ function buildBoard() {
     var lx = px + vx / len * fs * 2.3, ly = py + vy / len * fs * 2.3;
     parts.push('<line x1="' + px.toFixed(2) + '" y1="' + py.toFixed(2) +
                '" x2="' + lx.toFixed(2) + '" y2="' + ly.toFixed(2) +
-               '" stroke="rgba(255,255,255,.45)" stroke-width="1.4" vector-effect="non-scaling-stroke"/>');
+               '" stroke="' + lp.labLead + '" stroke-width="1.4" vector-effect="non-scaling-stroke"/>');
     parts.push('<circle cx="' + px.toFixed(2) + '" cy="' + py.toFixed(2) +
-               '" r="' + (fs * 0.23).toFixed(2) + '" fill="#fff"/>');
+               '" r="' + (fs * 0.23).toFixed(2) + '" fill="' + lp.labDot + '"' +
+               (lp.labDotEdge !== 'none' ? ' stroke="' + lp.labDotEdge + '" stroke-width="1.2"' : '') + '/>');
     parts.push('<rect x="' + (lx - fs * 0.92).toFixed(2) + '" y="' + (ly - fs * 0.74).toFixed(2) +
                '" width="' + (fs * 1.84).toFixed(2) + '" height="' + (fs * 1.48).toFixed(2) +
-               '" rx="' + (fs * 0.46).toFixed(2) + '" fill="#fff"/>');
+               '" rx="' + (fs * 0.46).toFixed(2) + '" fill="' + lp.labBox + '"' +
+               (lp.labBoxEdge !== 'none' ? ' stroke="' + lp.labBoxEdge + '" stroke-width="1.2"' : '') + '/>');
     parts.push('<text x="' + lx.toFixed(2) + '" y="' + ly.toFixed(2) +
-               '" font-size="' + fs.toFixed(2) + '" font-weight="800" fill="#152034" ' +
+               '" font-size="' + fs.toFixed(2) + '" font-weight="800" fill="' + lp.labInk + '" ' +
                'text-anchor="middle" dominant-baseline="central">' + LBL[nm] + '</text>');
   });
   svg.innerHTML = parts.join('');
   cellEls = Array.prototype.slice.call(svg.querySelectorAll('.cellbg'));
+  ballEls = Array.prototype.slice.call(svg.querySelectorAll('.ballp'));
   refreshBoard();
 }
 /* 一个格子的状态：0 = 空　1 = 涂对　2 = 涂错 */
@@ -1126,35 +2112,779 @@ function cellState(k, i, j) {
    先生 2026-09-29 说「游戏区格子不要带颜色」⇒ 整体撤掉，空格子一律透明、只留格线。
    skinPal() 里的 tintBase / tintA 两个字段也一并删掉，不留死字段。 */
 function refreshBoard() {
+  if (G.mode === 'solid') { renderCubes(); return; }   /* 立体模式没有"格子着色"，只有方块 */
   var sk = skinPal();
+  var ball = !!G.ball;
   cellEls.forEach(function (el) {
     var k = el.getAttribute('data-k'), i = +el.getAttribute('data-i'), j = +el.getAttribute('data-j');
     var st = cellState(k, i, j);
-    if (st === 1) el.style.fill = G.COL[k];
-    else if (st === 2) el.style.fill = sk.badFill;
+    /* 圆形模式：格子层只留格线与 hover 金边，颜色一律交给椭圆层表达
+       （两层都填 = 椭圆被整格色块包住，"投影是个椭圆"这件事就看不见了）。 */
+    if (st === 1) el.style.fill = ball ? '' : G.COL[k];
+    else if (st === 2) el.style.fill = ball ? '' : sk.badFill;
     else el.style.fill = '';   /* ★ 空格一律清掉 inline 底 => 回落 CSS 的 transparent（先生：格子不要带颜色）*/
     el.setAttribute('class', 'cellbg' + (st === 2 ? ' bad' : ''));
   });
+  ballEls.forEach(function (el) {
+    var k = el.getAttribute('data-k'), i = +el.getAttribute('data-i'), j = +el.getAttribute('data-j');
+    var st = cellState(k, i, j);
+    if (st === 1) {
+      /* ★ 彩色模式：这一格的椭圆跟【投出它的那颗球】同色（查 ansColor 表）；
+         单色模式 / 查不到（理论上不会有）⇒ 退回 G.ballColor。 */
+      var tb = G.ansColor && G.ansColor[k];
+      el.setAttribute('fill', ballColorAt(tb ? tb[i + '|' + j] : undefined));
+      el.setAttribute('fill-opacity', '1');
+    }
+    else if (st === 2) { el.setAttribute('fill', sk.badFill); el.setAttribute('fill-opacity', '.92'); }
+    else el.setAttribute('fill-opacity', '0');
+  });
 }
 function updateStat() {
-  var need = ansCount(G.ans), done = 0, bad = 0;
+  var bar = document.getElementById('statBar');
+  if (G.mode === 'solid') {
+    var used = placeCount(), need = G.shape.length;
+    var d = projDiff(projOfPlace());
+    bar.innerHTML = '已摆 <i>' + used + '</i> / <i>' + need + '</i> 块　·　还差 <i>' +
+                    placeLeft() + '</i> 块　·　投影差 <i>' + d.total + '</i> 格';
+    return;
+  }
+  var n = ansCount(G.ans), done = 0, bad = 0;
   ['w', 'v', 'u'].forEach(function (k) {
     Object.keys(G.fill[k]).forEach(function (key) {
       if (G.ans[k][key]) done++; else bad++;
     });
   });
-  document.getElementById('stDone').textContent = done;
-  document.getElementById('stNeed').textContent = need;
-  document.getElementById('stBad').textContent = bad;
+  bar.innerHTML = '已涂 <i>' + done + '</i> / <i>' + n + '</i> 格　·　错 <i>' + bad + '</i> 格';
 }
 function showHintPulse(k, i, j) {
   var svg = document.getElementById('bsvg');
   var old = svg.querySelector('.hintpulse');
   if (old && old.parentNode) old.parentNode.removeChild(old);
-  var pts = withUnit(function () { return unitQuad(k, i, j); });
-  var el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  /* ★ 圆形模式：脉冲环也要是【椭圆】—— 它不是"另一个形状的提示"，它就是"这一格该涂成的样子"，
+     孩子点完格子后投影正好嵌在里面。画成菱形格会发生"提示一个形状、要涂另一个形状"的错。 */
+  var m = withUnit(function () {
+    if (!G.ball) return { ell: 0, pts: unitQuad(k, i, j) };
+    var q4 = faceCellQuad(FACES[WALLFACE[k]], i, j), e = ballEllipse(k);
+    return { ell: 1, cx: (q4[0].x + q4[1].x + q4[2].x + q4[3].x) / 4,
+                   cy: (q4[0].y + q4[1].y + q4[2].y + q4[3].y) / 4,
+                   rx: e.ra, ry: e.rb, ang: e.ang };
+  });
+  var el, NS = 'http://www.w3.org/2000/svg';
+  if (m.ell) {
+    var S = USCALE, cx = (m.cx * S).toFixed(2), cy = (m.cy * S).toFixed(2);
+    el = document.createElementNS(NS, 'ellipse');
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', (m.rx * S).toFixed(2));
+    el.setAttribute('ry', (m.ry * S).toFixed(2));
+    el.setAttribute('transform', 'rotate(' + m.ang.toFixed(3) + ' ' + cx + ' ' + cy + ')');
+  } else {
+    el = document.createElementNS(NS, 'polygon');
+    el.setAttribute('points', m.pts);
+  }
   el.setAttribute('class', 'hintpulse');
-  el.setAttribute('points', pts);
+  svg.appendChild(el);
+  setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 2400);
+}
+/* ============================================================
+   游戏区（立体模式）：在 3D 空间里点格位摆方块 —— 先生 2026-10-02
+   ------------------------------------------------------------------
+   【为什么"一个屏幕位置"要对应"一串格位"】（先在控制台实测过才这么写）
+     屏幕位移 f = Δi²+Δj²+Δk² − ΔiΔj − ΔjΔk − ΔkΔi（展开式即终值），
+     f 只能取 0 或 ≥1，且 f=0 ⟺ Δi=Δj=Δk —— 也就是【体对角线方向位移在屏幕上恰为 0】。
+     实测（N=5，共 125 个格位）：
+       · 屏幕上不重合的位置只有 61 个 = N³−(N−1)³ = "直接可见的格位数"（3→19、4→37、5→61 三档都对上）
+       · 每个位置压 {1:24, 2:18, 3:12, 4:6, 5:1} 个格位，24+36+36+24+5 = 125（一个不漏）
+       · 最深那条视线 = 主对角线 (0,0,0)…(4,4,4)
+     ⇒ 只靠"点屏幕位置"最多只能摆 61 块（外壳），剩下 64 个内核格位永远放不进去。
+     ⇒ 拾取规则因此定成：点一下 = 放在这条视线上【最靠前的空格位】；重复点 = 沿视线往里推。
+        每条视线最多 5 个格位 ⇒ 反复点即可走完，125 个格位全部可达。
+   ------------------------------------------------------------------
+   【判对】块数不超过原题块数，且三面投影与题面完全吻合。
+     ★ 不能要求"和出题用的那个立体一样" —— 解不唯一。构造性反例（2×2×2）：
+       A={(0,0,0),(0,1,1),(1,0,1),(1,1,0)} 与 B={(0,0,1),(0,1,0),(1,0,0),(1,1,1)}，
+       A≠B 但三视图完全相同（三面都是 2×2 全满）。
+     ★ 也不能不设上限：候选池 {(i,j,k): (i,j)∈W,(i,k)∈V,(j,k)∈U} 全摆满，投影必然吻合
+       （这就是"作弊解"）。上限取原题块数即可 —— 整箱 N³ 恒大于 K（K ≤ 30 ≤ N³）。
+     ★ 用 "≤" 而不是 "="：万一某个题目的最少块数小于原题块数，孩子用更少的块摆出正确投影
+       也该算对；写死 "=" 会让他看到"投影差 0 格"却一直不通关。
+   ============================================================ */
+var rays = [], pickEls = [], hoverRay = -1, hoverCell = null, lastRemoveAt = 0;
+var hoverBad = '';        /* '' = 可以放；否则是 dropReason 的拒绝原因（ghost 画成红色） */
+function rayKeyOf(c) {
+  /* ★ 分组键必须用【整数】，不能用"浮点屏幕坐标 × 1000 再四舍五入"。
+     推导（就是本文件那套口径，一步都不跳）：
+       PT.x = (a−b)·K·u，而 a = i−N/2、b = j−N/2 ⇒ PT.x ∝ (i−j)
+       PT.y = (−(a+b)·J + c·Z)·u，代入 Z = 2J 后 J·N 与 Z·N/2 恰好相消
+            ⇒ PT.y ∝ (2k − i − j)
+     ⇒ 屏幕位置【恰好且只由】两个整数 (i−j) 与 (2k−i−j) 决定，
+       而"同一条视线"就是这两个量都相同 ⇒ 用它当键是精确的。
+     （常数直接取自 A0 / B0 本身，别再抄一遍字面量：
+       M = 绕 (1,1,1) 转 180° = [[−1/3,2/3,2/3],[2/3,−1/3,2/3],[2/3,2/3,−1/3]]，
+       于是 q.y−q.x = i−j、−q.x−q.y+2q.z = i+j−2k，
+       乘上 A0 / B0 后正好得到 PT.x = (−A0.x)(i−j)、PT.y = (−B0.x)(2k−i−j)。
+       ⚠️ 第一版我把常数抄成 1/√2 = 0.70710678（此处应为 0.70711），
+         4.6e-6 的偏差把 125 格里的 106 个误报成"不符" —— 量一下才知道是判据抄错，不是图错。）
+     ⚠️ 第一版还用 Math.round(p.x*1000)+','+Math.round(p.y*1000) 当键：因为
+       0.40825×2×1000 = 816.5，(2k−i−j) 为偶数的那些位置【恰好落在 .5 上】，
+       1e-13 级浮点抖动就能让它翻边 ⇒ 实测把一条 4 格视线劈成 2+2
+       （射线数 62 ≠ 61，直方图 {1:24,2:20,3:12,4:5,5:1} 正好=一条 4 格拆成两条 2 格）。 */
+  return (c[0] - c[1]) + '|' + (2 * c[2] - c[0] - c[1]);
+}
+function buildRays() {
+  /* 把 N³ 个格位按"屏幕位置"分组，每组按 近→远 排好 —— 这就是拾取的顺序表。
+     整段必须包在 withUnit 里：PT / depthRel 读的都是全局 M 与 F。 */
+  return withUnit(function () {
+    var map = {}, i, j, k, seenFront = {};
+    for (i = 0; i < N; i++) for (j = 0; j < N; j++) for (k = 0; k < N; k++) {
+      var c = [i, j, k], p = PT(cv3(i + .5, j + .5, k + .5));
+      /* 自检：整数键必须与真实投影一致。不一致说明投影口径变了（比如 M 不再是默认视角），
+         那就必须当场炸掉，绝不能静默按错误的键分组 —— 那是"图形全是错的但页面不报错"的老毛病。 */
+      var dx = p.x / (-A0.x), dy = p.y / (-B0.x);
+      if (Math.abs(dx - (i - j)) > 1e-6 || Math.abs(dy - (2 * k - i - j)) > 1e-6) {
+        throw new Error('投影口径与整数键不符：(' + i + ',' + j + ',' + k + ') → ' + dx + ',' + dy);
+      }
+      var key = rayKeyOf(c);
+      if (!map[key]) map[key] = { key: key, cells: [] };
+      map[key].cells.push({ c: c, d: depthRel(rel(cv3(i + .5, j + .5, k + .5))) });
+    }
+    var out = [];
+    Object.keys(map).forEach(function (key) {
+      var r = map[key];
+      r.cells.sort(function (a, b) { return a.d - b.d; });   /* depthRel 越大越远 ⇒ 升序 = 近→远 */
+      r.hex = cHex(r.cells[0].c);
+      /* ★ 这个屏幕位置的【中心】（单位坐标）。拾取不用 elementFromPoint，
+         直接取"离指针最近的中心"——原因见 pickIndexAt 的注释。 */
+      var cenp = PT(cv3(r.cells[0].c[0] + .5, r.cells[0].c[1] + .5, r.cells[0].c[2] + .5));
+      r.cx = cenp.x; r.cy = cenp.y;
+      /* ★ 自检（2026-10-02）：每条视线最靠前的那一格，必须满足"至少一个坐标为 0"。
+         理由：沿 −(1,1,1) 的下一格越界才叫"最靠前"，而越界 ⟺ i=0 或 j=0 或 k=0。
+         立体模式【只允许】把方块放在这个格位上（= 外壳层），因为同一视线上的格位在屏幕上
+         完全重合：层只能靠三视图区分，靠拖动动作区分不了。所以这一格的身份必须是硬的。
+         另外全表合起来要正好是外壳层那 N³−(N−1)³ 个格位，一个不重一个不漏。 */
+      var c0 = r.cells[0].c;
+      if (c0[0] !== 0 && c0[1] !== 0 && c0[2] !== 0) {
+        throw new Error('视线最靠前的格位不在外壳层：' + c0.join(','));
+      }
+      if (seenFront[kk(c0)]) throw new Error('两个屏幕位置对到同一格位：' + c0.join(','));
+      seenFront[kk(c0)] = 1;
+      out.push(r);
+    });
+    if (Object.keys(seenFront).length !== N * N * N - (N - 1) * (N - 1) * (N - 1)) {
+      throw new Error('外壳层格位数不对：' + Object.keys(seenFront).length);
+    }
+    /* ★★ 必须按【远 → 近】排（2026-10-02 自检实测出来的真 bug）★★
+       等轴投影下，相邻格位的六边形【本来就会重叠】—— 重叠正是"前面的方块挡住后面的"的来源，
+       不是密铺（密铺是"正对着看"才有的性质：这里六边形外接圆半径 R = 0.8165，
+       而相邻屏幕位置的中心距也是 0.8165 < 1.5R，必然相交；只是不会完全覆盖，
+       因为中心距 0.8165 > 边心距 0.7071，每一格都还露着边角）。
+       而 DOM 顺序就是 elementFromPoint 的命中优先级 ⇒ 若按数组原顺序生成，
+       重叠处命中谁与远近无关 ⇒ 【拖到 A 位置、落下的却是 B 格位】。
+       按 depthRel 降序（远先近后）生成后，重叠处永远归最靠前的那一格，拾取才与视觉一致。 */
+    out.sort(function (a, b) { return b.cells[0].d - a.cells[0].d; });
+    return out;
+  });
+}
+function cHex(lo) {
+  /* 一个 1×1×1 格的投影六边形顶点。
+     ★ 顺序必须【绕一圈】，与 hexout 同一套 —— 整箱 [0,N]³ 那 6 个角的顺序搬过来就是
+       (N,0,0)(N,N,0)(0,N,0)(0,N,N)(0,0,N)(N,0,N)。
+       顺序错 / 漏一个角 ⇒ 多边形自交，会在格子中间切一道白缝、把已放的方块盖掉。
+     （(i,j,k) 与 (i+1,j+1,k+1) 这两个角在投影里重合于六边形中心，本来就不算顶点。） */
+  var i = lo[0], j = lo[1], k = lo[2];
+  var cs = [[i + 1, j, k], [i + 1, j + 1, k], [i, j + 1, k],
+            [i, j + 1, k + 1], [i, j, k + 1], [i + 1, j, k + 1]];
+  return cs.map(function (q) {
+    var p = PT(cv3(q[0], q[1], q[2]));
+    return (p.x * USCALE).toFixed(2) + ',' + (p.y * USCALE).toFixed(2);
+  }).join(' ');
+}
+/* ============================================================
+   拾取 / 合法性 / 拖拽 —— 立体模式（2026-10-02 先生：「把小正方形拖到对应的位置」）
+   ============================================================ */
+function cellOfRay(ray) {
+  /* 每条视线只用【最靠前那一格】。buildRays 已自检：它必在"外壳层"（至少一个坐标为 0），
+     且 61 个屏幕位置与 61 个外壳格位一一对应（不重不漏）。
+     ⇒ "拖到哪个位置"就直接定下了"放哪一格"，不再需要"连点往里推"。
+       同一视线上本来也只能有 1 块：两块会占同一个屏幕位置、互相完全遮挡，
+       而且"放到第几层"根本无法由拖动表达（层只能靠三视图区分）。 */
+  return ray.cells[0].c;
+}
+/* ============================================================
+   ★★ 立体模式的作答交互（2026-10-02 二改，先生原话逐字）：
+   「这个模式不用托盘 按你现在鼠标默认跟随 点击就放上去了
+     但是放错了要有提示然后错误的消失」
+   ⇒ ① 去掉托盘；② 方块默认跟着鼠标；③ 点一下就放下；④ 放错 = 提示 + 先真的出现再消失。
+   —— 为什么托盘可以不要：可用格位只有外壳层那 61 个，且每个屏幕位置与格位
+      【一一对应】（见 buildRays / cellOfRay），"还剩几块"用状态栏一句话就说得完；
+      再把方块摆一地反而挡住视线。上一版把"拿方块"做成必须先按住托盘，
+      孩子得先学一个新动作，与"点击就放上去"相比多了一步。
+   ============================================================ */
+
+/* ---------- 【判错】先枚举这道题的全部解 ----------
+   为什么不能"和出题用的立体逐格比对"：
+   同一道三视图可能不止一个解 —— 实测（N=5 K=7，12 道题、穷举去重后）
+   有 5 道唯一解、7 道有 2 个解，还出现过 6 块解（< K=7）。
+   逐格比对会把"另一条同样正确的走法"误杀成错。
+   ⇒ 判错口径 = 【不存在任何解同时包含 已放集合 与 这一块】。
+     它与"最终能不能凑出三视图"严格等价：不误杀，又能逐块即时给反馈。
+   成本实测：解数 1~2、搜索节点 8~50 ⇒ 出题时顺带算完，可忽略。
+   兜底：万一某题搜索爆掉（预算/解数用尽）⇒ 返回 null，退化为"只认原题格位"
+        （更严，只会多拒绝、绝不会把错的当对）。 */
+var SOLVE_BUDGET = 300000;
+/* 出题时算一次，放置时反复用（候选格 / 覆盖表 / 两两兼容表都在这里） */
+function buildSolCtx() {
+  var n = N, K = G.shape.length, cells = shellCells(n), ansSet = {};
+  ['w', 'v', 'u'].forEach(function (k) {
+    Object.keys(G.ans[k]).forEach(function (key) { ansSet[k + '|' + key] = 1; });
+  });
+  var ansKeys = Object.keys(ansSet);
+  var cov = cells.map(function (c) {
+    return ['w|' + c[0] + '|' + c[1], 'v|' + c[0] + '|' + c[2], 'u|' + c[1] + '|' + c[2]];
+  });
+  /* 只保留"三面投影都落在题面里"的格：单块只要有一面多出格子，并集必然多出格子 */
+  var okArr = cells.map(function (c, i) { return cov[i].every(function (k) { return !!ansSet[k]; }); });
+  var byKey = {};
+  ansKeys.forEach(function (k) { byKey[k] = []; });
+  cells.forEach(function (c, i) {
+    if (!okArr[i]) return;
+    cov[i].forEach(function (k) { if (byKey[k]) byKey[k].push(i); });
+  });
+  var idxOf = {};
+  cells.forEach(function (c, i) { idxOf[kk(c)] = i; });
+  var pc = {};
+  function compat(i, j) {
+    var s = i < j ? i + ',' + j : j + ',' + i;
+    if (pc[s] === undefined) {
+      /* "不共面"（曼哈顿 >= 2）—— 必须与 dropReason 的 touch 分支同一口径 */
+      pc[s] = (Math.abs(cells[i][0] - cells[j][0]) + Math.abs(cells[i][1] - cells[j][1]) +
+               Math.abs(cells[i][2] - cells[j][2])) >= 2;
+    }
+    return pc[s];
+  }
+  return { cells: cells, K: K, ansKeys: ansKeys, cov: cov, okArr: okArr,
+           byKey: byKey, idxOf: idxOf, compat: compat };
+}
+/* ------------------------------------------------------------------
+   ★★ 判错的核心：solvableWith(extra) ——
+      "已放的这些 + extra" 能不能被补成一个正确答案（<= K 块、全在外壳层、两两不共面）？
+   返回 true / false / null（预算用尽 ⇒ "算不尽"，由调用方保守处理）。
+
+   为什么是【可满足性】而不是"枚举全部解"：
+   一开始我写的是枚举全部解再查包含关系，N=5 时解数 1~2 看着没问题，
+   但一换到 N=4 立刻爆 —— N=4 格位少、三视图约束弱，解数远超我设的上限，
+   枚举法直接返回"算不出"。而这里真正要问的从来不是"总共有几个解"，
+   只是"这一块放下去还有没有救"。可满足性搜索只要找到【一个】解就能停，
+   搜索树小得多，也不会随解数爆炸。
+   ------------------------------------------------------------------ */
+function solvableWithCell(extraKey) {
+  var C = G.solCtx;
+  if (!C) return null;
+  var chosen = [], covd = {}, i, j, q;
+  for (i = 0; i < C.ansKeys.length; i++) covd[C.ansKeys[i]] = 0;
+  var keys = Object.keys(G.place);
+  if (extraKey) keys.push(extraKey);
+  for (i = 0; i < keys.length; i++) {
+    var ci = C.idxOf[keys[i]];
+    if (ci === undefined) return false;        /* 不在外壳层 ⇒ 摆不出来 */
+    if (!C.okArr[ci]) return false;            /* 投影会多出格子 ⇒ 一定凑不出题面 */
+    if (chosen.indexOf(ci) >= 0) continue;     /* 去重，免得同一个格位算两次 */
+    for (j = 0; j < chosen.length; j++) if (!C.compat(ci, chosen[j])) return false;
+    chosen.push(ci);
+    covd[C.cov[ci][0]]++; covd[C.cov[ci][1]]++; covd[C.cov[ci][2]]++;
+  }
+  if (chosen.length > C.K) return false;
+  var nodes = 0, hit = false, res = null;
+  function dfs() {
+    if (res !== null || hit) return;
+    if (++nodes > SOLVE_BUDGET) { hit = true; return; }
+    var target = null, x, miss = 0;
+    for (x = 0; x < C.ansKeys.length; x++) {
+      if (!covd[C.ansKeys[x]]) { miss++; if (target === null) target = C.ansKeys[x]; }
+    }
+    if (target === null) { res = true; return; }
+    /* 剪枝：每块最多再补 3 个没覆盖的答案格，块数不够就别往下走了 */
+    if ((C.K - chosen.length) * 3 < miss) return;
+    var cands = C.byKey[target], y, z;
+    for (y = 0; y < cands.length; y++) {
+      var ci = cands[y];
+      if (chosen.indexOf(ci) >= 0) continue;
+      if (chosen.length + 1 > C.K) continue;
+      var good = true;
+      for (z = 0; z < chosen.length; z++) if (!C.compat(ci, chosen[z])) { good = false; break; }
+      if (!good) continue;
+      covd[C.cov[ci][0]]++; covd[C.cov[ci][1]]++; covd[C.cov[ci][2]]++;
+      chosen.push(ci);
+      dfs();
+      chosen.pop();
+      covd[C.cov[ci][0]]--; covd[C.cov[ci][1]]--; covd[C.cov[ci][2]]--;
+      if (res !== null || hit) return;
+    }
+  }
+  dfs();
+  if (res === true) return true;
+  if (hit) return null;                        /* 算不尽 */
+  return false;
+}
+/* 按 (已放集合, 这一格) 记忆化 —— ghost 每次鼠标移动都要问一遍，
+   同一格会被反复问到，不缓存就等于每次移动都重跑一遍搜索。 */
+var _solMemo = {}, _solMemoSig = null;
+function solvableWith(lo) {
+  if (!G.solCtx) return null;
+  var sig = Object.keys(G.place).sort().join(';');
+  if (sig !== _solMemoSig) { _solMemo = {}; _solMemoSig = sig; }
+  var key = kk(lo);
+  if (_solMemo[key] === undefined) _solMemo[key] = solvableWithCell(key);
+  return _solMemo[key];
+}
+function ansHasCell(lo) {
+  var k = kk(lo);
+  for (var i = 0; i < G.shape.length; i++) if (kk(G.shape[i].lo) === k) return true;
+  return false;
+}
+function placeCount() { return Object.keys(G.place).length; }
+function placeLeft() { return G.shape.length - placeCount(); }
+/* '' = 可以放；否则是拒绝原因 */
+function dropReason(lo) {
+  if (G.place[kk(lo)]) return 'occupied';
+  if (placeCount() >= G.shape.length) return 'exhausted';
+  for (var key in G.place) {
+    var p = key.split('|');
+    var d = Math.abs(lo[0] - (+p[0])) + Math.abs(lo[1] - (+p[1])) + Math.abs(lo[2] - (+p[2]));
+    if (d === 1) return 'touch';        /* 曼哈顿 1 = 共用一面 ⇒ 违反先生要的"分散" */
+  }
+  /* ★ 真错：这块放下去以后，已经没有任何一条正确走法能走通了 */
+  var okv = solvableWith(lo);
+  if (okv === null) okv = ansHasCell(lo);   /* 算不尽（预算用尽）⇒ 退化为"只认原题格位" */
+  return okv ? '' : 'wrong';
+}
+var DROP_MSG = {
+  occupied: '这一格已经有方块了',
+  exhausted: '方块都用上了 —— 点掉一块再试',
+  touch: '这里会和旁边的方块贴面 —— 每块之间都要空开一格',
+  wrong: '放这里凑不出题面的三视图 —— 再想想它在哪一层',
+  outside: '把方块放到右边的格子上'
+};
+
+/* ---------- 【放错的那一块：先出现，再消失】 ----------
+   先生要的是"错误的消失"，所以错误方块必须【真的被画出来一下】。
+   只弹一行字，孩子看不出自己那一块落在哪个位置、也就不知道错在哪。
+   出现 → 左右抖 → 上浮淡出 = 520ms（动画全在 CSS 里，见 .wrongf）。 */
+var wrongList = [];                 /* [{lo, t}] 正在"闪一下"的错误方块 */
+var WRONG_MS = 520;
+function wrongFlash(lo) {
+  var item = { lo: lo.slice(), t: Date.now() };
+  wrongList.push(item);
+  renderWrong();
+  setTimeout(function () {
+    var i = wrongList.indexOf(item);
+    if (i >= 0) wrongList.splice(i, 1);
+    if (G.mode === 'solid') renderWrong();
+  }, WRONG_MS);
+}
+/* 放错统一走这里：音效 + 文字提示 + 方块闪一下消失 */
+function rejectPlace(lo, reason) {
+  sndBad();
+  toast(DROP_MSG[reason] || '这里放不下', 'no');
+  wrongFlash(lo);
+}
+var _svgPt = null;                  /* createSVGPoint 复用一个就够，别每次新建 */
+function pickIndexAt(x, y) {
+  /* ★★ 拾取必须用【几何最近中心】，不能靠 elementFromPoint（2026-10-02 自检实测出来的）★★
+     等轴投影下相邻格位的六边形【本来就会重叠】：相邻屏幕位置的中心距 = 0.81650，
+     而六边形外接圆半径 R 也 = 0.81650 ⇒ 一个六边形的顶点正好落在相邻六边形的【中心】上。
+     实测 61 个位置里有 29 个的中心点被更靠前的六边形盖住。
+     所以 elementFromPoint 给出的是"DOM 顺序决定的那个"，与孩子想点哪一格无关 ⇒ 点 A 落 B。
+     换成"取离指针最近的中心"之后：每个位置都拥有完整的一块可点区域（它的 Voronoi 单元），
+     而"最近的"恰好等于"视觉上最该归你的那一格"。 */
+  var svg = document.getElementById('bsvg');
+  if (!svg || !rays.length) return -1;
+  var r = svg.getBoundingClientRect();
+  if (x < r.left - 4 || x > r.right + 4 || y < r.top - 4 || y > r.bottom + 4) return -1;
+  var ctm = svg.getScreenCTM();
+  if (!ctm) return -1;
+  /* ⚠️ try 只包住 createSVGPoint 这一句（旧写法把整个 if 都包进去，
+     结果 _svgPt 未声明时的 ReferenceError 被自己的兜底 catch 吞掉 ⇒
+     拾取永远返回 -1、点击完全没反应，而页面【零报错】—— 这种"静默兜底"比崩溃难查得多）。 */
+  if (!_svgPt) {
+    try { _svgPt = svg.createSVGPoint(); } catch (e2) { _svgPt = null; }
+  }
+  if (!_svgPt) return -1;
+  _svgPt.x = x; _svgPt.y = y;
+  var loc = _svgPt.matrixTransform(ctm.inverse());
+  var ux = loc.x / USCALE, uy = loc.y / USCALE;
+  var best = -1, bd = Infinity, i;
+  for (i = 0; i < rays.length; i++) {
+    var dx = ux - rays[i].cx, dy = uy - rays[i].cy, d2 = dx * dx + dy * dy;
+    if (d2 < bd) { bd = d2; best = i; }
+  }
+  return best;
+}
+
+/* ---------- 【鼠标默认跟随】+【点击就放】 ----------
+   指针在游戏区里移动 ⇒ 一块半透明方块跟着指针、吸附到最近的屏幕位置（就是 hoverCell 的 ghost，
+   由 renderCubes 画，能放金色虚线、不能放红色虚线）。
+   点一下 ⇒ 就放在那一格。
+   按下与抬起都在【同一块已放方块】上且没怎么动 ⇒ 拿走它（原地点一下 = 取消，与原版一致）。 */
+var _pd = null;                     /* 按下时的现场 {idx, x, y, onBlock} */
+var _placeTrace = null, _placeN = 0, _rejectN = 0, _takeN = 0;
+var TAP_PX2 = 64;                   /* 8px：小于它算"点了一下"，大于它算"拖到别处" */
+function onSpaceMove(e) {
+  var idx = pickIndexAt(e.clientX, e.clientY);
+  if (idx === hoverRay) return;
+  hoverRay = idx;
+  var cell = (idx >= 0 && rays[idx]) ? cellOfRay(rays[idx]) : null;
+  hoverCell = cell;
+  hoverBad = cell ? dropReason(cell) : '';
+  renderCubes();
+}
+function onSpaceLeave() {
+  if (hoverRay === -1) return;
+  hoverRay = -1; hoverCell = null; hoverBad = ''; renderCubes();
+}
+function onSpaceDown(e) {
+  if (G.mode !== 'solid' || e.button === 2) return;
+  ac();
+  var idx = pickIndexAt(e.clientX, e.clientY);
+  if (idx < 0) { _pd = null; return; }
+  _pd = { idx: idx, x: e.clientX, y: e.clientY, onBlock: !!G.place[kk(cellOfRay(rays[idx]))] };
+}
+function onSpaceUp(e) {
+  if (G.mode !== 'solid' || !_pd) return;
+  var pd = _pd; _pd = null;
+  if (G.solved) { toast('这题已经完成啦，点「换一道题」继续', 'ok'); return; }
+  var idx = pickIndexAt(e.clientX, e.clientY);
+  var mx = e.clientX - pd.x, my = e.clientY - pd.y;
+  var still = (mx * mx + my * my < TAP_PX2);
+  /* 抬起点没落在任何格位上（挪到 SVG 外松手）：沿用按下时那一格。
+     否则孩子"按下去、抬手轻微一抖出了边界"就会莫名其妙什么都没发生。 */
+  if (idx < 0) idx = pd.idx;
+  if (!rays[idx]) return;
+  var lo = cellOfRay(rays[idx]);
+  var trace = { idx: idx, cell: lo, still: still, onBlock: pd.onBlock, branch: '' };
+
+  /* ① 原地点一下已放的方块 ⇒ 拿走 */
+  if (pd.onBlock && still && idx === pd.idx) {
+    removeBlockAt(lo);
+    trace.branch = 'taken';
+    _placeTrace = trace; _takeN++;
+    sndTap(); toast('拿走了一块');
+    renderCubes(); updateStat();
+    return;
+  }
+  /* ② 从一块已放的方块上按下去、挪到了别处 ⇒ 挪位（先摘后放，失败则原位放回） */
+  if (pd.onBlock) {
+    var home = cellOfRay(rays[pd.idx]);
+    var homeKey = kk(home);
+    var reason0 = dropReason(lo);
+    if (!reason0) {
+      delete G.place[homeKey];
+      var hz = G.phist.lastIndexOf(homeKey);
+      if (hz >= 0) G.phist.splice(hz, 1);
+      G.place[kk(lo)] = 1; G.phist.push(kk(lo));
+      trace.branch = 'moved';
+      _placeTrace = trace; _placeN++;
+      sndTap();
+      if (!G.solved && solidDone()) { G.solved = true; sndWin(); showWin(); }
+    } else {
+      trace.branch = 'rejected-' + reason0;
+      _placeTrace = trace; _rejectN++;
+      rejectPlace(lo, reason0);
+    }
+    renderCubes(); updateStat();
+    return;
+  }
+  /* ③ 点空位 ⇒ 放上去；放不成就提示 + 闪一下消失 */
+  var reason = dropReason(lo);
+  if (!reason) {
+    G.place[kk(lo)] = 1;
+    G.phist.push(kk(lo));
+    trace.branch = 'placed';
+    _placeTrace = trace; _placeN++;
+    sndTap();
+    renderCubes(); updateStat();
+    if (!G.solved && solidDone()) { G.solved = true; sndWin(); showWin(); }
+    return;
+  }
+  trace.branch = 'rejected-' + reason;
+  _placeTrace = trace; _rejectN++;
+  rejectPlace(lo, reason);
+  renderCubes(); updateStat();
+}
+function buildSolidBoard() {
+  var svg = document.getElementById('bsvg'), i, j, k;
+  cellEls = [];                    /* 原版那批格子已经不在 DOM 里了，清掉免得 refreshBoard 摸空 */
+  hoverRay = -1; hoverCell = null;
+  var box = withUnit(function () {
+    var xs = [], ys = [];
+    ['u', 'v', 'w'].forEach(function (k2) {
+      FACES[WALLFACE[k2]].q.forEach(function (nm) {
+        var p = PT(CORNER[nm]); xs.push(p.x); ys.push(p.y);
+      });
+    });
+    return { x0: Math.min.apply(null, xs), x1: Math.max.apply(null, xs),
+             y0: Math.min.apply(null, ys), y1: Math.max.apply(null, ys) };
+  });
+  var w = box.x1 - box.x0, h = box.y1 - box.y0, pad = Math.max(w, h) * 0.13;
+  var S = USCALE;
+  svg.setAttribute('viewBox', [(box.x0 - pad) * S, (box.y0 - pad) * S,
+                               (w + pad * 2) * S, (h + pad * 2) * S].join(' '));
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+  var parts = [];
+  /* ① 三面墙格线：立体模式里只当"这个箱子有多大"的参考，不可点 */
+  ['w', 'v', 'u'].forEach(function (k2) {
+    parts.push('<g class="spacegrid">');
+    for (i = 0; i < N; i++) for (j = 0; j < N; j++) {
+      parts.push('<polygon class="wallbg" points="' + unitQuad(k2, i, j) + '"/>');
+    }
+    parts.push('</g>');
+  });
+  /* ② 9 条棱（三面墙的 6 条外框 + 3 条内角），与 buildBoard 同一套 */
+  EDGES.forEach(function (e) {
+    if (!edgeOn(e)) return;
+    var r = withUnit(function () { return [PT(CORNER[e.a]), PT(CORNER[e.b])]; });
+    parts.push('<line class="edge" x1="' + (r[0].x * S).toFixed(2) + '" y1="' + (r[0].y * S).toFixed(2) +
+               '" x2="' + (r[1].x * S).toFixed(2) + '" y2="' + (r[1].y * S).toFixed(2) + '"/>');
+  });
+  /* ③ 已放方块（含悬停 ghost）单独一层：点一下就只重画这一层 */
+  parts.push('<g id="cubesG"></g>');
+  /* ★ 放错的那一块单独放一层（见 renderWrong 的注释：混在 cubesG 里会被
+     每次鼠标移动重建、CSS 动画被反复重启 ⇒ 表现成"一直抖个不停"而不是"抖一下消失"）。 */
+  parts.push('<g id="wrongG"></g>');
+  /* ④ 拾取【不再生成透明六边形】：改用"离指针最近的中心"（见 pickIndexAt）。
+     上一版在这里铺 61 个 .pick3d 靠 elementFromPoint 命中，看着能用，实际两处坏：
+       ① 它们在等轴投影下【互相重叠】（相邻中心距 0.81650 = 外接圆半径），
+          重叠处命中的是 DOM 里靠后的那个，与远近无关 ⇒ 拖 A 落 B；
+       ② 落点与视觉不一致，孩子没法学会"点哪里得到哪一格"。
+     几何拾取让每个位置各自拥有一整块可点区域，也省掉这 61 个多边形。 */
+  rays = buildRays();
+  /* ⑤ 顶点标签 A / B / C（与 buildBoard 逐字同一套，含配色也走 skinPal ⇒ 白底/纸面下看得见） */
+  var cx = box.x0 + w / 2, cy = box.y0 + h / 2, fs = 15;
+  var lp = skinPal();
+  LBLLIST.forEach(function (nm) {
+    var p = withUnit(function () { return PT(CORNER[nm]); });
+    var px = p.x * S, py = p.y * S, pcx = cx * S, pcy = cy * S;
+    var vx = px - pcx, vy = py - pcy, len = Math.hypot(vx, vy);
+    if (len < 1e-6) { vx = 0; vy = -1; len = 1; }
+    var lx = px + vx / len * fs * 2.3, ly = py + vy / len * fs * 2.3;
+    parts.push('<line x1="' + px.toFixed(2) + '" y1="' + py.toFixed(2) +
+               '" x2="' + lx.toFixed(2) + '" y2="' + ly.toFixed(2) +
+               '" stroke="' + lp.labLead + '" stroke-width="1.4" vector-effect="non-scaling-stroke"/>');
+    parts.push('<circle cx="' + px.toFixed(2) + '" cy="' + py.toFixed(2) +
+               '" r="' + (fs * 0.23).toFixed(2) + '" fill="' + lp.labDot + '"' +
+               (lp.labDotEdge !== 'none' ? ' stroke="' + lp.labDotEdge + '" stroke-width="1.2"' : '') + '/>');
+    parts.push('<rect x="' + (lx - fs * 0.92).toFixed(2) + '" y="' + (ly - fs * 0.74).toFixed(2) +
+               '" width="' + (fs * 1.84).toFixed(2) + '" height="' + (fs * 1.48).toFixed(2) +
+               '" rx="' + (fs * 0.46).toFixed(2) + '" fill="' + lp.labBox + '"' +
+               (lp.labBoxEdge !== 'none' ? ' stroke="' + lp.labBoxEdge + '" stroke-width="1.2"' : '') + '/>');
+    parts.push('<text x="' + lx.toFixed(2) + '" y="' + ly.toFixed(2) +
+               '" font-size="' + fs.toFixed(2) + '" font-weight="800" fill="' + lp.labInk + '" ' +
+               'text-anchor="middle" dominant-baseline="central">' + LBL[nm] + '</text>');
+  });
+  svg.innerHTML = parts.join('');
+  pickEls = [];                    /* 拾取改成几何最近中心，DOM 里没有可点面了 */
+  renderCubes();
+  _wrongSig = null;                /* 棋盘重建了 ⇒ 错误方块那一层要整体重画 */
+  renderWrong();
+}
+/* ★ 放错的那一块：先真的出现，再闪一下消失（先生："放错了要有提示然后错误的消失"）。
+   ⚠️ 必须【单独一层】且【只在内容变化时重建】：
+      renderCubes 每次鼠标移动都会重建 DOM（ghost 要跟着走），若把错误方块混在同一个 g 里，
+      CSS 动画就会被反复从头开始 ⇒ 孩子看到的不是"抖一下消失"，而是"一直抖个不停"。 */
+var _wrongSig = null;
+var WRONG_FILL = { u: '#FF8A8A', v: '#E24B4B', w: '#B93232' };   /* 三档红 = 三个面的明暗 */
+var WRONG_BALL = '#E24B4B';                                      /* 圆形模式：放错的那颗球的红 */
+function renderWrong() {
+  if (G.mode !== 'solid') return;
+  var svg = document.getElementById('bsvg'); if (!svg) return;
+  var g = svg.querySelector('#wrongG'); if (!g) return;
+  var sig = wrongList.map(function (w) { return kk(w.lo) + '@' + w.t; });
+  sig = sig.length ? sig.join(';') : '';
+  if (sig === _wrongSig) return;
+  _wrongSig = sig;
+  if (!sig) { g.innerHTML = ''; return; }
+  g.innerHTML = withUnit(function () {
+    var out = [];
+    /* 圆形模式：放错的那一颗画成【红球】，并复用同一支 wrongShake 抖动动画。
+       （原来的红多边形是"方块"的语言；圆形模式下块就是球，反馈形状要跟着一致。） */
+    if (G.ball) {
+      var S2 = USCALE, R2 = BALL_RS * USCALE, defs = [], used = {};
+      wrongList.forEach(function (w) {
+        var p = PT(cv3(w.lo[0] + .5, w.lo[1] + .5, w.lo[2] + .5));
+        var col = WRONG_BALL;
+        if (!used[col]) { used[col] = 1; defs.push(ballGradSvg(col, col.replace('#', ''))); }
+        out.push('<circle class="wrongf" cx="' + (p.x * S2).toFixed(2) +
+                 '" cy="' + (p.y * S2).toFixed(2) + '" r="' + R2.toFixed(2) +
+                 '" fill="url(#bg' + col.replace('#', '') + ')" fill-opacity=".86"' +
+                 ' stroke="#FF5252" stroke-width="2.6"/>');
+      });
+      return (defs.length ? '<defs>' + defs.join('') + '</defs>' : '') + out.join('');
+    }
+    wrongList.forEach(function (w) {
+      var f6 = cellFaces(w.lo[0], w.lo[1], w.lo[2]);
+      f6.forEach(function (f) {
+        var t = 0;
+        f.q.forEach(function (p) { t += depthRel(rel(p)); });
+        f.d = t / 4;
+      });
+      f6.filter(function (f) { return dot3(cam(f.n), N0) < -1e-6; })
+        .sort(function (a, b) { return b.d - a.d; })
+        .forEach(function (f) {
+          var pts = f.q.map(function (p) {
+            var s = PT(p);
+            return (s.x * USCALE).toFixed(2) + ',' + (s.y * USCALE).toFixed(2);
+          }).join(' ');
+          /* ★ 放错的那一块用【红色系】填，而不是它本来该有的轴色 ——
+             只加一道红描边在深色底上不够抢眼，孩子一眼要能分出"这块是错的"。
+             三个面给三档红（保留明暗，立体感不丢）。 */
+          out.push('<polygon class="wrongf" points="' + pts + '" fill="' + (WRONG_FILL[f.k] || '#FF6B6B') +
+                   '" fill-opacity=".72" stroke="#FF5252" stroke-width="2.6"/>');
+        });
+    });
+    return out.join('');
+  });
+}
+/* 已放的方块 + 悬停 ghost：画家算法（远→近），每块只画 3 个朝向观察者的面。
+   与缩略图 drawShape() 逐字同一套口径（含"三可见面不重叠地铺满整块六边形"那条证明），只是输出 SVG。 */
+function renderCubes() {
+  if (G.mode !== 'solid') return;
+  var svg = document.getElementById('bsvg'); if (!svg) return;
+  var g = svg.querySelector('#cubesG'); if (!g) return;
+  var sk = skinPal();
+  g.innerHTML = withUnit(function () {
+    var items = Object.keys(G.place).map(function (key) {
+      var p = key.split('|');
+      return { lo: [+p[0], +p[1], +p[2]], ghost: false };
+    });
+    /* 放错的那一块在【单独一层】里画，见 renderWrong —— 混进这里会被反复重建、动画重启 */
+    if (hoverCell) items.push({ lo: hoverCell.slice(), ghost: true });
+    items.forEach(function (it) {
+      it.d = depthRel(rel(cv3(it.lo[0] + .5, it.lo[1] + .5, it.lo[2] + .5)));
+    });
+    items.sort(function (a, b) {
+      if (Math.abs(b.d - a.d) > 1e-9) return b.d - a.d;
+      for (var t = 0; t < 3; t++) if (a.lo[t] !== b.lo[t]) return a.lo[t] - b.lo[t];
+      return a.ghost ? 1 : -1;
+    });
+    var out = [];
+    /* ★ 圆形模式（先生 2026-10-06「立体模式支持圆形」）★
+       一个格位上摆的不再是一块三面可见的方块，而是【一颗球】：
+       · 球是球体 ⇒ 只有一种颜色 ⇒ 走 solidBallColor()（不再是按面分色的 G.COL[f.k]）；
+       · 半径 = 格子内切 = BALL_RS × USCALE，与 flat 那边游戏区的球同一个值（50 单位）；
+       · 前后关系靠本函数已有的"远→近"排序 + 球面明暗表达：近球后画、盖住远球。
+         （flat 那边还有"影子落在更深的球上"的逐像素线索，SVG 里做不了逐像素；
+           而立体模式本来就要求每块空开一格、球之间不贴面，遮挡关系由画家算法给全。）
+       · SVG 没有 canvas 那种"每颗球一个渐变对象"，改用 <defs> 里的 radialGradient，
+         按颜色去重（最多与球色数同阶，不会爆）。 */
+    if (G.ball) {
+      /* ⚠️ 这里已经在 withUnit() 里面了（F = {s:1,ox:0,oy:0}），不许再调一次 withUnit：
+         它会重入、把恢复用的 M/F 快照搞错。半径直接 = BALL_RS × USCALE。 */
+      var S = USCALE, R = BALL_RS * USCALE;
+      var defs = [], used = {};
+      items.forEach(function (it) {
+        var p = PT(cv3(it.lo[0] + .5, it.lo[1] + .5, it.lo[2] + .5));
+        var col = solidBallColor(it.lo);
+        var uid = col.replace('#', '');
+        if (!used[uid]) { used[uid] = 1; defs.push(ballGradSvg(col, uid)); }
+        var bad = it.ghost && hoverBad;
+        var cls = it.ghost ? 'ghostf' : 'ballf';
+        var stk = it.ghost ? (bad ? '#FF6B6B' : '#FFD447') : mixHex(col, '#000000', 0.50);
+        var sw = it.ghost ? 2.6 : Math.max(0.8, R * 0.02);
+        out.push('<circle class="' + cls + '" cx="' + (p.x * S).toFixed(2) +
+                 '" cy="' + (p.y * S).toFixed(2) + '" r="' + R.toFixed(2) +
+                 '" fill="url(#bg' + uid + ')"' + (it.ghost ? ' fill-opacity=".5"' : '') +
+                 ' stroke="' + stk + '" stroke-width="' + sw + '"' +
+                 (it.ghost ? ' stroke-dasharray="5 3.5"' : '') + '/>');
+      });
+      return (defs.length ? '<defs>' + defs.join('') + '</defs>' : '') + out.join('');
+    }
+    items.forEach(function (it) {
+      var f6 = cellFaces(it.lo[0], it.lo[1], it.lo[2]);
+      f6.forEach(function (f) {
+        var t = 0;
+        f.q.forEach(function (p) { t += depthRel(rel(p)); });
+        f.d = t / 4;
+      });
+      f6.filter(function (f) { return dot3(cam(f.n), N0) < -1e-6; })
+        .sort(function (a, b) { return b.d - a.d; })
+        .forEach(function (f) {
+          var pts = f.q.map(function (p) {
+            var s = PT(p);
+            return (s.x * USCALE).toFixed(2) + ',' + (s.y * USCALE).toFixed(2);
+          }).join(' ');
+          /* 预览方块（ghost）：能放 = 黄虚线；不能放（贴面 / 已占 / 用完 / 放错）= 红虚线。
+             这块 ghost 就是"跟着鼠标走"的那一块：孩子一眼就能看出"这里行不行"，
+             不必等点下去才被拒（被拒时还会闪一下再消失，见 wrongFlash）。 */
+          var bad = it.ghost && hoverBad;
+          var cls = it.wrong ? 'wrongf' : (it.ghost ? 'ghostf' : 'cubef');
+          var stk = it.wrong ? '#FF6B6B'
+                  : (it.ghost ? (bad ? '#FF6B6B' : '#FFD447') : sk.cellEdge);
+          var sw = (it.ghost || it.wrong) ? 2.6 : 1.6;
+          out.push('<polygon class="' + cls + '" points="' + pts +
+                   '" fill="' + G.COL[f.k] + '"' + (it.ghost ? ' fill-opacity=".5"' : '') +
+                   ' stroke="' + stk + '" stroke-width="' + sw + '"' +
+                   (it.ghost ? ' stroke-dasharray="5 3.5"' : '') + '/>');
+        });
+    });
+    return out.join('');
+  });
+}
+function projOfPlace() {
+  /* 与 buildAns 逐字同一套：w←(u,v) 即 a|b；v←(u,w) 即 a|c；u←(v,w) 即 b|c */
+  var P = { w: {}, v: {}, u: {} };
+  Object.keys(G.place).forEach(function (key) {
+    var p = key.split('|'), a = +p[0], b = +p[1], e = +p[2];
+    P.w[a + '|' + b] = 1; P.v[a + '|' + e] = 1; P.u[b + '|' + e] = 1;
+  });
+  return P;
+}
+function projDiff(P) {
+  var miss = 0, extra = 0;
+  ['w', 'v', 'u'].forEach(function (k) {
+    Object.keys(G.ans[k]).forEach(function (key) { if (!P[k][key]) miss++; });
+    Object.keys(P[k]).forEach(function (key) { if (!G.ans[k][key]) extra++; });
+  });
+  return { miss: miss, extra: extra, total: miss + extra };
+}
+function solidDone() {
+  var used = Object.keys(G.place).length;
+  if (!used || used > G.shape.length) return false;
+  return projDiff(projOfPlace()).total === 0;
+}
+/* 拿走指定格位上的方块（点一下已放的方块 / 右键，都走这里） */
+function removeBlockAt(lo) {
+  var key = kk(lo);
+  if (!G.place[key]) return false;
+  delete G.place[key];
+  var h = G.phist.lastIndexOf(key);
+  if (h >= 0) G.phist.splice(h, 1);
+  G.solved = false;
+  hoverCell = null; hoverBad = '';
+  return true;
+}
+function solidPickRemove(idx) {
+  /* 右键（鼠标）/ 长按：拿走这一格上的方块。
+     ★ 400ms 去重是必须的：触摸设备的浏览器在长按之后还会自己补一次 contextmenu，
+       两个入口各拿掉一块 ⇒ 真机上是"一次长按掉了两块"。 */
+  var now = Date.now();
+  if (now - lastRemoveAt < 400) return;
+  var ray = rays[idx];
+  if (!ray || G.mode !== 'solid' || G.solved) return;
+  if (!removeBlockAt(cellOfRay(ray))) return;
+  lastRemoveAt = now;
+  sndTap();
+  renderCubes(); updateStat();
+  toast('拿走了一块');
+}
+function pulseCell3d(lo, kind) {
+  /* 提示那一格 / 拒绝那一格。两种颜色必须分开：金色 = 建议放这里，红色 = 这里不行。 */
+  var svg = document.getElementById('bsvg'); if (!svg) return;
+  var cls = (kind === 'bad') ? 'hintpulse bad' : 'hintpulse';
+  var old = svg.querySelector('.hintpulse');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  var el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  el.setAttribute('class', cls);
+  el.setAttribute('points', withUnit(function () { return cHex(lo); }));
   svg.appendChild(el);
   setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 2400);
 }
@@ -1162,7 +2892,9 @@ function showHintPulse(k, i, j) {
    音效（WebAudio）—— AudioContext 必须在用户手势里创建 / resume，
    否则会停在 suspended，表现为「点了没声音」。每个按钮的第一次点击都会 ac()。
    ============================================================ */
-var AC = null, muted = false;
+/* 先生 2026-10-02：「声音常开，删掉关闭选项」⇒ 不再有 muted 开关，
+   🔊/🔇 那颗按钮的位置让给了「立体模式」。 */
+var AC = null;
 function ac() {
   if (!AC) {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1184,11 +2916,11 @@ function tone(freq, t0, dur, type, vol) {
   o.connect(g); g.connect(a.destination);
   o.start(t); o.stop(t + dur + 0.03);
 }
-function sndOK()   { if (muted) return; tone(784, 0, .15, 'sine', .17); tone(1046.5, .055, .20, 'sine', .12); }
-function sndBad()  { if (muted) return; tone(196, 0, .22, 'triangle', .15); tone(146.8, .07, .28, 'triangle', .12); }
-function sndWin()  { if (muted) return;
+function sndOK()   { tone(784, 0, .15, 'sine', .17); tone(1046.5, .055, .20, 'sine', .12); }
+function sndBad()  { tone(196, 0, .22, 'triangle', .15); tone(146.8, .07, .28, 'triangle', .12); }
+function sndWin()  {
   [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { tone(f, i * .085, .36, 'sine', .16); }); }
-function sndTap()  { if (muted) return; tone(660, 0, .06, 'sine', .09); }
+function sndTap()  { tone(660, 0, .06, 'sine', .09); }
 
 /* ============================================================
    出题 / 涂色 / 撤销 / 提示
@@ -1205,30 +2937,159 @@ function toast(msg, cls) {
    ⇒ 原来只在底部 toast 里报一句，现在改成居中的对话框；toast 继续管"某一步"的即时反馈
      （涂错、撤销、换题…），通关这件大事走对话框。 */
 function showWin() {
-  var n = 0;
-  ['w', 'v', 'u'].forEach(function (k) { n += Object.keys(G.ans[k]).length; });
+  var n = ansCount(G.ans), solid = (G.mode === 'solid');
+  document.querySelector('#winBox .sub').textContent = solid
+    ? '摆出来的立体，三面投影和题面完全吻合，而且每块都空开着'
+    : '三面投影全部还原出来了';
   document.getElementById('winMeta').innerHTML =
     '<i>网格 <b>' + G.N + '×' + G.N + '</b></i>' +
-    '<i>小方块 <b>' + G.shape.length + '</b> 个</i>' +
-    '<i>涂对 <b>' + n + '</b> 格</i>';
+    (solid
+      ? '<i>摆了 <b>' + placeCount() + '</b> 个小方块</i>'
+      : '<i>小方块 <b>' + G.shape.length + '</b> 个</i>') +
+    '<i>' + (solid ? '投影 <b>' + n + '</b> 格全中' : '涂对 <b>' + n + '</b> 格') + '</i>';
   document.getElementById('winMask').classList.add('on');
 }
 function hideWin() { document.getElementById('winMask').classList.remove('on'); }
+/* 页头说明 / 缩略图角标 / 提示条 / 按钮文案 —— 随模式与题面块数一起同步 */
+function syncModeText() {
+  var solid = (G.mode === 'solid');
+  /* ★ 先生 2026-10-06 追加：「立体模式支持圆形」★
+     原来是 `solid ? false : !!G.ball`（立体模式下圆形不生效），现在两种模式都认 G.ball：
+     · flat  圆形 = 缩略图画【球】、游戏区涂的是【球投到墙上的椭圆】
+     · solid 圆形 = 缩略图画的是【三面投影 = 椭圆】、游戏区点格位摆的是【球】
+     两边的"球"跟"椭圆"是同一套几何（球半径 = 格子内切 = 0.5 格、椭圆 = 球投到该面墙上
+     再过等轴投影），所以用的是同一个 ballEllipse()，不会两边漂移。 */
+  var ball = !!G.ball;
+  var kmax = solidKMax(G.N), clipped = solid && G.K > kmax;
+  document.getElementById('ruleBar').innerHTML = solid
+    ? '看左边<b>三面投影</b>，把' + (ball ? '球' : '方块') +
+      '<b>点</b>到右边立体空间里摆出来（' + (ball ? '球' : '方块') + '跟着鼠标走）　·　用不超过 <b>' +
+      G.shape.length + '</b> ' + (ball ? '颗' : '块') + '，每' + (ball ? '颗' : '块') + '之间都要空开一格' +
+      (clipped ? '　（立体模式 N=' + G.N + ' 最多 ' + kmax + ' ' + (ball ? '颗' : '块') + '，已按上限出题）' : '')
+    : (ball
+        ? '看左边<b>圆球</b>，在右边三面方格上涂出<b>它的投影</b>（球投到墙上是一个<b>椭圆</b>）　·　每面方格的格数 = 立方体每边的小方格数'
+        : '看左边立体图，在右边三面方格上涂出<b>它的投影</b>　·　每面方格的格数 = 立方体每边的小方格数');
+  /* ★ 块数滑块也要按 N 收窄（先生 2026-10-06 问的"K 上限是否按 N 收窄"）★
+     出题那一步早就夹了（genScatter：`if (K > cap) K = cap`），但滑块的 max 一直是 HTML 里
+     写死的 30 ⇒ N=4 时界面上写着"30 块"、实际只会出 14 块，数字对不上。
+     这里把"显示的数"对齐到"真正会出的数"。
+     ⚠️ 顺序不能调：`clipped` 必须【先】用夹之前的旧 G.K 算出来（见上一行），
+        否则夹完永远是 false，那句"已按上限出题"的提示就再也不会出现。 */
+  var rngEl = document.getElementById('rng');
+  if (rngEl) {
+    var rmax = solid ? kmax : 30;
+    if (rngEl.max !== String(rmax)) rngEl.max = String(rmax);
+    if (G.K > rmax) G.K = rmax;
+    rngEl.value = String(G.K);
+    var knEl = document.getElementById('knum');
+    if (knEl) knEl.textContent = G.K;
+    var kpEl = document.getElementById('kPlus');
+    if (kpEl) kpEl.disabled = (G.K >= rmax);      /* 到顶了就别让人以为还能加 */
+  }
+  document.getElementById('thumbTag').textContent = solid
+    ? (ball ? '题目三视图 · 圆球投影' : '题目三视图')
+    : (ball ? '题目立体图 · 圆球' : '题目立体图');
+  document.getElementById('thumbHint').innerHTML = solid
+    ? '<b>点一下</b>就把' + (ball ? '球' : '方块') + '放下 · 每' + (ball ? '颗' : '块') +
+      '要空开一格 · 点已放的' + (ball ? '球' : '方块') + '可拿走'
+    : '<b>按住拖动</b>转视角 · 点右上角放大';
+  var b = document.getElementById('btnMode');
+  b.textContent = solid ? '▦ 投影模式' : '🧊 立体模式';
+  b.title = solid
+    ? '换回原版玩法：看立体图，在三面方格上涂出它的投影'
+    : '换一种玩法：看三面投影，把方块拖进立体空间里摆出来';
+  /* ★ 圆形模式按钮（先生 2026-10-06；同日追加「立体模式支持圆形」）★
+     两种模式都能用，所以【不再置灰】。文字只按 ball 翻面，与模式无关。 */
+  var bb = document.getElementById('btnBall');
+  bb.textContent = ball ? '▦ 方形模式' : '⚪ 圆形模式';
+  bb.disabled = false;
+  bb.title = ball
+    ? (solid ? '换回方块：点格位摆的是方块' : '换回方块：涂格子 = 涂满整格')
+    : (solid ? '把方块换成圆球：点格位摆的是球（左边三视图上对应的是一个椭圆）'
+             : '把方块换成圆球：球投到墙上是一个椭圆，涂格子时涂的就是那个椭圆');
+  /* 彩色按钮的提示也要跟着模式走：立体模式的题面颜色是【每面一种】（它是题目），
+     不会跟着摆的球变 ⇒ 不能沿用投影模式那句"墙上的椭圆也跟着各自的球"。 */
+  var brb = document.getElementById('btnRainbow');
+  if (brb) brb.title = solid
+    ? '让每一' + (ball ? '颗球' : '块') + '都是不一样的颜色（方便区分是哪一' +
+      (ball ? '颗' : '块') + '；题面三视图的颜色是每面一种，不跟着' + (ball ? '球' : '方块') + '变）'
+    : '让每一颗球都是不一样的颜色（墙上的椭圆也跟着各自的球）';
+  document.body.classList.toggle('ball-on', ball);
+  /* ★ 纸头要素每次都跟着刷 ★：原来只在 enterPaper() 里算一次，那样一旦走的是
+     @media print 兜底那条路（beforeprint 没派发），纸头上的"网格边长/块数/难度/玩法"就是空的。
+     挂在这儿能覆盖 N / 块数 / 模式 / 圆球四类变化（它们都会经过 syncModeText）。 */
+  syncPrintMeta();
+}
 function newPuzzle() {
   hideWin();                             /* 换题时先把通关对话框收掉，免得盖在新题上 */
-  G.shape = genShape(G.N, G.K);
+  /* ★ 两个模式的出题规则是【相反的】，必须各出各的：
+     原版 genShape（先生 09-29）：要相连、要出现共用面、50% 走"每块只共用一面"的配对生长；
+     立体模式 genScatter（先生 10-02）：互不共面、散开、且每块都占屏幕上一个独有的位置。
+     想"共用一道题"是不可能的 —— 形状一连通，就必然存在面贴面的两块。 */
+  G.shape = (G.mode === 'solid') ? genScatter(G.N, G.K) : genShape(G.N, G.K);
   G.ans = buildAns(G.shape);
+  G.ansColor = buildAnsColor(G.shape);   /* ★ 彩色模式要按"这一格是谁投的"上色 */
+  /* 判错要用的搜索上下文（候选格 / 覆盖表 / 兼容表）—— 出题时算一次，放置时反复用。 */
+  G.solCtx = (G.mode === 'solid') ? buildSolCtx() : null;
+  _solMemo = {}; _solMemoSig = null;
+  wrongList = [];
   G.fill = { w: {}, v: {}, u: {} };
   G.hist = [];
+  clearWrongTimers();       /* ★ 换题/切模式：上一题的"待自动清除"一律作废，别让它去清新题的格 */
+  G.place = {};
+  G.phist = [];
   G.solved = false;
+  hoverRay = -1; hoverCell = null; hoverBad = '';
+  _pd = null;                            /* 换题 / 切模式时别留着按下时的现场 */
   buildBoard();
+  syncModeText();        /* 块数可能被 genShape / genScatter 夹过 ⇒ 那句"用不超过 N 块"要跟着变 */
   updateStat();
   renderAll();
 }
 function repaint() {                     /* 只改 N / K 后重开一局，不动配色 */
   newPuzzle();
 }
+/* ---------- flat 模式：涂错了 2 秒后【自动消除】那一格（先生 2026-10-06）----------
+   先生原话：「整个游戏如果填错了 你提示错了后过2秒要自动消除错误的」。
+   立体模式本来就有一套（放错的方块 出现→抖动→520ms 淡出，见 WRONG_MS / wrongFlash），
+   缺的正是原版这边 —— 涂错会一直红着占住位置，得玩家自己再点一次才清得掉。
+   ---- 口径：
+   · 只清【刚涂错的那一格】，不是"一键清空所有错格"（对齐立体模式"那一块闪一下消失"）。
+   · 到点时【按现状判断】，不是无条件删：玩家若已自己点掉、或已经换了题，就不动（见 clearWrongAt）。
+   · 同一格被重新涂上 ⇒ 先取消旧定时器再重排；否则"1.6s 才重新涂上、2.0s 就被上一次的
+     定时器清掉"，玩家会觉得"这次怎么没到两秒"。连涂错好几格则各自计时、互不影响。
+   · 撤销栈要跟着干净：这一格等于【从没被涂过】⇒ 把 hist 里那条记录摘掉，
+     否则按撤销会把它又涂回来（红的）再消失一次。 */
+var WRONG_CLEAR_MS = 2000;
+var wrongTimers = {};                 /* 'k|i|j' → timeoutId */
+function dropHistLast(k, key) {
+  for (var t = G.hist.length - 1; t >= 0; t--) {
+    if (G.hist[t].k === k && G.hist[t].key === key) { G.hist.splice(t, 1); return; }
+  }
+}
+function clearWrongAt(k, i, j) {
+  var key = i + '|' + j;
+  delete wrongTimers[k + '|' + key];
+  if (!G.fill[k][key] || G.ans[k][key]) return;      /* 已经空了 / 已经变对了 ⇒ 什么都不做 */
+  delete G.fill[k][key];
+  dropHistLast(k, key);
+  refreshBoard(); updateStat();
+}
+function clearWrongTimers() {                        /* 换题 / 切模式时调用：旧定时器一律作废 */
+  Object.keys(wrongTimers).forEach(function (x) { clearTimeout(wrongTimers[x]); });
+  wrongTimers = {};
+}
+function cancelWrongTimer(k, key) {
+  var tk = k + '|' + key;
+  if (wrongTimers[tk]) { clearTimeout(wrongTimers[tk]); delete wrongTimers[tk]; }
+}
+/* 给"一格错格"排上自动消除（先取消旧的，避免两把定时器叠在同一格上） */
+function armWrongTimer(k, i, j) {
+  cancelWrongTimer(k, i + '|' + j);
+  wrongTimers[k + '|' + i + '|' + j] = setTimeout(function () { clearWrongAt(k, i, j); }, WRONG_CLEAR_MS);
+}
 function paint(k, i, j) {
+  if (G.mode === 'solid') return;        /* 立体模式下游戏区没有"格子"，涂色入口不该被调用 */
   if (G.solved) { toast('这题已经完成啦，点「换一道题」继续', 'ok'); return; }
   var key = i + '|' + j, was = G.fill[k][key] ? 1 : 0;
   if (was) { delete G.fill[k][key]; }
@@ -1237,7 +3098,15 @@ function paint(k, i, j) {
   /* 先生要「正确和错误的提示音」⇒ 涂上的那一刻就反馈 */
   if (!was) {
     if (G.ans[k][key]) { sndOK(); }
-    else { sndBad(); toast('这一格不该涂 —— ' + WALLNAME[k] + '网格上没有它的投影', 'no'); }
+    else {
+      sndBad();
+      toast('这一格不该涂 —— ' + WALLNAME[k] + (G.ball ? '面上没有球投出的椭圆' : '网格上没有它的投影') +
+            '（2 秒后自动消掉）', 'no');
+      /* ★ 先生 2026-10-06：提示完 2 秒自动消除（见上面 WRONG_CLEAR_MS 那段口径） */
+      armWrongTimer(k, i, j);
+    }
+  } else {
+    cancelWrongTimer(k, key);        /* 玩家自己点掉的 ⇒ 别再让定时器来清一次 */
   }
   refreshBoard(); updateStat();
   if (!G.solved && checkSolved()) {
@@ -1255,14 +3124,88 @@ function checkSolved() {
   return ok;
 }
 function doUndo() {
+  if (G.mode === 'solid') {
+    var key = G.phist.pop();
+    if (!key) { toast('还没有可以撤销的步骤'); return; }
+    delete G.place[key];
+    G.solved = false;
+    hoverCell = null; hoverBad = '';
+    renderCubes(); updateStat();
+    toast('拿走了 1 块');
+    return;
+  }
   var h = G.hist.pop();
   if (!h) { toast('还没有可以撤销的步骤'); return; }
-  if (h.prev) G.fill[h.k][h.key] = 1; else delete G.fill[h.k][h.key];
+  var hp = h.key.split('|');
+  if (h.prev) {
+    G.fill[h.k][h.key] = 1;
+    /* 撤销把一格【错格】又涂回来了 ⇒ 也得排上自动消除，否则它会一直红着 */
+    if (!G.ans[h.k][h.key]) armWrongTimer(h.k, +hp[0], +hp[1]);
+  } else {
+    delete G.fill[h.k][h.key];
+    cancelWrongTimer(h.k, h.key);     /* 撤掉的正是那格 ⇒ 待清除的定时器作废 */
+  }
   G.solved = false;
   refreshBoard(); updateStat();
   toast('撤销了 1 步');
 }
+function solidHintCell() {
+  /* 该往哪一格补？—— 沿【一条还走得通的路】补，而不是死认原题。
+     理由与判错同源：这道题常不止一个解，孩子走的是另一条同样正确的路时，
+     照原题提示会把他往回拽。判据用 dropReason === ''（里面就是 solvableWith），
+     再加一条"必须能补上至少一个还没点亮的答案格"，否则补了也没用。 */
+  var i, k;
+  if (G.solCtx) {
+    var C = G.solCtx, P = projOfPlace();
+    for (i = 0; i < C.cells.length; i++) {
+      var c = C.cells[i];
+      if (G.place[kk(c)]) continue;
+      var pr = [['w', c[0] + '|' + c[1]], ['v', c[0] + '|' + c[2]], ['u', c[1] + '|' + c[2]]];
+      var adds = false;
+      for (k = 0; k < 3; k++) {
+        if (G.ans[pr[k][0]][pr[k][1]] && !P[pr[k][0]][pr[k][1]]) adds = true;
+      }
+      if (!adds) continue;
+      if (dropReason(c) !== '') continue;
+      return c.slice();
+    }
+    return null;
+  }
+  for (i = 0; i < G.shape.length; i++) {        /* 兜底（理论上走不到）：照原题补 */
+    if (!G.place[kk(G.shape[i].lo)]) return G.shape[i].lo.slice();
+  }
+  return null;
+}
 function doHint() {
+  if (G.mode === 'solid') {
+    if (Object.keys(G.place).length >= G.shape.length) {
+      toast('方块已经全用上了 —— 看看有没有多放或放错位置的方块（点一下可拿走）', 'no');
+      return;
+    }
+    var lo = solidHintCell();
+    if (!lo) {
+      toast('场上有一块放错了 —— 点一下把它拿走再试', 'no');
+      return;
+    }
+    /* ⚠️ 还是要查一遍能不能放：解表里的组合彼此不共面，但兜底档（照原题补）
+       没有这条保证 —— 孩子摆下的块可能正好挨着原题那一格。
+       不查就放 ⇒ 屏幕上当场出现两块贴面的方块，正好是先生要禁的那种。 */
+    var why = dropReason(lo);
+    if (why) {
+      pulseCell3d(lo, 'bad');
+      toast('该补的那一格被挡住了 —— ' + (DROP_MSG[why] || '先拿掉挡住它的那一块'), 'no');
+      return;
+    }
+    G.place[kk(lo)] = 1;
+    G.phist.push(kk(lo));
+    sndTap();
+    hoverCell = null; hoverBad = '';
+    renderCubes(); updateStat();
+    pulseCell3d(lo);
+    toast('帮你在能走通的那条路上补了一块', 'ok');
+    if (!G.solved && solidDone()) { G.solved = true; sndWin(); showWin(); }
+    return;
+  }
   var found = null;
   ['w', 'v', 'u'].forEach(function (k) {
     if (found) return;
@@ -1284,10 +3227,19 @@ function doHint() {
    但已在别面用掉的色块上会打 ✓，选到重复色时给一句提醒，不阻止。 */
 var PALETTE = ['#6FD463', '#FF8354', '#5AA9FF', '#FFD447', '#B98CFF',
                '#4ED9D0', '#FF7BAF', '#FF6B6B', '#9CE86B', '#7FB2FF'];
-var popK = null;                 /* 当前正在给哪面墙挑色 */
+var popK = null;                 /* 当前正在给哪面墙 / 圆球挑色 */
+/* ★ 圆形模式那一个色块也走同一套浮层 ⇒ 用这两个取值器统一口径，别在每处写 if (k==='ball') */
+function palColor(k) {
+  if (k !== 'ball') return G.COL[k];
+  return G.rainbow ? '' : G.ballColor;   /* 彩色时没有"当前色"⇒ 浮层里一个都不标选中 */
+}
+function palLabel(k) { return (k === 'ball') ? '圆球' : WALLNAME[k] + '网格'; }
 function setColor(k, hex) {
   if (!k || !hex) return;
-  G.COL[k] = String(hex).toUpperCase();
+  hex = String(hex).toUpperCase();
+  /* ★ 自己挑了一个具体颜色 ⇒ 自动退出「彩色」（否则点了色块画面不变，会以为是坏的） */
+  if (k === 'ball') { G.ballColor = hex; G.rainbow = false; }
+  else G.COL[k] = hex;
   refreshPalette();
   if (popK) syncColorPop();
 }
@@ -1299,16 +3251,22 @@ function buildColorPop() {
 }
 function syncColorPop() {
   if (!popK) return;
-  document.getElementById('popName').textContent = WALLNAME[popK] + '网格';
+  document.getElementById('popName').textContent = palLabel(popK);
+  var cur = palColor(popK).toUpperCase();
   var used = {};
-  Object.keys(G.COL).forEach(function (x) { if (x !== popK) used[G.COL[x].toUpperCase()] = 1; });
+  if (popK !== 'ball') {
+    Object.keys(G.COL).forEach(function (x) { if (x !== popK) used[G.COL[x].toUpperCase()] = 1; });
+  } else {
+    /* 球与三面网格同色是常态（默认就是同一个绿）⇒ 球这一行不标"已用"，否则一打开满屏 ✓ */
+    used = {};
+  }
   Array.prototype.forEach.call(document.querySelectorAll('#popGrid .pcell'), function (el) {
     var c = el.getAttribute('data-c');
     el.classList.toggle('used', !!used[c]);
-    el.classList.toggle('cur', c === G.COL[popK].toUpperCase());
+    el.classList.toggle('cur', c === cur);
   });
   var nat = document.getElementById('popNative');
-  if (/^#[0-9A-F]{6}$/.test(G.COL[popK])) nat.value = G.COL[popK];
+  if (/^#[0-9A-F]{6}$/.test(cur)) nat.value = cur;
 }
 function openColorPop(k, anchor) {
   popK = k;
@@ -1331,9 +3289,115 @@ function refreshPalette() {
   ['u', 'v', 'w'].forEach(function (k) {
     document.getElementById('sw' + k).style.background = G.COL[k];
   });
+  /* ★ 彩色模式下色块显示成一圈彩虹 —— 它此刻不是"某一个颜色"，画成单色块会误导 */
+  document.getElementById('swball').style.background = G.rainbow
+    ? 'conic-gradient(#FF6B6B,#FFD447,#9CE86B,#4ED9D0,#5AA9FF,#B98CFF,#FF7BAF,#FF6B6B)'
+    : G.ballColor;
+  var rb = document.getElementById('btnRainbow');
+  rb.classList.toggle('on', !!G.rainbow);
+  rb.textContent = G.rainbow ? '🎨 彩色 ✓' : '🎨 彩色';
   refreshBoard();
   renderAll();
 }
+/* ---------- 「彩色」（先生 2026-10-06）----------
+   和 setBall 同理：只换外观，不重新出题（题目、已涂的格子、撤销栈全都不动）。 */
+function setRainbow(v) {
+  var on = !!v;
+  if (on === !!G.rainbow) return;
+  G.rainbow = on;
+  refreshPalette();      /* 内含 refreshBoard() + renderAll() + 色块与按钮同步 */
+  /* ★ 立体模式下不能说"墙上的椭圆也跟着各自的球" ★
+     立体模式的题面就是那三面墙上的投影，它是【题目】，颜色按面固定（G.COL），
+     不会跟着孩子摆的球变 ⇒ 照抄投影模式那句话会让孩子以为"颜色对不上就是错了"。 */
+  var solid = (G.mode === 'solid'), what = G.ball ? '球' : '方块';
+  toast(on ? (solid
+        ? '彩色：每一' + (G.ball ? '颗球' : '块') + '都是不一样的颜色' +
+          '（题面三视图的颜色是每面一种，不跟着摆的' + what + '变）'
+        : '彩色：每一颗球都是不一样的颜色，墙上的椭圆也跟着各自的球')
+      : '单色：所有' + (solid ? what : '球') + '都用同一个颜色', 'ok');
+}
+
+/* ============================================================
+   打印（先生 2026-10-06）
+   先生原话：「这个游戏做一个打印按钮 支持打印 要注意打印时候只显示缩略图和游戏区 合理排版」
+   ------------------------------------------------------------
+   为什么要 enterPaper 这一步，而不是只写 @media print：
+     · 缩略图是 canvas（位图），位图尺寸 = clientWidth/clientHeight × dpr。
+       而 beforeprint 触发时，@media print 还没生效 ⇒ 那个时刻量到的还是屏幕尺寸，
+       纸上框子尺寸不同 ⇒ 位图被 CSS 拉伸 ⇒ 糊。
+     · 所以先在【屏幕媒体】下把版式切到纸面尺寸（用 .paper 类，单位全用 mm），
+       量到的就正好是纸上尺寸，然后才让浏览器去分页。
+       mm 在屏幕媒体下同样有效（1mm = 96/25.4 px）⇒ 两边尺寸严格相等，不糊。
+   ------------------------------------------------------------
+   纸面配色不是"顺手美化"，是必须的：深色皮肤下格线是 rgba(255,255,255,.33)，
+   打在白纸上等于没有线；深色面板本身也会整块印成黑。
+   ============================================================ */
+var _paperTimer = null;
+function enterPaper() {
+  if (PAPER) return false;                 /* 幂等：按钮与 beforeprint 可能都触发，第二次起什么都不做 */
+  PAPER = true;
+  document.documentElement.classList.add('paper');
+  document.body.classList.add('paper');
+  _PALKEY = null;                          /* 强制 skinPal 重算成纸面那一套 */
+  syncPrintMeta();
+  /* ⚠️ 必须重建整个游戏区，不能只 refreshBoard()：
+     A/B/C 标签的引线·圆点·标签框颜色是【烤进 SVG 字符串】的（见 buildBoard），
+     换配色只重画填充色是刷不掉的。G.fill / G.place 都在状态里，重建不会丢作答。 */
+  buildBoard();
+  renderAll();                             /* 缩略图按纸面尺寸与 dpr=4 重画 */
+  return true;
+}
+function exitPaper() {
+  if (!PAPER) return false;                /* 同样幂等 */
+  PAPER = false;
+  document.documentElement.classList.remove('paper');
+  document.body.classList.remove('paper');
+  _PALKEY = null;
+  buildBoard();
+  renderAll();
+  return true;
+}
+/* 纸头要素：网格边长 / 小方块数 / 难度 / 模式。
+   一张只有两个图形的纸，孩子拿到手里不知道这是哪道题、要干什么 —— 这几项就是题号。 */
+function syncPrintMeta() {
+  var el = document.getElementById('printMeta');
+  if (!el) return;
+  var mode = (G.mode === 'solid')
+      ? (G.ball ? '立体模式 · 点格位摆球' : '立体模式 · 点格位摆方块')
+      : (G.ball ? '圆形模式（涂球投出的椭圆）' : '方形模式（涂满整格）');
+  var items = [
+    ['网格边长', G.N + '×' + G.N],
+    ['小方块数', G.K],
+    ['难度', G.diff === 'hard' ? '困难' : '简单'],
+    ['玩法', mode]
+  ];
+  el.innerHTML = items.map(function (it) {
+    return '<i>' + it[0] + ' <b>' + it[1] + '</b></i>';
+  }).join('');
+}
+function doPrint() {
+  /* 按钮这条路自己先切（不指望 beforeprint），afterprint 负责恢复；
+     再兜一个定时器：个别浏览器不派 afterprint，纸面版式不能一直挂着。 */
+  enterPaper();
+  var done = false;
+  function onAfter() { done = true; window.removeEventListener('afterprint', onAfter); exitPaper(); }
+  window.addEventListener('afterprint', onAfter);
+  try {
+    window.print();
+  } catch (e) {
+    window.removeEventListener('afterprint', onAfter);
+    exitPaper();
+    toast('这个环境不支持打印（可以直接按 Ctrl+P）', 'no');
+    return;
+  }
+  clearTimeout(_paperTimer);
+  _paperTimer = setTimeout(function () {
+    window.removeEventListener('afterprint', onAfter);
+    if (!done) exitPaper();                /* 兜底恢复，避免停在纸面版式 */
+  }, 1500);
+}
+window.addEventListener('beforeprint', function () { enterPaper(); });
+window.addEventListener('afterprint', function () { exitPaper(); });
 /* ---------- 底板皮肤：白 / 黑（先生 2026-09-29：「左侧下面设置个按钮 左边是白 右边是黑」）----------
    两段分工，别混：
      · 页面壳子（背景/面板/按钮/文字）→ 只切 CSS 的 body.skin-light，一行 JS 都不用改样式；
@@ -1355,12 +3419,53 @@ function syncSkinUI() {
 function setDiff(d) {
   G.diff = (d === 'hard') ? 'hard' : 'easy';
   syncDiffUI();
+  syncPrintMeta();        /* 难度会印在纸头上，这里单独刷一次（setDiff 不走 syncModeText） */
   renderAll();            /* 只重画，不重建题目 —— 切换难度不该把玩家的作答清掉 */
 }
 function syncDiffUI() {
   Array.prototype.forEach.call(document.querySelectorAll('#segDiff button'), function (b) {
     b.classList.toggle('on', b.getAttribute('data-diff') === G.diff);
   });
+}
+/* ---------- 模式切换（先生 2026-10-02）----------
+   flat ↔ solid 只是把"题面"和"作答"对调，题目本身不动 —— 同一道题两边都能玩。
+   ⚠️ 立体模式下题面必须固定正向，否则没法逐格跟游戏区对照 ⇒ 顺手转回默认视角：
+      缩略图的拖动/缩放与弹窗的旋转都在函数里就地对 G.mode 做了拦截（见 thumbRot / modalRot）。 */
+function setMode(m) {
+  var nm = (m === 'solid') ? 'solid' : 'flat';
+  if (nm === G.mode) return;
+  G.mode = nm;
+  document.body.classList.toggle('mode-solid', G.mode === 'solid');
+  Vthumb.M = defaultM(); Vthumb.zoom = 1;
+  if (modalOn) { Vmodal.M = defaultM(); Vmodal.zoom = 1; setAuto(false); renderModal(); updateZoomLbl(); }
+  /* ★ 切模式【必须重新出题】：两边的出题规则相反（原版要面贴面相连、立体模式要互不共面），
+     沿用上一道题会直接违规 —— 比如把原版那种连成一片的形状搬进立体模式，
+     一摆就是一坨，与"分散"正好相反。newPuzzle 里已经带 buildBoard / syncModeText /
+     updateStat / renderAll，所以这里不用再调一遍。 */
+  newPuzzle();
+  toast(G.mode === 'solid'
+    ? '立体模式：方块跟着鼠标走，点一下就放下 —— 每块之间都要空开一格'
+    : '投影模式：在三个面上涂出它的投影');
+}
+/* ---------- 圆形模式（先生 2026-10-06）----------
+   方形 ↔ 圆形 只换"方块长什么样 + 涂出来的东西长什么样"，题目本身【不动】。
+   与 setMode 的区别就在这里：setMode 必须重新出题（两个模式的出题规则相反）；
+   这里绝不能重出 —— 玩家只是想让方块变好看一点，不该被换掉涂到一半的题。
+   格子形状变了 ⇒ buildBoard() 必须重跑（椭圆层只在圆形模式下生成）；
+   G.fill / G.ans 都以 'i|j' 存，重建 DOM 不影响任何作答。 */
+function setBall(v) {
+  var on = !!v;
+  if (on === !!G.ball) return;
+  G.ball = on;
+  buildBoard();
+  syncModeText();          /* 顺带切 body.ball-on（球色那一行只在圆形模式下露出来） */
+  renderAll();
+  /* 两种模式的"涂/摆出来的东西"不一样，提示语得分开说，否则立体模式下那句是错的 */
+  var solid = (G.mode === 'solid');
+  toast(on ? (solid ? '圆形模式：点格位摆的是球（左边三视图上对应一个椭圆）'
+                    : '圆形模式：涂一格 = 球在这一面墙上投出的椭圆')
+           : (solid ? '方形模式：点格位摆的是方块（三面可见面按墙分色）'
+                    : '方形模式：涂一格 = 涂满整格'), 'ok');
 }
 /* ============================================================
    弹窗：360° 旋转看立体图
@@ -1393,15 +3498,67 @@ function setAuto(v) {
   if (autoRot) autoRaf = requestAnimationFrame(autoTick);
 }
 function autoTick() {
-  if (!autoRot) return;
+  if (!autoRot || G.mode === 'solid') return;
   Vmodal.M = mm(rotAxis(-B0.x, -B0.y, -B0.z, 0.0075), Vmodal.M);
   renderModal();
   autoRaf = requestAnimationFrame(autoTick);
 }
 /* 弹窗里的旋转：直接算矩阵，不碰全局 M ⇒ 不会影响缩略图 */
 function modalRot(dx, dy) {
+  if (G.mode === 'solid') return;        /* 立体模式：题面必须固定正向，转了就不好逐格对照 */
   Vmodal.M = mm(mm(rotAxis(A0.x, A0.y, A0.z, dy * ROTK),
                    rotAxis(-B0.x, -B0.y, -B0.z, dx * ROTK)), Vmodal.M);
+}
+/* 缩略图的旋转：同样只改 Vthumb.M，不碰全局 M ⇒ 不会影响游戏区（先生 2026-09-29） */
+function thumbRot(dx, dy) {
+  if (G.mode === 'solid') return;        /* 同上 */
+  Vthumb.M = mm(mm(rotAxis(A0.x, A0.y, A0.z, dy * ROTK),
+                   rotAxis(-B0.x, -B0.y, -B0.z, dx * ROTK)), Vthumb.M);
+}
+/* 缩略图本体：按住拖动 = 主页面就地 360° 转视角 + 双指缩放（先生 2026-09-29）
+   ⚠️ 与弹窗那套 pointer 逻辑同构，只是对象换成 Vthumb；
+   ⚠️ CSS 里 #tcv 必须 touch-action:none，否则平板上手指拖动会被浏览器手势吞掉。 */
+function vThumbBind() {
+  var box = document.getElementById('thumbBox');
+  var tp = {}, tlast = null, tpinch = 0;
+  box.addEventListener('pointerdown', function (e) {
+    if (!Vthumb) return;
+    box.setPointerCapture(e.pointerId);
+    tp[e.pointerId] = { x: e.clientX, y: e.clientY };
+    tlast = { x: e.clientX, y: e.clientY };
+    tpinch = 0;
+    box.classList.add('dragging');
+  });
+  box.addEventListener('pointermove', function (e) {
+    if (!tp[e.pointerId] || !Vthumb) return;
+    tp[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(tp);
+    if (ids.length >= 2) {
+      var a = tp[ids[0]], b = tp[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (tpinch > 0) { Vthumb.zoom = Math.max(0.5, Math.min(3, Vthumb.zoom * (d / tpinch))); renderThumb(); }
+      tpinch = d; return;
+    }
+    if (!tlast) { tlast = { x: e.clientX, y: e.clientY }; return; }
+    var dx = e.clientX - tlast.x, dy = e.clientY - tlast.y;
+    tlast = { x: e.clientX, y: e.clientY };
+    if (Math.abs(dx) > 26) dx = 26 * Math.sign(dx);
+    if (Math.abs(dy) > 26) dy = 26 * Math.sign(dy);
+    thumbRot(dx, dy);
+    renderThumb();
+  });
+  function tup(e) {
+    delete tp[e.pointerId]; tpinch = 0;
+    if (!Object.keys(tp).length) { tlast = null; box.classList.remove('dragging'); }
+    else tlast = tp[Object.keys(tp)[0]];
+  }
+  box.addEventListener('pointerup', tup);
+  box.addEventListener('pointercancel', tup);
+  box.addEventListener('wheel', function (e) {
+    if (!Vthumb) return;
+    e.preventDefault();
+    Vthumb.zoom = Math.max(0.5, Math.min(3, Vthumb.zoom * (e.deltaY > 0 ? 0.92 : 1.08)));
+    renderThumb();
+  }, { passive: false });
 }
 /* ============================================================
    事件绑定与启动
@@ -1441,7 +3598,9 @@ function bindUI() {
     document.getElementById('knum').textContent = G.K;
   }
   function applyK(v) {
-    v = Math.max(3, Math.min(30, Math.round(v)));
+    /* 上限跟着滑块走（立体模式下 syncModeText 会把它压到 solidKMax(N)）——
+       不能写死 30，否则立体模式 N=4 还能手动加到 30，界面上就又和实际出的题对不上了。 */
+    v = Math.max(3, Math.min(+rng.max || 30, Math.round(v)));
     if (v === G.K) return;
     G.K = v; setKUI(); sndTap(); repaint();
   }
@@ -1454,12 +3613,27 @@ function bindUI() {
   document.getElementById('btnNew').addEventListener('click', function () {
     ac(); rebuildGeometry(G.N); newPuzzle(); toast('换了一道新题');
   });
-  var bs = document.getElementById('btnSnd');
-  bs.addEventListener('click', function () {
-    muted = !muted;
-    bs.textContent = muted ? '🔇 静音中' : '🔊 声音开';
-    bs.style.color = muted ? '#8FA3BC' : '#9CE8B4';
-    if (!muted) { ac(); sndTap(); }
+  /* —— 模式切换（先生 2026-10-02）：这颗按钮原来叫「🔊 声音开」，声音改成常开后让出来 —— */
+  document.getElementById('btnMode').addEventListener('click', function () {
+    ac(); sndTap();
+    setMode(G.mode === 'solid' ? 'flat' : 'solid');
+    toast(G.mode === 'solid' ? '立体模式：看三面投影，自己摆立体' : '投影模式：看立体图，涂三面投影');
+  });
+  /* —— 圆形模式（先生 2026-10-06）：默认方形，点一下切过去，再点切回来 —— */
+  document.getElementById('btnBall').addEventListener('click', function () {
+    if (this.disabled) return;      /* 立体模式下置灰 ⇒ 点了什么也不做 */
+    ac(); sndTap();
+    setBall(!G.ball);
+  });
+  /* —— 彩色（先生 2026-10-06）：每颗球一个颜色 —— */
+  document.getElementById('btnRainbow').addEventListener('click', function () {
+    ac(); sndTap();
+    setRainbow(!G.rainbow);
+  });
+  /* —— 打印（先生 2026-10-06）：纸上只留「题目立体图」+「游戏区」—— */
+  document.getElementById('btnPrint').addEventListener('click', function () {
+    ac(); sndTap();
+    doPrint();
   });
   /* —— 换色：点按钮弹出调色板自己挑（先生 2026-09-29）—— */
   Array.prototype.forEach.call(document.querySelectorAll('.btnSw'), function (b) {
@@ -1475,7 +3649,8 @@ function bindUI() {
     var el = e.target.closest ? e.target.closest('.pcell') : null;
     if (!el || !popK) return;
     var c = el.getAttribute('data-c');
-    var dup = ['u', 'v', 'w'].filter(function (x) {
+    /* 球这一行不做重色提醒：球与某个墙面同色本来就是最正常的搭配（默认就是同一个绿） */
+    var dup = (popK === 'ball') ? [] : ['u', 'v', 'w'].filter(function (x) {
       return x !== popK && G.COL[x].toUpperCase() === c;
     });
     setColor(popK, c);
@@ -1497,15 +3672,47 @@ function bindUI() {
     if (e.target.closest && e.target.closest('.btnSw')) return;
     closeColorPop();
   });
-  /* —— 游戏区涂色（事件委托）—— */
-  document.getElementById('bsvg').addEventListener('click', function (e) {
+  /* —— 游戏区（事件委托）：原版点是涂格子；立体模式点是放方块 —— */
+  var bsvg = document.getElementById('bsvg');
+  bsvg.addEventListener('click', function (e) {
+    /* 立体模式的交互【全部】走 pointer 事件（鼠标跟随 + 点击放置 + 点已放方块拿走）。
+       click 只留给原版的涂格子 —— 否则 pointerup 之后浏览器补发的 click 会再动一次状态。 */
     var el = e.target;
-    if (!el || !el.classList || !el.classList.contains('cellbg')) return;
+    if (!el || !el.classList) return;
     ac();
-    paint(el.getAttribute('data-k'), +el.getAttribute('data-i'), +el.getAttribute('data-j'));
+    if (el.classList.contains('cellbg')) {
+      paint(el.getAttribute('data-k'), +el.getAttribute('data-i'), +el.getAttribute('data-j'));
+    }
   });
-  /* —— 缩略图点开弹窗 —— */
-  document.getElementById('thumbBox').addEventListener('click', openModal);
+  /* 右键 = 拿走这一格上的方块（鼠标）。触摸设备没有右键 ⇒ 点一下也能拿走。 */
+  bsvg.addEventListener('contextmenu', function (e) {
+    if (G.mode !== 'solid') return;
+    var idx = pickIndexAt(e.clientX, e.clientY);
+    if (idx < 0) return;
+    e.preventDefault();
+    solidPickRemove(idx);
+  });
+  /* —— 立体模式：方块跟着鼠标走，点一下就放（见 onSpaceDown / onSpaceUp）——
+     ★ 只走 pointer 事件，不走 click：click 是"按下+抬起"合成出来的，
+       拿不到"按下时按在哪一块上"，而"原地点一下已放方块 = 拿走"正需要这个信息。
+       原版的涂格子仍然是 click，两条路互不干扰（原版没有 pointerdown 分支）。 */
+  bsvg.addEventListener('pointerdown', onSpaceDown);
+  bsvg.addEventListener('pointerup', onSpaceUp);
+  /* 悬停 = 【鼠标默认跟随】的那一块：预览"放下去会是什么样"，能放金色、不能放红色。
+     ★ 预览必须画成【方块】而不是只亮一格：同一条视线上的格位在屏幕上完全重合
+       （屏幕位移 f = Δi²+Δj²+Δk²−ΔiΔj−ΔjΔk−ΔkΔi，f=0 ⟺ Δi=Δj=Δk），亮一格区分不出层。 */
+  bsvg.addEventListener('pointermove', onSpaceMove);
+  bsvg.addEventListener('pointerleave', onSpaceLeave);
+  /* —— 缩略图：只有右上角放大图标才弹窗（原来整块可点，2026-09-29 改）—— */
+  var zoomBtn = document.getElementById('thumbZoom');
+  zoomBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  zoomBtn.addEventListener('click', function (e) { e.stopPropagation(); openModal(); });
+  /* —— 缩略图：按住拖动 = 就地 360° 转视角（不碰全局 M，不影响游戏区）—— */
+  vThumbBind();
+  /* —— 缩略图下方：复位视角（回到默认角度 + 缩放 100%）—— */
+  document.getElementById('btnThumbReset').addEventListener('click', function () {
+    ac(); Vthumb.M = defaultM(); Vthumb.zoom = 1; renderThumb(); sndTap();
+  });
   document.getElementById('btnMClose').addEventListener('click', closeModal);
   document.getElementById('modal').addEventListener('click', function (e) {
     if (e.target.id === 'modal') closeModal();
@@ -1645,6 +3852,13 @@ window.__probe = function () {
     firstCell: G.shape.length ? G.shape[0].lo.slice() : null,
     centerCell: [G.N - 1, G.N - 1, G.N - 1],
     connected: isConnected(G.shape),
+    /* ★ 2026-09-29 新增：配对生长分支的核验字段
+       spread = 每个小方块的共面邻居数是否恰好为 1（"只共用一面"的判据）
+       loose  = 宽松连通（共面/共边/共角任一接触）—— 配对分支下必须为 true，保证整片不散 */
+    spread: G.shape.length > 1 && G.shape.every(function (c) {
+      return G.shape.filter(function (o) { return o !== c && sharesFace(c, o); }).length === 1;
+    }),
+    loose: looseConnected(G.shape),
     sharePairs: sharePairs, pairsTotal: tot,
     isolated: G.shape.filter(function (c) {
       return !G.shape.some(function (o) { return o !== c && sharesFace(c, o); });
@@ -1722,6 +3936,172 @@ window.__probe = function () {
     })(),
     modal: { on: modalOn, zoom: Vmodal ? +Vmodal.zoom.toFixed(3) : null, auto: autoRot,
              M: Vmodal ? Vmodal.M.map(function (x) { return +x.toFixed(4); }) : null },
+    /* ===== 立体模式（2026-10-02）=====
+       rays 必须等于 N³−(N−1)³（直接可见格位数），rayCover 必须等于 N³（一个格位都不能漏）。
+       这两条就是"点屏幕位置到底能点到几个格位"的硬判据。 */
+    mode: G.mode,
+    solid: {
+      rays: rays.length,
+      cells: N * N * N,
+      visibleCells: N * N * N - (N - 1) * (N - 1) * (N - 1),
+      rayCover: (function () {
+        var seen = {};
+        rays.forEach(function (r) { r.cells.forEach(function (c) { seen[kk(c.c)] = 1; }); });
+        return Object.keys(seen).length;
+      })(),
+      rayHist: (function () {
+        var h = {}; rays.forEach(function (r) { h[r.cells.length] = (h[r.cells.length] || 0) + 1; }); return h;
+      })(),
+      maxRay: rays.reduce(function (m, r) { return Math.max(m, r.cells.length); }, 0),
+      /* 独立判据：屏幕位置必须恰好由 (i−j) 与 (2k−i−j) 决定（见 rayKeyOf 的推导）。
+         常数取 A0/B0 本身。125 个格位 × 2 个分量全部要落在 1e-6 内，bad 必须为 0。 */
+      keyOK: withUnit(function () {
+        var bad = 0;
+        for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) for (var k = 0; k < N; k++) {
+          var p = PT(cv3(i + .5, j + .5, k + .5));
+          if (Math.abs(p.x / (-A0.x) - (i - j)) > 1e-6) bad++;
+          if (Math.abs(p.y / (-B0.x) - (2 * k - i - j)) > 1e-6) bad++;
+        }
+        return { bad: bad, total: N * N * N * 2 };
+      }),
+      picks: document.querySelectorAll('#board .pick3d').length,   /* 必须为 0：拾取已改成几何最近中心 */
+      pickMode: 'geo',
+      wallbg: document.querySelectorAll('#board .wallbg').length,
+      cubes: document.querySelectorAll('#board .cubef').length,
+      ghost: document.querySelectorAll('#board .ghostf').length,
+      place: Object.keys(G.place).sort(),
+      placeCount: Object.keys(G.place).length,
+      needBlocks: G.shape.length,
+      diff: projDiff(projOfPlace()),
+      done: solidDone(),
+      /* ===== 2026-10-02 新增：拖拽 + "每块都空开"的核验 =====
+         sharePairs（顶层那个）在立体模式下必须为 0 —— 它就是先生要的"不出现共用一面"；
+         frontAllShell / frontUnique 是"每条视线最靠前那一格"的两条硬不变量；
+         placeSharePairs 是【孩子摆出来之后】也要为空，否则孩子能摆出贴面的解。 */
+      shellN: shellCells(N).length,
+      frontAllShell: rays.every(function (r) {
+        var c = r.cells[0].c;
+        return c[0] === 0 || c[1] === 0 || c[2] === 0;
+      }),
+      frontUnique: (function () {
+        var seen = {}, n = 0;
+        rays.forEach(function (r) { var k2 = kk(r.cells[0].c); if (!seen[k2]) { seen[k2] = 1; n++; } });
+        return { unique: n, expect: N * N * N - (N - 1) * (N - 1) * (N - 1) };
+      })(),
+      placeSharePairs: (function () {
+        var ks = Object.keys(G.place).map(function (x) { return x.split('|').map(Number); });
+        var n = 0, i, j;
+        for (i = 0; i < ks.length; i++) for (j = i + 1; j < ks.length; j++) {
+          var d = Math.abs(ks[i][0] - ks[j][0]) + Math.abs(ks[i][1] - ks[j][1]) + Math.abs(ks[i][2] - ks[j][2]);
+          if (d === 1) n++;
+        }
+        return n;
+      })(),
+      shapeOnShell: G.shape.every(function (c) {
+        return c.lo[0] === 0 || c.lo[1] === 0 || c.lo[2] === 0;
+      }),
+      /* 共棱 / 共角的对数 —— 不违规（先生只要求不共面），但等轴投影下会【视觉上挨着】，
+         所以在容量够的时候应该为 0（容量不够时才会出现，见 growScatter 的两档说明）。 */
+      shapeTouchPairs: (function () {
+        var t = G.shape, n = 0, i, j;
+        for (i = 0; i < t.length; i++) for (j = i + 1; j < t.length; j++) {
+          var a = t[i].lo, b = t[j].lo;
+          var di = Math.abs(a[0] - b[0]), dj = Math.abs(a[1] - b[1]), dk = Math.abs(a[2] - b[2]);
+          if (di + dj + dk >= 2 && Math.max(di, dj, dk) === 1) n++;
+        }
+        return n;
+      })(),
+      placeTouchPairs: (function () {
+        var ks = Object.keys(G.place).map(function (x) { return x.split('|').map(Number); });
+        var n = 0, i, j;
+        for (i = 0; i < ks.length; i++) for (j = i + 1; j < ks.length; j++) {
+          var di = Math.abs(ks[i][0] - ks[j][0]), dj = Math.abs(ks[i][1] - ks[j][1]), dk = Math.abs(ks[i][2] - ks[j][2]);
+          if (di + dj + dk >= 2 && Math.max(di, dj, dk) === 1) n++;
+        }
+        return n;
+      })(),
+      placeOnShell: Object.keys(G.place).every(function (key) {
+        var p = key.split('|').map(Number);
+        return p[0] === 0 || p[1] === 0 || p[2] === 0;
+      }),
+      left: placeLeft(),
+      kMax: solidKMax(N),
+      /* —— 2026-10-02 二改：托盘已取消，换成"鼠标跟随 + 点击放置 + 放错消失"。 —— */
+      noTray: !document.getElementById('tray') && !document.getElementById('dragIco'),
+      /* —— 2026-10-02 三改：判错改成"可满足性"（见 solvableWith），不再枚举全部解 —— */
+      /* ★★ 这条是本模式最要紧的健全性判据：
+         "照着原题一格一格摆下去，中途会不会被自己判成错？"
+         全部 step 都被接受 + 最终 done ⇒ 原题那条路是通的，判错没有误杀。 */
+      targetReplay: (function () {
+        if (G.mode !== 'solid' || !G.solCtx) return null;
+        var keep = G.place, kh = G.phist, ks = G.solved;
+        G.place = {}; G.phist = []; G.solved = false;
+        _solMemo = {}; _solMemoSig = null;
+        var bad = null, i = 0, c, why;
+        for (i = 0; i < G.shape.length; i++) {
+          c = G.shape[i].lo;
+          why = dropReason(c);
+          if (why) { bad = { cell: c.slice(), reason: why, at: i }; break; }
+          G.place[kk(c)] = 1; G.phist.push(kk(c));
+        }
+        var done = solidDone();
+        G.place = keep; G.phist = kh; G.solved = ks;
+        _solMemo = {}; _solMemoSig = null;
+        renderCubes(); updateStat();
+        return { rejected: bad, done: done, steps: bad ? bad.at : G.shape.length };
+      })(),
+      /* 空场时"存在解"（true 才合理；null = 搜索算不尽） */
+      anySol: (G.mode === 'solid' && G.solCtx) ? (function () {
+        var keep = G.place;
+        G.place = {};
+        _solMemo = {}; _solMemoSig = null;
+        var r = solvableWithCell(null);
+        G.place = keep;
+        _solMemo = {}; _solMemoSig = null;
+        return r;
+      })() : null,
+      wrongCount: wrongList.length,               /* 当前正在"闪一下"的错误方块数 */
+      lastPlace: _placeTrace,                     /* 最近一次点击的结局（哪个分支、落点、拒绝原因） */
+      placeN: _placeN, rejectN: _rejectN, takeN: _takeN,
+      hoverIdx: hoverRay, hoverBad: hoverBad,
+      wrongG: (function () {
+        var g = document.getElementById('wrongG');
+        return { on: !!g, faces: g ? g.querySelectorAll('.wrongf').length : 0 };
+      })()
+    },
+    ruleText: (document.getElementById('ruleBar') || {}).textContent || '',
+    /* ★ 判"缩略图到底画的是三视图还是小方块"的硬判据 —— 像素级逐格采样：
+       三面墙上【每个格子的中心】的像素，必须等于该墙的轴色（当且仅当该格在答案里）。
+       立体模式下应该 100% 命中、且非答案格 0 泄漏；原版是画小方块，中心点对不上墙面格子。
+       ⚠️ 调用前会 useView(Vthumb)（可能因尺寸变化清空 canvas），所以外部必须先派发一次
+          resize 事件强制重画，再来取像素 —— 否则会拍到被清空的画布。 */
+    thumbCenterMatch: (function () {
+      var cv = Vthumb && Vthumb.cv;
+      if (!cv || !cv.clientWidth) return null;
+      var sM = M, sF = F, sCUR = CUR;
+      useView(Vthumb);
+      var dsf = cv.width / VW, ctx2 = cv.getContext('2d');
+      var hit = 0, tot = 0, leak = 0, totEmpty = 0;
+      ['w', 'v', 'u'].forEach(function (k) {
+        var f = FACES[WALLFACE[k]];
+        var c = G.COL[k];
+        var R = parseInt(c.substr(1, 2), 16), Gg = parseInt(c.substr(3, 2), 16), Bb = parseInt(c.substr(5, 2), 16);
+        for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) {
+          var q = faceCellQuad(f, i, j);
+          var px = Math.round((q[0].x + q[1].x + q[2].x + q[3].x) / 4 * dsf);
+          var py = Math.round((q[0].y + q[1].y + q[2].y + q[3].y) / 4 * dsf);
+          if (px < 0 || py < 0 || px >= cv.width || py >= cv.height) continue;
+          var d = ctx2.getImageData(px, py, 1, 1).data;
+          var near = Math.abs(d[0] - R) < 26 && Math.abs(d[1] - Gg) < 26 && Math.abs(d[2] - Bb) < 26;
+          if (G.ans[k][i + '|' + j]) { tot++; if (near) hit++; }
+          else { totEmpty++; if (near) leak++; }
+        }
+      });
+      M = sM; F = sF; CUR = sCUR;
+      return { ansCells: tot, filledRight: hit, nonAnsCells: totEmpty, leak: leak, dsf: +dsf.toFixed(2) };
+    })(),
+    statText: (document.getElementById('statBar') || {}).textContent || '',
+    btnModeText: (document.getElementById('btnMode') || {}).textContent || '',
     thumb: Vthumb ? { W: Vthumb.VW, H: Vthumb.VH, s: +Vthumb.F.s.toFixed(3),
                       zoom: Vthumb.zoom } : null,
     /* —— 本轮：难度 + "困难模式下里面的网格是否真没了"的采样点 ——
@@ -1736,11 +4116,83 @@ window.__probe = function () {
     defM: defaultM().map(function (x) { return +x.toFixed(5); })
   };
 };
+/* 探针（立体模式）：给外部脚本做数值核验 —— 摆方块 / 看投影差 / 直接点某条视线，
+   全部走与 UI 完全相同的函数，所以探针过了就等于真机那条路径过了。 */
+window.__solid = function () {
+  return {
+    mode: G.mode,
+    setMode: function (m) { setMode(m); return G.mode; },
+    rays: function () {
+      return rays.map(function (r) {
+        return { cells: r.cells.map(function (cc) { return cc.c; }), hex: r.hex };
+      });
+    },
+    set: function (arr) {              /* 直接摆一组格位（校验用） */
+      G.place = {}; G.phist = []; G.solved = false; hoverCell = null; hoverBad = '';
+      wrongList = [];
+      renderWrong();
+      arr.forEach(function (c) { G.place[kk(c)] = 1; G.phist.push(kk(c)); });
+      renderCubes(); updateStat();
+      return solidDone();
+    },
+    clear: function () { return window.__solid().set([]); },
+    target: function () { return G.shape.map(function (c) { return c.lo.slice(); }); },
+    /* —— 2026-10-02 二改：恢复"点击放置"（先生原话"点击就放上去了"），去掉托盘。
+       下面这些是给自检用的【程序化入口】；真机那条路是 pointerdown/up，自检另用真鼠标点。 —— */
+    drop: function (idx) {             /* 在第 idx 个屏幕位置上放一块（= 点一下） */
+      var ray = rays[idx];
+      if (!ray) return { ok: false, reason: 'noray' };
+      var cell = cellOfRay(ray), reason = dropReason(cell);
+      if (reason) return { ok: false, reason: reason, cell: cell };
+      G.place[kk(cell)] = 1; G.phist.push(kk(cell));
+      renderCubes(); updateStat();
+      var win = false;
+      if (!G.solved && solidDone()) { G.solved = true; win = true; sndWin(); showWin(); }
+      return { ok: true, cell: cell, done: G.solved, win: win };
+    },
+    remove: function (idx) {           /* 拿走第 idx 个位置上的方块 */
+      var ray = rays[idx];
+      if (!ray) return false;
+      var r = removeBlockAt(cellOfRay(ray));
+      renderCubes(); updateStat();
+      return r;
+    },
+    reason: function (idx) {
+      var ray = rays[idx];
+      return (ray && G.mode === 'solid') ? (dropReason(cellOfRay(ray)) || 'ok') : 'noray';
+    },
+    cellOf: function (idx) { return rays[idx] ? cellOfRay(rays[idx]) : null; },
+    /* 某个屏幕位置中心在【视口坐标】下的像素位置 —— 自检要按它来拖，才与孩子眼睛看到的一致 */
+    centerOf: function (idx) {
+      var ray = rays[idx], svg = document.getElementById('bsvg');
+      if (!ray || !svg) return null;
+      var ctm = svg.getScreenCTM();
+      if (!ctm) return null;
+      var pt = svg.createSVGPoint();
+      pt.x = ray.cx * USCALE; pt.y = ray.cy * USCALE;
+      var loc = pt.matrixTransform(ctm);
+      return [loc.x, loc.y];
+    },
+    /* 拾取函数本身 —— 自检可以直接问"指针在这个像素位置会落到哪一格" */
+    pickAt: function (x, y) { return pickIndexAt(x, y); },
+    left: placeLeft,
+    hover: function (idx) {
+      hoverRay = idx;
+      var cell = (idx >= 0 && rays[idx]) ? cellOfRay(rays[idx]) : null;
+      hoverCell = cell;
+      hoverBad = cell ? dropReason(cell) : '';
+      renderCubes();
+      return hoverCell;
+    },
+    proj: projOfPlace, diff: function () { return projDiff(projOfPlace()); },
+    done: solidDone
+  };
+};
 function init() {
   rebuildGeometry(G.N);
   Vthumb = makeView(document.getElementById('tcv'));
   Vmodal = makeView(document.getElementById('mcv'));
-  window.__audio = function () { return AC ? { state: AC.state, muted: muted } : null; };
+  window.__audio = function () { return AC ? { state: AC.state, alwaysOn: true } : null; };
   buildColorPop();
   bindUI();
   applySkin(G.skin);

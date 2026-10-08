@@ -1845,6 +1845,97 @@
         user-select: none;
       }
 
+      /* ===== 同心圆模式 =====
+         结构：背景容积圆 = 二十层同心圆（等粗黑圈）
+               每个小圆   = 五层同心圆（等粗黑圈）+ 黑数字白描边
+               大圆 20 层与小圆 5 层线宽完全一致（同一 sw）
+         排布：中心 1 个 + 若干等角同心环（上下左右天然对称，不会出现「上下留白」） */
+      .concentric-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: min(90vmin, 500px);
+        height: min(90vmin, 500px);
+        margin: 0 auto;
+      }
+
+      #concentric-svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .cc-cell {
+        cursor: pointer;
+        pointer-events: all;
+      }
+
+      /* 小圆的白底盘。圈线是 fill:none 的线条，没法靠它变底色，
+         所以「点对变绿 / 点错变红」由这层底盘承担。 */
+      .cc-bg {
+        fill: #FFFFFF;
+        transition: fill 0.15s ease;
+      }
+
+      /* 五层同心圆线：黑色、粗细一致。状态切换只换描边颜色，线宽永远不变。 */
+      .cc-layer {
+        stroke: #111111;
+        transition: stroke 0.15s ease;
+      }
+
+      /* 数字的白色描边 —— 由「字形整体膨胀一圈」的白抄本提供（见 renderConcentricGrid）。
+         必须是白：#111 黑字压在其上，圈线被它干净切断，就是「黑色数字带白色描边」。
+         pointer-events:none 必须给：几份白抄本叠在黑字周围，否则会挡住点击。 */
+      .cc-halo {
+        fill: #FFFFFF;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      /* 悬停：外圈橙色高亮环 */
+      .cc-hl {
+        opacity: 0;
+        transition: opacity 0.12s ease;
+        pointer-events: none;
+      }
+
+      .cc-cell:hover .cc-hl {
+        opacity: 1;
+      }
+
+      /* 点对：底盘变绿、五层线转白。★ 数字与其白描边【一律不动】——
+         委托人 2026-10-05：「数字要白色描边」。改成深绿描边就是不对。 */
+      .cc-cell.correct .cc-bg {
+        fill: #4CAF50;
+      }
+
+      .cc-cell.correct .cc-layer {
+        stroke: #FFFFFF;
+      }
+
+      .cc-cell.correct .cc-hl {
+        opacity: 0;
+      }
+
+      /* 点错：底盘闪红（JS 400ms 后移除 wrong 类，自动恢复黑白） */
+      .cc-cell.wrong .cc-bg {
+        fill: #FF5252;
+      }
+
+      .cc-cell.wrong .cc-layer {
+        stroke: #FFFFFF;
+      }
+
+      /* 点错时不要叠加橙色 hover 环，免得红+橙糊在一起 */
+      .cc-cell.wrong .cc-hl {
+        opacity: 0;
+      }
+
+      .cc-num {
+        pointer-events: none;
+        user-select: none;
+      }
+
       /* 旋转动画 */
       @keyframes rotateCW {
         from { transform: rotate(0deg); }
@@ -2140,11 +2231,19 @@
           width: min(75vh, 500px);
           height: min(75vh, 500px);
         }
+        .concentric-container {
+          width: min(75vh, 500px);
+          height: min(75vh, 500px);
+        }
       }
 
       /* 平板竖屏圆形容器放大 */
       @media (min-width: 768px) and (orientation: portrait) {
         .circular-container {
+          width: min(90vmin, 500px);
+          height: min(90vmin, 500px);
+        }
+        .concentric-container {
           width: min(90vmin, 500px);
           height: min(90vmin, 500px);
         }
@@ -2188,6 +2287,7 @@
           box-shadow: none !important;
         }
         .circular-container,
+        .concentric-container,
         #bounce-canvas,
         .variant-container,
         .mosaic-container,
@@ -2523,6 +2623,7 @@
         <div class="mode-group">
           <button class="mode-btn active" data-mode="normal" onclick="game.setMode('normal')">普通</button>
           <button class="mode-btn" data-mode="circular" id="circular-mode-btn" onclick="game.setMode('circular')">圆形</button>
+          <button class="mode-btn" data-mode="concentric" id="concentric-mode-btn" onclick="game.setMode('concentric')">同心圆</button>
           <div class="mode-dropdown-wrap">
             <button class="mode-btn" data-mode="chaos" id="chaos-btn" onclick="game.toggleModeMenu('chaos')">混沌 ▾</button>
             <div class="mode-menu" id="chaos-menu" onclick="event.stopPropagation()">
@@ -2692,6 +2793,9 @@
       <div class="circular-container" id="circular-container" style="display:none;">
         <svg id="circular-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
+      <div class="concentric-container" id="concentric-container" style="display:none;">
+        <svg id="concentric-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
       <canvas id="bounce-canvas" width="600" height="600" style="display:none;"></canvas>
       <div class="variant-container" id="variant-container" style="display:none;">
         <svg id="variant-svg" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -2786,6 +2890,7 @@
         this._bgColorSelectedAt = 0; // 颜色选择时间戳（防抖用）
         this.previousMode = 'normal'; // 保存退出圆形后回到的方格模式
         this.isCircularMode = false; // 是否在圆形模式
+        this.isConcentricMode = false; // 是否在同心圆模式（大圆内等圆密排）
         this.isRotateMode = false;    // 旋转模式（待实现）
         this.isBounceMode = false;    // 弹跳模式（待实现）
         this.bounceSubMode = 1;       // 混沌动子模式：1=普通混沌动，3=混沌3（碰撞大小互换）
@@ -3026,9 +3131,28 @@
               this.stopTimer();
               this.isPlaying = false;
             }
+            if (this.isConcentricMode) this.exitConcentricMode();
             this.enterCircularMode();
             return;
           }
+        }
+
+        // 同心圆模式特殊处理：无旋转，重复点＝换一局；游戏中重复点不打断
+        if (mode === 'concentric') {
+          if (this.isConcentricMode) {
+            if (!this.isPlaying) {
+              this.renderConcentricGrid();
+              this.updateUI();
+              this.updateStartButtonText();
+            }
+            return;
+          }
+          if (this.isPlaying) {
+            this.stopTimer();
+            this.isPlaying = false;
+          }
+          this.enterConcentricMode();
+          return;
         }
 
         // 混沌模式已改为 toggle，setMode('bounce') 不再直接调用
@@ -3036,6 +3160,7 @@
         if (mode === 'bounce') {
           this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
           if (this.isRotateMode) this.exitRotateMode();
           if (this.isVariantMode) this.exitVariantMode();
           if (this.isBounceMode) return;
@@ -3053,6 +3178,7 @@
           }
           this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
           if (this.isBounceMode) this.exitBounceMode();
           if (this.isRotateMode) this.exitRotateMode();
           if (this.isVariantMode) this.exitVariantMode();
@@ -3122,6 +3248,7 @@
           }
           this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
           if (this.isBounceMode) this.exitBounceMode();
           if (this.isRotateMode) this.exitRotateMode();
           if (this.destroyMode > 0) {
@@ -3156,6 +3283,7 @@
         if (mode === 'pattern') {
           this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
           if (this.isBounceMode) this.exitBounceMode();
           if (this.isRotateMode) this.exitRotateMode();
           if (this.isVariantMode) this.exitVariantMode();
@@ -3283,6 +3411,11 @@
           this.exitCircularMode();
         }
 
+        // 从同心圆模式切换到其他方格模式
+        if (this.isConcentricMode) {
+          this.exitConcentricMode();
+        }
+
         // 从方形（动）模式切换到其他模式
         if (this.isSquareMoveMode) {
           this.exitSquareMoveMode();
@@ -3362,6 +3495,7 @@
       SchulteGridGame.prototype._applyChaosSub = function(sub) {
         // 进入混沌前，退出所有其它布局模式
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         if (this.isVariantMode) this.exitVariantMode();
         if (this.isSquareMoveMode) this.exitSquareMoveMode();
         if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
@@ -3486,6 +3620,7 @@
           // 当前普通 → 进入马赛克（静）
           this.stopTimerAndReset();
           if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
           if (this.isBounceMode) this.exitBounceMode();
           if (this.isRotateMode) this.exitRotateMode();
           if (this.isVariantMode) this.exitVariantMode();
@@ -3650,6 +3785,7 @@
         this.stopTimerAndReset();
         // 退出其他所有布局模式
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
         if (this.isVariantMode) this.exitVariantMode();
@@ -3753,6 +3889,7 @@
       SchulteGridGame.prototype.enterSquareTransformMode = function() {
         this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
         if (this.isVariantMode) this.exitVariantMode();
@@ -3871,6 +4008,7 @@
       SchulteGridGame.prototype.enterSquareColorMode = function() {
         this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
         if (this.isVariantMode) this.exitVariantMode();
@@ -4206,6 +4344,7 @@
       SchulteGridGame.prototype.enterVisualParallaxMode = function() {
         this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
         if (this.isVariantMode) this.exitVariantMode();
@@ -4641,6 +4780,7 @@
       SchulteGridGame.prototype.enterBumpyMode = function() {
         this.stopTimerAndReset();
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
         if (this.isVariantMode) this.exitVariantMode();
@@ -5545,6 +5685,8 @@
       };
 
       SchulteGridGame.prototype.toggleVoidMode = function() {
+        // 同心圆模式：五层黑白填充本身就是底色，虚无效果不适用（与变体模式不支持毁灭同理）
+        if (this.isConcentricMode) return;
         // 圆形模式允许游戏中切换虚无
         if (!this.isCircularMode && !this.isVariantMode && this.isPlaying) {
           return;
@@ -5640,6 +5782,10 @@
       SchulteGridGame.prototype.toggleDestroyMode = function() {
         // 变体模式不支持毁灭效果
         if (this.isVariantMode) {
+          return;
+        }
+        // 同心圆模式不支持毁灭效果（五层黑白＝固定底纹，变底色会盖掉同心圆结构）
+        if (this.isConcentricMode) {
           return;
         }
         // 圆形模式：三态切换 0(关) → 1(黑白) → 2(12色循环) → 0(关)
@@ -5848,6 +5994,7 @@
         // 先隐藏所有容器
         document.getElementById('grid-container').style.display = 'none';
         document.getElementById('circular-container').style.display = 'none';
+        if (document.getElementById('concentric-container')) document.getElementById('concentric-container').style.display = 'none';
         document.getElementById('bounce-canvas').style.display = 'none';
         document.getElementById('variant-container').style.display = 'none';
         document.getElementById('mosaic-container').style.display = 'none';
@@ -5855,7 +6002,10 @@
         document.getElementById('vp-container').style.display = 'none';
         if (document.getElementById('bumpy-container')) document.getElementById('bumpy-container').style.display = 'none';
 
-        if (this.isCircularMode) {
+        if (this.isConcentricMode) {
+          document.getElementById('concentric-container').style.display = 'flex';
+          this.renderConcentricGrid();
+        } else if (this.isCircularMode) {
           document.getElementById('circular-container').style.display = 'flex';
           this.renderCircularGrid();
           if (this.circularRotating === 1) {
@@ -8750,6 +8900,7 @@
         this.stopTimerAndReset();
         // 退出所有其它布局模式
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         if (this.isBounceMode) this.exitBounceMode();
         if (this.isRotateMode) this.exitRotateMode();
         if (this.isVariantMode) this.exitVariantMode();
@@ -9828,6 +9979,8 @@
         var ntLabel = this.numberType === 'odd' ? '奇数' : (this.numberType === 'even' ? '偶数' : '自然数');
         if (this.isCircularMode) {
           difficultyStr = '圆形模式 (' + total + '个' + ntLabel + ')';
+        } else if (this.isConcentricMode) {
+          difficultyStr = '同心圆模式 (' + total + '个' + ntLabel + ')';
         } else if (this.isVariantMode) {
           difficultyStr = '变体模式 (' + total + '个' + ntLabel + ')';
         } else if (this.isSquareMoveMode) {
@@ -9850,6 +10003,12 @@
           difficultyStr + '<br>' +
           '平均每个数字: ' + avgTime + '秒<br>' +
           '评价: ' + evaluation;
+
+        // 通关后把进度显式补满（修复：主命中路径在"点到最后一个数"时走 completeGame()、
+        // 不再递增 currentNumber，而 getFoundCount() 由 currentNumber 推导，
+        // 导致进度永远停在 (N-1)/N；点结算框「关闭」后肉眼可见 8/9）
+        var progEl = document.getElementById('progress');
+        if (progEl) progEl.textContent = total + '/' + total;
 
         document.getElementById('result-overlay').classList.add('show');
       };
@@ -9987,6 +10146,300 @@
 
       // ========== 圆形模式方法 ==========
 
+      // ===================== 同心圆模式 =====================
+      // 排布：中心 1 个 + s 个同心环，每环 m_k 个等角分布（上下左右天然对称）。
+      // 单位 = 小圆半径（小圆半径 = 1，直径 = 2）。
+      //
+      // 数据由离线求解器 _cc_ring2.py 算出。目标：外接半径 R = ρ_s + 1 最小（覆盖率 N/R² 最大）。
+      // 约束：
+      //   ① 任意两圆心距 ≥ 2（严格不重叠）
+      //   ② ρ_k ≥ ρ_{k-1} + √3（相邻环间距 ≥ 1.732，保证「一环是一环」，不会两环挤成同一圈）
+      //   ③ 每环个数非递减
+      //   ④ 首环 ρ_0 ≥ 2（与中心那颗的圆心距 ≥ 直径）
+      // 实测（六档全部：最小圆心距 = 2.0000 严格相切、不重叠）：
+      //   入门  9个  环数1  ms=[8]            ρ=[2.6131]                     R=3.6131 覆盖0.6894
+      //   初级 16个  环数2  ms=[5,10]         ρ=[2.0000,3.8042]              R=4.8042 覆盖0.6932
+      //   中级 25个  环数2  ms=[9,15]         ρ=[2.9238,4.9063]              R=5.9063 覆盖0.7167
+      //   高级 36个  环数3  ms=[6,12,17]      ρ=[2.0000,3.8637,5.8624]       R=6.8624 覆盖0.7645
+      //   专家 49个  环数3  ms=[10,16,22]     ρ=[3.2361,5.2295,7.2265]       R=8.2265 覆盖0.7240
+      //   极限 64个  环数4  ms=[6,13,19,25]   ρ=[2.0000,4.1786,6.1775,8.1770] R=9.1770 覆盖0.7599
+      // 注：旧版是「行排布」（每行几个的行向量），左右贴边而上下各留约 70px 空白，
+      //     已被环形排布取代 —— 环形排布各向对称，不会出现某一边空出来的问题。
+      //
+      // 极限档封顶 64：100 个时小圆直径只有约 32px，五层同心圆会糊成一片，故不取 100。
+      SchulteGridGame.prototype.getConcentricConfig = function() {
+        var table = {
+          3:  { ms: [8],              rhos: [2.6131],                        phis: [0] },
+          4:  { ms: [5, 10],          rhos: [2.0000, 3.8042],                 phis: [0, 18] },
+          5:  { ms: [9, 15],          rhos: [2.9238, 4.9063],                 phis: [0, 4] },
+          6:  { ms: [6, 12, 17],      rhos: [2.0000, 3.8637, 5.8624],         phis: [0, 15, 0] },
+          7:  { ms: [10, 16, 22],     rhos: [3.2361, 5.2295, 7.2265],         phis: [0, 11.25, 0] },
+          10: { ms: [6, 13, 19, 25],  rhos: [2.0000, 4.1786, 6.1775, 8.1770], phis: [0, 0, 9.474, 0] }
+        };
+        return table[this.gridSize] || table[4];
+      };
+
+      // 环形排布：中心 1 个 + 每环 ms[k] 个等角分布（phis[k] 为整环的角度偏移，单位「度」）。
+      // 返回 cells（单位 = 小圆半径）与 R（排列外接半径，= 最外环 ρ + 小圆半径 1）。
+      SchulteGridGame.prototype._ccLayout = function(conf) {
+        var cells = [{ x: 0, y: 0 }], k, i, a;
+        var ms = conf.ms, rhos = conf.rhos, phis = conf.phis;
+        for (k = 0; k < ms.length; k++) {
+          for (i = 0; i < ms[k]; i++) {
+            a = phis[k] * Math.PI / 180 + 2 * Math.PI * i / ms[k];
+            cells.push({ x: rhos[k] * Math.cos(a), y: rhos[k] * Math.sin(a) });
+          }
+        }
+        return { cells: cells, R: rhos[rhos.length - 1] + 1 };
+      };
+
+      // 同心圆模式的总数（中心 1 + 各环个数），供进度条与结算使用。
+      SchulteGridGame.prototype._ccTotal = function() {
+        var conf = this.getConcentricConfig(), t = 1, k;
+        for (k = 0; k < conf.ms.length; k++) t += conf.ms[k];
+        return t;
+      };
+
+      // 同心圆几何常量（渲染与自检共用）
+      //   小圆五层圈半径比例：等距 0.185r，最内层 0.26r —— 就是一只正常的同心圆靶。
+      //   数字【压在圈上面】、字号 0.86r（委托人 2026-10-05 明确要求：「数字不要在最小圈的
+      //   圆里面 而是压在上面 大一点」）。所以数字会盖住最内那 1~2 圈，这是要的效果，
+      //   不是缺陷；关键是盖得干净 —— 靠下面的「白抄本膨胀」把圈线切干净，不是靠垫片。
+      //   线宽系数 0.046r：占圈间距（0.185r）的约 25%，清楚又不糊。
+      SchulteGridGame.prototype._ccSmallRings = [0.26, 0.445, 0.63, 0.815, 1.0];
+      //   背景容积圆的层数 = 20（委托人 2026-10-05 第四轮：「背景容积同心层数加一倍」，原 10 层）。
+      //   半径按 R_USE × k/20 等距铺满整个容积圆；线宽与小圆那 5 层**共用同一个 sw**（“粗细一致”）。
+      //   20 层时相邻层径向间距 = 240/20 = 12px，最大线宽 3.06px（难度 3）⇒ 白隙仍有 8.9px，不会糊成一片。
+      SchulteGridGame.prototype._ccBigLayers = 20;
+      SchulteGridGame.prototype._ccStrokeK = 0.046;
+      //   字号 1.00r（委托人 2026-10-05 第三轮：“数字再大点”；0.86 → 1.00 = 放大 16%）。
+      //   上限由“两位数不能伸出小圆”定：黑体两位数墨迹宽 = 1.116em，
+      //   1.00r 时占小圆直径 55.8%（难度 4）/ 57.5%（难度 10），尚余 42% 余量。
+      SchulteGridGame.prototype._ccFontK = 1.00;
+      // ★★ 数字的「白色描边」= 把字形整体【向外膨胀】一圈 —— 真膨胀，不是 stroke ★★
+      //   为什么不能用 stroke：字形外轮廓与内轮廓【绕向相反】，描边一加厚，两侧描边带
+      //   会在笔画中空处重叠、绕数相消，白色被"吃掉"一块 ⇒ 孔里反而漏出圈线，
+      //   而且【越厚漏越多】。实测（真页面真截图，判据=孔内是否残留黑：
+      //   43px 字号下"18"在 0.16/0.20 干净、0.24 起返脏；22.5px 下"29"在 0.20 干净、
+      //   0.24 返脏）—— 只加粗 stroke 的零泄漏窗口只有 0.20~0.22em 一条缝，不可靠。
+      //   膨胀做法：把字形画 N+1 份（中心 1 份 + 半径 R 的 N 个方向各 1 份）。
+      //   每份都是一次【独立填充】，天然取并集 —— 没有绕数相消，且随 R 单调变干净。
+      //   ★ 方向数取 16 而不是 8：并集在方向夹角处最短，只有 R·cos(π/N)。
+      //     N=8 时有效膨胀要打 0.924 折、切口边缘还有 0.24px 扇贝阶梯；
+      //     N=16 只打 0.981 折，阶梯降到 0.12px（亚像素），肉眼不可见。代价可忽略。
+      //   ---- R 取 0.095em 的依据（委托人 2026-10-05 第三轮：“描边细一点”）----
+      //   上一版是 0.14em，视觉上白圈偏厚。压到 0.095em：白边绝对宽度
+      //   6.02px → 4.25px（难度 4；细 21%），相对数字高度 19.4% → 13.2%。
+      //   ⚠️ 这里有个**必须知道的边界**，别再往下压：
+      //     这个数值下 “膨胀”已经**不足以把字形的孔填满**
+      //     （填满需要有效膨胀 ≥ 孔半径 0.1050em ⇒ R ≥ 0.1071em）。
+      //     也就是说：孔中心那一小块没有被白覆盖，白边能不能盖住圈线，取决于
+      //     “圈线有没有正好扎进孔里”。当前字号（1.00r）下实测是安全，但这**不是结构性安全** ——
+      //     实测边界（真页面真截图，探针 = 最坏情况 `88` 与 `0`）：
+      //       R=0.095 + 字号 1.00r → 泄漏 0     ✔ 定稿
+      //       R=0.085 + 字号 1.10r → 泄漏 0     ✔
+      //       R=0.085 + 字号 1.20r → 泄漏 94/10 ✘ 圈线开始扎进孔
+      //     ⇒ **若以后再把字号往上推（>1.10r），必须回头加粗到 R ≥ 0.1071em（填孔），
+      //       否则孔里会重新漏黑渣。**
+      //   ★ 判据真伪已自查过（这一步不能省）：把 R 压到 0.020（白边≈0）时，
+      //     泄漏如期出现 408 / 143 / 62 / 18 像素 —— 证明“孔内残留黑”这个判据
+      //     确实会失败、不是恒真；因此上面那些 0 是真通过，不是没测到。
+      //   像素级验收（真截图）：46 个带孔格子，孔内残留黑合计 0、最大黑渣连通块 0。
+      SchulteGridGame.prototype._ccHaloK = 0.095;
+      SchulteGridGame.prototype._ccHaloN = 16;
+
+      SchulteGridGame.prototype.renderConcentricGrid = function() {
+        var svg = document.getElementById('concentric-svg');
+        if (!svg) return;
+        svg.innerHTML = '';
+        var NS = 'http://www.w3.org/2000/svg';
+        var cx = 250, cy = 250, R_USE = 240;   // R_USE 同时是「排列外接半径」与「背景容积圆半径」
+
+        var conf = this.getConcentricConfig();
+        var lay = this._ccLayout(conf);
+        var total = lay.cells.length;
+        var scale = R_USE / lay.R;   // 「小圆半径」单位 → SVG 像素
+        var r = scale;               // 小圆半径（px）
+        var sw = Math.max(1.1, r * this._ccStrokeK);   // 全部同心圆共用同一线宽（大圆 20 层 ≡ 小圆 5 层）
+        var fs = Math.max(11, r * this._ccFontK);      // 字号（大，压在圈上面）
+        var haloR = fs * this._ccHaloK;                // 白描边的膨胀半径（px）
+        var rings = this._ccSmallRings;
+        var self = this;
+
+        // ① 背景容积圆底盘
+        var bg = document.createElementNS(NS, 'circle');
+        bg.setAttribute('cx', cx);
+        bg.setAttribute('cy', cy);
+        bg.setAttribute('r', R_USE.toFixed(2));
+        bg.setAttribute('fill', '#FFFFFF');
+        svg.appendChild(bg);
+
+        // ② 背景容积圆 = 二十层同心圆（等粗黑圈，线宽与小圆五层完全一致）
+        //    半径 = R_USE × b / 20（b = 1..20），等距铺满整个容积圆
+        for (var b = 1; b <= this._ccBigLayers; b++) {
+          var bc = document.createElementNS(NS, 'circle');
+          bc.setAttribute('class', 'cc-big-layer');
+          bc.setAttribute('cx', cx);
+          bc.setAttribute('cy', cy);
+          bc.setAttribute('r', (R_USE * b / this._ccBigLayers).toFixed(2));
+          bc.setAttribute('fill', 'none');
+          bc.setAttribute('stroke', '#111111');
+          bc.setAttribute('stroke-width', sw.toFixed(2));
+          svg.appendChild(bc);
+        }
+
+        // ③ 数字 1..N（或奇数/偶数序列），洗牌后逐个贴到圆上
+        var numbers = [];
+        for (var n = 0; n < total; n++) numbers.push(this.getNumberByIndex(n));
+        for (var s = numbers.length - 1; s > 0; s--) {
+          var k = Math.floor(Math.random() * (s + 1));
+          var tmp = numbers[s]; numbers[s] = numbers[k]; numbers[k] = tmp;
+        }
+
+        // ④ 小圆：白底盘 + 五层等粗黑圈 + 黑数字白描边
+        for (var ci = 0; ci < lay.cells.length; ci++) {
+          var px = cx + lay.cells[ci].x * scale;
+          var py = cy + lay.cells[ci].y * scale;
+          var num = numbers[ci];
+
+          var g = document.createElementNS(NS, 'g');
+          g.setAttribute('class', 'cc-cell');
+          g.setAttribute('data-number', num);
+          g.setAttribute('pointer-events', 'all');
+
+          // 白底盘：既挡住背后的二十层黑圈，也是「点对变绿 / 点错变红」的承载层
+          var disc = document.createElementNS(NS, 'circle');
+          disc.setAttribute('class', 'cc-bg');
+          disc.setAttribute('cx', px.toFixed(2));
+          disc.setAttribute('cy', py.toFixed(2));
+          disc.setAttribute('r', r.toFixed(2));
+          disc.setAttribute('fill', '#FFFFFF');
+          g.appendChild(disc);
+
+          // 五层同心圆：纯线条、黑色、等粗
+          for (var L = 0; L < rings.length; L++) {
+            var cir = document.createElementNS(NS, 'circle');
+            cir.setAttribute('class', 'cc-layer');
+            cir.setAttribute('cx', px.toFixed(2));
+            cir.setAttribute('cy', py.toFixed(2));
+            cir.setAttribute('r', (r * rings[L]).toFixed(2));
+            cir.setAttribute('fill', 'none');
+            cir.setAttribute('stroke', '#111111');
+            cir.setAttribute('stroke-width', sw.toFixed(2));
+            g.appendChild(cir);
+          }
+
+          // ★ 白色描边 = 把字形整体膨胀一圈：中心 1 份 + 半径 haloR 的 N 个方向各 1 份白抄本。
+          //   每份都是一次独立填充 → 天然取并集，没有"描边绕数相消"，随半径单调变干净。
+          //   黑字随后压在最上面，所以白色只从字形四周露出来，形状完全跟着数字走
+          //   （旧版用矩形垫片去"擦"圈线，放大看是上下两条笔直切口，已被否决）。
+          for (var H = 0; H <= this._ccHaloN; H++) {
+            var hth = 2 * Math.PI * (H - 1) / this._ccHaloN;
+            var hdx = (H === 0) ? 0 : haloR * Math.cos(hth);
+            var hdy = (H === 0) ? 0 : haloR * Math.sin(hth);
+            var ht = document.createElementNS(NS, 'text');
+            ht.setAttribute('class', 'cc-halo');
+            ht.setAttribute('x', (px + hdx).toFixed(2));
+            ht.setAttribute('y', (py + hdy).toFixed(2));
+            ht.setAttribute('text-anchor', 'middle');
+            ht.setAttribute('dominant-baseline', 'central');
+            ht.setAttribute('font-size', fs.toFixed(1));
+            ht.setAttribute('font-weight', '700');
+            ht.setAttribute('fill', '#FFFFFF');
+            ht.setAttribute('stroke', 'none');
+            ht.textContent = num;
+            g.appendChild(ht);
+          }
+
+          // 悬停高亮环（只在 hover 时显示）
+          var hl = document.createElementNS(NS, 'circle');
+          hl.setAttribute('class', 'cc-hl');
+          hl.setAttribute('cx', px.toFixed(2));
+          hl.setAttribute('cy', py.toFixed(2));
+          hl.setAttribute('r', r.toFixed(2));
+          hl.setAttribute('fill', 'none');
+          hl.setAttribute('stroke', '#FF9800');
+          hl.setAttribute('stroke-width', '3');
+          g.appendChild(hl);
+
+          // 黑色数字，恒为黑、无描边（白色描边由上面那圈白抄本提供）
+          var t = document.createElementNS(NS, 'text');
+          t.setAttribute('class', 'cc-num');
+          t.setAttribute('x', px.toFixed(2));
+          t.setAttribute('y', py.toFixed(2));
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('dominant-baseline', 'central');
+          t.setAttribute('font-size', fs.toFixed(1));
+          t.setAttribute('font-weight', '700');
+          t.setAttribute('fill', '#111111');
+          t.setAttribute('stroke', 'none');
+          t.textContent = num;
+          g.appendChild(t);
+
+          g.onclick = (function(n, el) {
+            return function() { self.handleClick(n, el); };
+          })(num, g);
+
+          svg.appendChild(g);
+        }
+      };
+
+      SchulteGridGame.prototype.enterConcentricMode = function() {
+        // 逐个退出其它视觉布局（与圆形模式同样的清理链）
+        if (this.isMosaicMode) this.exitMosaicMode();
+        if (this.isSquareMoveMode) this.exitSquareMoveMode();
+        if (this.isBounceMode) this.exitBounceMode();
+        if (this.isRotateMode) this.exitRotateMode();
+        if (this.isVariantMode) this.exitVariantMode();
+        if (this.isVisualParallaxMode) this.exitVisualParallaxMode();
+        if (this.isBumpyMode) this.exitBumpyMode();
+        if (this.isColorMode) this.exitColorMode();
+        if (this.isPatternMode) this.isPatternMode = false;
+        if (this.isCircularMode) this.exitCircularMode();
+        if (this.destroyMode > 0) {
+          this.destroyMode = 0;
+          var dbtn = document.querySelector('.destroy-toggle');
+          if (dbtn) {
+            dbtn.dataset.destroy = 'false';
+            dbtn.classList.remove('active', 'state1', 'state2', 'state3', 'state4', 'state5');
+            dbtn.textContent = '毁灭';
+          }
+        }
+
+        this.isConcentricMode = true;
+        this.previousMode = this.currentMode;
+        this.currentMode = 'concentric';
+
+        document.getElementById('grid-container').style.display = 'none';
+        document.getElementById('circular-container').style.display = 'none';
+        document.getElementById('variant-container').style.display = 'none';
+        document.getElementById('bounce-canvas').style.display = 'none';
+        document.getElementById('mosaic-container').style.display = 'none';
+        document.getElementById('square-move-container').style.display = 'none';
+        document.getElementById('vp-container').style.display = 'none';
+        if (document.getElementById('bumpy-container')) document.getElementById('bumpy-container').style.display = 'none';
+        document.getElementById('concentric-container').style.display = 'flex';
+
+        this.renderConcentricGrid();
+
+        var btns = document.querySelectorAll('.mode-btn');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+        document.getElementById('concentric-mode-btn').classList.add('active');
+
+        this.currentNumber = this.getNumberStart();
+        document.getElementById('progress').textContent = '0/' + this._ccTotal();
+        document.getElementById('timer').textContent = '00:00';
+        this.updateStartButtonText();
+      };
+
+      SchulteGridGame.prototype.exitConcentricMode = function() {
+        this.isConcentricMode = false;
+        document.getElementById('concentric-container').style.display = 'none';
+        document.getElementById('grid-container').style.display = '';
+        var btn = document.getElementById('concentric-mode-btn');
+        if (btn) btn.textContent = '同心圆';
+      };
+
       SchulteGridGame.prototype.getCircularRingConfig = function() {
         var size = this.gridSize;
         var configs = {
@@ -10017,6 +10470,9 @@
             total += config.rings[i].count;
           }
           return total;
+        }
+        if (this.isConcentricMode) {
+          return this._ccTotal();   // 中心 1 + 各环个数
         }
         if (this.isBounceMode) return this._bounceGetTotal();
         if (this.isVariantMode) return this.variantNumbers.length;
@@ -10830,6 +11286,7 @@
         if (this.isColorMode) this.exitColorMode();
         if (this.isPatternMode) this.isPatternMode = false;
         if (this.isCircularMode) this.exitCircularMode();
+          if (this.isConcentricMode) this.exitConcentricMode();
         // 毁灭模式重置
         if (this.destroyMode > 0) {
           this.destroyMode = 0;

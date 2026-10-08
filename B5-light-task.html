@@ -31,8 +31,6 @@ body{
   overflow-y:auto;
 }
 .panel-title{color:#9C27B0;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
-.diff-group{margin-bottom:2px;}
-.diff-label{color:#5A4F7A;font-size:13px;margin-bottom:3px;font-weight:600;}
 .diff-btns{display:flex;gap:4px;}
 .diff-btn{
   flex:1;padding:6px 0;border-radius:8px;
@@ -230,9 +228,7 @@ body{
   <!-- 左侧面板 -->
   <div class="left-panel">
     <div class="panel-title">难度选择</div>
-    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
-    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
-    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="diff-btns" id="diff-row"></div>
     <div class="panel-title">难度差异</div>
     <table class="diff-table">
       <tr><th>难度</th><th>选项</th><th>切换</th><th>时长</th></tr>
@@ -270,7 +266,7 @@ body{
     </div>
 
     <div class="rule-bar">
-      <span class="diff-label-text" id="diff-label">难度2级(递增)</span>
+      <span class="diff-label-text" id="diff-label">困难：4→6 个选项</span>
       <span class="rule-desc">绿灯找颜色，红灯找形状</span>
     </div>
 
@@ -375,21 +371,32 @@ function drawShapeSVG(shape,colorHex,size){
 }
 
 // ===== 难度按钮 =====
+// 2026-09-30 修改：三排「初级/中级/高级」标题与按钮文字「简单/中等/困难」互相矛盾，
+// 且每排只有一颗按钮（标题纯属重复），合并成单排 #diff-row，档名只由按钮文字表达。
+const B5_DIFFS=[
+  {id:'easy',label:'简单',optStart:2,optMax:3,switchEvery:6,time:120},
+  {id:'medium',label:'中等',optStart:3,optMax:4,switchEvery:4,time:150},
+  {id:'hard',label:'困难',optStart:4,optMax:6,switchEvery:2,time:180},
+];
 function buildDiffBtns(){
-  const diffs=[
-    {id:'easy',label:'简单',optStart:2,optMax:3,switchEvery:6,time:120},
-    {id:'medium',label:'中等',optStart:3,optMax:4,switchEvery:4,time:150},
-    {id:'hard',label:'困难',optStart:4,optMax:6,switchEvery:2,time:180},
-  ];
-  diffs.forEach(d=>{
-    const row=document.getElementById('diff-'+d.id);
+  const row=document.getElementById('diff-row');if(!row)return;
+  row.innerHTML='';
+  B5_DIFFS.forEach(d=>{
     const btn=document.createElement('button');
-    btn.className='diff-btn'+(d.id==='hard'?' active':'');
+    btn.className='diff-btn';
+    btn.type='button';
     btn.textContent=d.label;
+    btn.dataset.key=d.id;
+    btn.setAttribute('aria-pressed',state.diffCfg&&state.diffCfg.id===d.id?'true':'false');
+    if(state.diffCfg&&state.diffCfg.id===d.id) btn.classList.add('active');
     btn.onclick=()=>{
-      document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
+      if(state.gameActive) return;            // 游戏中不许改难度
       state.diffCfg=d;
+      document.querySelectorAll('#diff-row .diff-btn').forEach(b=>{
+        const on=b.dataset.key===d.id;
+        b.classList.toggle('active',on);
+        b.setAttribute('aria-pressed',on?'true':'false');
+      });
       updateDiffLabel();
     };
     row.appendChild(btn);
@@ -397,6 +404,9 @@ function buildDiffBtns(){
 }
 
 // ===== 状态 =====
+// diffCfg 直接引用 B5_DIFFS 里的同一个对象。
+// （原先这里另抄了一份内联字面量，且漏了 label 字段，
+//   导致待机标签渲染成「undefined：4→6 个选项」—— 真机验证才抓出来）
 let state={
   score:0,correct:0,wrong:0,switches:0,
   currentRule:'color',trialCount:0,ruleTrialCount:0,
@@ -404,7 +414,7 @@ let state={
   gameActive:false,timerInterval:null,
   timeLeft:180,totalTime:180,
   currentTarget:null,
-  diffCfg:{id:'hard',optStart:4,optMax:6,switchEvery:2,time:180}
+  diffCfg:B5_DIFFS[2]   // B5_DIFFS[2] = 困难
 };
 
 function formatTime(s){
@@ -425,7 +435,18 @@ function updateTaskBtns(){
 }
 
 function updateDiffLabel(){
-  document.getElementById('diff-label').textContent='难度'+state.optCount+'级(递增)';
+  const el=document.getElementById('diff-label');
+  if(!el) return;
+  if(state.gameActive){
+    // 游戏中：显示当前实际生效的选项数（会随答对递增）
+    el.textContent='难度'+state.optCount+'级(递增)';
+  }else{
+    // 待机：必须显示「当前选中的那一档」的真实参数。
+    // 原实现待机时也读 state.optCount，而它只在 startGame() 里被赋值，
+    // 所以点「简单」标签纹丝不动 —— 这是本次修掉的 BUG。
+    const d=state.diffCfg;
+    el.textContent=d.label+'：'+d.optStart+'→'+d.optMax+' 个选项';
+  }
 }
 
 function updateStats(){
@@ -605,6 +626,7 @@ function resetToIdle(){
   document.getElementById('options-row').innerHTML='';
   document.getElementById('result-area').classList.remove('show');
   document.getElementById('start-area').classList.remove('hidden');
+  updateDiffLabel();   // 回到待机：标签要切回「当前选中档位」的口径
 }
 
 function endGame(){
@@ -614,6 +636,7 @@ function endGame(){
   document.getElementById('timer-text').textContent='0:00';
   document.getElementById('target-card').innerHTML='';
   document.getElementById('options-row').innerHTML='';
+  updateDiffLabel();   // 同上
 
   const total=state.correct+state.wrong;
   const acc=total>0?Math.round(state.correct/total*100):0;
@@ -630,7 +653,7 @@ function endGame(){
 
 // 初始化
 buildDiffBtns();
-state.diffCfg={id:'hard',optStart:4,optMax:6,switchEvery:2,time:180};
+state.diffCfg=B5_DIFFS[2];   // 与按钮共用同一份配置对象（原为另抄一份、且漏 label 字段）
 updateDiffLabel();
 
 function showRulesPopup(){

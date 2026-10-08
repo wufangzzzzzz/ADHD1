@@ -330,24 +330,36 @@ function buildModeBtns(){
   });
 }
 // ===== 颜色选择器 =====
+// 2026-09-30 修改：7 个色块原本只有 title（且内容就是十六进制），没有任何 aria-label，
+// 等于 7 个按钮对读屏和触摸设备来说都没有可读名称。这里补上编号+色值的无障碍名称，
+// 并同步维护 aria-pressed。（不臆造颜色中文名，用「序号＋真实色值」这种可核对的说法）
 function buildColorRow(){
   const c=$('color-row');c.innerHTML='';
-  COLOR_PRESETS.forEach(col=>{
+  COLOR_PRESETS.forEach((col,i)=>{
     const b=document.createElement('button');
+    b.type='button';
     b.className='color-swatch'+(state.flashColor===col?' active':'');
-    b.style.background=col;b.title=col;
+    b.style.background=col;
+    const name='闪现颜色 '+(i+1)+'（'+col+'）';
+    b.title=name;
+    b.setAttribute('aria-label',name);
+    b.setAttribute('aria-pressed',state.flashColor===col?'true':'false');
     b.onclick=()=>{if(state.running)return;setFlashColor(col);};
     c.appendChild(b);
   });
   const picker=document.createElement('input');
-  picker.type='color';picker.className='color-pick';picker.value=state.flashColor;picker.title='自定义颜色';
+  picker.type='color';picker.className='color-pick';picker.value=state.flashColor;
+  picker.title='自定义颜色';
+  picker.setAttribute('aria-label','自定义闪现颜色');
   picker.oninput=()=>{if(state.running){picker.value=state.flashColor;return;}setFlashColor(picker.value);};
   c.appendChild(picker);
 }
 function setFlashColor(col){
   state.flashColor=col;
-  document.querySelectorAll('.color-swatch').forEach(x=>{
-    x.classList.toggle('active',x.style.background===hexToRgbStr(col));
+  document.querySelectorAll('.color-swatch').forEach((x,i)=>{
+    const on=x.style.background===hexToRgbStr(col);
+    x.classList.toggle('active',on);
+    x.setAttribute('aria-pressed',on?'true':'false');
   });
 }
 function hexToRgbStr(h){const r=hexToRgb(h);return 'rgb('+r[0]+', '+r[1]+', '+r[2]+')';}

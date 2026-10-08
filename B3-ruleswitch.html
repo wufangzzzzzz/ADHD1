@@ -31,8 +31,6 @@ body{
   overflow-y:auto;
 }
 .panel-title{color:#00BCD4;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
-.diff-group{margin-bottom:2px;}
-.diff-label{color:rgba(212,232,236,0.45);font-size:11px;margin-bottom:3px;}
 .diff-btns{display:flex;gap:4px;}
 .diff-btn{
   flex:1;padding:5px 0;border-radius:8px;
@@ -169,15 +167,10 @@ body{
       <button class="mode-btn" data-gamemode="size" onclick="setGameMode('size')">B 大小</button>
     </div>
     <div class="panel-title">难度选择</div>
-    <div class="diff-group"><div class="diff-label">初级</div><div class="diff-btns" id="diff-easy"></div></div>
-    <div class="diff-group"><div class="diff-label">中级</div><div class="diff-btns" id="diff-medium"></div></div>
-    <div class="diff-group"><div class="diff-label">高级</div><div class="diff-btns" id="diff-hard"></div></div>
+    <div class="diff-btns" id="diff-row"></div>
     <div class="panel-title">难度差异</div>
-    <table class="diff-table">
+    <table class="diff-table" id="diff-table">
       <tr><th>难度</th><th>切换频率</th><th>窗口</th><th>题数</th></tr>
-      <tr><td>简单</td><td>每10题</td><td>3.0s</td><td>30</td></tr>
-      <tr><td>中等</td><td>每7题</td><td>1.8s</td><td>40</td></tr>
-      <tr><td>困难</td><td>每4题</td><td>1.0s</td><td>50</td></tr>
     </table>
     <div class="guide-card">
       <div class="guide-title">玩法说明</div>
@@ -219,31 +212,24 @@ body{
   </div>
 </div>
 <script>
+// 2026-09-30 修改：原「3主档 × 3子档 = 9档」砍到 3 档，
+// 口径与 B4-stroop 一致 —— 每个主档保留其 medium 子档的数值，label 去掉「·子档」后缀。
+//   初级 = 原 easy-medium ／ 中级 = 原 medium-medium ／ 高级 = 原 hard-medium
 const DIFF_CONFIG={
-  'easy-easy':{switchEvery:10,timeout:3000,total:30,label:'初级·简单'},
-  'easy-medium':{switchEvery:9,timeout:2500,total:36,label:'初级·中等'},
-  'easy-hard':{switchEvery:8,timeout:2000,total:40,label:'初级·困难'},
-  'medium-easy':{switchEvery:7,timeout:1800,total:40,label:'中级·简单'},
-  'medium-medium':{switchEvery:6,timeout:1500,total:48,label:'中级·中等'},
-  'medium-hard':{switchEvery:5,timeout:1200,total:48,label:'中级·困难'},
-  'hard-easy':{switchEvery:5,timeout:1000,total:50,label:'高级·简单'},
-  'hard-medium':{switchEvery:4,timeout:800,total:60,label:'高级·中等'},
-  'hard-hard':{switchEvery:3,timeout:600,total:60,label:'高级·困难'},
+  'easy':  {switchEvery:9,timeout:2500,total:36,label:'初级'},
+  'medium':{switchEvery:6,timeout:1500,total:48,label:'中级'},
+  'hard':  {switchEvery:4,timeout:800, total:60,label:'高级'},
 };
+const DIFF_ORDER=['easy','medium','hard'];
 const ADULT_DIFF={
-  'easy-easy':{switchEvery:8,timeout:2500,total:30,label:'初级·简单'},
-  'easy-medium':{switchEvery:7,timeout:2000,total:36,label:'初级·中等'},
-  'easy-hard':{switchEvery:6,timeout:1800,total:40,label:'初级·困难'},
-  'medium-easy':{switchEvery:5,timeout:1500,total:40,label:'中级·简单'},
-  'medium-medium':{switchEvery:4,timeout:1200,total:48,label:'中级·中等'},
-  'medium-hard':{switchEvery:3,timeout:1000,total:48,label:'中级·困难'},
-  'hard-easy':{switchEvery:3,timeout:800,total:50,label:'高级·简单'},
-  'hard-medium':{switchEvery:2,timeout:700,total:60,label:'高级·中等'},
-  'hard-hard':{switchEvery:2,timeout:500,total:60,label:'高级·困难'},
+  'easy':  {switchEvery:7,timeout:2000,total:36,label:'初级'},
+  'medium':{switchEvery:4,timeout:1200,total:48,label:'中级'},
+  'hard':  {switchEvery:2,timeout:700, total:60,label:'高级'},
 };
 
+
 let state={
-  mode:'child',level:'easy',subLevel:'easy',gameMode:'odd',
+  mode:'child',level:'easy',gameMode:'odd',
   running:false,trials:[],currentTrial:0,score:0,
   currentRule:'normal',trialStartTime:0,responded:false,timeoutId:null,
   results:[]
@@ -253,31 +239,48 @@ function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webki
 function playBeep(freq,dur,vol=0.12){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(vol,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
 
 function getConfig(){
-  const key=state.level+'-'+state.subLevel;
-  return state.mode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
+  const table=state.mode==='adult'?ADULT_DIFF:DIFF_CONFIG;
+  return table[state.level]||table['easy'];
 }
 
 function buildDiffBtns(){
-  ['easy','medium','hard'].forEach(lvl=>{
-    const c=document.getElementById('diff-'+lvl);c.innerHTML='';
-    ['easy','medium','hard'].forEach(sub=>{
-      const key=lvl+'-'+sub;
-      const cfg=state.mode==='adult'?ADULT_DIFF[key]:DIFF_CONFIG[key];
-      const btn=document.createElement('button');btn.className='diff-btn';
-      btn.textContent=cfg.label.split('·')[1];btn.dataset.key=key;
-      btn.onclick=()=>selectDiff(lvl,sub);
-      if(state.level===lvl&&state.subLevel===sub)btn.classList.add('active');
-      c.appendChild(btn);
-    });
+  const c=document.getElementById('diff-row');if(!c)return;
+  c.innerHTML='';
+  const table=state.mode==='adult'?ADULT_DIFF:DIFF_CONFIG;
+  DIFF_ORDER.forEach(key=>{
+    const cfg=table[key];
+    const btn=document.createElement('button');btn.className='diff-btn';
+    btn.type='button';btn.textContent=cfg.label;btn.dataset.key=key;
+    btn.setAttribute('aria-pressed',state.level===key?'true':'false');
+    btn.onclick=()=>selectDiff(key);
+    if(state.level===key)btn.classList.add('active');
+    c.appendChild(btn);
+  });
+  updateParams();
+  buildDiffTable();
+}
+
+function selectDiff(key){
+  state.level=key;
+  document.querySelectorAll('#diff-row .diff-btn').forEach(b=>{
+    const on=b.dataset.key===key;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
   });
   updateParams();
 }
 
-function selectDiff(lvl,sub){
-  state.level=lvl;state.subLevel=sub;
-  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelector('.diff-btn[data-key="'+lvl+'-'+sub+'"]')?.classList.add('active');
-  updateParams();
+// 难度差异表从配置渲染（单一数据源），保证表里的数字永远和按钮实际用的一致
+function buildDiffTable(){
+  const table=document.getElementById('diff-table');
+  if(!table)return;
+  const cfg=state.mode==='adult'?ADULT_DIFF:DIFF_CONFIG;
+  let html='<tr><th>难度</th><th>切换频率</th><th>窗口</th><th>题数</th></tr>';
+  DIFF_ORDER.forEach(key=>{
+    const c=cfg[key];
+    html+=`<tr><td>${c.label}</td><td>每${c.switchEvery}题</td><td>${(c.timeout/1000).toFixed(1)}s</td><td>${c.total}</td></tr>`;
+  });
+  table.innerHTML=html;
 }
 
 function updateParams(){
@@ -336,7 +339,7 @@ function updateButtons(){
 function resetToIdle(){
   state.running=false;
   document.getElementById('start-btn').disabled=false;
-  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false);
+  document.querySelectorAll('#diff-row .diff-btn').forEach(b=>b.disabled=false);
   document.getElementById('stimulus-number').textContent='';
   document.getElementById('progress-fill').style.width='0%';
   document.getElementById('trial-info').textContent='';
@@ -479,7 +482,7 @@ function endGame(){
   overlay.innerHTML='<div class="modal-card"><div class="result-title">训练完成！</div><div class="result-subtitle">'+grade+'</div><div class="result-grid"><div class="result-item"><div class="val">'+acc+'%</div><div class="lbl">总正确率</div></div><div class="result-item"><div class="val">'+switchAcc+'%</div><div class="lbl">切换后正确率</div></div><div class="result-item"><div class="val">'+cost+'%</div><div class="lbl">切换成本</div></div><div class="result-item"><div class="val">'+avgRT+'ms</div><div class="lbl">平均反应时</div></div></div><div class="result-btns"><button class="btn-retry" onclick="this.closest(\'.modal-overlay\').remove();resetToIdle();">再来一次</button><button class="btn-home" onclick="location.href=\'index.html\'">返回大厅</button></div></div>';
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   document.body.appendChild(overlay);
-  try{const data=JSON.parse(localStorage.getItem('b3_ruleswitch')||'{}');data[state.level+'-'+state.subLevel]={acc,switchAcc,cost,avgRT,date:new Date().toISOString()};localStorage.setItem('b3_ruleswitch',JSON.stringify(data));}catch(e){}
+  try{const data=JSON.parse(localStorage.getItem('b3_ruleswitch')||'{}');data[state.level]={acc,switchAcc,cost,avgRT,date:new Date().toISOString()};localStorage.setItem('b3_ruleswitch',JSON.stringify(data));}catch(e){}
 }
 
 document.getElementById('btn-left').addEventListener('click',()=>handleChoice('left'));
