@@ -14,7 +14,10 @@
   .top h1 { font-size: 26px; font-weight: 700; color: #1f2d29; }
   .top p { color: #5b6b66; margin-top: 6px; font-size: 14px; }
   .official { display: inline-block; margin-top: 11px; font-size: 13px; color: #9a6a12; background: #fff7e6; border: 1px solid #f0e0b8; border-radius: 999px; padding: 4px 14px; }
-  .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 1280px; margin: 0 auto 18px; }
+  /* ★2026-10-09 先生：「你把他移动到上面测评 视觉 听觉菜单 那一行」⇒ 页签与搜索框合成一行工具栏★ */
+  .filterbar { max-width: 1280px; margin: 0 auto 18px; display: flex; flex-wrap: wrap;
+    align-items: center; justify-content: center; gap: 14px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; flex: 0 1 auto; min-width: 0; }
   .tab {
     border: 1px solid #d7e3de; background: #fff; color: #46605a;
     padding: 7px 16px; border-radius: 999px; cursor: pointer; font-size: 14px;
@@ -76,6 +79,37 @@
     background: #2ba89e; padding: 6px 13px; border-radius: 9px; white-space: nowrap;
   }
   .play:hover { filter: brightness(.93); }
+  /* ---- 搜索框（2026-10-09 先生：「加一个搜索功能 输入名字可以直接查到对应游戏」，
+          要求中文游戏名查询 + 兼容注意）---- */
+  .searchbar { position: relative; flex: 1 1 500px; min-width: 0; max-width: 560px; margin: 0; }
+  .searchbar .sico { position: absolute; left: 13px; top: 50%; width: 19px; height: 19px;
+    transform: translateY(-50%); color: #7e8f89; pointer-events: none; }
+  #qInput {
+    width: 100%; font: inherit; font-size: 16px; line-height: 1.35;
+    padding: 11px 44px 11px 40px; border: 1px solid #d7e3de; border-radius: 12px;
+    background: #fff; color: #2b3a36; outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  #qInput::-webkit-search-cancel-button,
+  #qInput::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+  #qInput:focus { border-color: #2ba89e; box-shadow: 0 0 0 3px rgba(43,168,158,.14); }
+  #qInput::placeholder { color: #9aaba4; }
+  .searchbar .sclr {
+    position: absolute; right: 9px; top: 50%; width: 26px; height: 26px;
+    transform: translateY(-50%); border: 0; border-radius: 50%; padding: 0;
+    background: #eef4f1; color: #5b6b66; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .searchbar .sclr:hover { background: #e2ece8; }
+  .searchbar .sclr svg { width: 14px; height: 14px; }
+  /* ★必须显式写 [hidden]★：否则 .sclr 的 display:flex 会盖过 [hidden] 的 display:none */
+  .searchbar .sclr[hidden], .noresult[hidden] { display: none; }
+  .noresult { max-width: 1280px; margin: 6px auto 0; padding: 36px 12px; text-align: center;
+    color: #7e8f89; font-size: 15px; line-height: 1.6; }
+  @media (max-width: 560px) {
+    .filterbar { margin-bottom: 13px; gap: 10px; }
+    #qInput { font-size: 16px; padding-left: 38px; }   /* ≥16px：防 iOS 聚焦时自动放大整页 */
+  }
 </style>
 </head>
 <body>
@@ -84,6 +118,7 @@
     <p>共 59 款训练游戏 · 按维度筛选，点卡片或按钮开始</p>
     <p class="official">获取更多内容请关注公众号：读写障碍-ADHD之家</p>
   </div>
+  <div class="filterbar">
   <div class="tabs" id="tabs">
     <span class="tab on" data-f="all">全部</span>
     <span class="tab" data-f="assess">测评</span>
@@ -92,6 +127,14 @@
     <span class="tab" data-f="behavior">行为</span>
     <span class="tab" data-f="dual">双人</span>
   </div>
+  <div class="searchbar">
+    <svg class="sico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.6 16.6 L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <input id="qInput" type="search" placeholder="输入中文游戏名查找，如「舒尔特」「迷宫」「找不同」" aria-label="按中文游戏名搜索" autocomplete="off" enterkeyhint="search">
+    <button id="qClear" class="sclr" type="button" aria-label="清空搜索" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7 L17 17 M17 7 L7 17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  </div><!-- /.filterbar -->
   <div class="grid" id="grid">
     <div class="game-card" data-cat="assess">
       <a class="cover" href="assessment.html" style="background:linear-gradient(135deg,#8b7cb6,#2ba89e)">
@@ -1389,16 +1432,111 @@
 
 
   </div>
+  <div class="noresult" id="noResult" hidden></div>
   <script>
-    document.getElementById('tabs').addEventListener('click', function(e){
-      var t = e.target.closest('.tab'); if(!t) return;
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
-      t.classList.add('on');
-      var f = t.dataset.f;
-      document.querySelectorAll('.game-card').forEach(c=>{
-        c.style.display = (f==='all' || c.dataset.cat===f) ? '' : 'none';
-      });
+  (function () {
+    var grid = document.getElementById('grid');
+    var tabs = document.getElementById('tabs');
+    var input = document.getElementById('qInput');
+    var clearBtn = document.getElementById('qClear');
+    var noRes = document.getElementById('noResult');
+    if (!grid || !tabs || !input) return;              // 兜底：结构缺失时不抛错
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.game-card'));
+    var curTab = 'all';
+
+    /* 归一化：转小写 + 去掉空格/连字符/常见中英标点
+       ⇒「Dual N-back」与「dualnback」「dual n-back」互相命中；中文不受影响 */
+    function norm(s) {
+      return (s || '').toLowerCase().replace(/[\s\-_·、，。・\/\\()（）\[\]【】'"’“”]/g, '');
+    }
+
+    // 每张卡片可搜文本 = 封面名 + 标题（首帧缓存，之后不再查 DOM）
+    cards.forEach(function (c) {
+      var a = c.querySelector('.cover-name'), b = c.querySelector('.title');
+      c.__q = norm((a ? a.textContent : '') + (b ? b.textContent : ''));
     });
+
+    function setTabUI(f) {
+      Array.prototype.slice.call(tabs.querySelectorAll('.tab')).forEach(function (t) {
+        if (t.getAttribute('data-f') === f) { t.classList.add('on'); } else { t.classList.remove('on'); }
+      });
+    }
+
+    function apply() {
+      var q = norm(input.value);
+      var hasQ = q.length > 0;
+      var shown = 0;
+      cards.forEach(function (c) {
+        var ok;
+        if (hasQ) { ok = c.__q.indexOf(q) >= 0; }       // 搜索：在全站 65 张里找
+        else { ok = (curTab === 'all' || c.getAttribute('data-cat') === curTab); }
+        c.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+      });
+      if (clearBtn) clearBtn.hidden = !hasQ;
+      if (noRes) {
+        if (hasQ && shown === 0) {
+          noRes.hidden = false;
+          noRes.textContent = '没有找到「' + input.value + '」相关的游戏，换个名字试试';
+        } else { noRes.hidden = true; }
+      }
+    }
+
+    // 搜索时自动回到「全部」⇒ 任何页签下输入名字都能搜到全站
+    function onType() {
+      if (norm(input.value).length > 0 && curTab !== 'all') { curTab = 'all'; setTabUI('all'); }
+      apply();
+    }
+
+    // 点页签 = 纯维度筛选（清空搜索词；两种筛选互斥，避免叠加出"搜不到"的错觉）
+    tabs.addEventListener('click', function (e) {
+      var t = e.target;
+      while (t && t !== tabs && !t.classList.contains('tab')) { t = t.parentNode; }
+      if (!t || t === tabs) return;
+      curTab = t.getAttribute('data-f');
+      setTabUI(curTab);
+      input.value = '';
+      apply();
+    });
+
+    /* ★中文输入法（IME）兼容★：拼音组字期间【不】过滤，组完再过滤。
+       否则「舒尔特」会在拼音阶段按 s/h/u/e/r/t/e 逐一过滤，画面乱跳。 */
+    var composing = false;
+    input.addEventListener('compositionstart', function () { composing = true; });
+    input.addEventListener('compositionend', function () { composing = false; onType(); });
+    input.addEventListener('input', function (e) {
+      if (composing || (e && e.isComposing)) return;    // 组字中 ⇒ 不搜
+      onType();
+    });
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+      input.value = ''; apply(); input.focus();
+    });
+
+    apply();
+
+    /* ★占位符自适应★：与页签同排时搜索框会变窄，长提示会被裁
+       （实测：820 视口同行时可用文宽 272px，长提示要 400px；CSS 改不了 placeholder 文本，只能 JS）
+       判据用【实测】：长提示需要 clientWidth ≥ 文字宽 + 左右内边距 84px */
+    var PH_LONG = '输入中文游戏名查找，如「舒尔特」「迷宫」「找不同」';
+    var PH_SHORT = '搜游戏名，如「迷宫」';
+    function phFit() {
+      if (!input) return;
+      var cs = window.getComputedStyle(input);
+      var pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      var need;
+      try {
+        var cx = document.createElement('canvas').getContext('2d');
+        cx.font = cs.fontSize + ' ' + cs.fontFamily;
+        need = cx.measureText(PH_LONG).width;
+      } catch (e) { need = PH_LONG.length * 16; }   // 兜底：按 CJK 1em 估算
+      input.placeholder = (input.clientWidth - pad >= need) ? PH_LONG : PH_SHORT;
+    }
+    phFit();
+    window.addEventListener('resize', phFit);
+    window.addEventListener('load', phFit);
+  })();
   </script>
 </body>
 </html>
