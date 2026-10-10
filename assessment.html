@@ -25,10 +25,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .hero{background:linear-gradient(135deg,var(--teal),var(--blue));color:#fff;border-radius:18px;padding:42px 24px;margin-bottom:26px;text-align:center;box-shadow:0 6px 22px rgba(43,168,158,.22);}
 .hero h1{font-size:26px;margin-bottom:10px;font-weight:700;letter-spacing:1px;}
 .hero p{opacity:.92;font-size:14px;}
-.choose{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;}
-.choose .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:30px 18px;text-align:center;cursor:pointer;transition:.18s;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.choose{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px;}
+.choose .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 14px;text-align:center;cursor:pointer;transition:.18s;box-shadow:0 2px 10px rgba(0,0,0,.04);}
 .choose .card:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.08);border-color:var(--teal);}
-.choose .card .t{font-size:20px;font-weight:700;margin-bottom:6px;}
+.choose .card .t{font-size:19px;font-weight:700;margin-bottom:6px;}
 .choose .card .d{font-size:13px;color:var(--sub);}
 .note{font-size:13px;color:var(--sub);background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:22px;line-height:1.8;}
 .note b{color:var(--teal);}
@@ -96,6 +96,7 @@ a.gi:hover{background:#eef6f4;}
 .actions{display:flex;gap:12px;justify-content:center;margin:24px 0 8px;flex-wrap:wrap;}
 .sig{text-align:center;color:#aab;font-size:12px;padding:18px 0 4px;}
 a.link{color:var(--teal);text-decoration:underline;}
+@media(max-width:820px){.choose{grid-template-columns:1fr;}}
 @media(max-width:560px){.choose,.pg,.gl,.lib-h{grid-template-columns:1fr;}.lib-h{grid-template-columns:1fr 1fr;}.hero{padding:30px 18px;}}
 @media print{.wrap{max-width:100%;padding:0 8px;}.sec,.report-header,.pc,.ref-item,.gi,.sb,.tip-box{box-shadow:none;break-inside:avoid;}.pg,.gl{break-inside:avoid;}.report-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.actions{display:none;}.no-print{display:none;}}
 </style>
@@ -110,17 +111,21 @@ a.link{color:var(--teal);text-decoration:underline;}
       <p>基于可观测困难行为的三维度测评 · 听觉 / 视觉 / 行为</p>
     </div>
     <div class="choose">
-      <div class="card" onclick="start('adult')">
-        <div class="t">成人版</div>
-        <div class="d">13岁及以上 · 80题自填<br>约15分钟</div>
-      </div>
       <div class="card" onclick="start('kids')">
         <div class="t">儿童版</div>
-        <div class="d">4-12岁 · 家长代填<br>80题约15分钟</div>
+        <div class="d">6-12岁 · 家长代填<br>80题约15分钟</div>
+      </div>
+      <div class="card" onclick="start('youth')">
+        <div class="t">青年版</div>
+        <div class="d">13-17岁 · 本人自填<br>80题约15分钟</div>
+      </div>
+      <div class="card" onclick="start('adult')">
+        <div class="t">成人版</div>
+        <div class="d">18岁以上 · 本人自填<br>80题约15分钟</div>
       </div>
     </div>
     <div class="note">
-      <b>测评说明：</b>本测评从听觉、视觉、行为三个维度评估专注力表现。每题按「经常 / 偶尔 / 基本没有」三种频率作答，得分率越低代表困扰越少、状态越好。报告含三维度总览、子维度分析、12周训练方案与游戏推荐，供能力训练参考（非临床诊断）。
+      <b>测评说明：</b>按年龄选版本：<b>6-12 岁选儿童版</b>（家长代填），<b>13-17 岁选青年版</b>（本人自填），<b>18 岁以上选成人版</b>（本人自填）。本测评从听觉、视觉、行为三个维度评估专注力表现。每题按「经常 / 偶尔 / 基本没有」三种频率作答，得分率越低代表困扰越少、状态越好。报告含三维度总览、子维度分析、12周训练方案与游戏推荐，供能力训练参考（非临床诊断）。
     </div>
   </section>
 
@@ -375,6 +380,69 @@ const SURVEY = {
   }
 };
 
+/* ============ 青年版（13-17 岁 · 本人自填） ============
+   分档依据（2026-10-10 联网核验原始量表资料，出处逐条可查）：
+     · Conners 3 自评表适用 8–18 岁（WPS 官方：家长/教师版 6–18、自评版 8–18，
+       自评表按三年级阅读水平编写）；BRIEF-2 自评表适用 11–18 岁（PAR 官方：
+       家长/教师版 5–18 共 63 题 9 量表、自评版 11–18 共 55 题 7 量表）
+       ⇒ 13-17 岁的国际惯例是「本人自评表」，不是成人量表
+     · 成人自评量表（WHO 的 ASRS）是按成人使用设计的；青少年另有 ASRS-A 版，
+       已在 12-17 岁临床样本完成验证（Sonnby 等 2015, Nord J Psychiatry 69(3):216-223,
+       DOI:10.3109/08039488.2014.968203；n=134 门诊青少年，平均 15 岁）
+       ⇒ 成人档下界取 18 岁
+     · BRIEF-2 自评表与家长版为「平行结构(parallel structure)」：官方表述是
+       「increased parallelism in item content，多数条目为家长版与自评版共用」，
+       且自评版条目是「由家长/教师版改写、使其适合青少年」而来 —— 本档的构建方式
+       与之同源（同一套子维度、同一题数，只改场景措辞）
+     · Conners 3 与 BRIEF-2 都用「按年龄（或按年龄＋性别）」的常模给分；
+       本系统是自建阈值、未做年龄常模 ⇒ 该差异已在报告 YOUTH_NOTE 中向用户明示
+   ⇒ 本档沿用成人版 80 题、6 个子维度（保证跨档可比、处方可直接映射），
+     仅把 17 条含职场限定词的题目改写为学业场景。对照表见 YOUTH_ITEM_FIX，
+     构建时做命中计数自校验（未全部命中直接抛错，防止静默漏改）。 */
+const YOUTH_ITEM_FIX = {
+  '长时间听讲或会议时保持专注':'长时间听课时保持专注',
+  '跟读陌生或专业词汇':'跟读新学的陌生词汇',
+  '多任务处理时的听觉注意力':'一边听课一边做笔记时的听觉注意力',
+  '电话中听清对方表述':'通话或线上语音中听清对方表述',
+  '听讲座时抓住逻辑主线':'听老师讲课时抓住逻辑主线',
+  '在背景音乐下高效工作':'在背景音乐下高效学习',
+  '理解含有数据的口头报告':'理解老师口头讲的数据信息',
+  '参与线上语音会议不跑神':'参与线上课堂或网课时不跑神',
+  '长时间屏幕工作不疲劳':'长时间看屏幕或上网课不疲劳',
+  '多窗口多任务时的视觉管理':'同时看多份材料时的视觉管理',
+  '长时间保持静坐专注工作':'长时间保持静坐专注学习',
+  '整理和规划工作空间':'整理和规划书桌与学习空间',
+  '按时交付工作成果':'按时完成并提交作业',
+  '团队协作时兼顾他人进度':'小组合作时兼顾他人进度',
+  '会议中不打断别人':'课堂或小组讨论中不打断别人',
+  '重要物品和文件不遗失':'重要物品和学习资料不遗失',
+  '长期项目坚持到底不半途而废':'长期任务坚持到底不半途而废'
+};
+(function(){
+  SURVEY.youth = JSON.parse(JSON.stringify(SURVEY.adult));
+  SURVEY.youth.typeLabel = '青年精细版';
+  SURVEY.youth.info = [
+    {id:'name', label:'姓名', ph:'如：李四'},
+    {id:'age',  label:'年龄', ph:'如：15'},
+    {id:'date', label:'测评日期', ph:'如：2026-07-29'}
+  ];
+  /* 先数命中（改写前），再改写 —— 命中数必须等于对照表条目数 */
+  var keys = Object.keys(YOUTH_ITEM_FIX), found = 0, total = 0;
+  SURVEY.youth.groups.forEach(function(g){ g.subdims.forEach(function(sd){
+    sd.items.forEach(function(t){ total++; if(keys.indexOf(t) !== -1) found++; });
+  }); });
+  SURVEY.youth.fixCount = found;
+  SURVEY.youth.totalItems = total;
+  if(found !== keys.length){
+    throw new Error('青年版改写对照表未全部命中：' + found + '/' + keys.length);
+  }
+  SURVEY.youth.groups.forEach(function(g){ g.subdims.forEach(function(sd){
+    sd.items = sd.items.map(function(t){
+      return YOUTH_ITEM_FIX[t] !== undefined ? YOUTH_ITEM_FIX[t] : t;
+    });
+  }); });
+})();
+
 /* ============ 等级判定（与计划4 tag() 一字不差） ============ */
 function tagInfo(rate){
   if(rate>=70) return {label:'重点关注', cls:'tr'};
@@ -407,6 +475,8 @@ const COMP_ORDER = ['inh','sus','wm','flex','plan','speed'];
 const EVID_TXT = {self:'游戏自述训练目标', tested:'实机核定', infer:'按玩法推断'};
 
 const SUBDIM = {
+  /* 青年档（13-17）与成人档共用 adult 这一套子维度 —— 这是「平行结构」的刻意设计：
+     子维度口径一致才能跨档比较，且 58 款游戏的子维度映射（GAMELIB 的 a 字段）可直接复用。 */
   adult:{
     A1:{n:'听觉分辨与理解', c:['sus','inh']},
     A2:{n:'听觉记忆与高阶处理', c:['wm']},
@@ -493,6 +563,21 @@ const GAMELIB = [
   {n:'手脑协调', h:'B18-hand-brain.html', c:'motor', e:'self', a:['B1'], k:['V2']},
 ];
 
+/* ============ 汉字识字游戏站 · 额外建议（仅儿童档） ============
+   收录口径（不凭主观挑）：只收「汉字学习游戏」站自己的游戏说明里写明了
+   注意力训练 / 视觉追踪 / 快速反应 / 观察力 这类训练目标的游戏；
+   纯识字教学与描红打印类（红蓝字卡、红蓝词语卡、古诗补形、拼音标调、汉字补型、
+   词语补型）不列。游戏名一律照该站游戏中心卡片与页面 title 的展示名，
+   禁止按玩法顺口取名。本表为【附加建议】：不进 GAMELIB、不进处方逻辑、不参与算分。 */
+const HANZI_EXTRA = [
+  {n:'古诗舒尔特', s:'汉字识字游戏站', t:'注意力训练 · 古诗背诵', d:'按诗句顺序在格阵里找字：几个字就排几格（重复的字占多格），点对一个，那一格就消失。练注意广度与眼动控制。'},
+  {n:'视觉追踪训练', s:'汉字识字游戏站', t:'视觉追踪 · 专注力', d:'只用眼睛追踪交叉的连线，找到对应的第二个字，在右侧表格标出搭配，不许用手指或笔辅助。'},
+  {n:'加工速度训练', s:'汉字识字游戏站', t:'视觉追踪 · 快速反应', d:'按照汉字序列顺序，在点阵上依次连线。锻炼视觉追踪和快速反应能力。'},
+  {n:'偏旁组字', s:'汉字识字游戏站', t:'偏旁认知 · 汉字结构', d:'绕过错误偏旁，连接正确偏旁组成汉字。锻炼观察力和汉字结构认知。'},
+  {n:'读写纠错训练', s:'汉字识字游戏站', t:'阅读训练 · 纠错练习', d:'在短文中找出错别字，点出来，再手写或选出正确的字。练细节观察、字形辨析和阅读专注。'}
+];
+
+
 const STAGES_ADULT = [
   {wk:'第1-3周·基础激活', fc:'视觉追踪+基础听觉+冲动抑制', dc:'视觉追踪、舒尔特方格、G1听词行动、B1红灯绿灯。每周5次×15-20min'},
   {wk:'第4-6周·能力强化', fc:'视觉分辨+听觉记忆+认知灵活', dc:'符号迷宫、彩色连线、G2数字回音壁、B3规则跳跳'},
@@ -507,16 +592,21 @@ const STAGES_KIDS = [
 ];
 
 const REFS = [
-  ['执行功能框架','Diamond A. (2013). Executive Functions. 提出执行功能三核心：抑制控制 / 工作记忆 / 认知灵活性，高阶含计划与问题解决。','Annual Review of Psychology, 64:135-168, DOI:10.1146/annurev-psych-113011-143750'],
-  ['注意网络框架','Petersen SE & Posner MI (2012). 注意三网络：警觉 / 定向 / 执行控制，为“持续注意、定向搜索”提供神经框架。','Annual Review of Neuroscience, 35:73-89, DOI:10.1146/annurev-neuro-062111-150525'],
-  ['认知训练Meta·儿童','You Z. et al. (2026). 86项RCT / 4628名被试贝叶斯网络Meta：认知训练对抑制控制 g=0.61、持续注意 g=0.50、工作记忆 g=0.32；认知灵活性证据减弱。','Translational Psychiatry, DOI:10.1038/s41398-026-04331-9'],
-  ['执行功能训练Meta·青少年','Yan S., He X. et al. (2026). 36项研究：计算机化执行功能训练即时效 g=0.488、近迁移 g=0.567。','Journal of Affective Disorders, 395(A):120730'],
-  ['认知训练Meta·注意','Westwood et al. (2023). CCT对ADHD注意力不集中有适度但显著改善。','Molecular Psychiatry, DOI:10.1038/s41380-023-02000-7'],
-  ['执行功能Meta','GBI Meta-analysis (2025). 20项RCT, 1376名被试, CCT改善执行功能(SMD=0.42).','PMC12751576'],
-  ['视觉注意RCT','Valdois et al. (2024). EVASION VAS训练RCT, 453名儿童，显著改善阅读流畅性。','Reading Research Quarterly, DOI:10.1002/rrq.576'],
-  ['视觉闭合','Germano et al. (2014). 阅读障碍儿童存在视觉闭合与图形恒常性双重缺陷。','Frontiers in Psychology, 5:1169, DOI:10.3389/fpsyg.2014.01169'],
-  ['数字疗法·中国','鲍梦依等 (2025). 系统梳理DD四大技术路线，中国儿童ADHD患病率约7.2%。','中国现代应用药学, DOI:10.13748/j.cnki.issn1007-7693.20252057']
+  ['执行功能框架','Diamond A. (2013). Executive Functions. 提出执行功能三核心：抑制控制（含反应抑制与干扰控制）/ 工作记忆 / 认知灵活性，高阶执行功能含推理、问题解决与计划。','Annual Review of Psychology 64:135-168, PMID 23020641, DOI:10.1146/annurev-psych-113011-143750'],
+  ['注意网络框架','Petersen S.E. & Posner M.I. (2012). The attention system of the human brain: 20 years after. 注意三网络：警觉（alerting）/ 定向（orienting）/ 执行控制（executive），为“持续注意、定向搜索”提供神经框架。','Annual Review of Neuroscience 35:73-89, PMID 22524787, DOI:10.1146/annurev-neuro-062111-150525'],
+  ['非药物干预网络Meta·6-18岁','You Z., Han R., Du Y., Cao A. (2026). 基于任务表现的贝叶斯网络Meta：86项RCT / 4628名被试，对象为6-18岁ADHD儿童青少年，比较八类非药物干预。认知训练对抑制控制 g=0.61（95% CrI 0.30–0.93）、持续注意 g=0.50（0.13–0.89）、工作记忆 g=0.32（0.01–0.63）；同一网络内「多成分干预」效果更强（抑制 0.63、持续注意 0.95）。认知灵活性证据减弱；计划/高阶执行功能与加工速度仍不确定。按研究平均年龄分层未见系统性调节效应。','Translational Psychiatry, DOI:10.1038/s41398-026-04331-9（PROSPERO CRD420251129986）'],
+  ['执行功能训练Meta·儿童青少年','Yan S., He X., Zhang Y., 等 (2026). 36项研究 / 1798名ADHD儿童青少年（平均年龄 5–15.6 岁）：计算机化执行功能训练的即时效 g=0.488、近迁移 g=0.567、远迁移 g=0.468、持续效应 g=0.541；按年龄、性别、训练方案等做的元回归未发现显著调节变量。','Journal of Affective Disorders 395(Pt A):120730, PMID 41260369, DOI:10.1016/j.jad.2025.120730'],
+  ['认知训练Meta·注意','Westwood S.J., Parlatini V., Rubia K., Cortese S., Sonuga-Barke E.J.S. 等 (2023). 36项RCT：计算机化认知训练对「注意力不集中」有小的改善（SMD=0.17，95%CI 0.02–0.31），在干预实施场景下效应翻倍（SMD=0.40）；但对ADHD总分与多动/冲动症状无显著效果（SMD=0.12），对阅读、算术等学业成绩亦无显著效果。纳入研究以儿童青少年为主，成人代表性不足。','Molecular Psychiatry 28(4):1402-1414, PMID 36977764, DOI:10.1038/s41380-023-02000-7'],
+  ['游戏化干预Meta·儿童青少年','Mao F., Liu Y., Liu Z., Fang Q. (2025). 游戏化干预（GBI）对ADHD儿童青少年认知表现：20项RCT / 1376名被试，总体 SMD=0.42（95%CI 0.143–0.697, p<0.01），主要改善注意与执行功能；异质性高（I²=86.6%）。作者建议作为常规治疗的补充手段。','BMC Psychiatry, DOI:10.1186/s12888-025-07607-4'],
+  ['视觉注意广度训练','Valdois S., Zaher A., Meyer S., Diard J., Mandin S., Bosse M.-L. (2025). 453名一年级儿童，课堂内数字游戏三臂对照（EVASION 视觉注意广度训练 vs GraphoGame vs 常规教学），建议累计训练10小时、由教师监督：EVASION 组的视觉注意广度、阅读流畅性与拼写进步更大，且训练时间越长提升越多。','Reading Research Quarterly 60(1):e576（2024-08-28 线上）, DOI:10.1002/rrq.576'],
+  ['语音·视觉双通路','Germano G.D., Reilhac C., Capellini S.A., Valdois S. (2014). 66名发展性阅读障碍儿童与正常儿童对照：阅读障碍儿童除语音加工缺陷外还存在视觉加工缺陷（视觉闭合、图形恒常性任务），二者独立贡献于阅读流畅性；并可分出「单纯语音型／单纯视觉型／双重缺陷型／无缺陷型」等亚型。','Frontiers in Psychology 5:1169, PMID 25352822, DOI:10.3389/fpsyg.2014.01169'],
+  ['数字药物·中国综述','鲍梦依, 赵家靖, 严晨毓, 等 (2025). 系统评述儿童ADHD数字药物（digital drugs）的神经机制与四条技术路径：游戏化认知训练、行为监测与反馈系统、沉浸式交互技术、AI驱动的个性化干预；并比较数字药物与传统药物在疗效、安全性、经济性上的差异。','中国现代应用药学 42(22):3945-3953, DOI:10.13748/j.cnki.issn1007-7693.20252057'],
+  ['中国ADHD患病率·合并估计','Wang T., Liu K., Li Z., 等 (2017). 67项研究 / 275,502名中国儿童青少年：ADHD合并患病率 6.26%（95%CI 5.36–7.22%），异质性高（I²=99.0%）；男生 8.17% 高于女生 6.22%。','BMC Psychiatry 17:32, PMID 28103833, DOI:10.1186/s12888-016-1187-9'],
+  ['中国ADHD患病率·年龄因素','Liu A., Xu Y., Yan Q., Tong L. (2018). 67项研究 / 642,266名中国儿童青少年：总体患病率 6.3%（95%CI 5.7–6.9）；<b>学龄儿童青少年 6.5%（95%CI 5.5–7.4%）高于学龄前 5.5%（3.3–7.7%）</b>；男生 8.9% 高于女生 4.0%。meta 回归显示数据采集年份、年龄、家庭社会经济地位与患病率估计显著相关，地域影响有限。','Scientific Reports 8:11169, PMID 30115972, DOI:10.1038/s41598-018-29488-2'],
+  ['青少年自评与家长评的差异','Du Rietz E., Cheung C.H.M., McLoughlin G., 等 (2016). 108名童年期确诊ADHD的青少年与青年 + 167名对照：本人报告的症状与困扰程度显著低于家长报告；按本人报告得出的「持续存在率」为 44%，而按家长报告为 79%；本人报告与认知-神经生理指标的吻合度也低于家长报告。说明青少年自评与家长评不能互相替代。','Journal of Psychiatric Research 82:91-99, PMID 27478936, DOI:10.1016/j.jpsychires.2016.07.020']
 ];
+const AGE_NOTE = '【年龄分档依据】青少年注意力／执行功能的国际评估惯例是使用「本人自评表」，而不是成人量表：Conners 3 自评表适用 8–18 岁、BRIEF-2 自评表适用 11–18 岁；而成人自评量表（如 WHO 的 ASRS）是按成人使用设计、并另有青少年版 ASRS-A（已在 12-17 岁临床样本完成验证，Sonnby 等 2015）。本系统据此设三档——儿童 6-12 岁由家长代填、青年 13-17 岁本人自填、成人 18 岁以上本人自填。三档共用同一套维度框架与题量，因此跨档结果可以直接对比、训练处方可以直接映射。';
+const YOUTH_NOTE = '【青年档使用须知（13-17 岁 · 本人自填）】解读时请注意三点：① <b>等级阈值未按年龄做常模</b>：本系统三档共用同一套等级阈值（≥70% 重点关注／≥50% 中度关注／≥30% 轻度关注），而国际上成熟量表是按年龄分常模的——Conners 3 官方标注为「按性别、按年龄分层常模」，BRIEF-2 官方同时提供「按年龄」与「按年龄＋性别」两套常模（2026 年新增按年龄常模）。青少年尚在发育期，同一绝对分数在不同年龄的含义并不相同，因此请重点看<b>各子维度的相对强弱</b>与<b>同一档位的纵向变化</b>，而不是单看绝对等级。② <b>本人自评与家长代填不可直接互换，跨档比较要谨慎</b>：一项 275 人的追踪研究显示，同一批人由本人报告与由家长报告得出的「持续存在率」分别为 44% 与 79%，且本人报告的症状与困扰程度显著低于家长报告（Du Rietz 等, 2016）。因此从儿童档（家长代填）升到青年档（本人自评）后分数下降，可能来自报告人改变而不是能力提升；如需要，可由家长另填一份儿童档做对照。③ <b>关注发育进程</b>：执行功能（尤其抑制控制与认知灵活性）在青春期仍在持续发育、直至成年早期（Diamond, 2013），青少年出现一定程度的走神与冲动属于发育过程中的常见表现，不必按成人标准苛求。';
 const REF_NOTE = '上述文献支持本测评的两层结构：【维度设计】参考认知成分框架（抑制控制 / 工作记忆 / 持续注意 / 认知灵活性 / 计划），第八板块【训练处方】按你测出的最弱子维度 → 对应认知成分 → 游戏组织。游戏化认知训练（CCT）的近迁移效果可靠，但远迁移（学业成绩、日常功能）证据有限（UK NICE指南NG87定位CCT为辅助手段）。本报告训练建议定位于能力训练工具，不作为临床治疗替代方案。';
 const TRAIN_NOTE = '北大六院认知训练方案为每天20分钟、每3个月评估调整一次（王久菊/王玉凤团队，2024）；短频次（15-20分钟/天）+自适应难度调节是文献一致指向的效果增强关键变量（MDPI系统综述，2026）。';
 
@@ -535,10 +625,10 @@ function start(type){
   CUR = type;
   QLIST = [];
   const cfg = SURVEY[type];
-  document.getElementById('formType').textContent = (type==='adult'?'成人版':'儿童版') + ' · ' + cfg.typeLabel;
-  document.getElementById('formHint').innerHTML = (type==='adult'
-    ? '请针对每一项，选择<b>你</b>在该项上出现困难的频率：<b>经常</b>（高频、明显影响日常生活）／<b>偶尔</b>（时有出现）／<b>基本没有</b>（极少或从未）。得分率越低代表困扰越少、状态越好。'
-    : '请<b>家长</b>根据孩子的实际表现，选择孩子在该项上出现困难的频率：<b>经常</b>（高频、明显影响）／<b>偶尔</b>（时有出现）／<b>基本没有</b>（极少或从未）。');
+  document.getElementById('formType').textContent = (type==='kids'?'儿童版':type==='youth'?'青年版':'成人版') + ' · ' + cfg.typeLabel;
+  document.getElementById('formHint').innerHTML = (type==='kids'
+    ? '请<b>家长</b>根据孩子的实际表现，选择孩子在该项上出现困难的频率：<b>经常</b>（高频、明显影响）／<b>偶尔</b>（时有出现）／<b>基本没有</b>（极少或从未）。'
+    : '请针对每一项，选择<b>你</b>在该项上出现困难的频率：<b>经常</b>（高频、明显影响日常学习与生活）／<b>偶尔</b>（时有出现）／<b>基本没有</b>（极少或从未）。得分率越低代表困扰越少、状态越好。');
   // 基本信息
   let infoHtml = '<div class="form-card"><div class="dim-title" style="margin-top:0;">基本信息</div>';
   infoHtml += '<div class="info-row">';
@@ -597,7 +687,7 @@ function buildData(){
   const cfg = SURVEY[CUR];
   const info = {};
   cfg.info.forEach(f=>{ info[f.id] = (document.getElementById('inf_'+f.id).value||'').trim(); });
-  const name = info.name || (CUR==='adult'?'测评者':'儿童');
+  const name = info.name || (CUR==='kids'?'儿童':'测评者');
 
   // 按维度、子维度聚合
   const dims = ['A','V','B'];
@@ -637,10 +727,26 @@ function buildData(){
   return d;
 }
 
+/* 报告人称：儿童档由家长代填，陈述对象是孩子；青年/成人档本人自填，用「你」 */
+function SUBJ(){ return CUR==='kids' ? '孩子' : '你'; }
+/* 维度全名：听觉／视觉 是「注意力」，行为维度的真名是「行为表现」——
+   直接拼「行为」+「注意力」会得到不通顺的「行为注意力」 */
+function DIM_FULL(short){ return short==='行为' ? '行为表现' : short+'注意力'; }
 function narrative(d){
   const A=d.A_rate, V=d.V_rate, B=d.B_rate, T=d.total_rate;
   const dims=[['听觉',A],['视觉',V],['行为',B]].sort((x,y)=>y[1]-x[1]);
   const w=dims[0], m=dims[1], s=dims[2];
+  /* 三维度完全同分时不谈「最优/最弱」：否则同一个分数会一边被写成「中度关注」、
+     一边被写成「相对最优」，报告自相矛盾（整卷同选一档时就会发生） */
+  if(A===V && V===B){
+    return {
+      conclusion: '<b>听觉、视觉、行为三个维度的得分率完全相同（'+A+'%），没有明显的相对短板</b>'
+        + '——建议以'+SUBJ()+'日常最费力的具体场景（听讲、写作业、收拾书包等）作为切入点来选训练游戏。',
+      strength: '三维度表现一致（均 '+A+'%），说明困扰是均匀分布在三个通道上的，而不是集中在某一处。',
+      weakness: '因为没有单点突出的短板，训练不必指定主攻方向：从完整训练库中自选 4 款、每天 20-30 分钟，三个维度轮流练即可。',
+      path: '任选一个维度入门 → 补齐另两个维度 → 三维度交替'
+    };
+  }
   let profile;
   if(T<30) profile='三维度状态整体良好，专注力困扰较少';
   else if(w[1]>=70) profile=w[0]+'维度为重点关注（'+w[1]+'%），是主要短板';
@@ -648,8 +754,8 @@ function narrative(d){
   else profile='整体以轻度困扰为主，'+w[0]+'维度略高（'+w[1]+'%）';
   return {
     conclusion: '<b>'+profile+'</b>——'+s[0]+'维度相对最优（'+s[1]+'%），'+w[0]+'维度需重点提升。',
-    strength: '你的'+s[0]+'注意力相对最优（'+s[1]+'%·'+tagInfo(s[1]).label+'），信息接收与处理效率较好，是后续训练的稳固基础。',
-    weakness: '你的'+w[0]+'注意力最弱（'+w[1]+'%·'+tagInfo(w[1]).label+'），建议在训练方案中作为主攻方向优先安排。',
+    strength: SUBJ()+'的'+DIM_FULL(s[0])+'相对最优（'+s[1]+'%·'+tagInfo(s[1]).label+'），信息接收与处理效率较好，是后续训练的稳固基础。',
+    weakness: SUBJ()+'的'+DIM_FULL(w[0])+'最弱（'+w[1]+'%·'+tagInfo(w[1]).label+'），建议在训练方案中作为主攻方向优先安排。',
     path: w[0]+'强化 → '+m[0]+'巩固 → '+s[0]+'整合'
   };
 }
@@ -687,12 +793,12 @@ function renderReport(d){
 
   // 子标题（空字段优雅处理）
   const subParts = [];
-  if(CUR==='adult'){
-    subParts.push((d.name||'测评者')+'（成人）');
-    if(d.age) subParts.push(d.age+'岁');
-  } else {
+  if(CUR==='kids'){
     subParts.push((d.name||'儿童') + (d.age? '（'+d.age+'岁）':''));
     if(d.submitter) subParts.push('提交人：'+d.submitter);
+  } else {
+    subParts.push((d.name||'测评者')+'（'+(CUR==='youth'?'青年':'成人')+'）');
+    if(d.age) subParts.push(d.age+'岁');
   }
   subParts.push('测评日期：'+date);
   const sub = subParts.join('｜');
@@ -701,8 +807,13 @@ function renderReport(d){
   html += '<div class="report-header"><h1>专注力测评分析报告</h1><p>'+sub+'</p></div>';
 
   // 阅读提示
+  const readTip = CUR==='kids'
+    ? '请结合孩子的实际表现合理看待各项得分。'
+    : (CUR==='youth'
+        ? '青年档为本人自评，等级阈值未按年龄做常模，请重点看各子维度的相对强弱与同一档位的纵向变化（详见第十板块）。'
+        : '请根据自身情况合理看待各项得分。');
   html += '<div class="ref-note" style="text-align:center;background:#eef6f4;border-left:4px solid var(--teal);">'
-        + '<b>阅读提示：</b>百分比越低代表问题越少——分数统计的是困扰出现频率，<b>0分=完全无困扰</b>，满分=所有项目都「经常」出现。请根据自身情况合理看待各项得分。</div>';
+        + '<b>阅读提示：</b>百分比越低代表问题越少——分数统计的是困扰出现频率，<b>0分=完全无困扰</b>，满分=所有项目都「经常」出现。' + readTip + '</div>';
 
   // 一、三维度总览
   html += '<div class="sec"><h2>一、三维度总览</h2>'
@@ -733,7 +844,7 @@ function renderReport(d){
         + '<div class="sb"><b>综合评分解读：</b>听觉 '+d.A_rate+'%、视觉 '+d.V_rate+'%、行为 '+d.B_rate+'%，加权综合 <b>'+d.total_rate+'%（'+tr.label+'）</b>。综合评分反映三维度协调水平，得分率越低代表困扰越少、状态越好。柱状图中虚线为三维度均值参考线，低于虚线说明优于自身平均水平。最弱维度为<b style="color:var(--red)">'+weakDim(d)+'</b>，第八板块训练方案将以此为重点定制。</div></div>';
 
   // 七、12周训练方案
-  const stages = CUR==='adult'?STAGES_ADULT:STAGES_KIDS;
+  const stages = CUR==='kids'?STAGES_KIDS:STAGES_ADULT;   // 青年档复用成人方案：训练内容按最弱子维度定，与年龄无关
   html += '<div class="sec"><h2>七、12周训练方案</h2>'
         + '<canvas id="trainChart" height="340"></canvas>'
         + '<div class="pg">'+stages.map(s=>'<div class="pc"><div class="wk">'+s.wk+'</div><div class="fc">'+s.fc+'</div><div class="dc">'+s.dc+'</div></div>').join('')+'</div>'
@@ -748,13 +859,15 @@ function renderReport(d){
         + '<p>'+d.strength+'</p>'
         + '<p>'+d.weakness+'</p>'
         + '<p><b>干预路径：</b>'+d.path+'</p>'
-        + (d.total_rate===0 ? '<p style="color:var(--blue);">你状态正常，可以玩玩<a class="link" href="index.html">舒尔特方格</a>很有趣。</p>' : '')
+        + (d.total_rate===0 ? '<p style="color:var(--blue);">'+(CUR==='kids' ? '孩子状态正常，可以让他玩玩' : '你状态正常，可以玩玩')+'<a class="link" href="index.html">舒尔特方格</a>，很有趣。</p>' : '')
         + '</div></div>';
 
   // 十、科学依据
   html += '<div class="sec"><h2>十、科学依据</h2>'
         + '<p style="font-size:14px;color:var(--sub);margin-bottom:14px;">本测评维度设计与训练建议参考以下经独立核验的学术研究与机构实践：</p>'
         + REFS.map(r=>'<div class="ref-item"><span class="rn">【'+r[0]+'】</span>'+r[1]+'<span class="rj">'+r[2]+'</span></div>').join('')
+        + '<div class="ref-note">'+AGE_NOTE+'</div>'
+        + (CUR==='youth' ? '<div class="ref-note">'+YOUTH_NOTE+'</div>' : '')
         + '<div class="ref-note">'+REF_NOTE+'</div></div>';
 
   html += '<div class="sig">读小红书：读写障碍力老师 | '+date+' | 专注力测评分析报告</div>';
@@ -782,10 +895,16 @@ function renderReport(d){
 }
 function weakDim(d){
   const arr=[['听觉',d.A_rate],['视觉',d.V_rate],['行为',d.B_rate]].sort((x,y)=>y[1]-x[1]);
-  return arr[0][0]+'注意力（'+arr[0][1]+'%）';
+  return DIM_FULL(arr[0][0])+'（'+arr[0][1]+'%）';
 }
 function gameGuide(d){
-  const isAdult = CUR==='adult';
+  const isAdult = CUR!=='kids';   // 儿童档=家长代填用 kids 子维度；青年/成人共用同一套子维度（平行结构）
+  /* 难度起步指引按档位分（原句无条件写「游戏内选成人模式」，对儿童档不合适）*/
+  const DIFF_TIP = CUR==='kids'
+    ? '游戏内从<b>最低难度</b>（初级 / 简单，或儿童模式）起步，适应后再逐档升高'
+    : (CUR==='youth'
+        ? '游戏内先选<b>中级难度</b>起步，适应后再升到<b>高级 / 成人模式</b>'
+        : '游戏内选成人模式/高级难度');
   const subMeta = isAdult?SUBDIM.adult:SUBDIM.kids;
   const eRank = {self:3, tested:2, infer:1};
   const dimCN = {A:'听觉', V:'视觉', B:'行为'};
@@ -818,7 +937,7 @@ function gameGuide(d){
     const C=COMPS[k];
     return '<div style="background:#f7faf9;border-left:3px solid '+C.col+';border-radius:8px;padding:9px 13px;margin:7px 0;font-size:13px;line-height:1.6;">'
       + '<b style="color:'+C.col+';">'+C.name+'</b>'
-      + (C.g? ' · <b>g='+C.g+'</b>（认知训练 vs 对照，You 2026）' : ' · '+C.txt)
+      + (C.g? ' · <b>g='+C.g+'</b>（You 2026 网络 Meta · 6-18岁）' : ' · '+C.txt)
       + '<div style="color:#6a7178;margin-top:3px;">依据：'+C.basis+'</div></div>';
   }).join('');
 
@@ -901,7 +1020,7 @@ function gameGuide(d){
     + '<p style="margin-bottom:10px;">你最弱的是 <b style="color:var(--red)">'+dimCN[weakest.dim]+'·'+weakest.name+'（'+weakest.rate+'%）</b>，据此从 <b>'+GAMELIB.length+' 款线上训练库</b>中定制处方如下。</p>'
 
     + '<div class="tip-box">'
-    + '<b>你的弱项处方</b>　最弱子维度：<b>'+weakest.name+'</b> → 对应认知成分：'
+    + '<b>'+SUBJ()+'的弱项处方</b>　最弱子维度：<b>'+weakest.name+'</b> → 对应认知成分：'
     + wComps.map(function(k){ return COMPS[k].name; }).join(' / ')
     + '</div>'
     + compHtml
@@ -911,7 +1030,7 @@ function gameGuide(d){
     + '<div class="tip-box">'
     + '<b>使用规则</b><br>'
     + '• 每次训练选 <b>4款游戏</b>，依序完成，总时长 <b>20-30分钟</b><br>'
-    + '• 每款5-10分钟，游戏间休息 <b>1-2分钟</b>，游戏内选成人模式/高级难度<br>'
+    + '• 每款5-10分钟，游戏间休息 <b>1-2分钟</b>，' + DIFF_TIP + '<br>'
     + '• 完整训练周期：<b>12周（3个月）</b>，每3周为一个阶段，难度自然递增<br>'
     + '• 每周7天循环执行，<b>周日为弱项强化日</b>（从上方处方自选线上游戏）'
     + '</div>'
@@ -921,6 +1040,24 @@ function gameGuide(d){
     + '<h3>完整训练库（'+GAMELIB.length+'款 · 按认知成分分组）</h3>'
     + libGroups
     + special;
+
+
+  /* ⑧ 附：额外建议 · 汉字识字游戏站（★仅儿童档★，独立于处方，不参与算分） */
+  if(CUR==='kids'){
+    h += '<h3 style="margin-top:24px;">附：额外建议 · 汉字识字游戏站（可选，' + HANZI_EXTRA.length + '款）</h3>'
+      + '<p style="font-size:13px;color:#6a7178;margin-bottom:8px;">'
+      + '下面这几款<b>不属于上面的训练处方</b>，是给同时有识字／读写困难的孩子的补充选项：'
+      + '它们本身是为识字与读写设计的，但其中的注意力成分与本站训练同源，可以在「汉字学习游戏」站里一并练。'
+      + '训练目标按该站自己的游戏说明标注，不是我们替它总结的。</p>'
+      + '<div class="gl">' + HANZI_EXTRA.map(function(g){
+          return '<div class="gi t" style="font-size:13px;padding:8px 11px;">'
+            + '<b>' + g.n + '</b>'
+            + '<span style="font-size:11px;color:#9aa3ad;margin-left:6px;">' + g.t + '</span>'
+            + '<div style="font-size:12px;color:#6a7178;margin-top:3px;">' + g.d + '</div></div>';
+        }).join('') + '</div>'
+      + '<div class="ref-note">本小节只出现在儿童档；这几款游戏<b>不参与上方算分与处方排序</b>，'
+      + '也不能替代处方里的专注力训练游戏（完整训练库 ' + GAMELIB.length + ' 款见上）。</div>';
+  }
 
   h += '<div class="ref-note" style="margin-top:16px;">本处方的排序依据：认知训练对上述成分的效应量来自 You et al. (2026) 儿童 ADHD 非药物干预贝叶斯网络 Meta（抑制控制 g=0.61 ／ 持续注意 g=0.50 ／ 工作记忆 g=0.32；认知灵活性、计划、加工速度证据较弱或不确定）。权威边界见第十板块。</div>';
 
